@@ -250,13 +250,15 @@ class FT_CheckInputDict(FiretaskBase):
         #####################################################################
         essential_keys = ['formula', 'miller', 'use_vdw', 'use_spin']
         additional_keys = ['volume_tolerance', 'energy_tolerance',
-                             'functional', 'BM_tolerance', 'MP_ID']
+                             'functional', 'BM_tolerance', 'MP_ID',
+                             'min_thickness']
         
         volume_tolerance_default = 0.001
         energy_tolerance_default = 0.001
         functional_default = 'SCAN'
         BM_tolerance_default = 0.01
         MP_ID_default = None
+        min_thickness_default = 10.0
         #####################################################################
         
         input_dict = fw_spec[self['input_dict_name']]
@@ -334,6 +336,11 @@ class FT_CheckInputDict(FiretaskBase):
                     out_dict['BM_tolerance'] = float(input_dict[key])
                 else:
                     out_dict['BM_tolerance'] = BM_tolerance_default
+            if key == 'min_thickness':
+                if key in input_dict:
+                    out_dict['min_thickness'] = float(input_dict[key])
+                else:
+                    out_dict['min_thickness'] = min_thickness_default
                 
         return FWAction(update_spec={out_name: out_dict})
         
