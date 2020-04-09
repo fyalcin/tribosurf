@@ -14,9 +14,40 @@ __date__ = 'March 11th, 2020'
 # Custom FireWorks
 # =============================================================================
 
+def RelaxFW(name):
+# =============================================================================
+#     TODO: Adapt OptimizeFW to work with input structure and parameters from
+#           the fw_spec and save some output to the spec as well.
+# =============================================================================
+    FW=Firework(FT_PrintSpec(), name=name)
+    return FW
+
+def FixParametersFW(name):
+# =============================================================================
+#     TODO: Take convergence parameters from both systems and take the higher
+#           ones for the rest of the workflow.
+# =============================================================================
+    FW=Firework(FT_PrintSpec(), name=name)
+    return FW
+
+
+def ConvergeParametersFW(name):
+# =============================================================================
+#     TODO: Write Firetasks and Fireworks (or better workflows) to converge
+#           Kpoints and Energy cutoff.
+# =============================================================================
+    FW=Firework(FT_PrintSpec(), name=name)
+    return FW
+
+def CheckInputsFW(input_dictionary, name):
+# =============================================================================
+#     TODO: Check all inputs and add default values for all not specified keys
+# =============================================================================
+    FW=Firework(FT_PrintSpec(), name=name)
+    return FW
 
     
-def FW_ReadWFInputs(inputfile_name):
+def ReadWFInputsFW(inputfile_name):
     """Generates a FireWork that reads and checks an input file for a Workflow.
     
     An input file is read in using a FireTask. A following FireTask is used
@@ -46,7 +77,7 @@ def FW_ReadWFInputs(inputfile_name):
     return fw
 
 
-def FW_MakeGeneralizedKpoints_FW(structure, PrecalcDict, IncarDict=None,
+def MakeGeneralizedKpointsFW(structure, PrecalcDict, IncarDict=None,
                               WorkDir='./'):
     """
     A workflow is constructured that uses the K-Point Grid Generator
@@ -90,7 +121,7 @@ def FW_MakeGeneralizedKpoints_FW(structure, PrecalcDict, IncarDict=None,
 
 
 
-def FW_MakeHeteroInterfaceFromScratch(Material_1, Material_2, parameters):
+def MakeHeteroInterfaceFromScratchFW(Material_1, Material_2, parameters):
     """
     A FireWork is constructed that forms two slabs out of information
     contained in Material_1 and Material_2. These slabs are then combined

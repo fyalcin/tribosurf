@@ -215,6 +215,7 @@ class FT_FetchStructureFromInput(FiretaskBase):
                                                  MP_ID=mp_id,
                                                  PrintInfo=False)
         
+        
         if 'structures' in fw_spec:
             structures = fw_spec['structures']
         else:
@@ -233,6 +234,7 @@ fw_1 = Firework(FT_FetchStructureFromInput(input_dict_name='material'),
                 spec={'material': material})
 
 fw_2 = OptimizeFW_Mod(structure_spec_loc=['structures', material['formula']],
+                      vasp_input_set='MPScanRelaxSet',
                       parents=[fw_1])
 wf = Workflow([fw_1, fw_2])
 

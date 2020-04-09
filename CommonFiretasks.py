@@ -60,53 +60,52 @@ class FT_PrintSpec(FiretaskBase):
         return FWAction(update_spec = spec)        
 
 @explicit_serialize
-class FT_FetchStructureFromInput(FiretaskBase):
+class FT_FetchStructureFromFormula(FiretaskBase):
     """Fetches a structure from the MP database and puts it in the spec.
     
     Uses the helper function GetLowEnergyStructure to get the structure for a
-    given chemical formula with the lowest formation energy. If a MP_ID is
-    also given, this exact structure will be fetched. The 'structures' key of
-    the spec is updated to include the fetched structur under the formula key.
+    given chemical formula with the lowest formation energy. If a mp_id is
+    also given, this exact structure will be fetched. The structure will be 
+    saved on the first level of the spec under the given name.
     
     Parameters
     ----------
-    input_dict_name: str
-        Required input dictionary where a chemical formula for the structure
-        is given under the key 'formula'. The input key 'MP_ID' must also  be
-        present but might be 'None' and will then not be used.
+    formula_loc: list of str
+        Location where the formula of the structure to fetch is located.
+        E.g. ['inputs', 'bottom_slab', 'formula']
+        will point to fw_spec['inputs']['bottom']['formula']
+        If there is an input key 'mp_id' at the same level as the formula
+        (e.g. fw_spec['inputs']['bottom']['mp-id']) it will be used to
+        exactly define the structure to be fetched.
+        
+    structure_name: str
+        If given saves the structrue under this name in the first level of the
+        fw_spec. E.g. fw_spec[structure_name] = structure
     ---------
     
-    Yields
+    Returns
     ------
-    updated structures dictionary in the spec.
+    An updated fw_spec that includes a new structure.
     ------
     """
     
-    _fw_name = 'Fetch Structure From Input'
-    required_params = ['input_dict_name']
+    _fw_name = 'Fetch Structure From Spec'
+    required_params = ['formula_loc', 'structure_name']
     
     def run_task(self, fw_spec):
-        from HelperFunctions import GetLowEnergyStructure
+        from HelperFunctions import GetLowEnergyStructure, \
+                                    GetValueFromNestedDict
         
-        input_dict = fw_spec[self['input_dict_name']]
+        formula = GetValueFromNestedDict(fw_spec, self['formula_loc'])
+        mp_id = GetValueFromNestedDict(fw_spec, 
+                                       self['formula_loc'][:-1]+['mp_id'])
         
-        if 'mp_id' in input_dict:
-            mp_id = input_dict['mp_id']
-        else:
-            mp_id = None
-        
-        structure, MP_ID = GetLowEnergyStructure(input_dict['formula'],
+        structure, MP_ID = GetLowEnergyStructure(formula,
                                                  MP_ID=mp_id,
                                                  PrintInfo=False)
         
-        if 'structures' in fw_spec:
-            structures = fw_spec['structures']
-        else:
-            structures = {}          
-        structures[input_dict['formula']] = structure
-        
         spec = fw_spec
-        spec.update({'structures': structures})
+        spec.update({self['structure_name']: structure})
         return FWAction(update_spec = spec)
 
 @explicit_serialize
@@ -436,6 +435,53 @@ class FT_MakeHeteroStructure(FiretaskBase):
                             parameters=new_parameters), fw_spec)
             return FWAction(additions = new_fw)
 
+@explicit_serialize
+class FT_MakeSlabFromStructure(FiretaskBase):
+    """Makes a slab with certain orientation out of a bulk structure.
+
+    The slab has a defined thickness and orientation and the bulk structure is
+    loaded from the fw_spec
+
+    Parameters
+    ----------
+    bulk_name: str
+        name of the bulk structure in the spec from which the slab is made
+    parameters: dict
+        dictionary of input data that must contain the following keys:
+            miller: list of int
+            min_thickness: float
+            min_vacuum: float
+    ----
+    
+    Returns
+    -------
+        Pymatgen slab structure to the spec
+    ------- 
+    """
+    
+    _fw_name = 'Make slab from structure in spec'
+    required_params = ['bulk_name', 'parameters']
+    
+    def run_task(self, fw_spec):
+        from mpinterfaces.interface import Interface
+        
+        bulk_structure = fw_spec[self['bulk_name']]
+            
+        miller = self['parameters']['miller']
+        min_thickness = self['parameters']['min_thickness']
+        min_vacuum = self['parameters']['min_vacuum']
+
+        
+        #Construct the slab out of the bulk_structure
+        slab = Interface(bulk_structure, hkl = miller,
+                   min_thick = min_thickness,
+                   min_vac = min_vacuum, primitive = False,
+                   from_ase = True)
+        
+        miller = ''.join(str(e) for e in self['parameters']['miller'])
+        slab_name = bulk_structure.composition.reduced_formula + miller
+        return FWAction(update_spec={slab_name: slab}, 
+                        stored_data={slab_name: slab})
 
 @explicit_serialize
 class FT_MakeSlabFromFormula(FiretaskBase):

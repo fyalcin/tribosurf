@@ -1,12 +1,14 @@
 """A collection of HelperFunctions to be used for the FireFlow project."""
 
-def GetValueFromNestedDict(dictionary,key_list):
+
+def GetValueFromNestedDict(dictionary, key_list):
     """Take a list of keys and a nested dictionary and return the value.
     
     A (usually nested) dictionary is given along side a list of keys to this
     dictionary. The value at the end of this key_list is returned using a
     recursive method. E.g. key_list=['key_a', 'key_b', 'key_c'] will return
     dictionary['key_a']['key_b']['key_c']
+    Returns <None> when there is a KeyError
     
 
     Parameters
@@ -21,11 +23,17 @@ def GetValueFromNestedDict(dictionary,key_list):
     -------
         Returns whatever is stored at the appropriate position in the
         dictionary. Type can vary!
+        If there is a KeyError on some stage, None is returned
 
     """
     if len(key_list) > 1:
-        return GetValueFromNestedDict(dictionary[key_list[0]], key_list[1:])
-    return dictionary[key_list[0]]
+        if key_list[0] in dictionary:
+            return GetValueFromNestedDict(dictionary[key_list[0]],
+                                          key_list[1:])
+        else:
+            return None
+    return dictionary.get(key_list[0])
+        
 
 def RemoveMatchingFiles(list_of_patterns):
     """
