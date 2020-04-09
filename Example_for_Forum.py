@@ -1,16 +1,13 @@
-# coding: utf-8
-
-import warnings
-
-
-
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-Standard Fireworks from the atomate package that have been adapted to read
-structures from the spec and write output to the spec.
-"""
+Created on Wed Apr  8 15:30:31 2020
 
-from fireworks import Firework
-from fireworks import FiretaskBase, explicit_serialize
+@author: mwo
+"""
+from fireworks import FWAction, FiretaskBase, Firework, Workflow, LaunchPad
+from fireworks.utilities.fw_utilities import explicit_serialize
+from fireworks.core.rocket_launcher import rapidfire
 
 from atomate.vasp.firetasks.parse_outputs import VaspToDb
 from atomate.utils.utils import load_class
@@ -111,3 +108,136 @@ class OptimizeFW_Mod(Firework):
                                          format(
                                              structure_spec_loc[-1], name),
                                          **kwargs)
+    
+
+def GetLowEnergyStructure(chem_formula, MP_ID=None, PrintInfo=False):
+    """
+    A function that searches the MaterialsProject Database
+    for structures that match the given chemical formula
+    and selcts the one with the lowest formation energy
+    per atom. If several 
+    Inputs: 
+    chem_formula (str): Required input of a chemical formula
+                        e.g.: NaCl, Fe2O3, SiO, FeCW
+    MP_ID (str):        Optional Input of Materials Project ID
+                        of the exact desired structure
+                        e.g. 'mp-990448'
+    PrintInfo (bool):   Optional variable defaults to "False".
+                        if set to "True", will print some
+                        information about how many structures
+                        have been found and the ID of the selcted
+                        one.
+                        
+    Returns: pymatgen Structure object and associated MP_ID
+    """
+    from pymatgen import MPRester
+
+    # load structure from MaterialsProjct Website
+    with MPRester() as mpr:
+        if MP_ID:
+            struct = mpr.get_structure_by_material_id(MP_ID)
+            return struct, MP_ID
+        else:
+            id_list = mpr.query(criteria={'pretty_formula': chem_formula,
+                                        'e_above_hull': 0.0},
+                              properties=['material_id'])
+            if id_list == []:
+                raise NameError('{} has not been found in the MaterialsProject'
+                            'database'.format(chem_formula))
+            else:
+                MP_ID = id_list[0]['material_id']
+                struct = mpr.get_structure_by_material_id(MP_ID)
+                return struct, MP_ID
+
+def GetValueFromNestedDict(dictionary,key_list):
+    """Take a list of keys and a nested dictionary and return the value.
+    
+    A (usually nested) dictionary is given along side a list of keys to this
+    dictionary. The value at the end of this key_list is returned using a
+    recursive method. E.g. key_list=['key_a', 'key_b', 'key_c'] will return
+    dictionary['key_a']['key_b']['key_c']
+    
+
+    Parameters
+    ----------
+    dictionary : dict
+        Input dictionary which can be nested
+    key_list : list of str
+        The list of keys to the nested dictionary at the end of which the
+        value that is needed is located
+
+    Returns
+    -------
+        Returns whatever is stored at the appropriate position in the
+        dictionary. Type can vary!
+
+    """
+    if len(key_list) > 1:
+        return GetValueFromNestedDict(dictionary[key_list[0]], key_list[1:])
+    return dictionary[key_list[0]]
+
+
+@explicit_serialize
+class FT_FetchStructureFromInput(FiretaskBase):
+    """Fetches a structure from the MP database and puts it in the spec.
+    
+    Uses the helper function GetLowEnergyStructure to get the structure for a
+    given chemical formula with the lowest formation energy. If a MP_ID is
+    also given, this exact structure will be fetched. The 'structures' key of
+    the spec is updated to include the fetched structur under the formula key.
+    
+    Parameters
+    ----------
+    input_dict_name: str
+        Required input dictionary where a chemical formula for the structure
+        is given under the key 'formula'. The input key 'MP_ID' must also  be
+        present but might be 'None' and will then not be used.
+    ---------
+    
+    Yields
+    ------
+    updated structures dictionary in the spec.
+    ------
+    """
+    
+    _fw_name = 'Fetch Structure From Input'
+    required_params = ['input_dict_name']
+    
+    def run_task(self, fw_spec):
+        input_dict = fw_spec[self['input_dict_name']]
+        
+        if 'mp_id' in input_dict:
+            mp_id = input_dict['mp_id']
+        else:
+            mp_id = None
+        
+        structure, MP_ID = GetLowEnergyStructure(input_dict['formula'],
+                                                 MP_ID=mp_id,
+                                                 PrintInfo=False)
+        
+        if 'structures' in fw_spec:
+            structures = fw_spec['structures']
+        else:
+            structures = {}          
+        structures[input_dict['formula']] = structure
+        
+        spec = fw_spec
+        spec.update({'structures': structures})
+        return FWAction(update_spec = spec)
+
+
+
+material = {'formula': 'Fe', 'miller': [0, 0, 1], 'min_thickness': 10}
+
+fw_1 = Firework(FT_FetchStructureFromInput(input_dict_name='material'),
+                spec={'material': material})
+
+fw_2 = OptimizeFW_Mod(structure_spec_loc=['structures', material['formula']],
+                      parents=[fw_1])
+wf = Workflow([fw_1, fw_2])
+
+# finally, instatiate the LaunchPad and add the workflow to it
+lpad = LaunchPad.auto_load() # loads this based on the FireWorks configuration
+lpad.add_wf(wf)
+
+rapidfire(lpad)

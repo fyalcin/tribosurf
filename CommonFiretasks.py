@@ -12,6 +12,7 @@ from fireworks.utilities.fw_utilities import explicit_serialize
 # Custom FireTasks
 # =============================================================================
 
+
 @explicit_serialize
 class FT_SpawnOptimizeFW(FiretaskBase):
     """Spawns a new optimization workflow using a structure saved in the spec.
@@ -54,6 +55,9 @@ class FT_PrintSpec(FiretaskBase):
         import pprint
         
         pprint.pprint(fw_spec)
+        
+        spec = fw_spec
+        return FWAction(update_spec = spec)        
 
 @explicit_serialize
 class FT_FetchStructureFromInput(FiretaskBase):
@@ -86,9 +90,13 @@ class FT_FetchStructureFromInput(FiretaskBase):
         
         input_dict = fw_spec[self['input_dict_name']]
         
+        if 'mp_id' in input_dict:
+            mp_id = input_dict['mp_id']
+        else:
+            mp_id = None
         
         structure, MP_ID = GetLowEnergyStructure(input_dict['formula'],
-                                                 MP_ID=input_dict['MP_ID'],
+                                                 MP_ID=mp_id,
                                                  PrintInfo=False)
         
         if 'structures' in fw_spec:
@@ -96,7 +104,6 @@ class FT_FetchStructureFromInput(FiretaskBase):
         else:
             structures = {}          
         structures[input_dict['formula']] = structure
-        structures['to_optimize'] = structure
         
         spec = fw_spec
         spec.update({'structures': structures})
