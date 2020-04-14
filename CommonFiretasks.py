@@ -214,6 +214,234 @@ class FT_ReadInputFile(FiretaskBase):
 
 
 @explicit_serialize
+class FT_CheckCompParamDict(FiretaskBase):
+    """Checks a dictionary for essential keys and adds default values if needed.
+    
+    An input dictionary is compared to a list of essential keys that must be
+    present in the dictionary. If essential keys are missing an error is
+    printed and SystemExit is raised. If optional keys are not given, default
+    values are used for them and added to the dictionary.
+    
+    Parameters
+    ----------
+    input_dict_loc: list of str
+        The location of a dictionary in the spec that holds the computational
+        input parameters
+    output_dict_loc: list of str, optional
+        The location of the output dictionary that is going to be put into the
+        fw_spec. If not specified this will default to the input_dict_loc.
+    ----------
+    
+    Returns
+    -------
+    dict
+        A dictionary is pushed to the fw_spec. It contains all the
+        essential and optional keys given and uses default values for the
+        remaining optional keys.
+    -------
+    """
+
+    _fw_name = 'Check Input Dict'
+    required_params = ['input_dict_loc']
+    optional_params = ['output_dict_loc']
+    
+    def run_task(self, fw_spec):
+        """Run the FireTask
+
+        Edit the essential and additional keys here if necessary, as well as
+        the default values given for the additional keys.
+
+        """
+        from HelperFunctions import GetValueFromNestedDict, \
+                                    WriteNestedDictFromList, \
+                                    UpdateNestedDict
+        #Edit this block according to need, but be careful with the defaults!
+        #####################################################################
+        essential_keys = ['use_vdw', 'use_spin']
+        additional_keys = ['volume_tolerance', 'energy_tolerance',
+                             'functional', 'BM_tolerance']
+        
+        volume_tolerance_default = 0.001
+        energy_tolerance_default = 0.001
+        functional_default = 'SCAN'
+        BM_tolerance_default = 0.01
+        #####################################################################
+        
+        input_dict = GetValueFromNestedDict(fw_spec, self['input_dict_loc'])
+        
+        if 'output_dict_loc' in self:
+            out_loc = self['output_dict_loc']
+        else:
+            out_loc = self['input_dict_loc']
+
+        #Define all known keys here
+        known_keys = essential_keys + additional_keys
+        #Create lists for input options condidered to be True:
+        true_list = ['true', 'True', 'TRUE', '.TRUE.', '.true.', True, 
+                     'yes', 'Yes', 'YES', '.YES.', '.yes.']
+        #initialize checking dictionary for essential inputs and output dict
+        out_dict = {}
+        check_essential = {}
+        for key in essential_keys:
+            check_essential[key] = False
+        for key in input_dict.keys():
+        #Check for unknown parameters:
+            if key not in known_keys:
+                raise SystemExit('The input parameter <'+str(key)+
+                              '> is not known. Please check your input file'
+                              'and use only the following parameters:\n'
+                              .format(known_keys))
+            elif key == 'use_vdw':
+                if input_dict[key] in true_list:
+                    out_dict['use_vdw'] = True
+                else:
+                    out_dict['use_vdw'] = False
+                check_essential[key] = True
+            elif key == 'use_spin':
+                if input_dict[key] in true_list:
+                    out_dict['use_spin'] = True
+                else:
+                    out_dict['use_spin'] = False
+                check_essential[key] = True
+        
+        
+        #check if all essential keys are present and print out missing ones.
+        missing_keys=[]
+        for key in check_essential.keys():
+            if check_essential[key] == False:
+                missing_keys.append(key)
+        if not all(check_essential.values()):
+            raise SystemExit('The essential input parameters "'+missing_keys+
+                              '" are missing. Check your input file!\n')
+        
+        for key in additional_keys:
+            if key == 'volume_tolerance':
+                if key in input_dict:
+                    out_dict['volume_tolerance'] = float(input_dict[key])
+                else:
+                    out_dict['volume_tolerance'] = volume_tolerance_default
+            if key == 'energy_tolerance':
+                if key in input_dict:
+                    out_dict['energy_tolerance'] = float(input_dict[key])
+                else:
+                    out_dict['energy_tolerance'] = energy_tolerance_default
+            if key == 'functional':
+                if key in input_dict:
+                    out_dict['functional'] = str(input_dict[key])
+                else:
+                    out_dict['functional'] = functional_default
+            if key == 'BM_tolerance':
+                if key in input_dict:
+                    out_dict['BM_tolerance'] = float(input_dict[key])
+                else:
+                    out_dict['BM_tolerance'] = BM_tolerance_default
+                
+        spec = fw_spec
+        final_output = WriteNestedDictFromList(out_loc, out_dict)
+        updated_spec = UpdateNestedDict(spec, final_output)
+        return FWAction(update_spec=updated_spec)
+    
+@explicit_serialize
+class FT_CheckInterfaceParamDict(FiretaskBase):
+    """Checks a dictionary for essential keys and adds default values if needed.
+    
+    An input dictionary is compared to a list of essential keys that must be
+    present in the dictionary. If essential keys are missing an error is
+    printed and SystemExit is raised. If optional keys are not given, default
+    values are used for them and added to the dictionary.
+    
+    Parameters
+    ----------
+    input_dict_loc: list of str
+        The location of a dictionary in the spec that holds the computational
+        input parameters
+    output_dict_loc: list of str, optional
+        The location of the output dictionary that is going to be put into the
+        fw_spec. If not specified this will default to the input_dict_loc.
+    ----------
+    
+    Returns
+    -------
+    dict
+        A dictionary is pushed to the fw_spec. It contains all the
+        essential and optional keys given and uses default values for the
+        remaining optional keys.
+    -------
+    """
+
+    _fw_name = 'Check Input Dict'
+    required_params = ['input_dict_loc']
+    optional_params = ['output_dict_loc']
+    
+    def run_task(self, fw_spec):
+        """Run the FireTask
+
+        Edit the essential and additional keys here if necessary, as well as
+        the default values given for the additional keys.
+
+        """
+        from HelperFunctions import GetValueFromNestedDict, \
+                                    WriteNestedDictFromList, \
+                                    UpdateNestedDict
+        #Edit this block according to need, but be careful with the defaults!
+        #####################################################################
+        essential_keys = ['max_area']
+        additional_keys = ['interface_distance', 'max_mismatch',
+                           'max_angle_diff', 'r1r2_tol']
+        
+        defaults = {'interface_distance': 2.0,
+                    'max_mismatch': 0.01,
+                    'max_angle_diff': 2.0,
+                    'r1r2_tol': 0.05}
+        #####################################################################
+        
+        input_dict = GetValueFromNestedDict(fw_spec, self['input_dict_loc'])
+        
+        if 'output_dict_loc' in self:
+            out_loc = self['output_dict_loc']
+        else:
+            out_loc = self['input_dict_loc']
+
+        #Define all known keys here
+        known_keys = essential_keys + additional_keys
+        #initialize checking dictionary for essential inputs and output dict
+        out_dict = {}
+        check_essential = {}
+        for key in essential_keys:
+            check_essential[key] = False
+        for key in input_dict.keys():
+        #Check for unknown parameters:
+            if key not in known_keys:
+                raise SystemExit('The input parameter <'+str(key)+
+                              '> is not known. Please check your input file'
+                              'and use only the following parameters:\n'
+                              .format(known_keys))
+            elif key == 'max_area':
+                out_dict['max_area'] = float(input_dict[key])
+                check_essential[key] = True
+        
+        
+        #check if all essential keys are present and print out missing ones.
+        missing_keys=[]
+        for key in check_essential.keys():
+            if check_essential[key] == False:
+                missing_keys.append(key)
+        if not all(check_essential.values()):
+            raise SystemExit('The essential input parameters "'+missing_keys+
+                              '" are missing. Check your input file!\n')
+        
+        for key in additional_keys:
+            if key in input_dict:
+                out_dict[key] = float(input_dict[key])
+            else:
+                out_dict[key] = defaults[key]
+                
+        spec = fw_spec
+        final_output = WriteNestedDictFromList(out_loc, out_dict)
+        updated_spec = UpdateNestedDict(spec, final_output)
+        return FWAction(update_spec=updated_spec)
+
+@explicit_serialize
 class FT_CheckMaterialInputDict(FiretaskBase):
     """Checks a dictionary for essential keys and adds default values if needed.
     
@@ -475,15 +703,16 @@ class FT_MakeHeteroStructure(FiretaskBase):
         top_slab_name (str):    Name of the structure of the top slab that
                                 needs to be aligned (structure itself must be
                                 in fw_spec).
-        parameters (dict):  Dictionary containing the key (values):
+        parameters_loc (list of str):  location of the dictionary in the spec
+                                holding the following keys:
                             interface_distance (float): Distance between the
                                 two materials.
                             max_area (float): Maximal cross section
                                 area of the matched cell in Angstrom squared.
                                 Defaults to 200.,
                             max_mismatch (float): Maximal allowed mismatch
-                                between lattice vector length in %.
-                                Defaults to 0.01,
+                                between lattice vector length.
+                                Defaults to 0.01 (1%),
                             max_angle_diff (float): Maximal allowed mismatch
                                 between lattice vector angle in degrees.
                                 Defaults to 1.
@@ -501,19 +730,23 @@ class FT_MakeHeteroStructure(FiretaskBase):
     """
     
     _fw_name = 'Make Hetero Structure'
-    required_params = ['bottom_slab_name', 'top_slab_name', 'parameters']
+    required_params = ['bottom_slab_name', 'top_slab_name', 'parameters_loc']
     
     def run_task(self, fw_spec):
         from mpinterfaces.transformations import get_aligned_lattices
         from mpinterfaces.transformations import generate_all_configs
-        
+        from HelperFunctions import UpdateNestedDict, \
+                                    GetValueFromNestedDict, \
+                                    WriteNestedDictFromList
+        parameters = GetValueFromNestedDict(fw_spec, self['parameters_loc'])
+        print(parameters)
         bottom_aligned, top_aligned = get_aligned_lattices(
                 fw_spec[self['bottom_slab_name']],
                 fw_spec[self['top_slab_name']],
-                max_area = self['parameters']['max_area'],
-                max_mismatch = self['parameters']['max_mismatch'],
-                max_angle_diff = self['parameters']['max_angle_diff'],
-                r1r2_tol = self['parameters']['r1r2_tol'])
+                max_area = parameters['max_area'],
+                max_mismatch = parameters['max_mismatch'],
+                max_angle_diff = parameters['max_angle_diff'],
+                r1r2_tol = parameters['r1r2_tol'])
         
         if bottom_aligned is not None:
             #TODO: Find out if this is actually useful for the PES to return
@@ -521,29 +754,37 @@ class FT_MakeHeteroStructure(FiretaskBase):
             #should be written with another input of lateral shifts.
             hetero_interfaces = generate_all_configs(top_aligned, bottom_aligned,
                             nlayers_2d=1, nlayers_substrate=1,
-                            seperation=self['parameters']['interface_distance'])
+                            seperation=parameters['interface_distance'])
         
             hetero_name = self['bottom_slab_name']+self['top_slab_name']
             hetero_interfaces[0].to(fmt='poscar', filename=
                                     'POSCAR_'+hetero_name+'.vasp')
-        
-            return FWAction(update_spec={'matched_interface':
-                                         hetero_interfaces[0]}, 
+            
+            spec = fw_spec
+            updated_spec = UpdateNestedDict(spec, {'matched_interface':
+                                                   hetero_interfaces[0]})
+            return FWAction(update_spec=updated_spec, 
                             stored_data={'matched_interface':
                                          hetero_interfaces[0]})
         else:
             f = 1.05 # factor with wich to multiply the missmatch criteria
-            new_parameters = {'max_area': self['parameters']['max_area'] * f,
-                    'max_mismatch': self['parameters']['max_mismatch'] * f,
-                    'max_angle_diff': self['parameters']['max_angle_diff'] * f,
-                    'r1r2_tol': self['parameters']['r1r2_tol'] * f,
-                    'interface_distance': self['parameters']['interface_distance']
+            new_parameters = {'max_area': parameters['max_area'] * f,
+                    'max_mismatch': parameters['max_mismatch'] * f,
+                    'max_angle_diff': parameters['max_angle_diff'] * f,
+                    'r1r2_tol': parameters['r1r2_tol'] * f,
+                    'interface_distance': parameters['interface_distance']
                                 }
+            spec = fw_spec
+            parameters_dict = WriteNestedDictFromList(self['parameters_loc'],
+                                                      new_parameters)
+            updated_spec = UpdateNestedDict(spec, parameters_dict)
             new_fw = Firework(FT_MakeHeteroStructure(
                             bottom_slab_name=self['bottom_slab_name'],
                             top_slab_name=self['top_slab_name'],
-                            parameters=new_parameters), fw_spec)
-            return FWAction(additions = new_fw)
+                            parameters_loc=self['parameters_loc']),
+                            spec=updated_spec,
+                            name = 'Make Heterostructure with relaxed params')
+            return FWAction(detours = new_fw)
 
 @explicit_serialize
 class FT_MakeSlabFromStructure(FiretaskBase):
@@ -575,6 +816,7 @@ class FT_MakeSlabFromStructure(FiretaskBase):
     
     def run_task(self, fw_spec):
         from mpinterfaces.interface import Interface
+        from HelperFunctions import UpdateNestedDict
         
         bulk_structure = fw_spec[self['bulk_name']]
             
@@ -588,13 +830,12 @@ class FT_MakeSlabFromStructure(FiretaskBase):
                    min_thick = min_thickness,
                    min_vac = min_vacuum, primitive = False,
                    from_ase = True)
-        
+
+        spec = fw_spec
         miller = ''.join(str(e) for e in miller)
         slab_name = bulk_structure.composition.reduced_formula + miller
-        print(slab_name)
-        print(slab_name)
-        print(slab_name)
-        return FWAction(update_spec={slab_name: slab}, 
+        updated_spec = UpdateNestedDict(spec, {slab_name: slab})
+        return FWAction(update_spec=updated_spec, 
                         stored_data={slab_name: slab})
 
 @explicit_serialize

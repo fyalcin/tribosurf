@@ -34,10 +34,8 @@ inputs = {'material_1': {'formula': 'Al2O3',
                                   'use_spin': 'True'
                                   },
           'interface_params':{'interface_distance': 1.5,
-                              'max_area': 100,
-                              'max_mismatch': 0.025,
-                              'max_angle_diff': 2.5,
-                              'r1r2_tol': 0.025
+                              'max_area': 500,
+                              'r1r2_tol': 0.05
                               }
           }
 
@@ -106,8 +104,11 @@ Make_Hetero_Structure = Firework(FT_MakeHeteroStructure(
                      inputs['material_1']['miller'],
     top_slab_name=inputs['material_2']['formula']+
                   inputs['material_2']['miller'],
-    parameters=inputs['interface_params']), name='Make the interface')
+    parameters_loc=['interface_params']), name='Make the interface')
 WF.append(Make_Hetero_Structure)
+
+Print_spec = Firework(FT_PrintSpec(), name='Print Spec at the end')
+WF.append(Print_spec)
 
 #Define dependencies:
 Dependencies = {Initialize: [Check_Inputs],
@@ -120,7 +121,8 @@ Dependencies = {Initialize: [Check_Inputs],
                 Relax_M1: [Make_Slab_M1],
                 Relax_M2: [Make_Slab_M2],
                 Make_Slab_M1: [Make_Hetero_Structure],
-                Make_Slab_M2: [Make_Hetero_Structure]}
+                Make_Slab_M2: [Make_Hetero_Structure],
+                Make_Hetero_Structure: [Print_spec]}
 
 wf = Workflow(WF, Dependencies, name='Dummy Heterogeneous Workflow')
 
@@ -128,4 +130,4 @@ wf = Workflow(WF, Dependencies, name='Dummy Heterogeneous Workflow')
 lpad = LaunchPad.auto_load() # loads this based on the FireWorks configuration
 lpad.add_wf(wf)
 
-#rapidfire(lpad)
+rapidfire(lpad)

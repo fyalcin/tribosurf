@@ -32,6 +32,37 @@ def UpdateNestedDict(d, u):
             d[k] = v
     return d
 
+def WriteNestedDictFromList(key_list, value, d={}):
+    """Write a value to a nested dict defined by a list of strings.
+    
+    A list of keys is given and a nested dict is returned. The input value
+    will be put into the last key of the key_list. E.g.:
+        value = 'x' and key_list = ['a', 'b', 'c'] will return
+        {'a': {'b': {'c': 'x'}}}
+    
+    Parameters
+    ----------
+    key_list : list of str
+        A list of keys with wich to form the nested dictionary.
+    value :
+        The object to put at the end of the nested dictionary Can be any type.
+    d : dict, optional
+        A dictionary can be passed, but it will be overwritten. It is needed
+        for the recursive definition. The default is {}.
+
+    Returns
+    -------
+    d : dict
+        A nested dictionary with the input value at the end of it.
+
+    """
+    if len(key_list) > 1:
+        d[key_list[0]] = {}
+        d[key_list[0]] = d.get(key_list[0], {})
+        WriteNestedDictFromList(key_list[1:], value, d[key_list[0]])
+    else:
+        d[key_list[0]] = value
+    return d
 
 def GetValueFromNestedDict(dictionary, key_list):
     """Take a list of keys and a nested dictionary and return the value.
