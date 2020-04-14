@@ -18,16 +18,16 @@ indir = os.getcwd()
 
 #Create the input dictionary
 
-inputs = {'material_1': {'formula': 'FeCo',
-                         'miller': [0, 0, 1],
+inputs = {'material_1': {'formula': 'Al2O3',
+                         'miller': '001',
                          'min_vacuum': 25,
-                         'min_thickness': 10
+                         'min_thickness': 5
                          },
           'material_2': {'formula': 'Fe',
                          'mp_id': 'mp-13',
-                         'miller': [1, 1, 0],
+                         'miller': '111',
                          'min_vacuum': 25,
-                         'min_thickness': 10
+                         'min_thickness': 6
                          },
           'computational_params':{'functional': 'PBE',
                                   'use_vdw': 'False',
@@ -48,12 +48,10 @@ Initialize = Firework(FT_PrintSpec(), spec=inputs,
                                 name= 'Initialize Workflow')
 WF.append(Initialize)
 
-# =============================================================================
-# TODO: When CheckInputsFW is done, switch back the input directory to str
-#       inputs, so that miller can be used as an identification string for
-#       the slabs later!
-# =============================================================================
-Check_Inputs = CheckInputsFW(inputs, name='Check Inputs')
+Check_Inputs = CheckInputsFW(mat1name='material_1', mat2name='material_2',
+                             compparaname='computational_params',
+                             interparaname='interface_params',
+                             name='Check Inputs')
 WF.append(Check_Inputs)
 
 Start_M1 = Firework(FT_FetchStructureFromFormula(
@@ -63,7 +61,7 @@ Start_M1 = Firework(FT_FetchStructureFromFormula(
 WF.append(Start_M1)
 
 Start_M2 = Firework(FT_FetchStructureFromFormula(
-                        formula_loc=['material_1','formula'],
+                        formula_loc=['material_2','formula'],
                         structure_name=inputs['material_2']['formula']+'bulk'),
                         name='Get '+inputs['material_2']['formula']+' bulk')
 WF.append(Start_M2)
@@ -87,13 +85,13 @@ WF.append(Relax_M2)
 
 Make_Slab_M1 = Firework(FT_MakeSlabFromStructure(
                         bulk_name=inputs['material_1']['formula']+'bulk',
-                        parameters=inputs['material_1']),
+                        dict_name='material_1'),
                 name='Make '+inputs['material_1']['formula']+' slab')
 WF.append(Make_Slab_M1)
 
 Make_Slab_M2 = Firework(FT_MakeSlabFromStructure(
                         bulk_name=inputs['material_2']['formula']+'bulk',
-                        parameters=inputs['material_2']),
+                        dict_name='material_2'),
                 name='Make '+inputs['material_2']['formula']+' slab')
 WF.append(Make_Slab_M2)
 
@@ -103,13 +101,11 @@ WF.append(Relax_Slab_M1)
 Relax_Slab_M2 = RelaxFW(name='Relax '+inputs['material_2']['formula']+' slab')
 WF.append(Relax_Slab_M2)
 
-# =============================================================================
-# TODO: Make sure to switch the hardcoded miller indices here after
-#       CheckInputsFW is done and the inputs are switched back to str!
-# =============================================================================
 Make_Hetero_Structure = Firework(FT_MakeHeteroStructure(
-    bottom_slab_name=inputs['material_1']['formula']+'001',
-    top_slab_name=inputs['material_1']['formula']+'110',
+    bottom_slab_name=inputs['material_1']['formula']+
+                     inputs['material_1']['miller'],
+    top_slab_name=inputs['material_2']['formula']+
+                  inputs['material_2']['miller'],
     parameters=inputs['interface_params']), name='Make the interface')
 WF.append(Make_Hetero_Structure)
 
@@ -132,4 +128,4 @@ wf = Workflow(WF, Dependencies, name='Dummy Heterogeneous Workflow')
 lpad = LaunchPad.auto_load() # loads this based on the FireWorks configuration
 lpad.add_wf(wf)
 
-rapidfire(lpad)
+#rapidfire(lpad)

@@ -1,8 +1,8 @@
 #! /.fs/data/wolloch/atomate_test/atomate_env/bin/python
 # -*- coding: utf-8 -*-
-"""
-Created on Mon Mar 23 14:33:47 2020
+"""A collection of Firetasks to be used for the FireFlow project.
 
+Created on Mon Mar 23 14:33:47 2020
 @author: mwo
 """
 from fireworks.core.firework import FWAction, FiretaskBase, Firework
@@ -212,6 +212,116 @@ class FT_ReadInputFile(FiretaskBase):
         
         return FWAction(update_spec={self['filename']: input_dict})
 
+
+@explicit_serialize
+class FT_CheckMaterialInputDict(FiretaskBase):
+    """Checks a dictionary for essential keys and adds default values if needed.
+    
+    An input dictionary is compared to a list of essential keys that must be
+    present in the dictionary. If essential keys are missing an error is
+    printed and SystemExit is raised. If optional keys are not given, default
+    values are used for them and added to the dictionary.
+    
+    Parameters
+    ----------
+    input_dict_name: str
+        The name of a dictionary that was previously constructed from an input
+        file of the same name.
+    output_dict_name: str, optional
+        Name of the output dictionary that is going to be put into the workflow
+        spec. If not specified this will default to the input_dict_name.
+    ----------
+    
+    Returns
+    -------
+    dict
+        A dictionary is pushed to the spec of the workflow. It contains all the
+        essential and optional keys given and uses default values for the
+        remaining optional keys. The name in the spec is output_dict_name.
+    -------
+    """
+
+    _fw_name = 'Check Material Input Dict'
+    required_params = ['input_dict_name']
+    optional_params = ['output_dict_name']
+    
+    def run_task(self, fw_spec):
+        """Run the FireTask."""
+        from HelperFunctions import UpdateNestedDict
+        #Edit this block according to need, but be careful with the defaults!
+        #####################################################################
+        essential_keys = ['formula', 'miller']
+        additional_keys = ['min_vacuum', 'mp_id', 'min_thickness']
+        
+        MP_ID_default = None
+        min_thickness_default = 10.0
+        min_vacuum_default = 25.0
+        #####################################################################
+        input_dict = fw_spec[self['input_dict_name']]
+        if 'output_dict_name' in self:
+            out_name = self['output_dict_name']
+        else:
+            out_name = self['input_dict_name']
+
+        #Define all known keys here
+        known_keys = essential_keys + additional_keys
+        #initialize checking dictionary for essential inputs and output dict
+        out_dict = {}
+        check_essential = {}
+        for key in essential_keys:
+            check_essential[key] = False
+            
+        for key in input_dict.keys():
+        #Check for unknown parameters:
+            if key not in known_keys:
+                with open('output.txt', 'a') as out:
+                    out.write(' ')
+                    out.write('The input parameter <'+str(key)+
+                              '> is not known. Please check your input file'
+                              'and use only the following parameters:\n')
+                    out.write(str(known_keys))
+                    out.write('\n')
+                raise SystemExit
+            elif key == 'formula':
+                out_dict['formula'] = str(input_dict[key])
+                check_essential[key] = True
+            elif key == 'miller':
+                out_dict['miller'] = [int(k) for k in list(input_dict[key])]
+                check_essential[key] = True
+        
+        #check if all essential keys are present and print out missing ones.
+        for key in check_essential.keys():
+            if check_essential[key] == False:
+                with open('output.txt', 'a') as out:
+                    out.write('The essential input parameter "'+key+
+                              '" is missing. Check your input file!\n')
+        if not all(check_essential.values()):
+            with open('output.txt', 'a') as out:
+                out.write('')
+            raise SystemExit
+            
+        for key in additional_keys:
+            if key == 'mp_id':
+                if key in input_dict:
+                    out_dict['mp_id'] = str(input_dict[key])
+                else:
+                    out_dict['mp_id'] = MP_ID_default
+            if key == 'min_thickness':
+                if key in input_dict:
+                    out_dict['min_thickness'] = float(input_dict[key])
+                else:
+                    out_dict['min_thickness'] = min_thickness_default
+            if key == 'min_vacuum':
+                if key in input_dict:
+                    out_dict['min_vacuum'] = float(input_dict[key])
+                else:
+                    out_dict['min_vacuum'] = min_vacuum_default
+        
+        spec = fw_spec
+        updated_spec = UpdateNestedDict(spec, {out_name: out_dict})
+        return FWAction(update_spec=updated_spec)
+            
+
 @explicit_serialize
 class FT_CheckInputDict(FiretaskBase):
     """Checks a dictionary for essential keys and adds default values if needed.
@@ -231,13 +341,13 @@ class FT_CheckInputDict(FiretaskBase):
         spec. If not specified this will default to the input_dict_name.
     ----------
     
-    Yields
-    ------
+    Returns
+    -------
     dict
         A dictionary is pushed to the spec of the workflow. It contains all the
         essential and optional keys given and uses default values for the
-        rmaining optional keys. The name in the spec isoutput_dict_name.
-    ------
+        remaining optional keys. The name in the spec is output_dict_name.
+    -------
     """
 
     _fw_name = 'Check Input Dict'
@@ -446,8 +556,9 @@ class FT_MakeSlabFromStructure(FiretaskBase):
     ----------
     bulk_name: str
         name of the bulk structure in the spec from which the slab is made
-    parameters: dict
-        dictionary of input data that must contain the following keys:
+    dict_name: str
+        name of the dictionary in the spec that contains input data in the
+        following keys:
             miller: list of int
             min_thickness: float
             min_vacuum: float
@@ -460,16 +571,16 @@ class FT_MakeSlabFromStructure(FiretaskBase):
     """
     
     _fw_name = 'Make slab from structure in spec'
-    required_params = ['bulk_name', 'parameters']
+    required_params = ['bulk_name', 'dict_name']
     
     def run_task(self, fw_spec):
         from mpinterfaces.interface import Interface
         
         bulk_structure = fw_spec[self['bulk_name']]
             
-        miller = self['parameters']['miller']
-        min_thickness = self['parameters']['min_thickness']
-        min_vacuum = self['parameters']['min_vacuum']
+        miller = fw_spec[self['dict_name']]['miller']
+        min_thickness = fw_spec[self['dict_name']]['min_thickness']
+        min_vacuum = fw_spec[self['dict_name']]['min_vacuum']
 
         
         #Construct the slab out of the bulk_structure
@@ -478,8 +589,11 @@ class FT_MakeSlabFromStructure(FiretaskBase):
                    min_vac = min_vacuum, primitive = False,
                    from_ase = True)
         
-        miller = ''.join(str(e) for e in self['parameters']['miller'])
+        miller = ''.join(str(e) for e in miller)
         slab_name = bulk_structure.composition.reduced_formula + miller
+        print(slab_name)
+        print(slab_name)
+        print(slab_name)
         return FWAction(update_spec={slab_name: slab}, 
                         stored_data={slab_name: slab})
 

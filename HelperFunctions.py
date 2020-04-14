@@ -1,6 +1,38 @@
 """A collection of HelperFunctions to be used for the FireFlow project."""
 
 
+
+
+def UpdateNestedDict(d, u):
+    """Update the dictionary d with the update u without losing data in d.
+    
+    This function allows to update a nested dictionary on an arbitrary level
+    without overwriting any data present in the key that is being updated.
+    This entire function is copied from the follwing stackoverflow post:
+    https://stackoverflow.com/a/3233356
+
+    Parameters
+    ----------
+    d : dict
+        (Nested) dictionary to be updated. 
+    u : dict
+        (Nested) update to the dictionary.
+
+    Returns
+    -------
+    d : dict
+        Updated dictionary
+
+    """
+    import collections.abc
+    for k, v in u.items():
+        if isinstance(v, collections.abc.Mapping):
+            d[k] = UpdateNestedDict(d.get(k, {}), v)
+        else:
+            d[k] = v
+    return d
+
+
 def GetValueFromNestedDict(dictionary, key_list):
     """Take a list of keys and a nested dictionary and return the value.
     

@@ -39,11 +39,15 @@ def ConvergeParametersFW(name):
     FW=Firework(FT_PrintSpec(), name=name)
     return FW
 
-def CheckInputsFW(input_dictionary, name):
+def CheckInputsFW(mat1name, mat2name, compparaname, interparaname, name):
 # =============================================================================
 #     TODO: Check all inputs and add default values for all not specified keys
+#           for the computational parameters and the interface parameters.
+#           Write a docstring!
 # =============================================================================
-    FW=Firework(FT_PrintSpec(), name=name)
+    FT_Mat1 = FT_CheckMaterialInputDict(input_dict_name=mat1name)
+    FT_Mat2 = FT_CheckMaterialInputDict(input_dict_name=mat2name)
+    FW=Firework([FT_Mat1, FT_PrintSpec(), FT_Mat2], name=name)
     return FW
 
     
