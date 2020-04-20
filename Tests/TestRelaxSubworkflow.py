@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-""" Common Workflows to be used by the FireFlow Project
+""" 
 Created on Wed Apr 15 17:04:35 2020
 
 @author: mwo
@@ -18,18 +18,22 @@ prev_spec = {'some_data': {'a': 1, 'b':2},
              'relax_loc': './RELAX_THIS_THING'}
 
 bandgap = GetGapFromMP(mp_id)
-if bandgap > 0.2:
+if bandgap > 0.1:
     is_metal = False
 else:
     is_metal = True
 
-parameters = {'use_vdw': True,
-              'functional': 'SCAN',
-              'k_distance': 35,
-              'encut': 350,
+parameters = {'use_vdw': False,
+              'functional': 'PBE',
+              #'k_distance': 25,
+              #'encut': 350,
               'is_metal': is_metal}
 
-wf = Relax_SWF(struct, parameters, 'bulk_pos_relax', prev_spec)
+Relaxed_structure_loc = ['structures',
+                         'relaxed_structures',
+                         struct.composition.reduced_formula]
+wf = Relax_SWF(struct, parameters, 'bulk_pos_relax', Relaxed_structure_loc,
+               prev_spec)
 #fw = OptimizeFW(struct, override_default_vasp_params=uis)
 #fw2 = RelaxFW(name='print spec')
 
@@ -38,4 +42,4 @@ lpad = LaunchPad.auto_load() # loads this based on the FireWorks configuration
 lpad.add_wf(wf)
 
 
-rapidfire(lpad)
+#rapidfire(lpad)

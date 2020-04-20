@@ -1,7 +1,111 @@
 """A collection of HelperFunctions to be used for the FireFlow project."""
 
 
+def GetCustomVaspRelaxSettings(comp_parameters, relax_type):
+    """Make custom vasp settings for relaxations.
+    
 
+    Parameters
+    ----------
+    comp_parameters : dict
+        Computational parameters dictionary which is usually created partly
+        by the user and then filled automatically with defaults and after
+        convergence tests.
+    relax_type : str
+        Specifies what is to be relaxed in what way. Check 'allowed_types'
+        for a list of choices.
+
+    Raises
+    ------
+    SystemExit
+        If a non-supported relax_type is passed, the process terminates.
+
+    Returns
+    -------
+    vis : str
+        A vasp input set for pymatgen.
+    uis : dict
+        User input settings that will override the standard setting in the vis.
+    vdw : str
+        Specifies which vdw functional is used. (optB86b or rVV10)
+
+    """
+    allowed_types = ['bulk_full_relax', 'bulk_vol_relax', 'bulk_pos_relax',
+                     'bulk_shape_relax',
+                     'slab_shape_relax', 'slab_pos_relax',
+                     'interface_shape_relax', 'interface_pos_relax']
+    
+    if relax_type not in allowed_types:
+        raise SystemExit('relax type is not known. Please select from: {}'
+                         .format(allowed_types))
+    
+    #Set user incar settings:
+    uis = {}
+    uis['NEDOS'] = 3001
+    uis['PREC'] = 'Accurate'
+    uis['GGA_COMPAT'] = '.FALSE.'
+    uis['LASPH'] = '.TRUE.'
+    uis['LORBIT'] = 11
+    uis['MAXMIX'] = 100
+    uis['NELMIN'] = 4
+    
+    if relax_type.startswith('slab_') or relax_type.startswith('interface_'):
+        uis['NELMDL'] = -15
+        uis['EDIFFG'] = -0.05
+    else:
+        uis['EDIFFG'] = -0.01
+    
+    if relax_type.endswith('full_relax'):
+        uis['ISIF'] = 3
+    elif relax_type.endswith('pos_relax'):
+        uis['ISIF'] = 2
+    elif relax_type.endswith('vol_relax'):
+        uis['ISIF'] = 7
+    elif relax_type.endswith('shape_relax'):
+        uis['ISIF'] = 5
+    
+    if 'encut' in comp_parameters:
+        uis['ENCUT'] = comp_parameters['encut']
+    
+    if 'is_metal' in comp_parameters:
+        if comp_parameters['is_metal']:
+            uis['SIGMA'] = 0.2
+            uis['ISMEAR'] = 2
+        else:
+            uis['SIGMA'] = 0.05
+            uis['ISMEAR'] = -5
+    else:
+        uis['SIGMA'] = 0.1
+        uis['ISMEAR'] = 0
+        
+        
+    #set van der Waals functional. Note that as of now, 'functional' must be
+    #specified for vdw to work!
+    if set(('use_vdw', 'functional')) <= comp_parameters.keys():
+        if comp_parameters['use_vdw']:
+            if comp_parameters['functional'] == 'SCAN':
+                vdw = 'rVV10'
+            else:
+                vdw = 'optB86b'
+        else:
+            vdw = None
+    else:
+        vdw = None
+        
+    if 'functional' in comp_parameters:
+        if comp_parameters['functional'] == 'SCAN':
+            vis = 'MPScanRelaxSet'
+            #Algo All does not play well with tetrahedron method
+            if 'is_metal' in comp_parameters:
+                if not comp_parameters['is_metal']:
+                    uis['SIGMA'] = 0.1
+                    uis['ISMEAR'] = 0
+        else:
+            vis = 'MPRelaxSet'
+    else:
+        vis = 'MPRelaxSet'
+        
+    return vis, uis, vdw
 
 def UpdateNestedDict(d, u):
     """Update the dictionary d with the update u without losing data in d.
@@ -140,6 +244,26 @@ def WriteFileFromDict(Dict, Filename):
             out.write(line+'\n')
     return
 
+def GetGapFromMP(MP_ID):
+    """Get the bandgap of a structure from the MaterialsProject database.
+    
+    Parameters
+    ----------
+    MP_ID : str
+        Materials Project material_id
+
+    Returns
+    -------
+    float
+        Bandgap of the material (is usually not accurate, but can be used
+        to decide if the material is a metal or not).
+
+    """
+    from pymatgen import MPRester
+    with MPRester() as mpr:
+        band_gap = mpr.query(criteria={'material_id': MP_ID},
+                             properties=['band_gap'])
+    return band_gap[0]['band_gap']
 
 def GetLowEnergyStructure(chem_formula, MP_ID=None, PrintInfo=False):
     """

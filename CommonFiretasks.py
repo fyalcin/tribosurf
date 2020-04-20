@@ -13,6 +13,40 @@ from fireworks.utilities.fw_utilities import explicit_serialize
 # =============================================================================
 
 @explicit_serialize
+class FT_StructFromVaspOutput(FiretaskBase):
+    _fw_name = 'Make Structure from Vasp Output'
+    required_params = ['out_struct_loc']
+    optional_params = ['job_dir']
+    def run_task(self, fw_spec):
+        from pymatgen.io.vasp.outputs import Outcar
+        from pymatgen.core import Structure
+        from HelperFunctions import WriteNestedDictFromList, UpdateNestedDict
+        
+        if 'job_dir' in self:
+            job_dir = self['job_dir']
+        elif '_job_info' in fw_spec:
+            job_dir = fw_spec['_job_info'][-1]['launch_dir']
+        else:
+            job_dir = '.'
+        print(job_dir)
+        outcar = Outcar(job_dir+'/OUTCAR.relax2.gz')
+        structure = Structure.from_file(job_dir+'/CONTCAR.relax2.gz')
+        
+        mag_tuple = outcar.magnetization
+        
+        if mag_tuple:
+            for i, site in enumerate(structure.sites):
+                structure.replace(i, structure.species[i],
+                                  properties={'magmom': mag_tuple[i]['tot']})
+        
+        output = WriteNestedDictFromList(self['out_struct_loc'],
+                                         structure)
+
+        spec = fw_spec
+        updated_spec = UpdateNestedDict(spec, output)
+        return FWAction(update_spec = updated_spec)
+    
+@explicit_serialize
 class FT_AddSelectiveDynamics(FiretaskBase):
     _fw_name = 'Add selctive dynamics'
     required_params = ['structure']
