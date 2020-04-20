@@ -21,7 +21,39 @@ from HelperFunctions import GetCustomVaspRelaxSettings
 
 
 def Relax_SWF(structure, comp_parameters, relax_type, out_loc, spec):
+    """Relax bulk, slab, or interface structures in a subworkflow.
     
+    A FireWorks (Sub)workflow is created that works with the PBE and SCAN
+    functionals. It also supports generalized Kpoint-grids and different
+    kinds of settings depending on the 'relax_type' input parameters. For
+    Interfaces, selective dynamics will be added so that ions can only move
+    in the direciton of the third lattice. Functionality can be added to pass
+    a custom list for selective dynamics as well. The workflow puts the final
+    relaxed structure in the spec of the firework which is then passed on to
+    the main workflow.
+
+    Parameters
+    ----------
+    structure : pymatgen.core.structure.Structure
+        The structure to relax.
+    comp_parameters : dict
+        Dictionary of computational parameters for the relaxation.
+    relax_type : str
+        Used by the 'GetCustomVaspRelaxSettings' HelperFunction to set
+        override parameters for the used MPRelaxSer or the MPScanRelaxSet and
+        also determine which form of relaxation (ISIF) to do.
+    out_loc : list of str
+        List of keys that specify in which location the final output structure
+        will be stored in the spec.
+    spec : dict
+        present spec that will be passed on to further fireworks after the
+        relaxed structure has been added.
+
+    Returns
+    -------
+    WF : FireWorks Workflow
+
+    """  
     CalcName = structure.composition.reduced_formula+relax_type
     
     vis, uis, vdw = GetCustomVaspRelaxSettings(comp_parameters, relax_type)

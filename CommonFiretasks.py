@@ -8,12 +8,36 @@ Created on Mon Mar 23 14:33:47 2020
 from fireworks.core.firework import FWAction, FiretaskBase, Firework
 from fireworks.utilities.fw_utilities import explicit_serialize
 
-# =============================================================================
-# Custom FireTasks
-# =============================================================================
-
 @explicit_serialize
 class FT_StructFromVaspOutput(FiretaskBase):
+    """Makes a pymatgen Structure object out of VASP output files.
+    
+    Parameters
+    ----------
+    out_struct_loc: list of str
+        location of the structure in the spec given by a list of keys.
+    job_dir: str, optional
+        directory where the VASP files (CONTCAR.relax.2.gz and
+        OUTCAR.relax.2.gz) are located. This assumes that a double-relaxation
+        run has been done before with custodian. If not defined, the files
+        will be loaded from the current directory. Since the files might be on
+        a different machine, better use CopyFilesFromCalcLoc before.
+    ----------
+    
+    Returns
+    -------
+    structure : pymatgen.core.structure.Structure
+        The structure is added to the fw_spec.
+    -------
+    
+    Notes
+    -----
+    TODO: Maybe this should be generalized to except specific file names.
+    However, this have to be optional parameters and should default to the
+    current values of CONTCAR.relax.2.gz and OUTCAR.relax.2.gz!
+    
+    """
+    
     _fw_name = 'Make Structure from Vasp Output'
     required_params = ['out_struct_loc']
     optional_params = ['job_dir']
@@ -48,6 +72,24 @@ class FT_StructFromVaspOutput(FiretaskBase):
     
 @explicit_serialize
 class FT_AddSelectiveDynamics(FiretaskBase):
+    """Write a POSCAR with selective dynamics added.
+    
+    Parameters
+    ----------
+    structure : pymatgen.core.structure.Structure
+        The structure from which the POSCAR file is written
+    selective_dynamics_array: list, optional
+        Optional Nx3 array of booleans given as a list of lists. N is equal to
+        the number of sites in the structure.
+    ----------
+    
+    Returns
+    -------
+    POSCAR: file
+        A POSCAR file is written in the current directory.
+    
+    """
+    
     _fw_name = 'Add selctive dynamics'
     required_params = ['structure']
     optional_params = ['selective_dynamics_array']
@@ -74,20 +116,6 @@ class FT_AddSelectiveDynamics(FiretaskBase):
         
         spec = fw_spec
         return FWAction(update_spec = spec) 
-                    
-
-@explicit_serialize
-class FT_SetUpRelax(FiretaskBase):
-    
-    _fw_name = 'Set up relaxation firework'
-    required_params = ['parameter_loc', 'relax_type']
-
-    def run_task(self, fw_spec):
-        
-        allowed_types = ['bulk', 'slab', 'interface']
-        if self['relax_type'] not in allowed_types:
-            raise SystemExit('Relaxation type is not supported, '
-                             'please select on of: {}'.format(allowed_types))
         
 
 @explicit_serialize
@@ -245,17 +273,18 @@ class FT_ReadInputFile(FiretaskBase):
         ...
         ...
         
-    Args
-    ----
-        filename (str):     File to be opened and read by the FireTask
-    ----
+    Parameters
+    ----------
+    filename: str
+        File to be opened and read by the FireTask
+    ----------
     
-    Yields
-    ------
-        dictionary:         Is pushed to the spec and contains key-value
-                            pairs {'Flag_1': 'Setting_1',
-                                   'Flag_2': 'Setting_2',
-                                   ...} 
+    Returns
+    -------
+    dictionary is pushed to the spec and contains key-value pairs
+        {'Flag_1': 'Setting_1',
+         'Flag_2': 'Setting_2',
+          ...}
     ------
     """
     

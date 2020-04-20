@@ -8,7 +8,6 @@ Created on Thu Apr  2 10:37:34 2020
 
 import os
 from fireworks import LaunchPad, Firework, Workflow
-from atomate.vasp.fireworks import OptimizeFW
 from fireworks.core.rocket_launcher import rapidfire
 from CommonFiretasks import *
 from CommonFireworks import *
@@ -18,14 +17,14 @@ indir = os.getcwd()
 
 #Create the input dictionary
 
-inputs = {'material_1': {'formula': 'Al2O3',
-                         'miller': '001',
+inputs = {'material_1': {'formula': 'Cu',
+                         'miller': '111',
                          'min_vacuum': 25,
                          'min_thickness': 5
                          },
           'material_2': {'formula': 'Fe',
                          'mp_id': 'mp-13',
-                         'miller': '111',
+                         'miller': '110',
                          'min_vacuum': 25,
                          'min_thickness': 6
                          },
@@ -120,8 +119,10 @@ Dependencies = {Initialize: [Check_Inputs],
                 Final_Params: [Relax_M1, Relax_M2],
                 Relax_M1: [Make_Slab_M1],
                 Relax_M2: [Make_Slab_M2],
-                Make_Slab_M1: [Make_Hetero_Structure],
-                Make_Slab_M2: [Make_Hetero_Structure],
+                Make_Slab_M1: [Relax_Slab_M1],
+                Make_Slab_M2: [Relax_Slab_M2],
+                Relax_Slab_M1: [Make_Hetero_Structure],
+                Relax_Slab_M2: [Make_Hetero_Structure],
                 Make_Hetero_Structure: [Print_spec]}
 
 wf = Workflow(WF, Dependencies, name='Dummy Heterogeneous Workflow')
