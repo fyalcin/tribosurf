@@ -12,6 +12,49 @@ from fireworks.utilities.fw_utilities import explicit_serialize
 # Custom FireTasks
 # =============================================================================
 
+@explicit_serialize
+class FT_AddSelectiveDynamics(FiretaskBase):
+    _fw_name = 'Add selctive dynamics'
+    required_params = ['structure']
+    optional_params = ['selective_dynamics_array']
+
+    def run_task(self, fw_spec):
+        import numpy as np
+        from pymatgen.io.vasp.inputs import Poscar
+        struct = self['structure']
+        
+        if 'selective_dynamics_array' in self:
+            sd_array = self['selective_dynamics_array']
+            if len(sd_array) != len (struct.sites):
+                raise SystemExit('Length of provided selective_dynamics array'
+                                 ' is not equal to the number of sites in the'
+                                 ' structure!')
+        else:
+            sd_array = []
+            for i in range(len(struct.sites)):
+                sd_array.append([False, False, True])
+            #sd_array = np.asarray(sd_array)
+        
+        poscar = Poscar(struct, selective_dynamics=sd_array)
+        poscar.write_file('POSCAR')
+        
+        spec = fw_spec
+        return FWAction(update_spec = spec) 
+                    
+
+@explicit_serialize
+class FT_SetUpRelax(FiretaskBase):
+    
+    _fw_name = 'Set up relaxation firework'
+    required_params = ['parameter_loc', 'relax_type']
+
+    def run_task(self, fw_spec):
+        
+        allowed_types = ['bulk', 'slab', 'interface']
+        if self['relax_type'] not in allowed_types:
+            raise SystemExit('Relaxation type is not supported, '
+                             'please select on of: {}'.format(allowed_types))
+        
 
 @explicit_serialize
 class FT_SpawnOptimizeFW(FiretaskBase):
@@ -850,7 +893,7 @@ class FT_MakeSlabFromFormula(FiretaskBase):
         formula (str):      Chemical formula of the structure (e.g. 'Fe2O3').
                             The structure with the lowest formation energy for
                             this formula is used unless MP_ID is specified.
-        MP_ID (str):        Materials Project ID of the selected bulk structure
+        mp_id (str):        Materials Project ID of the selected bulk structure
                             (e.g. 'mp-990448').
         miller (list):      List of miller indices to describe the selected
                             surface of the slab (e.g. [1, 1, 0]).
@@ -867,18 +910,18 @@ class FT_MakeSlabFromFormula(FiretaskBase):
     
     _fw_name = 'Make Slab from Formula'
     required_params = ['formula', 'miller', 'thickness']
-    optional_params = ['MP_ID', 'vacuum']
+    optional_params = ['mp_id', 'vacuum']
     
     def run_task(self, fw_spec):
         from HelperFunctions import GetLowEnergyStructure
         from mpinterfaces.interface import Interface
         
-        if self['MP_ID']:
-            MP_ID = self['MP_ID']
+        if 'mp_id' in self:
+            MP_ID = self['mp_id']
         else:
             MP_ID = None
         
-        if self['vacuum']:
+        if 'vacuum' in self:
             vacuum = self['vacuum']
         else:
             vacuum = 25.0
@@ -899,6 +942,16 @@ class FT_MakeSlabFromFormula(FiretaskBase):
         slab_name = self['formula'] + miller
         return FWAction(update_spec={slab_name: slab}, 
                         stored_data={slab_name: slab})
+
+@explicit_serialize
+class FT_WritePrecalc(FiretaskBase):
+    """Write a PRECALC file for the getKPoints script."""
+    
+    _fw_name = "Write PRECALC file"
+    required_params = ['PrecalcDict']
+    def run_task(self, fw_spec):
+        from HelperFunctions import WriteFileFromDict
+        WriteFileFromDict(self['PrecalcDict'], 'PRECALC')
 
 @explicit_serialize
 class FT_WriteGeneralKpointsInputs(FiretaskBase):
@@ -928,7 +981,7 @@ class FT_WriteGeneralKpointsInputs(FiretaskBase):
     def run_task(self, fw_spec):
         from HelperFunctions import WriteFileFromDict
         
-        if self['WorkDir']:
+        if 'WorkDir' in self:
             workdir = self['WorkDir']
         else:
             workdir = './'
@@ -936,7 +989,7 @@ class FT_WriteGeneralKpointsInputs(FiretaskBase):
         self['structure'].to(fmt='poscar', filename=workdir+'POSCAR')
         WriteFileFromDict(self['PrecalcDict'], workdir+'PRECALC')
 
-        if self['IncarDict']:
+        if 'IncarDict' in self:
             WriteFileFromDict(self['IncarDict'], workdir+'INCAR')
             
 
@@ -957,28 +1010,35 @@ class FT_GetKpoints(FiretaskBase):
     """
     
     _fw_name = 'Get Kpoints'
-    optional_params = ['WorkDir']
+    optional_params = ['WorkDir', 'KPTS_loc']
 
     def run_task(self, fw_spec):
         import os
         from pymatgen.io.vasp.inputs import Kpoints
+        from HelperFunctions import WriteNestedDictFromList
         
-        if self['WorkDir']:
+        if 'WorkDir' in self:
             workdir = self['WorkDir']
         else:
             workdir = './'
+        
 
         #Make a pymatgen Kpoints Object from a KPOINTS file
         KPTS = Kpoints().from_file(workdir+'KPOINTS')
+        
+        if 'KPTS_loc' in self:
+            out_dict = WriteNestedDictFromList(self['KPTS_loc'], KPTS, d={})
+        else:
+            out_dict = {'KPOINTS': KPTS}
 
         #Check for 'KPOINTS.log in workdir and read if it is there'
         if os.path.isfile(workdir+'KPOINTS.log'):
             with open(workdir+'KPOINTS.log') as f:
                 Kpoints_Info = f.readlines()
             return FWAction(stored_data={'KPOINTS_Info': Kpoints_Info},
-                             mod_spec=[{'_push': {'KPOINTS': KPTS}}])
+                             mod_spec=[{'_push': out_dict}])
         else:
-            return FWAction(mod_spec=[{'_push': {'KPOINTS': KPTS}}])
+            return FWAction(mod_spec=[{'_push': out_dict}])
 
 
 @explicit_serialize

@@ -82,7 +82,7 @@ def ReadWFInputsFW(inputfile_name):
 
 
 def MakeGeneralizedKpointsFW(structure, PrecalcDict, IncarDict=None,
-                              WorkDir='./'):
+                              WorkDir='./', KPTS_loc=None):
     """
     A workflow is constructured that uses the K-Point Grid Generator
     of the Mueller group at John Hopkins to get a kpoint mesh for
@@ -99,6 +99,9 @@ def MakeGeneralizedKpointsFW(structure, PrecalcDict, IncarDict=None,
                             information about ISYM, MAGMOM, etc...
         WorkDir (str):      Optional working directory where everything happens
                             this is created if not already found.
+        KPTS_loc (list of str): Optional location of the Kpoints object in
+                                the spec. Will default to 'KPOINTS' if left at
+                                'None'.
 
     Returns:
         Firework
@@ -115,7 +118,7 @@ def MakeGeneralizedKpointsFW(structure, PrecalcDict, IncarDict=None,
                                                   IncarDict=IncarDict,
                                                   WorkDir=WorkDir)
     FT_makeKpoints = ScriptTask(script=['(cd '+WorkDir+' ; getKPoints)'])
-    FT_getKpoints = FT_GetKpoints(WorkDir=WorkDir)
+    FT_getKpoints = FT_GetKpoints(WorkDir=WorkDir, KPTS_loc=KPTS_loc)
     FT_CleanUp = FT_CleanUpGeneralizedKpointFiles(WorkDir=WorkDir)
 
     FW = Firework([FT_write_files, FT_makeKpoints, FT_getKpoints,
