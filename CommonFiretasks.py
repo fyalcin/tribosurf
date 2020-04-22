@@ -9,6 +9,24 @@ from fireworks.core.firework import FWAction, FiretaskBase, Firework
 from fireworks.utilities.fw_utilities import explicit_serialize
 
 @explicit_serialize
+class FT_StartRelaxSubWorkflow(FiretaskBase):
+    _fw_name = 'Starting Relaxation Subworkflow'
+    required_params = ['structure_loc', 'comp_parameters_loc', 'relax_type',
+                       'out_loc']
+    def run_task(self, fw_spec):
+        from CommonWorkflows import Relax_SWF
+        from HelperFunctions import GetValueFromNestedDict
+        
+        relax_type = self['relax_type']
+        structure = GetValueFromNestedDict(fw_spec, self['structure_loc'])
+        params = GetValueFromNestedDict(fw_spec, self['comp_parameters_loc'])
+        out_loc = self['out_loc']
+        
+        SWF = Relax_SWF(structure, params, relax_type, out_loc, fw_spec)
+        return FWAction(detours=SWF)
+        
+        
+@explicit_serialize
 class FT_StructFromVaspOutput(FiretaskBase):
     """Makes a pymatgen Structure object out of VASP output files.
     
@@ -171,46 +189,88 @@ class FT_FetchStructureFromFormula(FiretaskBase):
     Uses the helper function GetLowEnergyStructure to get the structure for a
     given chemical formula with the lowest formation energy. If a mp_id is
     also given, this exact structure will be fetched. The structure will be 
-    saved on the first level of the spec under the given name.
+    saved on the first level of the spec under the given name. Information on
+    the metallicity of the material will also be saved in the spec.
     
     Parameters
     ----------
-    formula_loc: list of str
+    materials_dict_loc: list of str
         Location where the formula of the structure to fetch is located.
-        E.g. ['inputs', 'bottom_slab', 'formula']
-        will point to fw_spec['inputs']['bottom']['formula']
-        If there is an input key 'mp_id' at the same level as the formula
-        (e.g. fw_spec['inputs']['bottom']['mp-id']) it will be used to
-        exactly define the structure to be fetched.
+        E.g. ['inputs', 'bottom_slab'] will lead to the formula located at
+        fw_spec['inputs']['bottom']['formula'] to be loaded.
+        The input key 'mp_id' will also be loaded and has to be present at
+        the same location (e.g. fw_spec['inputs']['bottom']['mp-id']) but it
+        may be None-type and then is not used to fetch the structure.
         
-    structure_name: str
-        If given saves the structrue under this name in the first level of the
-        fw_spec. E.g. fw_spec[structure_name] = structure
+    structure_loc: list of str, optional
+        If given saves the structure at this location in the fw_spec.
+        E.g. ['my_structures', 'relaxed_structures', 'bulk_TiO'] will allow
+        you to find the structure later in
+        fw_spec[my_structures']['relaxed_structures']['bulk_TiO']
+        If not given, the structure will be placed in the spec on the same
+        level as the formula with the key: formula+'_fromMP'
     ---------
     
     Returns
     ------
-    An updated fw_spec that includes a new structure.
+    An updated fw_spec that includes a new structure and updates the mp_id and
+    information about the bandgap of the structure.
     ------
     """
     
     _fw_name = 'Fetch Structure From Spec'
-    required_params = ['formula_loc', 'structure_name']
+    required_params = ['materials_dict_loc']
+    optional_params = ['structure_loc']
     
     def run_task(self, fw_spec):
         from HelperFunctions import GetLowEnergyStructure, \
-                                    GetValueFromNestedDict
+                                    GetValueFromNestedDict, GetGapFromMP, \
+                                    UpdateNestedDict, WriteNestedDictFromList
         
-        formula = GetValueFromNestedDict(fw_spec, self['formula_loc'])
-        mp_id = GetValueFromNestedDict(fw_spec, 
-                                       self['formula_loc'][:-1]+['mp_id'])
+        mat_dict = self['materials_dict_loc']
+        formula_loc = mat_dict+['formula']
+        mpid_loc = mat_dict+['mp_id']
+        formula = GetValueFromNestedDict(fw_spec, formula_loc)
+        mp_id = GetValueFromNestedDict(fw_spec, mpid_loc)
+        
         
         structure, MP_ID = GetLowEnergyStructure(formula,
                                                  MP_ID=mp_id,
                                                  PrintInfo=False)
         
+        bandgap = GetGapFromMP(MP_ID)
+        if bandgap > 0.1:
+            is_metal = False
+        else:
+            is_metal = True
+            
+        updated_mpid = WriteNestedDictFromList(mpid_loc, MP_ID, d={})
+        updated_metal = WriteNestedDictFromList(mat_dict+['is_metal'],
+                                                is_metal, d={})
+        if 'structure_name' in self:
+            updated_struct = WriteNestedDictFromList(self['structure_loc'],
+                                                     structure, d={})
+        else:
+            updated_struct = WriteNestedDictFromList(mat_dict+[formula+
+                                                               '_fromMP'],
+                                                     structure, d={})
+        
+        
+        import pprint
         spec = fw_spec
-        spec.update({self['structure_name']: structure})
+        spec = UpdateNestedDict(spec, updated_mpid)
+        print('')
+        print('spec_mpid:')
+        pprint.pprint(spec)
+        spec = UpdateNestedDict(spec, updated_metal)
+        print('')
+        print('spec_metal:')
+        pprint.pprint(spec)
+        spec = UpdateNestedDict(spec, updated_struct)
+        print('')
+        print('spec_struct:')
+        pprint.pprint(spec)
+        
         return FWAction(update_spec = spec)
 
 @explicit_serialize
@@ -801,42 +861,42 @@ class FT_MakeHeteroStructure(FiretaskBase):
     If the match fails, the accuracy criteria are relaxed in steps of 5% until
     a match is found.
 
-    Args
-    ----
-        bottom_slab_name (str): Name of the structure of the bottom slab that
-                                needs to be aligned (structure itself must be
-                                in fw_spec).
-        top_slab_name (str):    Name of the structure of the top slab that
-                                needs to be aligned (structure itself must be
-                                in fw_spec).
-        parameters_loc (list of str):  location of the dictionary in the spec
-                                holding the following keys:
-                            interface_distance (float): Distance between the
-                                two materials.
-                            max_area (float): Maximal cross section
-                                area of the matched cell in Angstrom squared.
-                                Defaults to 200.,
-                            max_mismatch (float): Maximal allowed mismatch
-                                between lattice vector length.
-                                Defaults to 0.01 (1%),
-                            max_angle_diff (float): Maximal allowed mismatch
-                                between lattice vector angle in degrees.
-                                Defaults to 1.
-                            r1r2_tol (float): Tolerance between factors r1 and
-                                r2 which relate to the matched cell areas as:
-                                abs(r1*area1-r2*area2)/max_area <= r1r2_tol.
-                                Defaults to 0.02
-    ----
+    Parameters
+    ----------
+    bottom_slab_loc: list of str
+        list of keys in the spec that point to the bottom slab.
+    top_slab_loc: list of str
+        list of keys in the spec that point to the top slab.
+    parameters_loc: list of str
+        location of the dictionary in the spec holding the following keys:
+        interface_distance (float): Distance between the two materials.
+        max_area (float): Maximal cross section area of the matched cell in
+            Angstrom squared. Defaults to 200.,
+        max_mismatch (float): Maximal allowed mismatch between lattice vector
+            length. Defaults to 0.01 (1%),
+        max_angle_diff (float): Maximal allowed mismatch between lattice
+            vector angle in degrees. Defaults to 1.
+        r1r2_tol (float): Tolerance between factors r1 and r2 which relate to
+            the matched cell areas as:
+            abs(r1*area1-r2*area2)/max_area <= r1r2_tol. Defaults to 0.02
+    out_loc: list of str, optional
+        If given saves the output structure, and the two matched slabs in the
+        fw_spec at the location specified. If not given the location defaults
+        to: ['interface'], where the slabs and interfaces will be saved as:
+            'top_slab'
+            'bottom_slab'
+            'initial_match'
+    ----------
 
     Returns
     -------
-        Matched Structure (pymatgen structure object)
-    -------
+    Matched interface structure and bottom and top slabs in the fw_spec.
         
     """
     
     _fw_name = 'Make Hetero Structure'
-    required_params = ['bottom_slab_name', 'top_slab_name', 'parameters_loc']
+    required_params = ['bottom_slab_loc', 'top_slab_loc', 'parameters_loc']
+    optional_params = ['out_loc']
     
     def run_task(self, fw_spec):
         from mpinterfaces.transformations import get_aligned_lattices
@@ -845,33 +905,49 @@ class FT_MakeHeteroStructure(FiretaskBase):
                                     GetValueFromNestedDict, \
                                     WriteNestedDictFromList
         parameters = GetValueFromNestedDict(fw_spec, self['parameters_loc'])
-        print(parameters)
+        bottom_slab = GetValueFromNestedDict(fw_spec, self['bottom_slab_loc'])
+        top_slab = GetValueFromNestedDict(fw_spec, self['top_slab_loc'])
+        
         bottom_aligned, top_aligned = get_aligned_lattices(
-                fw_spec[self['bottom_slab_name']],
-                fw_spec[self['top_slab_name']],
+                bottom_slab,
+                top_slab,
                 max_area = parameters['max_area'],
                 max_mismatch = parameters['max_mismatch'],
                 max_angle_diff = parameters['max_angle_diff'],
                 r1r2_tol = parameters['r1r2_tol'])
         
         if bottom_aligned is not None:
-            #TODO: Find out if this is actually useful for the PES to return
-            #all the interface structures we need, or if another stacking function
-            #should be written with another input of lateral shifts.
-            hetero_interfaces = generate_all_configs(top_aligned, bottom_aligned,
-                            nlayers_2d=1, nlayers_substrate=1,
+# ============================================================================
+# TODO: Find out if this is actually useful for the PES to return
+#       all the interface structures we need, or if another stacking function
+#       should be written with another input of lateral shifts.
+#       Check out AdsorbateSiteFinder of pymatgen.analysis.adsorption!!
+#       If generate all configs will work, we just have to remove the
+#       [0] index and move the whole list of structures to the spec.
+# ============================================================================
+            hetero_interfaces = generate_all_configs(top_aligned,
+                                                     bottom_aligned,
+                                                     nlayers_2d=1,
+                                                     nlayers_substrate=1,
                             seperation=parameters['interface_distance'])
         
-            hetero_name = self['bottom_slab_name']+self['top_slab_name']
+            name = self['bottom_slab_loc'][-1]+self['bottom_slab_loc'][-1]
             hetero_interfaces[0].to(fmt='poscar', filename=
-                                    'POSCAR_'+hetero_name+'.vasp')
+                                    'POSCAR_'+name+'.vasp')
+            
+            if 'out_loc' in self:
+                out_loc = self['out_loc']
+            else:
+                out_loc = ['interface']
+            
+            out_dict = WriteNestedDictFromList(out_loc,
+                                        {'top_slab': top_aligned,
+                                         'bottom_slab': bottom_aligned,
+                                         'intial_match': hetero_interfaces[0]})
             
             spec = fw_spec
-            updated_spec = UpdateNestedDict(spec, {'matched_interface':
-                                                   hetero_interfaces[0]})
-            return FWAction(update_spec=updated_spec, 
-                            stored_data={'matched_interface':
-                                         hetero_interfaces[0]})
+            updated_spec = UpdateNestedDict(spec, out_dict)
+            return FWAction(update_spec=updated_spec)
         else:
             f = 1.05 # factor with wich to multiply the missmatch criteria
             new_parameters = {'max_area': parameters['max_area'] * f,
@@ -901,15 +977,22 @@ class FT_MakeSlabFromStructure(FiretaskBase):
 
     Parameters
     ----------
-    bulk_name: str
-        name of the bulk structure in the spec from which the slab is made
-    dict_name: str
-        name of the dictionary in the spec that contains input data in the
-        following keys:
+    bulk_loc: list of str
+        list of keys in the spec that point to the bulk input structure.
+    dict_loc: list of str
+        list of keys for the dictionary in the spec that contains input data
+        in the following keys:
             miller: list of int
             min_thickness: float
             min_vacuum: float
-    ----
+    out_loc: list of str, optional
+        If given saves the output structure at this location in the fw_spec.
+        E.g. ['my_structures', 'unrelaxed_structures', 'TiO111_slab'] will
+        allow you to find the structure later in
+        fw_spec[my_structures']['unrelaxed_structures']['TiO111_slab']
+        If not given, the structure will be placed in the spec on the same
+        level as the input structure with the key: formula+miller
+    ----------
     
     Returns
     -------
@@ -918,17 +1001,20 @@ class FT_MakeSlabFromStructure(FiretaskBase):
     """
     
     _fw_name = 'Make slab from structure in spec'
-    required_params = ['bulk_name', 'dict_name']
+    required_params = ['bulk_loc', 'dict_loc']
+    optional_params = ['out_loc']
     
     def run_task(self, fw_spec):
         from mpinterfaces.interface import Interface
-        from HelperFunctions import UpdateNestedDict
+        from HelperFunctions import UpdateNestedDict, GetValueFromNestedDict,\
+                                    WriteNestedDictFromList
         
-        bulk_structure = fw_spec[self['bulk_name']]
+        bulk_structure = GetValueFromNestedDict(fw_spec, self['bulk_loc'])
+        param_dict = GetValueFromNestedDict(fw_spec, self['dict_loc'])
             
-        miller = fw_spec[self['dict_name']]['miller']
-        min_thickness = fw_spec[self['dict_name']]['min_thickness']
-        min_vacuum = fw_spec[self['dict_name']]['min_vacuum']
+        miller = param_dict['miller']
+        min_thickness = param_dict['min_thickness']
+        min_vacuum = param_dict['min_vacuum']
 
         
         #Construct the slab out of the bulk_structure
@@ -940,9 +1026,13 @@ class FT_MakeSlabFromStructure(FiretaskBase):
         spec = fw_spec
         miller = ''.join(str(e) for e in miller)
         slab_name = bulk_structure.composition.reduced_formula + miller
-        updated_spec = UpdateNestedDict(spec, {slab_name: slab})
-        return FWAction(update_spec=updated_spec, 
-                        stored_data={slab_name: slab})
+        if 'out_loc' in self:
+            out_loc = self['out_loc']
+        else:
+            out_loc = self['bulk_loc'][:-1]+[slab_name]
+        struct_dict = WriteNestedDictFromList(out_loc, slab)
+        updated_spec = UpdateNestedDict(spec, struct_dict)
+        return FWAction(update_spec=updated_spec)
 
 @explicit_serialize
 class FT_MakeSlabFromFormula(FiretaskBase):

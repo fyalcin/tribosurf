@@ -124,6 +124,7 @@ def Heterogeneous_WF(inputs):
 
     WF = Workflow(WF, Dependencies, name='Dummy Heterogeneous Workflow')
     return WF
+
 def Relax_SWF(structure, comp_parameters, relax_type, out_loc, spec):
     """Relax bulk, slab, or interface structures in a subworkflow.
     

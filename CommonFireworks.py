@@ -14,6 +14,32 @@ __date__ = 'March 11th, 2020'
 # Custom FireWorks
 # =============================================================================
 
+def StartDetourWF_FW(WF_type, name, **kwargs):
+    # Add more subworkflows here and also the necessary parameters that need
+    # to be passed.
+    allowed_types = ['Relax_SWF']
+    needed_params = {'Relax_SWF': ['structure_loc',
+                                   'comp_parameters_loc',
+                                   'relax_type',
+                                   'out_loc']}
+    if WF_type in allowed_types:
+        if not all (k in kwargs for k in needed_params[WF_type]):
+            raise SystemExit('Not all necessary arguments passed for the {}'
+                             ' Subworkflow.'.format(WF_type))
+    else:
+        raise SystemExit('Specified subworkflow type {} is not known.\n'
+                         'Please select one of: {}'.format(WF_type,
+                                                           allowed_types))
+    
+    if WF_type == 'Relax_SWF':
+        FW = Firework(FT_StartRelaxSubWorkflow(
+                            structure_loc=kwargs['structure_loc'],
+                            comp_parameters_loc=kwargs['comp_parameters_loc'],
+                            relax_type=kwargs['relax_type'],
+                            out_loc=kwargs['out_loc']), name=name)
+    
+    return FW
+
 def RelaxFW(name):
 # =============================================================================
 #     TODO: Adapt OptimizeFW to work with input structure and parameters from
