@@ -8,18 +8,122 @@ Created on Thu Apr 16 15:46:22 2020
 
 
 from fireworks import Workflow, ScriptTask, Firework, FileTransferTask
-from atomate.vasp.config import RELAX_MAX_FORCE, VASP_CMD, DB_FILE
+from atomate.vasp.config import VASP_CMD
 from atomate.vasp.firetasks.write_inputs import WriteVaspFromIOSet
 from atomate.vasp.firetasks.run_calc import RunVaspCustodian
 from atomate.vasp.firetasks.parse_outputs import VaspToDb
 from atomate.common.firetasks.glue_tasks import PassCalcLocs, \
     CopyFilesFromCalcLoc
-#from custodian.vasp.jobs import double_relaxation_run, metagga_opt_run
-from CommonFireworks import FT_AddSelectiveDynamics, FT_WritePrecalc, \
-    FT_PrintSpec, FT_StructFromVaspOutput
+from CommonFiretasks import FT_AddSelectiveDynamics, FT_WritePrecalc, \
+    FT_PrintSpec, FT_StructFromVaspOutput, FT_FetchStructureFromFormula, \
+    FT_MakeSlabFromStructure, FT_MakeHeteroStructure
+from CommonFireworks import CheckInputsFW, ConvergeParametersFW, \
+    FixParametersFW, RelaxFW
 from HelperFunctions import GetCustomVaspRelaxSettings
 
 
+def Heterogeneous_WF(inputs):
+    """Return main workflow for heterogeneous interfaces within Triboflow.
+
+    Parameters
+    ----------
+    inputs : dict
+        Dictionary containing sub-dictionaries with material information and
+        parameters for the interface creation and computational settings.
+
+    Returns
+    -------
+    WF : FireWorks Workflow
+        Main Triboflow workflow for heterogeneous interfaces.
+
+    """
+    WF = []
+
+    Initialize = Firework(FT_PrintSpec(), spec=inputs,
+                                    name= 'Initialize Workflow')
+    WF.append(Initialize)
+    
+    Check_Inputs = CheckInputsFW(mat1name='material_1', mat2name='material_2',
+                                 compparaname='computational_params',
+                                 interparaname='interface_params',
+                                 name='Check Inputs')
+    WF.append(Check_Inputs)
+    
+    Start_M1 = Firework(FT_FetchStructureFromFormula(
+                            materials_dict_loc=['material_1']),
+                            name='Get '+inputs['material_1']['formula']+' bulk')
+    WF.append(Start_M1)
+    
+    Start_M2 = Firework(FT_FetchStructureFromFormula(
+                            materials_dict_loc=['material_2']),
+                            name='Get '+inputs['material_2']['formula']+' bulk')
+    WF.append(Start_M2)
+    
+    Converge_M1 = ConvergeParametersFW(name='Converge Parameters for'+' '+
+                                            inputs['material_1']['formula'])
+    WF.append(Converge_M1)
+    
+    Converge_M2 = ConvergeParametersFW(name='Converge Parameters for'+' '+
+                                            inputs['material_2']['formula'])
+    WF.append(Converge_M2)
+    
+    Final_Params = FixParametersFW(name='Select computational parameters')
+    WF.append(Final_Params)
+    
+    Relax_M1 = RelaxFW(name='Relax '+inputs['material_1']['formula']+' bulk')
+    WF.append(Relax_M1)
+    
+    Relax_M2 = RelaxFW(name='Relax '+inputs['material_2']['formula']+' bulk')
+    WF.append(Relax_M2)
+    
+    bulk_loc = ['material_1', inputs['material_1']['formula']+'_fromMP']
+    Make_Slab_M1 = Firework(FT_MakeSlabFromStructure(bulk_loc=bulk_loc,
+                                                     dict_loc=['material_1']),
+                    name='Make '+inputs['material_1']['formula']+' slab')
+    WF.append(Make_Slab_M1)
+    
+    bulk_loc = ['material_2', inputs['material_2']['formula']+'_fromMP']
+    Make_Slab_M2 = Firework(FT_MakeSlabFromStructure(bulk_loc=bulk_loc,
+                                                     dict_loc=['material_2']),
+                    name='Make '+inputs['material_2']['formula']+' slab')
+    WF.append(Make_Slab_M2)
+    
+    Relax_Slab_M1 = RelaxFW(name='Relax '+inputs['material_1']['formula']+' slab')
+    WF.append(Relax_Slab_M1)
+    
+    Relax_Slab_M2 = RelaxFW(name='Relax '+inputs['material_2']['formula']+' slab')
+    WF.append(Relax_Slab_M2)
+    
+    bottom_slab_loc = ['material_1', inputs['material_1']['formula']+
+                         inputs['material_1']['miller']]
+    top_slab_loc = ['material_2', inputs['material_2']['formula']+
+                         inputs['material_2']['miller']]
+    Make_Hetero_Structure = Firework(FT_MakeHeteroStructure(
+        bottom_slab_loc=bottom_slab_loc, top_slab_loc=top_slab_loc,
+        parameters_loc=['interface_params']), name='Make the interface')
+    WF.append(Make_Hetero_Structure)
+    
+    Print_spec = Firework(FT_PrintSpec(), name='Print Spec at the end')
+    WF.append(Print_spec)
+    
+    #Define dependencies:
+    Dependencies = {Initialize: [Check_Inputs],
+                    Check_Inputs: [Start_M1, Start_M2],
+                    Start_M1: [Converge_M1],
+                    Start_M2: [Converge_M2],
+                    Converge_M1: [Final_Params],
+                    Converge_M2: [Final_Params],
+                    Final_Params: [Relax_M1, Relax_M2],
+                    Relax_M1: [Make_Slab_M1],
+                    Relax_M2: [Make_Slab_M2],
+                    Make_Slab_M1: [Relax_Slab_M1],
+                    Make_Slab_M2: [Relax_Slab_M2],
+                    Relax_Slab_M1: [Make_Hetero_Structure],
+                    Relax_Slab_M2: [Make_Hetero_Structure],
+                    Make_Hetero_Structure: [Print_spec]}
+
+    WF = Workflow(WF, Dependencies, name='Dummy Heterogeneous Workflow')
+    return WF
 def Relax_SWF(structure, comp_parameters, relax_type, out_loc, spec):
     """Relax bulk, slab, or interface structures in a subworkflow.
     
