@@ -65,15 +65,21 @@ def ConvergeParametersFW(name):
     FW=Firework(FT_PrintSpec(), name=name)
     return FW
 
-def CheckInputsFW(mat1name, mat2name, compparaname, interparaname, name):
+def CheckInputsFW(mat1loc, mat2loc, compparamloc, interparamloc, name):
 # =============================================================================
 #     TODO: Write a docstring!
 # =============================================================================
-    FT_Mat1 = FT_CheckMaterialInputDict(input_dict_name=mat1name)
-    FT_Mat2 = FT_CheckMaterialInputDict(input_dict_name=mat2name)
-    FT_CompParams = FT_CheckCompParamDict(input_dict_loc=[compparaname])
-    FT_InterParams = FT_CheckInterfaceParamDict(input_dict_loc=[interparaname])
-    FW=Firework([FT_Mat1, FT_Mat2, FT_CompParams, FT_InterParams], name=name)
+    FT_Mat1 = FT_CheckMaterialInputDict(input_dict_loc=mat1loc)
+    FT_Mat2 = FT_CheckMaterialInputDict(input_dict_loc=mat2loc)
+    FT_CompParams1 = FT_CheckCompParamDict(input_dict_loc=compparamloc,
+                                           output_dict_loc=mat1loc)
+    FT_CompParams2 = FT_CheckCompParamDict(input_dict_loc=compparamloc,
+                                           output_dict_loc=mat2loc)
+    FT_InterParams = FT_CheckInterfaceParamDict(input_dict_loc=interparamloc)
+    FT_CompParams3 = FT_CheckCompParamDict(input_dict_loc=compparamloc,
+                                output_dict_loc=interparamloc)
+    FW=Firework([FT_Mat1, FT_Mat2, FT_CompParams1, FT_CompParams2,
+                 FT_InterParams, FT_CompParams3], name=name)
     return FW
 
     

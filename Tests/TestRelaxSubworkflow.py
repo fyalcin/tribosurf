@@ -58,7 +58,7 @@ from CommonFireworks import CheckInputsFW
 
 #Create the input dictionary
 
-inputs = {'material_1': {'formula': 'Al',
+inputs = {'material_1': {'formula': 'NiO',
                           'miller': '111',
                           'min_vacuum': 25,
                           'min_thickness': 5
@@ -69,10 +69,8 @@ inputs = {'material_1': {'formula': 'Al',
                           'min_vacuum': 25,
                           'min_thickness': 6
                           },
-          'computational_params':{'functional': 'PBE',
-                                  'use_vdw': 'False',
-                                  'use_spin': 'True'
-                                  },
+          'computational_params':{'functional': 'SCAN',
+                                  'use_vdw': 'False'},
           'interface_params':{'interface_distance': 1.5,
                               'max_area': 500,
                               'r1r2_tol': 0.05
@@ -87,9 +85,9 @@ Initialize = Firework(FT_PrintSpec(), spec=inputs,
                                 name= 'Initialize Workflow')
 FWs.append(Initialize)
 
-Check_Inputs = CheckInputsFW(mat1name='material_1', mat2name='material_2',
-                             compparaname='computational_params',
-                             interparaname='interface_params',
+Check_Inputs = CheckInputsFW(mat1loc=['material_1'], mat2loc=['material_2'],
+                             compparamloc=['computational_params'],
+                             interparamloc=['interface_params'],
                              name='Check Inputs')
 FWs.append(Check_Inputs)
 
@@ -103,7 +101,7 @@ out_loc = ['material_1', inputs['material_1']['formula']+'_relaxed']
 Relax_M1 = StartDetourWF_FW('Relax_SWF',
                             name='Relax '+inputs['material_1']['formula'],
                             structure_loc=bulk_loc,
-                            comp_parameters_loc=['computational_params'],
+                            comp_parameters_loc=['material_1'],
                             relax_type='bulk_full_relax',
                             out_loc=out_loc)
 FWs.append(Relax_M1)

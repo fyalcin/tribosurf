@@ -66,6 +66,12 @@ def GetCustomVaspRelaxSettings(comp_parameters, relax_type):
     
     if 'encut' in comp_parameters:
         uis['ENCUT'] = comp_parameters['encut']
+        
+    if 'use_spin' in comp_parameters:
+        if comp_parameters['use_spin']:
+            uis['ISPIN'] = 2
+        else:
+            uis['ISPIN'] = 1
     
     if 'is_metal' in comp_parameters:
         if comp_parameters['is_metal']:

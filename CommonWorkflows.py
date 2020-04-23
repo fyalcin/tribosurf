@@ -43,9 +43,9 @@ def Heterogeneous_WF(inputs):
                                     name= 'Initialize Workflow')
     WF.append(Initialize)
     
-    Check_Inputs = CheckInputsFW(mat1name='material_1', mat2name='material_2',
-                                 compparaname='computational_params',
-                                 interparaname='interface_params',
+    Check_Inputs = CheckInputsFW(mat1loc=['material_1'], mat2loc=['material_2'],
+                                 compparamloc=['computational_params'],
+                                 interparamloc=['interface_params'],
                                  name='Check Inputs')
     WF.append(Check_Inputs)
     
@@ -181,7 +181,21 @@ def Relax_SWF(structure, comp_parameters, relax_type, out_loc, spec):
                         'GAPDISTANCE': 6,
                         'MONOCLINIC_SEARCH_DEPTH': 2500,
                         'TRICLINIC_SEARCH_DEPTH': 1500}
-    
+        FT_list.append(FT_WritePrecalc(PrecalcDict=Precalc_Dict))
+        FT_list.append(ScriptTask(script=['getKPoints']))
+    elif comp_parameters.get('functional') == 'SCAN':
+        if 'is_metal' in comp_parameters:
+            if comp_parameters.get('is_metal'):
+                k_distance = 50
+            else:
+                k_distance = 31.5
+        else:
+            k_distance = 50
+        Precalc_Dict = {'MINDISTANCE': k_distance,
+                        'MINTOTALKPOINTS': 4,
+                        'GAPDISTANCE': 6,
+                        'MONOCLINIC_SEARCH_DEPTH': 2500,
+                        'TRICLINIC_SEARCH_DEPTH': 1500}
         FT_list.append(FT_WritePrecalc(PrecalcDict=Precalc_Dict))
         FT_list.append(ScriptTask(script=['getKPoints']))
     

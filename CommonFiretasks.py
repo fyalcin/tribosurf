@@ -82,7 +82,7 @@ class FT_StructFromVaspOutput(FiretaskBase):
                                   properties={'magmom': mag_tuple[i]['tot']})
         
         output = WriteNestedDictFromList(self['out_struct_loc'],
-                                         structure)
+                                         structure, d={})
 
         spec = fw_spec
         updated_spec = UpdateNestedDict(spec, output)
@@ -423,13 +423,14 @@ class FT_CheckCompParamDict(FiretaskBase):
                                     UpdateNestedDict
         #Edit this block according to need, but be careful with the defaults!
         #####################################################################
-        essential_keys = ['use_vdw', 'use_spin']
-        additional_keys = ['volume_tolerance', 'energy_tolerance',
-                             'functional', 'BM_tolerance']
+        essential_keys = ['use_vdw']
+        additional_keys = ['volume_tolerance', 'energy_tolerance', 'use_spin',
+                           'BM_tolerance', 'functional']
         
         volume_tolerance_default = 0.001
         energy_tolerance_default = 0.001
         functional_default = 'SCAN'
+        use_spin_default = True
         BM_tolerance_default = 0.01
         #####################################################################
         
@@ -456,18 +457,12 @@ class FT_CheckCompParamDict(FiretaskBase):
                 raise SystemExit('The input parameter <'+str(key)+
                               '> is not known. Please check your input file'
                               'and use only the following parameters:\n'
-                              .format(known_keys))
+                              '{}'.format(known_keys))
             elif key == 'use_vdw':
                 if input_dict[key] in true_list:
                     out_dict['use_vdw'] = True
                 else:
                     out_dict['use_vdw'] = False
-                check_essential[key] = True
-            elif key == 'use_spin':
-                if input_dict[key] in true_list:
-                    out_dict['use_spin'] = True
-                else:
-                    out_dict['use_spin'] = False
                 check_essential[key] = True
         
         
@@ -481,6 +476,14 @@ class FT_CheckCompParamDict(FiretaskBase):
                               '" are missing. Check your input file!\n')
         
         for key in additional_keys:
+            if key == 'use_spin':
+                if key in input_dict:
+                    if input_dict[key] in true_list:
+                        out_dict['use_spin'] = True
+                    else:
+                        out_dict['use_spin'] = False
+                else:
+                    out_dict['use_spin'] = use_spin_default
             if key == 'volume_tolerance':
                 if key in input_dict:
                     out_dict['volume_tolerance'] = float(input_dict[key])
@@ -503,7 +506,7 @@ class FT_CheckCompParamDict(FiretaskBase):
                     out_dict['BM_tolerance'] = BM_tolerance_default
                 
         spec = fw_spec
-        final_output = WriteNestedDictFromList(out_loc, out_dict)
+        final_output = WriteNestedDictFromList(out_loc, out_dict, d={})
         updated_spec = UpdateNestedDict(spec, final_output)
         return FWAction(update_spec=updated_spec)
     
@@ -603,7 +606,7 @@ class FT_CheckInterfaceParamDict(FiretaskBase):
                 out_dict[key] = defaults[key]
                 
         spec = fw_spec
-        final_output = WriteNestedDictFromList(out_loc, out_dict)
+        final_output = WriteNestedDictFromList(out_loc, out_dict, d={})
         updated_spec = UpdateNestedDict(spec, final_output)
         return FWAction(update_spec=updated_spec)
 
@@ -618,12 +621,12 @@ class FT_CheckMaterialInputDict(FiretaskBase):
     
     Parameters
     ----------
-    input_dict_name: str
-        The name of a dictionary that was previously constructed from an input
-        file of the same name.
-    output_dict_name: str, optional
-        Name of the output dictionary that is going to be put into the workflow
-        spec. If not specified this will default to the input_dict_name.
+    input_dict_name: list of str
+        List of keys that specifiy the location of the input parameters
+        dictionary in the spec
+    output_dict_name: list of str, optional
+        Location of the output dictionary that is going to be put into the
+        spec. If not specified this will default to the input_dict_loc.
     ----------
     
     Returns
@@ -636,12 +639,13 @@ class FT_CheckMaterialInputDict(FiretaskBase):
     """
 
     _fw_name = 'Check Material Input Dict'
-    required_params = ['input_dict_name']
-    optional_params = ['output_dict_name']
+    required_params = ['input_dict_loc']
+    optional_params = ['output_dict_loc']
     
     def run_task(self, fw_spec):
         """Run the FireTask."""
-        from HelperFunctions import UpdateNestedDict
+        from HelperFunctions import UpdateNestedDict, GetValueFromNestedDict, \
+                                    WriteNestedDictFromList
         #Edit this block according to need, but be careful with the defaults!
         #####################################################################
         essential_keys = ['formula', 'miller']
@@ -651,11 +655,11 @@ class FT_CheckMaterialInputDict(FiretaskBase):
         min_thickness_default = 10.0
         min_vacuum_default = 25.0
         #####################################################################
-        input_dict = fw_spec[self['input_dict_name']]
+        input_dict = GetValueFromNestedDict(fw_spec, self['input_dict_loc'])
         if 'output_dict_name' in self:
-            out_name = self['output_dict_name']
+            out_loc = self['output_dict_loc']
         else:
-            out_name = self['input_dict_name']
+            out_loc = self['input_dict_loc']
 
         #Define all known keys here
         known_keys = essential_keys + additional_keys
@@ -712,7 +716,8 @@ class FT_CheckMaterialInputDict(FiretaskBase):
                     out_dict['min_vacuum'] = min_vacuum_default
         
         spec = fw_spec
-        updated_spec = UpdateNestedDict(spec, {out_name: out_dict})
+        spec_update = WriteNestedDictFromList(out_loc, out_dict, d={})
+        updated_spec = UpdateNestedDict(spec, spec_update)
         return FWAction(update_spec=updated_spec)
             
 
@@ -943,7 +948,8 @@ class FT_MakeHeteroStructure(FiretaskBase):
             out_dict = WriteNestedDictFromList(out_loc,
                                         {'top_slab': top_aligned,
                                          'bottom_slab': bottom_aligned,
-                                         'intial_match': hetero_interfaces[0]})
+                                         'intial_match': hetero_interfaces[0]},
+                                        d={})
             
             spec = fw_spec
             updated_spec = UpdateNestedDict(spec, out_dict)
@@ -958,7 +964,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
                                 }
             spec = fw_spec
             parameters_dict = WriteNestedDictFromList(self['parameters_loc'],
-                                                      new_parameters)
+                                                      new_parameters, d={})
             updated_spec = UpdateNestedDict(spec, parameters_dict)
             new_fw = Firework(FT_MakeHeteroStructure(
                             bottom_slab_name=self['bottom_slab_name'],
@@ -1030,7 +1036,7 @@ class FT_MakeSlabFromStructure(FiretaskBase):
             out_loc = self['out_loc']
         else:
             out_loc = self['bulk_loc'][:-1]+[slab_name]
-        struct_dict = WriteNestedDictFromList(out_loc, slab)
+        struct_dict = WriteNestedDictFromList(out_loc, slab, d={})
         updated_spec = UpdateNestedDict(spec, struct_dict)
         return FWAction(update_spec=updated_spec)
 
