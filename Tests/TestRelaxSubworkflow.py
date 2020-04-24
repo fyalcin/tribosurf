@@ -58,7 +58,7 @@ from CommonFireworks import CheckInputsFW
 
 #Create the input dictionary
 
-inputs = {'material_1': {'formula': 'NiO',
+inputs = {'material_1': {'formula': 'Al',
                           'miller': '111',
                           'min_vacuum': 25,
                           'min_thickness': 5
@@ -69,7 +69,7 @@ inputs = {'material_1': {'formula': 'NiO',
                           'min_vacuum': 25,
                           'min_thickness': 6
                           },
-          'computational_params':{'functional': 'SCAN',
+          'computational_params':{'functional': 'PBE',
                                   'use_vdw': 'False'},
           'interface_params':{'interface_distance': 1.5,
                               'max_area': 500,
@@ -96,26 +96,46 @@ Start_M1 = Firework(FT_FetchStructureFromFormula(
                         name='Get '+inputs['material_1']['formula']+' bulk')
 FWs.append(Start_M1)
 
+Start_M2 = Firework(FT_FetchStructureFromFormula(
+                        materials_dict_loc=['material_2']),
+                        name='Get '+inputs['material_2']['formula']+' bulk')
+FWs.append(Start_M2)
+
 bulk_loc = ['material_1', inputs['material_1']['formula']+'_fromMP']
 out_loc = ['material_1', inputs['material_1']['formula']+'_relaxed']
-Relax_M1 = StartDetourWF_FW('Relax_SWF',
+Relax_M1 = StartDetourWF_FW('None',
                             name='Relax '+inputs['material_1']['formula'],
                             structure_loc=bulk_loc,
                             comp_parameters_loc=['material_1'],
                             relax_type='bulk_full_relax',
-                            out_loc=out_loc)
+                            out_loc=out_loc,
+                            to_pass=['material_1'])
 FWs.append(Relax_M1)
+
+bulk_loc = ['material_2', inputs['material_2']['formula']+'_fromMP']
+out_loc = ['material_2', inputs['material_2']['formula']+'_relaxed']
+Relax_M2 = StartDetourWF_FW('None',
+                            name='Relax '+inputs['material_2']['formula'],
+                            structure_loc=bulk_loc,
+                            comp_parameters_loc=['material_2'],
+                            relax_type='bulk_full_relax',
+                            out_loc=out_loc,
+                            to_pass=['material_2'])
+FWs.append(Relax_M2)
 
 End = Firework(FT_PrintSpec(), name='End of the workflow')
 FWs.append(End)
 
 Dependencies = {Initialize: [Check_Inputs],
-                Check_Inputs: [Start_M1],
+                Check_Inputs: [Start_M1, Start_M2],
                 Start_M1: [Relax_M1],
-                Relax_M1: [End]}
+                Start_M2: [Relax_M2],
+                Relax_M1: [End],
+                Relax_M2: [End]}
 
 wf = Workflow(FWs, Dependencies, name='Test Relax Subworkflow')
 
 # finally, instatiate the LaunchPad and add the workflow to it
 lpad = LaunchPad.auto_load() # loads this based on the FireWorks configuration
 lpad.add_wf(wf)
+rapidfire(lpad)

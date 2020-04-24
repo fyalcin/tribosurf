@@ -16,9 +16,9 @@ from atomate.common.firetasks.glue_tasks import PassCalcLocs, \
     CopyFilesFromCalcLoc
 from CommonFiretasks import FT_AddSelectiveDynamics, FT_WritePrecalc, \
     FT_PrintSpec, FT_StructFromVaspOutput, FT_FetchStructureFromFormula, \
-    FT_MakeSlabFromStructure, FT_MakeHeteroStructure
+    FT_MakeSlabFromStructure, FT_MakeHeteroStructure, FT_PassSpec
 from CommonFireworks import CheckInputsFW, ConvergeParametersFW, \
-    FixParametersFW, RelaxFW
+    FixParametersFW, StartDetourWF_FW
 from HelperFunctions import GetCustomVaspRelaxSettings
 
 
@@ -59,45 +59,92 @@ def Heterogeneous_WF(inputs):
                             name='Get '+inputs['material_2']['formula']+' bulk')
     WF.append(Start_M2)
     
-    Converge_M1 = ConvergeParametersFW(name='Converge Parameters for'+' '+
+    Converge_M1 = ConvergeParametersFW(key_list=['material_1',
+                                                 'interface_params',
+                                                 'computational_params'],
+                                       name='Converge Parameters for'+' '+
                                             inputs['material_1']['formula'])
     WF.append(Converge_M1)
     
-    Converge_M2 = ConvergeParametersFW(name='Converge Parameters for'+' '+
-                                            inputs['material_2']['formula'])
+    Converge_M2 = ConvergeParametersFW(key_list=['material_2'],
+                                        name='Converge Parameters for'+' '+
+                                             inputs['material_2']['formula'])
     WF.append(Converge_M2)
     
-    Final_Params = FixParametersFW(name='Select computational parameters')
+    Final_Params = FixParametersFW(key_list=['_all'],
+                                   name='Select computational parameters')
     WF.append(Final_Params)
     
-    Relax_M1 = RelaxFW(name='Relax '+inputs['material_1']['formula']+' bulk')
+    bulk_loc = ['material_1', inputs['material_1']['formula']+'_fromMP']
+    out_loc = ['material_1', inputs['material_1']['formula']+'_relaxed']
+    Relax_M1 = StartDetourWF_FW('None',
+                            name='Relax '+inputs['material_1']['formula'],
+                            structure_loc=bulk_loc,
+                            comp_parameters_loc=['material_1'],
+                            relax_type='bulk_full_relax',
+                            out_loc=out_loc,
+                            to_pass=['material_1', 'computational_params',
+                                     'interface_params'])
     WF.append(Relax_M1)
     
-    Relax_M2 = RelaxFW(name='Relax '+inputs['material_2']['formula']+' bulk')
+    bulk_loc = ['material_2', inputs['material_2']['formula']+'_fromMP']
+    out_loc = ['material_2', inputs['material_2']['formula']+'_relaxed']
+    Relax_M2 = StartDetourWF_FW('None',
+                            name='Relax '+inputs['material_2']['formula'],
+                            structure_loc=bulk_loc,
+                            comp_parameters_loc=['material_2'],
+                            relax_type='bulk_full_relax',
+                            out_loc=out_loc,
+                            to_pass=['material_2', 'computational_params',
+                                     'interface_params'])
     WF.append(Relax_M2)
     
-    bulk_loc = ['material_1', inputs['material_1']['formula']+'_fromMP']
+    bulk_loc = ['material_1', inputs['material_1']['formula']+'_relaxed']
     Make_Slab_M1 = Firework(FT_MakeSlabFromStructure(bulk_loc=bulk_loc,
                                                      dict_loc=['material_1']),
                     name='Make '+inputs['material_1']['formula']+' slab')
     WF.append(Make_Slab_M1)
     
-    bulk_loc = ['material_2', inputs['material_2']['formula']+'_fromMP']
+    bulk_loc = ['material_2', inputs['material_2']['formula']+'_relaxed']
     Make_Slab_M2 = Firework(FT_MakeSlabFromStructure(bulk_loc=bulk_loc,
                                                      dict_loc=['material_2']),
                     name='Make '+inputs['material_2']['formula']+' slab')
     WF.append(Make_Slab_M2)
     
-    Relax_Slab_M1 = RelaxFW(name='Relax '+inputs['material_1']['formula']+' slab')
+    bottom_slab_loc = ['material_1', inputs['material_1']['formula']+
+                         inputs['material_1']['miller']]
+    out_loc = ['material_1', inputs['material_1']['formula']+
+                         inputs['material_1']['miller']+'_relaxed']
+    Relax_Slab_M1 = StartDetourWF_FW('None',
+                            name='Relax '+inputs['material_1']['formula']+
+                            ' slab',
+                            structure_loc=bottom_slab_loc,
+                            comp_parameters_loc=['material_2'],
+                            relax_type='slab_pos_relax',
+                            out_loc=out_loc,
+                            to_pass=['material_1', 'computational_params',
+                                     'interface_params'])
     WF.append(Relax_Slab_M1)
     
-    Relax_Slab_M2 = RelaxFW(name='Relax '+inputs['material_2']['formula']+' slab')
+    top_slab_loc = ['material_2', inputs['material_2']['formula']+
+                         inputs['material_2']['miller']]
+    out_loc = ['material_2', inputs['material_2']['formula']+
+                         inputs['material_2']['miller']+'_relaxed']
+    Relax_Slab_M2 = StartDetourWF_FW('None',
+                            name='Relax '+inputs['material_2']['formula']+
+                            ' slab',
+                            structure_loc=top_slab_loc,
+                            comp_parameters_loc=['material_2'],
+                            relax_type='slab_pos_relax',
+                            out_loc=out_loc,
+                            to_pass=['material_2', 'computational_params',
+                                     'interface_params'])
     WF.append(Relax_Slab_M2)
     
     bottom_slab_loc = ['material_1', inputs['material_1']['formula']+
-                         inputs['material_1']['miller']]
+                         inputs['material_1']['miller']+'_relaxed']
     top_slab_loc = ['material_2', inputs['material_2']['formula']+
-                         inputs['material_2']['miller']]
+                         inputs['material_2']['miller']+'_relaxed']
     Make_Hetero_Structure = Firework(FT_MakeHeteroStructure(
         bottom_slab_loc=bottom_slab_loc, top_slab_loc=top_slab_loc,
         parameters_loc=['interface_params']), name='Make the interface')
@@ -111,8 +158,8 @@ def Heterogeneous_WF(inputs):
                     Check_Inputs: [Start_M1, Start_M2],
                     Start_M1: [Converge_M1],
                     Start_M2: [Converge_M2],
-                    Converge_M1: [Final_Params],
                     Converge_M2: [Final_Params],
+                    Converge_M1: [Final_Params],
                     Final_Params: [Relax_M1, Relax_M2],
                     Relax_M1: [Make_Slab_M1],
                     Relax_M2: [Make_Slab_M2],
@@ -125,7 +172,7 @@ def Heterogeneous_WF(inputs):
     WF = Workflow(WF, Dependencies, name='Dummy Heterogeneous Workflow')
     return WF
 
-def Relax_SWF(structure, comp_parameters, relax_type, out_loc, spec):
+def Relax_SWF(structure, comp_parameters, relax_type, out_loc, to_pass, spec):
     """Relax bulk, slab, or interface structures in a subworkflow.
     
     A FireWorks (Sub)workflow is created that works with the PBE and SCAN
@@ -150,6 +197,9 @@ def Relax_SWF(structure, comp_parameters, relax_type, out_loc, spec):
     out_loc : list of str
         List of keys that specify in which location the final output structure
         will be stored in the spec.
+    to_pass : list of str
+        List of all the keys in the spec to be passed to the next firework.
+        May be ['_all'] to pass the whole spec.
     spec : dict
         present spec that will be passed on to further fireworks after the
         relaxed structure has been added.
@@ -228,7 +278,7 @@ def Relax_SWF(structure, comp_parameters, relax_type, out_loc, spec):
                                            filenames=['OUTCAR.relax2.gz',
                                                       'CONTCAR.relax2.gz']),
                       FT_StructFromVaspOutput(out_struct_loc=out_loc),
-                      FT_PrintSpec()],
+                      FT_PassSpec(key_list=to_pass)],
                      spec=spec, name=CalcName+' post processing FW')
     
     WF = Workflow([FW_Relax, FW_PP], {FW_Relax: [FW_PP]}, name=CalcName+

@@ -8,11 +8,18 @@ Created on Mon Mar 23 14:33:47 2020
 from fireworks.core.firework import FWAction, FiretaskBase, Firework
 from fireworks.utilities.fw_utilities import explicit_serialize
 
+
+# =============================================================================
+# Make a PassOn Firetask that goes at the end of all Fireworks and passes stuff
+# in the spec based on a key_list. If only the key "_all_" is passed, update the
+# whole spec.
+# =============================================================================
+
 @explicit_serialize
 class FT_StartRelaxSubWorkflow(FiretaskBase):
     _fw_name = 'Starting Relaxation Subworkflow'
     required_params = ['structure_loc', 'comp_parameters_loc', 'relax_type',
-                       'out_loc']
+                       'out_loc', 'to_pass']
     def run_task(self, fw_spec):
         from CommonWorkflows import Relax_SWF
         from HelperFunctions import GetValueFromNestedDict
@@ -21,8 +28,10 @@ class FT_StartRelaxSubWorkflow(FiretaskBase):
         structure = GetValueFromNestedDict(fw_spec, self['structure_loc'])
         params = GetValueFromNestedDict(fw_spec, self['comp_parameters_loc'])
         out_loc = self['out_loc']
+        to_pass = self['to_pass']
         
-        SWF = Relax_SWF(structure, params, relax_type, out_loc, fw_spec)
+        SWF = Relax_SWF(structure, params, relax_type, out_loc, to_pass,
+                        fw_spec)
         return FWAction(detours=SWF)
         
         
@@ -165,7 +174,51 @@ class FT_SpawnOptimizeFW(FiretaskBase):
         
         return FWAction(additions = [new_optimize_wf])
         
-        
+@explicit_serialize
+class FT_PassSpec(FiretaskBase):
+    """Update only certain keys in the first level of the spec.
+    
+    If the key_list contatins only '_all', update the whole spec!
+    """
+    
+    _fw_name = 'Pass Spec'
+    required_params=['key_list']
+    def run_task(self, fw_spec):
+        update = {}
+        if self['key_list'] == ['_all']:
+            spec = fw_spec
+            return FWAction(update_spec = spec)
+        else:
+            for k in self['key_list']:
+                if fw_spec.get(k) is None:
+                    raise ValueError('{} can not be passed on to the next'
+                                     'FT/FW because it is not in the spec.\n'
+                                     'Currently the spec has the keys:\n'
+                                     '{}'.format(k, fw_spec.keys()))
+                update[k] = fw_spec.get(k)
+            return FWAction(update_spec = update)
+
+@explicit_serialize
+class FT_CopyInSpec(FiretaskBase):
+    """Copy something saved in the spec to another position in the spec.
+    """
+    
+    _fw_name = 'Copy in Spec'
+    required_params = ['in_loc', 'out_loc']
+    def run_task(self, fw_spec):
+        from HelperFunctions import GetValueFromNestedDict, UpdateNestedDict,\
+                                    WriteNestedDictFromList
+        thing = GetValueFromNestedDict(fw_spec, self['in_loc'])
+        out_str = '->'.join(self['out_loc'])
+        return FWAction(mod_spec=[{'_set': {out_str: thing}}])
+
+@explicit_serialize
+class FT_DoNothing(FiretaskBase):
+    """Does Nothing
+    """
+    _fw_name = 'Do Nothing'
+    def run_task(self, fw_spec):
+        fw_spec['testlala'] ='test'
 
 @explicit_serialize
 class FT_PrintSpec(FiretaskBase):
@@ -236,7 +289,7 @@ class FT_FetchStructureFromFormula(FiretaskBase):
         
         structure, MP_ID = GetLowEnergyStructure(formula,
                                                  MP_ID=mp_id,
-                                                 PrintInfo=False)
+                                                 PrintInfo=True)
         
         bandgap = GetGapFromMP(MP_ID)
         if bandgap > 0.1:
@@ -259,17 +312,8 @@ class FT_FetchStructureFromFormula(FiretaskBase):
         import pprint
         spec = fw_spec
         spec = UpdateNestedDict(spec, updated_mpid)
-        print('')
-        print('spec_mpid:')
-        pprint.pprint(spec)
         spec = UpdateNestedDict(spec, updated_metal)
-        print('')
-        print('spec_metal:')
-        pprint.pprint(spec)
         spec = UpdateNestedDict(spec, updated_struct)
-        print('')
-        print('spec_struct:')
-        pprint.pprint(spec)
         
         return FWAction(update_spec = spec)
 

@@ -17,11 +17,13 @@ __date__ = 'March 11th, 2020'
 def StartDetourWF_FW(WF_type, name, **kwargs):
     # Add more subworkflows here and also the necessary parameters that need
     # to be passed.
-    allowed_types = ['Relax_SWF']
+    allowed_types = ['Relax_SWF', 'None']
     needed_params = {'Relax_SWF': ['structure_loc',
                                    'comp_parameters_loc',
                                    'relax_type',
-                                   'out_loc']}
+                                   'out_loc',
+                                   'to_pass'],
+                     'None': ['structure_loc', 'out_loc', 'to_pass']}
     if WF_type in allowed_types:
         if not all (k in kwargs for k in needed_params[WF_type]):
             raise SystemExit('Not all necessary arguments passed for the {}'
@@ -36,33 +38,43 @@ def StartDetourWF_FW(WF_type, name, **kwargs):
                             structure_loc=kwargs['structure_loc'],
                             comp_parameters_loc=kwargs['comp_parameters_loc'],
                             relax_type=kwargs['relax_type'],
-                            out_loc=kwargs['out_loc']), name=name)
+                            out_loc=kwargs['out_loc'],
+                            to_pass=kwargs['to_pass']), name=name)
+    elif WF_type == 'None':
+        FT_copy = FT_CopyInSpec(in_loc=kwargs['structure_loc'],
+                                out_loc=kwargs['out_loc'])
+        FT_dummy = FT_DoNothing()
+        FT_PassOn = FT_PassSpec(key_list = kwargs['to_pass'])
+        FW = Firework([FT_copy, FT_PassOn], name=name)
     
     return FW
 
-def RelaxFW(name):
-# =============================================================================
-#     TODO: Adapt OptimizeFW to work with input structure and parameters from
-#           the fw_spec and save some output to the spec as well.
-# =============================================================================
-    FW=Firework(FT_PrintSpec(), name=name)
+def TestFW(in_loc, out_loc, pass_list):
+    FT0 = FT_PrintSpec()
+    FT1 = ScriptTask.from_str('echo "task1"')
+    FT2 = FT_CopyInSpec(in_loc=in_loc, out_loc=out_loc)
+    FT3 = ScriptTask.from_str('echo "task3"')
+    FT4 = ScriptTask.from_str('echo "task4"')
+    FT5 = FT_PassSpec(key_list = pass_list)
+    FW = Firework([FT1, FT2, FT3, FT5])
     return FW
 
-def FixParametersFW(name):
+def FixParametersFW(key_list, name):
 # =============================================================================
 #     TODO: Take convergence parameters from both systems and take the higher
 #           ones for the rest of the workflow.
 # =============================================================================
-    FW=Firework(FT_PrintSpec(), name=name)
+    FW = Firework(FT_PrintSpec(), name=name)
+    FW = Firework(FT_PassSpec(key_list = key_list), name=name)
     return FW
 
 
-def ConvergeParametersFW(name):
+def ConvergeParametersFW(key_list, name):
 # =============================================================================
 #     TODO: Write Firetasks and Fireworks (or better workflows) to converge
 #           Kpoints and Energy cutoff.
 # =============================================================================
-    FW=Firework(FT_PrintSpec(), name=name)
+    FW = Firework(FT_PassSpec(key_list=key_list), name=name)
     return FW
 
 def CheckInputsFW(mat1loc, mat2loc, compparamloc, interparamloc, name):
