@@ -17,6 +17,39 @@ from fireworks.utilities.fw_utilities import explicit_serialize
 
 @explicit_serialize
 class FT_StartRelaxSubWorkflow(FiretaskBase):
+    """Start a RelaxSubWorkflow as a detour.
+    
+    This Firetask is intendet to be used within a StartDetourWF_FW Firework.
+    A Relax_SWF is started as a detour using a FWAction. The current fw_spec
+    is passed on to the subworkflow.
+    
+    Parameters
+    ----------
+    structure_loc : list of str
+        List of keys that point to the structure to be relaxed in the fw_spec.
+    comp_parameters_loc : list of str
+        List of keys that point to the computational parameters to be used for
+        the relaxation in the fw_spec.
+    relax_type : str
+        specifies which relaxation should be performed.
+    out_loc : list of str
+        List of keys that point to the relaxed structure in the fw_spec.
+    to_pass : list of str
+        List of keys that each represent a location in the first level of the
+        fw_spec and signifies which of those are to be passed to the next
+        Firework. E.g. if the fw_sec = {'a': a, 'b': {'b1'; b1, 'b2': b2},
+        'c': c}} and to_pass = ['a', 'b'], the spec in the next FW will be:
+        {'a': a, 'b': {'b1'; b1, 'b2': b2}}
+    
+    See Also
+    --------
+    StartDetourWF_FW in CommonFireworks and Relax_SWF in CommonWorkflows.
+    
+    Returns
+    -------
+    FWAction with a detour starting a Relax_SWF subworkflow.
+    """
+    
     _fw_name = 'Starting Relaxation Subworkflow'
     required_params = ['structure_loc', 'comp_parameters_loc', 'relax_type',
                        'out_loc', 'to_pass']
@@ -37,7 +70,7 @@ class FT_StartRelaxSubWorkflow(FiretaskBase):
         
 @explicit_serialize
 class FT_StructFromVaspOutput(FiretaskBase):
-    """Makes a pymatgen Structure object out of VASP output files.
+    """Make a pymatgen Structure object out of VASP output files.
     
     Parameters
     ----------
@@ -206,11 +239,11 @@ class FT_CopyInSpec(FiretaskBase):
     _fw_name = 'Copy in Spec'
     required_params = ['in_loc', 'out_loc']
     def run_task(self, fw_spec):
-        from HelperFunctions import GetValueFromNestedDict, UpdateNestedDict,\
-                                    WriteNestedDictFromList
+        from HelperFunctions import GetValueFromNestedDict, SetInSpecFWAction
         thing = GetValueFromNestedDict(fw_spec, self['in_loc'])
-        out_str = '->'.join(self['out_loc'])
-        return FWAction(mod_spec=[{'_set': {out_str: thing}}])
+        FWA = SetInSpecFWAction(self['out_loc'], thing)
+        return FWA
+        
 
 @explicit_serialize
 class FT_DoNothing(FiretaskBase):
@@ -222,7 +255,10 @@ class FT_DoNothing(FiretaskBase):
 
 @explicit_serialize
 class FT_PrintSpec(FiretaskBase):
-    """Prints the spec of the current Workflow to the screen 
+    """Prints the spec of the current Workflow to the screen.
+    
+    Not only prints the current spec in a pretty way, but also returns a
+    FWAction that updates the spec of future to include the current spec.
     """
     
     _fw_name = 'Print Spec'
@@ -262,13 +298,11 @@ class FT_FetchStructureFromFormula(FiretaskBase):
         fw_spec[my_structures']['relaxed_structures']['bulk_TiO']
         If not given, the structure will be placed in the spec on the same
         level as the formula with the key: formula+'_fromMP'
-    ---------
     
     Returns
-    ------
+    -------
     An updated fw_spec that includes a new structure and updates the mp_id and
     information about the bandgap of the structure.
-    ------
     """
     
     _fw_name = 'Fetch Structure From Spec'
@@ -335,12 +369,10 @@ class FT_FetchStructure(FiretaskBase):
         Optional Input of Materials Project ID
         of the exact desired structure
         e.g. 'mp-990448'
-    ---------
     
     Yields
     ------
     updated structures dictionary in the spec.
-    ------
     """
     
     _fw_name = 'Fetch Structure'
@@ -381,7 +413,6 @@ class FT_ReadInputFile(FiretaskBase):
     ----------
     filename: str
         File to be opened and read by the FireTask
-    ----------
     
     Returns
     -------
@@ -389,7 +420,6 @@ class FT_ReadInputFile(FiretaskBase):
         {'Flag_1': 'Setting_1',
          'Flag_2': 'Setting_2',
           ...}
-    ------
     """
     
     _fw_name = 'Read input file'
@@ -440,7 +470,6 @@ class FT_CheckCompParamDict(FiretaskBase):
     output_dict_loc: list of str, optional
         The location of the output dictionary that is going to be put into the
         fw_spec. If not specified this will default to the input_dict_loc.
-    ----------
     
     Returns
     -------
@@ -448,7 +477,6 @@ class FT_CheckCompParamDict(FiretaskBase):
         A dictionary is pushed to the fw_spec. It contains all the
         essential and optional keys given and uses default values for the
         remaining optional keys.
-    -------
     """
 
     _fw_name = 'Check Input Dict'
@@ -456,11 +484,10 @@ class FT_CheckCompParamDict(FiretaskBase):
     optional_params = ['output_dict_loc']
     
     def run_task(self, fw_spec):
-        """Run the FireTask
+        """Run the FireTask.
 
         Edit the essential and additional keys here if necessary, as well as
         the default values given for the additional keys.
-
         """
         from HelperFunctions import GetValueFromNestedDict, \
                                     WriteNestedDictFromList, \
@@ -571,7 +598,6 @@ class FT_CheckInterfaceParamDict(FiretaskBase):
     output_dict_loc: list of str, optional
         The location of the output dictionary that is going to be put into the
         fw_spec. If not specified this will default to the input_dict_loc.
-    ----------
     
     Returns
     -------
@@ -579,7 +605,6 @@ class FT_CheckInterfaceParamDict(FiretaskBase):
         A dictionary is pushed to the fw_spec. It contains all the
         essential and optional keys given and uses default values for the
         remaining optional keys.
-    -------
     """
 
     _fw_name = 'Check Input Dict'
@@ -587,11 +612,10 @@ class FT_CheckInterfaceParamDict(FiretaskBase):
     optional_params = ['output_dict_loc']
     
     def run_task(self, fw_spec):
-        """Run the FireTask
+        """Run the FireTask.
 
         Edit the essential and additional keys here if necessary, as well as
         the default values given for the additional keys.
-
         """
         from HelperFunctions import GetValueFromNestedDict, \
                                     WriteNestedDictFromList, \
@@ -671,7 +695,6 @@ class FT_CheckMaterialInputDict(FiretaskBase):
     output_dict_name: list of str, optional
         Location of the output dictionary that is going to be put into the
         spec. If not specified this will default to the input_dict_loc.
-    ----------
     
     Returns
     -------
@@ -679,7 +702,6 @@ class FT_CheckMaterialInputDict(FiretaskBase):
         A dictionary is pushed to the spec of the workflow. It contains all the
         essential and optional keys given and uses default values for the
         remaining optional keys. The name in the spec is output_dict_name.
-    -------
     """
 
     _fw_name = 'Check Material Input Dict'
@@ -782,7 +804,6 @@ class FT_CheckInputDict(FiretaskBase):
     output_dict_name: str, optional
         Name of the output dictionary that is going to be put into the workflow
         spec. If not specified this will default to the input_dict_name.
-    ----------
     
     Returns
     -------
@@ -790,7 +811,6 @@ class FT_CheckInputDict(FiretaskBase):
         A dictionary is pushed to the spec of the workflow. It contains all the
         essential and optional keys given and uses default values for the
         remaining optional keys. The name in the spec is output_dict_name.
-    -------
     """
 
     _fw_name = 'Check Input Dict'
@@ -798,11 +818,10 @@ class FT_CheckInputDict(FiretaskBase):
     optional_params = ['output_dict_name']
     
     def run_task(self, fw_spec):
-        """Run the FireTask
+        """Run the FireTask.
 
         Edit the essential and additional keys here if necessary, as well as
         the default values given for the additional keys.
-
         """
         
         #Edit this block according to need, but be careful with the defaults!
@@ -935,12 +954,10 @@ class FT_MakeHeteroStructure(FiretaskBase):
             'top_slab'
             'bottom_slab'
             'initial_match'
-    ----------
 
     Returns
     -------
     Matched interface structure and bottom and top slabs in the fw_spec.
-        
     """
     
     _fw_name = 'Make Hetero Structure'
@@ -1042,12 +1059,10 @@ class FT_MakeSlabFromStructure(FiretaskBase):
         fw_spec[my_structures']['unrelaxed_structures']['TiO111_slab']
         If not given, the structure will be placed in the spec on the same
         level as the input structure with the key: formula+miller
-    ----------
     
     Returns
     -------
         Pymatgen slab structure to the spec
-    ------- 
     """
     
     _fw_name = 'Make slab from structure in spec'

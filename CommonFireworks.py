@@ -15,6 +15,38 @@ __date__ = 'March 11th, 2020'
 # =============================================================================
 
 def StartDetourWF_FW(WF_type, name, **kwargs):
+    """Starts a subworkflow as a detour.
+    
+    This should be the only way a sub-workflow is started if it should run as
+    a detour to the main workflow (inherit children). If a new subworkflow
+    is needed, it should be added here as an allowed_type, and the needed
+    parameters should be added to the needed_params dictionary.
+    
+
+    Parameters
+    ----------
+    WF_type : str
+        Which kind of subworkflow should be executed. Needs to be in
+        allowed_types.
+    name : str
+        Name of the Firework that starts the subworkflow. Not the Subworkflows
+        name.
+    **kwargs : 
+        Pass all the parameters necessary for the subworkflow. Edit
+        neede_params if a new subworkflow is added.
+
+    Raises
+    ------
+    SystemExit
+        Will exit if the subworkflow type is not known or the needed_params
+        are not passed in **kwargs
+
+    Returns
+    -------
+    FW : fireworks.core.firework.Firework
+        Firework that starts a detour subworkflow via a FWAction.
+
+    """
     # Add more subworkflows here and also the necessary parameters that need
     # to be passed.
     allowed_types = ['Relax_SWF', 'None']
@@ -43,7 +75,6 @@ def StartDetourWF_FW(WF_type, name, **kwargs):
     elif WF_type == 'None':
         FT_copy = FT_CopyInSpec(in_loc=kwargs['structure_loc'],
                                 out_loc=kwargs['out_loc'])
-        FT_dummy = FT_DoNothing()
         FT_PassOn = FT_PassSpec(key_list = kwargs['to_pass'])
         FW = Firework([FT_copy, FT_PassOn], name=name)
     
@@ -78,9 +109,38 @@ def ConvergeParametersFW(key_list, name):
     return FW
 
 def CheckInputsFW(mat1loc, mat2loc, compparamloc, interparamloc, name):
-# =============================================================================
-#     TODO: Write a docstring!
-# =============================================================================
+    """Check the input parameters for completeness and add default values.
+    
+    This Firework uses several Firetasks to check if the necessary input for
+    the heterogeneous Triboflow workflow is given and assignes default values
+    to optional parameters that are not given. Also makes sure that the
+    input parameters are of the correct type and in the correct locations
+    in the spec.
+    
+    Parameters
+    ----------
+    mat1loc : list of str
+        List of keys in the fw_spec pointing to the input dictionary for the
+        first material.
+    mat2loc : list of str
+        List of keys in the fw_spec pointing to the input dictionary for the
+        second material.
+    compparamloc : list of str
+        List of keys in the fw_spec pointing to the input dictionary for the
+        computational parameters.
+    interparamloc : list of str
+        List of keys in the fw_spec pointing to the input dictionary for the
+        parameters needed for interface matching. THESE MIGHT CHANGE IF
+        INITIALLY NO INTERFACE IS FOUND!
+    name : str
+        Name for the firework.
+
+    Returns
+    -------
+    FW : fireworks.core.firework.Firework
+        Firework for checking the parameters.
+
+    """
     FT_Mat1 = FT_CheckMaterialInputDict(input_dict_loc=mat1loc)
     FT_Mat2 = FT_CheckMaterialInputDict(input_dict_loc=mat2loc)
     FT_CompParams1 = FT_CheckCompParamDict(input_dict_loc=compparamloc,
