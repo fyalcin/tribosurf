@@ -1,7 +1,6 @@
 #! /.fs/data/wolloch/atomate_test/atomate_env/bin/python
 
 from fireworks import Firework, ScriptTask
-from fireworks.core.firework import FWAction, FiretaskBase
 from CommonFiretasks import *
 __author__ = 'Michael Wolloch'
 __copyright__ = 'Copyright 2020, Michael Wolloch'
@@ -13,6 +12,15 @@ __date__ = 'March 11th, 2020'
 # =============================================================================
 # Custom FireWorks
 # =============================================================================
+
+def ParsePrevVaspCalc_FW(CalcName, OutLoc, KeyList, Name='Parse Vasp Output'):
+    from atomate.common.firetasks.glue_tasks import CopyFilesFromCalcLoc
+    task_list = []
+    task_list.append(CopyFilesFromCalcLoc(calc_loc=CalcName))
+    task_list.append(FT_ParseVaspOutput(out_loc=OutLoc))
+    task_list.append(FT_PassSpec(key_list=KeyList))
+    FW = Firework(task_list, name = Name)
+    return FW
 
 def StartDetourWF_FW(WF_type, name, **kwargs):
     """Starts a subworkflow as a detour.

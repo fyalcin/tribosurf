@@ -15,6 +15,47 @@ from fireworks.utilities.fw_utilities import explicit_serialize
 # whole spec.
 # =============================================================================
 
+
+@explicit_serialize
+class FT_GetEnergyFromDB(FiretaskBase):
+    """ Make a database query to get the final energy for a VASP calculation.
+    
+    This might not be unambigous if you have more than one calculation with
+    the same formula and task_label. The energy will be the one of the first
+    matching calculation found in the database.
+    
+    Parameters
+    ----------
+    task_label : str
+        Specifies what type of vasp calculation you are querying. E.g. 'static'
+        or 'nscf uniform'.
+    formula : str
+        Reduced chemical formula for the compound you are looking for.
+    out_loc : list of str
+        Location in the spec as specified by a list of keys into which the
+        energy should be written.
+        
+    Returns
+    -------
+    The final energy of a VASP calculation at a specified location in the spec.
+    """
+    _fw_name = 'Get Energy'
+    required_params = ['label', 'formula', 'out_loc']
+    def run_task(self, fw_spec):
+        from atomate.vasp.database import VaspCalcDb
+        db_file = fw_spec['_fw_env']['db_file']
+        atomate_db = VaspCalcDb.from_db_file(db_file=db_file)
+        
+        label = self['label']
+        formula = self['formula']
+        out_loc = self['out_loc']
+        
+        energy = atomate_db.collection.find_one({'task_label': label,
+                                                 'formula_pretty': formula})[
+                                                     'output']['energy']
+        out_str = '->'.join(out_loc)
+        return FWAction(mod_spec=[{'_set': {out_str: energy}}])
+    
 @explicit_serialize
 class FT_StartRelaxSubWorkflow(FiretaskBase):
     """Start a RelaxSubWorkflow as a detour.
@@ -67,6 +108,44 @@ class FT_StartRelaxSubWorkflow(FiretaskBase):
                         fw_spec)
         return FWAction(detours=SWF)
         
+@explicit_serialize
+class FT_ParseVaspOutput(FiretaskBase):
+    _fw_name = 'Parse Vasp Output'
+    required_params = ['out_loc']
+    optional_params = ['job_dir']
+    def run_task(self, fw_spec):
+        import os.path
+        from pymatgen.io.vasp.outputs import Outcar
+        from pymatgen.core import Structure
+        from HelperFunctions import SetInSpecFWAction
+        
+        if 'job_dir' in self:
+            job_dir = self['job_dir']
+        elif '_job_info' in fw_spec:
+            job_dir = fw_spec['_job_info'][-1]['launch_dir']
+        else:
+            job_dir = '.'
+            
+        if os.path.isfile(job_dir+'/OUTCAR.relax2.gz'):
+            outcar = Outcar(job_dir+'/OUTCAR.relax2.gz')
+        elif os.path.isfile(job_dir+'/OUTCAR.gz'):
+            outcar = Outcar(job_dir+'/OUTCAR.gz')
+        elif os.path.isfile(job_dir+'/OUTCAR.relax2'):
+            outcar = Outcar(job_dir+'/OUTCAR.relax2')
+        elif os.path.isfile(job_dir+'/OUTCAR'):
+            outcar = Outcar(job_dir+'/OUTCAR')
+        else:
+            raise IOError('OUTCAR could not be located in folder:\n{}'.format(
+                job_dir))
+        
+        output_dict = {}
+        output_dict['energy'] = outcar.final_energy
+        output_dict['fermi_energy'] = outcar.efermi
+        output_dict['local_charges'] = outcar.charge
+        output_dict['local_magnetization'] = outcar.magnetization
+        
+        FWA = SetInSpecFWAction(self['out_loc'], output_dict)
+        return FWA
         
 @explicit_serialize
 class FT_StructFromVaspOutput(FiretaskBase):
@@ -112,7 +191,6 @@ class FT_StructFromVaspOutput(FiretaskBase):
             job_dir = fw_spec['_job_info'][-1]['launch_dir']
         else:
             job_dir = '.'
-        print(job_dir)
         outcar = Outcar(job_dir+'/OUTCAR.relax2.gz')
         structure = Structure.from_file(job_dir+'/CONTCAR.relax2.gz')
         
