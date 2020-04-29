@@ -110,6 +110,27 @@ class FT_StartRelaxSubWorkflow(FiretaskBase):
         
 @explicit_serialize
 class FT_ParseVaspOutput(FiretaskBase):
+    """Parse VASP OUTCAR output and save it in a given location in the fw_spec.
+    
+    The OUTCAR is parsed using pymatgen Outcar object. The location of the
+    vasp calculation folder can be directly specified, but probably the best
+    way is to first copy the output files using atomate PassCalcLocs features.
+    FireWorks _pass_job_info functionality is also supported.
+    
+    Parameters
+    ----------
+    out_loc : list of str
+        List of keys that point to the location in the fw_spec that should
+        contain the results that are parsed.
+    job_dir : str, optional
+        If job_dir is passed it is used to specify the directory where the
+        VASP job was run. 
+        
+    Returns
+    -------
+    An output directory with OUTCAR results is set in the fw_spec using a
+    FWAction.
+    """
     _fw_name = 'Parse Vasp Output'
     required_params = ['out_loc']
     optional_params = ['job_dir']
