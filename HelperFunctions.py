@@ -1,12 +1,140 @@
 """A collection of HelperFunctions to be used for the FireFlow project."""
 
 
-def GetCustomVaspRelaxSettings(comp_parameters, relax_type):
-    """Make custom vasp settings for relaxations.
+def SetInSpecFWAction(key_list, value):
+    """Generate A FWAction that puts something in the spec using mod_spec.
     
+    A FireWorkAction is returned that puts the value in the fw_spec using
+    the mod_spec method and the '_set'option. Nested dictionary updates are
+    supported
 
     Parameters
     ----------
+    key_list : list of str
+        List of keys to the location the value needs to be put in the nested
+        fw_spec
+    value :
+        Whatever needs to be put in the fw_spec at the given location.
+        Variable type
+
+    Returns
+    -------
+    FA : fireworks.core.firework.FWAction
+        FWAction that handles the modification of the spec.
+
+    """
+    from fireworks.core.firework import FWAction
+    out_str = '->'.join(key_list)
+    FA = FWAction(mod_spec=[{'_set': {out_str: value}}])
+    return FA
+
+def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
+    """Make custom vasp settings for static calculations.
+    
+    Parameters
+    ----------
+    structure : pymatgen.core.structure.Structure
+        Structure to be treated
+    comp_parameters : dict
+        Computational parameters dictionary which is usually created partly
+        by the user and then filled automatically with defaults and after
+        convergence tests.
+    statc_type : str
+        Specifies what system is treated in what way. Check 'allowed_types'
+        for a list of choices.
+
+    Raises
+    ------
+    SystemExit
+        If a non-supported static_type is passed, the process terminates.
+
+    Returns
+    -------
+    vis : str
+        A vasp input set for pymatgen.
+    uis : dict
+        User input settings that will override the standard setting in the vis.
+    vdw : str
+        Specifies which vdw functional is used. (optB86b or rVV10)
+    """
+
+    allowed_types = ['bulk_from_scratch', 'bulk_follow_up', 'bulk_nscf',
+                     'slab_from_scratch', 'slab_follow_up', 'slab_nscf']
+    
+    if static_type not in allowed_types:
+        raise SystemExit('relax type is not known. Please select from: {}'
+                         .format(allowed_types))
+
+    # Set vasp input set (currently none available for static SCAN!)
+    vis = 'MPStaticSet'
+        
+    #Set user incar settings:
+    uis = {}
+    uis['NEDOS'] = 3001
+    uis['PREC'] = 'Accurate'
+    uis['GGA_COMPAT'] = '.FALSE.'
+    uis['LASPH'] = '.TRUE.'
+    uis['LORBIT'] = 11
+    uis['NELMIN'] = 4
+    uis['SIGMA'] = 0.05
+    uis['ISMEAR'] = -5
+    
+    if structure.num_sites < 20:
+        uis['LREAL'] = '.FALSE.'
+        
+    
+    if static_type.startswith('slab_'):
+        uis['NELMDL'] = -15
+    elif comp_parameters.get('functional') == 'SCAN':
+        uis['NELMDL'] = -10
+    
+    if 'encut' in comp_parameters:
+        uis['ENCUT'] = comp_parameters['encut']
+        
+    if 'use_spin' in comp_parameters:
+        if comp_parameters['use_spin']:
+            uis['ISPIN'] = 2
+        else:
+            uis['ISPIN'] = 1
+        
+    #set van der Waals functional. Note that as of now, 'functional' must be
+    #specified for vdw to work!
+    if set(('use_vdw', 'functional')) <= comp_parameters.keys():
+        if comp_parameters['use_vdw']:
+            if comp_parameters['functional'] == 'SCAN':
+                vdw = 'rVV10'
+                uis['LUSE_VDW'] = '.TRUE.'
+                uis['BPARAM'] = 15.7
+            else:
+                vdw = 'optB86b'
+        else:
+            vdw = None
+    else:
+        vdw = None
+    
+    if comp_parameters.get('functional') == 'SCAN':
+        uis['METAGGA'] = 'SCAN'
+        uis['ALGO'] = 'All'
+        
+    if static_type.endswith('follow_up'):
+        uis['ISTART'] = 1
+        uis['LREAL'] = '.FALSE.'
+        uis['NELMDL'] = -1
+    elif static_type.endswith('nsfc'):
+        uis['ISTART'] = 1
+        uis['LREAL'] = '.FALSE.'
+        uis['ICHARG'] = 11
+        uis['NELMDL'] = -1
+        
+    return vis, uis, vdw
+
+def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
+    """Make custom vasp settings for relaxations.
+    
+    Parameters
+    ----------
+    structure : pymatgen.core.structure.Structure
+        Structure to be relaxed.
     comp_parameters : dict
         Computational parameters dictionary which is usually created partly
         by the user and then filled automatically with defaults and after
@@ -48,6 +176,9 @@ def GetCustomVaspRelaxSettings(comp_parameters, relax_type):
     uis['LORBIT'] = 11
     uis['MAXMIX'] = 100
     uis['NELMIN'] = 4
+    
+    if structure.num_sites < 20:
+        uis['LREAL'] = '.FALSE.'
     
     if relax_type.startswith('slab_') or relax_type.startswith('interface_'):
         uis['NELMDL'] = -15
