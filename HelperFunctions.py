@@ -1,5 +1,32 @@
 """A collection of HelperFunctions to be used for the FireFlow project."""
 
+def IsEnergyConverged(energy_list, etol, n=3):
+    """Check if the last n values of an array are within etol of each other.
+    
+
+    Parameters
+    ----------
+    energy_list : list of float
+        Total energies to be checked for convergence
+    etol : float
+        Tolerance for the convergence.
+    n : int, optional
+        Number of entries at the end of energy_list that have to be within
+        etol for the list to be considered converged. The default is 3.
+
+    Returns
+    -------
+    Bool
+        True if energy_list is converged, False otherwise.
+
+    """
+    check_list = [False]*n
+    el = energy_list.copy()
+    el.reverse()
+    for i, b in enumerate(check_list):
+        if abs(el[0]-el[i+1]) < etol:
+            check_list[i] = True
+    return all(check_list)
 
 def SetInSpecFWAction(key_list, value):
     """Generate A FWAction that puts something in the spec using mod_spec.
@@ -78,16 +105,22 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
     uis['NELMIN'] = 4
     uis['SIGMA'] = 0.05
     uis['ISMEAR'] = -5
+    uis['EDIFF'] = 1.0e-6
     
     if structure.num_sites < 20:
         uis['LREAL'] = '.FALSE.'
         
+    if comp_parameters.get('functional') == 'SCAN':
+        uis['ISMEAR'] = 0
+        uis['SIGMA'] = 0.1
     
     if static_type.startswith('slab_'):
         uis['NELMDL'] = -15
     elif comp_parameters.get('functional') == 'SCAN':
         uis['NELMDL'] = -10
-    
+    else:
+        uis['NELMDL'] = -6
+        
     if 'encut' in comp_parameters:
         uis['ENCUT'] = comp_parameters['encut']
         
@@ -182,8 +215,9 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
     
     if relax_type.startswith('slab_') or relax_type.startswith('interface_'):
         uis['NELMDL'] = -15
-        uis['EDIFFG'] = -0.05
+        uis['EDIFFG'] = -0.02
     else:
+        uis['NELMDL'] = -6
         uis['EDIFFG'] = -0.01
     
     if relax_type.endswith('full_relax'):

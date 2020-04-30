@@ -9,6 +9,7 @@ Created on Thu Apr 16 15:46:22 2020
 
 from fireworks import Workflow, ScriptTask, Firework, FileTransferTask
 from atomate.vasp.config import VASP_CMD
+from atomate.utils.utils import env_chk
 from atomate.vasp.firetasks.write_inputs import WriteVaspFromIOSet
 from atomate.vasp.firetasks.run_calc import RunVaspCustodian
 from atomate.vasp.firetasks.parse_outputs import VaspToDb
@@ -18,9 +19,9 @@ from CommonFiretasks import FT_AddSelectiveDynamics, FT_WritePrecalc, \
     FT_PrintSpec, FT_StructFromVaspOutput, FT_FetchStructureFromFormula, \
     FT_MakeSlabFromStructure, FT_MakeHeteroStructure, FT_PassSpec
 from CommonFireworks import CheckInputsFW, ConvergeParametersFW, \
-    FixParametersFW, StartDetourWF_FW
-from HelperFunctions import GetCustomVaspRelaxSettings
-
+    FixParametersFW, StartDetourWF_FW, ParsePrevVaspCalc_FW
+from HelperFunctions import GetCustomVaspRelaxSettings, \
+    GetCustomVaspStaticSettings
 
 def Heterogeneous_WF(inputs):
     """Return main workflow for heterogeneous interfaces within Triboflow.
@@ -172,6 +173,68 @@ def Heterogeneous_WF(inputs):
     WF = Workflow(WF, Dependencies, name='Dummy Heterogeneous Workflow')
     return WF
 
+def GetEnergy_SWF(structure, comp_parameters, static_type, out_loc,
+                  to_pass, spec, push_energy_loc=None):
+    CalcName = structure.composition.reduced_formula+' GetEnergy'
+    
+    vis, uis, vdw = GetCustomVaspStaticSettings(structure, comp_parameters,
+                                                static_type)
+            
+    custom_params = {'user_incar_settings': uis,
+                     'vdw': vdw,
+                     'user_potcar_functional': 'PBE_54'}
+    
+    FT_list = []
+    
+    FT_list.append(WriteVaspFromIOSet(structure=structure, vasp_input_set=vis,
+                             vasp_input_params=custom_params))
+    
+    if 'k_distance' in comp_parameters:
+        Precalc_Dict = {'MINDISTANCE': comp_parameters['k_distance'],
+                        'MINTOTALKPOINTS': 4,
+                        'GAPDISTANCE': 6,
+                        'MONOCLINIC_SEARCH_DEPTH': 2500,
+                        'TRICLINIC_SEARCH_DEPTH': 1500}
+        FT_list.append(FT_WritePrecalc(PrecalcDict=Precalc_Dict))
+        FT_list.append(ScriptTask(script=['getKPoints']))
+    elif comp_parameters.get('functional') == 'SCAN':
+        if 'is_metal' in comp_parameters:
+            if comp_parameters.get('is_metal'):
+                k_distance = 50
+            else:
+                k_distance = 31.5
+        else:
+            k_distance = 50
+        Precalc_Dict = {'MINDISTANCE': k_distance,
+                        'MINTOTALKPOINTS': 4,
+                        'GAPDISTANCE': 6,
+                        'MONOCLINIC_SEARCH_DEPTH': 2500,
+                        'TRICLINIC_SEARCH_DEPTH': 1500}
+        FT_list.append(FT_WritePrecalc(PrecalcDict=Precalc_Dict))
+        FT_list.append(ScriptTask(script=['getKPoints']))
+        
+    if vdw:
+        vdw_kernel = env_chk('>>vdw_kernel_dir<<', spec)+'/vdw_kernel.bindat'
+        FT_list.append(FileTransferTask({'files': [{'src': vdw_kernel,
+                                            'dest': 'vdw_kernel.bindat'}],
+                                         'mode': 'copy'}))
+    
+    FT_list.append(RunVaspCustodian(vasp_cmd=VASP_CMD, auto_npar=True))
+    
+    FT_list.append(VaspToDb(db_file='>>db_file<<'))
+    FT_list.append(PassCalcLocs(name=CalcName))
+    
+    FW_Static = Firework(FT_list, name=CalcName+' FW')
+    
+    FW_PP = ParsePrevVaspCalc_FW(CalcName=CalcName, OutLoc=out_loc,
+                                 PassOnList=to_pass,
+                                 PushEnergyLoc=push_energy_loc,
+                                 Name='Parse Output FW', spec=spec)
+    
+    WF = Workflow([FW_Static, FW_PP], {FW_Static: [FW_PP]}, name=CalcName+
+                                                              ' Workflow')
+    return WF
+
 def Relax_SWF(structure, comp_parameters, relax_type, out_loc, to_pass, spec):
     """Relax bulk, slab, or interface structures in a subworkflow.
     
@@ -211,7 +274,9 @@ def Relax_SWF(structure, comp_parameters, relax_type, out_loc, to_pass, spec):
     """  
     CalcName = structure.composition.reduced_formula+relax_type
     
-    vis, uis, vdw = GetCustomVaspRelaxSettings(comp_parameters, relax_type)
+    vis, uis, vdw = GetCustomVaspRelaxSettings(structure, comp_parameters,
+                                               relax_type)
+    
             
     custom_params = {'user_incar_settings': uis,
                      'vdw': vdw,
@@ -258,7 +323,7 @@ def Relax_SWF(structure, comp_parameters, relax_type, out_loc, to_pass, spec):
         job_type = 'double_relaxation_run'
         
     if vdw:
-        vdw_kernel = '/home/mwo/bin/vdw_kernel/vdw_kernel.bindat'
+        vdw_kernel = env_chk('>>vdw_kernel_dir<<', spec)+'/vdw_kernel.bindat'
         FT_list.append(FileTransferTask({'files': [{'src': vdw_kernel,
                                             'dest': 'vdw_kernel.bindat'}],
                                          'mode': 'copy'}))

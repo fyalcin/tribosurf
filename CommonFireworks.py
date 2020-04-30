@@ -13,13 +13,16 @@ __date__ = 'March 11th, 2020'
 # Custom FireWorks
 # =============================================================================
 
-def ParsePrevVaspCalc_FW(CalcName, OutLoc, KeyList, Name='Parse Vasp Output'):
+def ParsePrevVaspCalc_FW(CalcName, OutLoc, PassOnList, PushEnergyLoc=None,
+                         spec=None, Name='Parse Vasp Output'):
     from atomate.common.firetasks.glue_tasks import CopyFilesFromCalcLoc
     task_list = []
     task_list.append(CopyFilesFromCalcLoc(calc_loc=CalcName))
-    task_list.append(FT_ParseVaspOutput(out_loc=OutLoc))
-    task_list.append(FT_PassSpec(key_list=KeyList))
-    FW = Firework(task_list, name = Name)
+    task_list.append(FT_ParseVaspOutput(out_loc=OutLoc,
+                                        push_energy_loc=PushEnergyLoc))
+    task_list.append(FT_PassSpec(key_list=PassOnList))
+    task_list.append(FT_PrintSpec())
+    FW = Firework(task_list, spec = spec, name = Name)
     return FW
 
 def StartDetourWF_FW(WF_type, name, **kwargs):
