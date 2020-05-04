@@ -5,6 +5,7 @@
 Created on Mon Mar 23 14:33:47 2020
 @author: mwo
 """
+from fireworks import Workflow
 from fireworks.core.firework import FWAction, FiretaskBase, Firework
 from fireworks.utilities.fw_utilities import explicit_serialize
 
@@ -29,7 +30,21 @@ class FT_LoopKpoints(FiretaskBase):
             k_str = '->'.join(self['out_loc']+['final_k_distance'])
             return FWAction(mod_spec=[{'_set': {k_str: final_k_dist}}])
         else:
-            FW = Firework([FT_ConvergeKpoints, FT_LoopKpoints])
+            FT_CK = FT_ConvergeKpoints(structure_loc = self['structure_loc'],
+                                       kinfo_loc = self['kinfo_loc'],
+                                       out_loc = self['out_loc'],
+                                       comp_params = self['comp_params'],
+                                       k_dist_start = self['k_dist_start'],
+                                       k_dist_incr = self['k_dist_incr'],
+                                       n_converge = n_converge)
+            FT_LK = FT_LoopKpoints(structure_loc = self['structure_loc'],
+                                   kinfo_loc = self['kinfo_loc'],
+                                   out_loc = self['out_loc'],
+                                   comp_params = self['comp_params'],
+                                   k_dist_start = self['k_dist_start'],
+                                   k_dist_incr = self['k_dist_incr'],
+                                   n_converge = n_converge)
+            FW = Firework([FT_CK, FT_LK])
             return FWAction(detours=Workflow(FW))
             
 @explicit_serialize
@@ -88,7 +103,7 @@ class FT_ConvergeKpoints(FiretaskBase):
 
 @explicit_serialize
 class FT_GetEnergyFromDB(FiretaskBase):
-    """ Make a database query to get the final energy for a VASP calculation.
+    """Make a database query to get the final energy for a VASP calculation.
     
     This might not be unambigous if you have more than one calculation with
     the same formula and task_label. The energy will be the one of the first
@@ -109,6 +124,7 @@ class FT_GetEnergyFromDB(FiretaskBase):
     -------
     The final energy of a VASP calculation at a specified location in the spec.
     """
+    
     _fw_name = 'Get Energy'
     required_params = ['label', 'formula', 'out_loc']
     def run_task(self, fw_spec):
