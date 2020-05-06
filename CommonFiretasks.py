@@ -12,8 +12,8 @@ from fireworks.utilities.fw_utilities import explicit_serialize
 @explicit_serialize
 class FT_LoopKpoints(FiretaskBase):
     _fw_name = 'Converge Kpoints'
-    required_params = ['structure_loc', 'kinfo_loc', 'out_loc', 'comp_params',
-                       'k_dist_start', 'k_dist_incr']
+    required_params = ['structure', 'out_loc', 'comp_params', 'k_dist_start',
+                       'k_dist_incr']
     optional_params = ['n_converge']
     def run_task(self, fw_spec):
         from CommonWorkflows import GetEnergy_SWF
@@ -24,79 +24,122 @@ class FT_LoopKpoints(FiretaskBase):
         else:
             n_converge = 3
             
-        final_k_dist = GetValueFromNestedDict(fw_spec,
-                                        self['kinfo_loc']+['final_k_distance'])
+        import pprint
+        print('')
+        pprint.pprint(fw_spec)
+        print('')
+            
+        final_k_dist = fw_spec.get('final_k_distance')
+        
         if final_k_dist:
-            k_str = '->'.join(self['out_loc']+['final_k_distance'])
+            k_str = '->'.join(self['out_loc']+['k_distance'])
             return FWAction(mod_spec=[{'_set': {k_str: final_k_dist}}])
         else:
-            FT_CK = FT_ConvergeKpoints(structure_loc = self['structure_loc'],
-                                       kinfo_loc = self['kinfo_loc'],
+            FT_CK = FT_ConvergeKpoints(structure = self['structure'],
                                        out_loc = self['out_loc'],
                                        comp_params = self['comp_params'],
                                        k_dist_start = self['k_dist_start'],
                                        k_dist_incr = self['k_dist_incr'],
                                        n_converge = n_converge)
-            FT_LK = FT_LoopKpoints(structure_loc = self['structure_loc'],
-                                   kinfo_loc = self['kinfo_loc'],
+            FW_CK = Firework([FT_CK], spec=fw_spec,
+                             name = 'Converge Kpoints FW')
+            FT_LK = FT_LoopKpoints(structure = self['structure'],
                                    out_loc = self['out_loc'],
                                    comp_params = self['comp_params'],
                                    k_dist_start = self['k_dist_start'],
                                    k_dist_incr = self['k_dist_incr'],
                                    n_converge = n_converge)
-            FW = Firework([FT_CK, FT_LK])
-            return FWAction(detours=Workflow(FW))
+            FW_LK = Firework([FT_LK], name = 'Loop Kpoints FW')
+            WF = Workflow([FW_CK, FW_LK], {FW_CK: [FW_LK]})
+            return FWAction(detours=WF)
             
 @explicit_serialize
 class FT_ConvergeKpoints(FiretaskBase):
     _fw_name = 'Converge Kpoints'
-    required_params = ['structure_loc', 'kinfo_loc', 'out_loc', 'comp_params',
-                       'k_dist_start', 'k_dist_incr', 'n_converge']
+    required_params = ['structure', 'out_loc', 'comp_params', 'k_dist_start',
+                       'k_dist_incr', 'n_converge']
     def run_task(self, fw_spec):
         from CommonWorkflows import GetEnergy_SWF
         from HelperFunctions import GetValueFromNestedDict, IsEnergyConverged
         
-        energies_loc = self['kinfo_loc']+['energy_array']
-        energies = GetValueFromNestedDict(fw_spec, energies_loc)
+        energies = fw_spec.get('energy_list')
         n_converge = self['n_converge']
-        struct = GetValueFromNestedDict(fw_spec, self ['structure'])
-        comp_parameters = GetValueFromNestedDict(fw_spec, self['comp_params'])
+        struct = self['structure']
+        comp_parameters = self['comp_params']
         #TODO: Decide the static_type based on the structure (bulk or slab)!
         static_type = 'bulk_from_scratch'
-        out_loc = self['kinfo_loc']+['last_calc']
-        to_pass = [self['kinfo_loc'][0]]
+        out_loc = ['last_calc']
         spec = fw_spec
         etol = comp_parameters['energy_tolerance']*struct.num_sites
-        k_dist = GetValueFromNestedDict(fw_spec, 
-                                        self['kinfo_loc']+['k_distences'])[-1]
+        
+        final_k_dist = fw_spec.get('final_k_dist')
+        if final_k_dist:
+            to_pass = ['energy_list', 'k_dist_list', 'last_calc',
+                       'final_k_dist']
+            print('')
+            print('')
+            print('')
+            print('')
+            print('We need this too!')
+            print('')
+            print('')
+            print('')
+            print('')
+            print('')
+            print('')
+            FW = Firework(FT_PassSpec(key_list=to_pass), spec=fw_spec,
+                          name='Pass Spec FW at the end of Convergence')
+            return FWAction(detours=Workflow([FW]))
+        
+        import pprint
+        print('')
+        pprint.pprint(fw_spec)
+        print('')
         
         if energies is None:
+            to_pass = ['energy_list',  'last_calc']
             k_dist = self['k_dist_start']
             comp_parameters['k_distance'] = k_dist
-            k_str = '->'.join(self['kinfo_loc']+['k_distences'])
             return FWAction(detours=GetEnergy_SWF(struct, comp_parameters,
                                                   static_type, out_loc,
                                                   to_pass, spec,
-                                                  push_energy_loc=energies_loc
+                                                  push_energy_loc=['energy_list']
                                                   ),
-                            mod_spec=[{'_push': {k_str: k_dist}}])
+                            mod_spec=[{'_set': {'k_dist_list': [k_dist]}}])
         elif len(energies) <= n_converge:
-            k_dist = k_dist + self['k_dist_incr']
+            to_pass = ['energy_list', 'k_dist_list', 'last_calc']
+            k_list = fw_spec.get('k_dist_list')
+            k_dist = k_list[-1] + self['k_dist_incr']
+            k_list.append(k_dist)
             comp_parameters['k_distance'] = k_dist
-            k_str = '->'.join(self['kinfo_loc']+['k_distences'])
             return FWAction(detours=GetEnergy_SWF(struct, comp_parameters,
                                                   static_type, out_loc,
                                                   to_pass, spec,
-                                                  push_energy_loc=energies_loc
+                                                  push_energy_loc=['energy_list']
                                                   ),
-                            mod_spec=[{'_push': {k_str: k_dist}}])
+                            mod_spec=[{'_set': {'k_dist_list': k_list}}])
         else:
             if IsEnergyConverged(energies, etol, n_converge):
-                final_k_dist = GetValueFromNestedDict(fw_spec, 
-                            self['kinfo_loc']+['k_distences'])[-n_converge]
-                k_str = '->'.join(self['kinfo_loc']+['final_k_distance'])
-                return FWAction(mod_spec=[{'_set': {k_str: final_k_dist}}])
-            
+                final_k_dist = fw_spec.get('k_dist_list')[-n_converge]
+                print('')
+                print('')
+                print('Kpoint convergence reached. Ideal k-distance = {}'
+                      .format(final_k_dist))
+                print('')
+                return FWAction(mod_spec=[{'_set':
+                                           {'final_k_dist': final_k_dist}}])
+            else:
+                to_pass = ['energy_list', 'k_dist_list', 'last_calc']
+                k_list = fw_spec.get('k_dist_list')
+                k_dist = k_list[-1] + self['k_dist_incr']
+                k_list.append(k_dist)
+                comp_parameters['k_distance'] = k_dist
+                return FWAction(detours=GetEnergy_SWF(struct, comp_parameters,
+                                                  static_type, out_loc,
+                                                  to_pass, spec,
+                                                  push_energy_loc=['energy_list']
+                                                  ),
+                                mod_spec=[{'_set': {'k_dist_list': k_list}}])
             
         
         
@@ -224,7 +267,7 @@ class FT_ParseVaspOutput(FiretaskBase):
         import os.path
         from pymatgen.io.vasp.outputs import Outcar
         from pymatgen.core import Structure
-        from HelperFunctions import SetInSpecFWAction
+        from HelperFunctions import SetInSpecFWAction, GetValueFromNestedDict
         
         if 'job_dir' in self:
             job_dir = self['job_dir']
@@ -254,9 +297,15 @@ class FT_ParseVaspOutput(FiretaskBase):
         if self.get('push_energy_loc'):
             out_str = '->'.join(self['out_loc'])
             push_str = '->'.join(self['push_energy_loc'])
-            FWA = FWAction(mod_spec=[{'_set': {out_str: output_dict}},
-                                     {'_push': {push_str: outcar.final_energy}}
-                                    ])
+            energy_list = GetValueFromNestedDict(fw_spec,
+                                                 self['push_energy_loc'])
+            if energy_list:
+                energy_list.append(outcar.final_energy)
+                to_push = energy_list
+            else:
+                to_push = [outcar.final_energy]
+            FWA = FWAction(mod_spec=[{'_set': {out_str: output_dict,
+                                               push_str: to_push}}])
         else:
             FWA = SetInSpecFWAction(self['out_loc'], output_dict)
         return FWA
@@ -443,7 +492,7 @@ class FT_DoNothing(FiretaskBase):
     """
     _fw_name = 'Do Nothing'
     def run_task(self, fw_spec):
-        fw_spec['testlala'] ='test'
+        print('Doing Nothing')
 
 @explicit_serialize
 class FT_PrintSpec(FiretaskBase):
@@ -460,8 +509,8 @@ class FT_PrintSpec(FiretaskBase):
         
         pprint.pprint(fw_spec)
         
-        spec = fw_spec
-        return FWAction(update_spec = spec)        
+        #spec = fw_spec
+        #return FWAction(update_spec = spec)        
 
 @explicit_serialize
 class FT_FetchStructureFromFormula(FiretaskBase):

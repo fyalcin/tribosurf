@@ -21,7 +21,7 @@ def ParsePrevVaspCalc_FW(CalcName, OutLoc, PassOnList, PushEnergyLoc=None,
     task_list.append(FT_ParseVaspOutput(out_loc=OutLoc,
                                         push_energy_loc=PushEnergyLoc))
     task_list.append(FT_PassSpec(key_list=PassOnList))
-    task_list.append(FT_PrintSpec())
+    #task_list.append(FT_PrintSpec())
     FW = Firework(task_list, spec = spec, name = Name)
     return FW
 
