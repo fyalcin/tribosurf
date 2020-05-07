@@ -5,9 +5,37 @@
 Created on Mon Mar 23 14:33:47 2020
 @author: mwo
 """
+import numpy as np
+from pymatgen.core import Structure
+from pymatgen.io.vasp.inputs import Poscar
+from pymatgen.io.vasp.outputs import Outcar
+from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet
 from fireworks import Workflow
 from fireworks.core.firework import FWAction, FiretaskBase, Firework
 from fireworks.utilities.fw_utilities import explicit_serialize
+from atomate.vasp.database import VaspCalcDb
+from atomate.vasp.fireworks.core import OptimizeFW
+from mpinterfaces.interface import Interface
+from mpinterfaces.transformations import get_aligned_lattices, \
+    generate_all_configs
+from HelperFunctions import GetValueFromNestedDict, IsEnergyConverged, \
+    WriteNestedDictFromList, UpdateNestedDict, GetLowEnergyStructure, \
+    GetGapFromMP, WriteFileFromDict, RemoveMatchingFiles
+            
+        
+        
+@explicit_serialize
+class FT_PassKpointsInfo(FiretaskBase):
+    _fw_name = 'Pass Kpoints Info'
+    required_params = ['out_loc']
+    def run_task(self, fw_spec):
+        
+        prev_data = GetValueFromNestedDict(fw_spec, self['out_loc'])
+        k_info = fw_spec.get('k_info_dict')
+        out_dict = UpdateNestedDict(prev_data, k_info)
+        out_str = '->'.join(self['out_loc'])
+        return FWAction(mod_spec=[{'_set': {out_str: out_dict}}])
+        
 
 @explicit_serialize
 class FT_LoopKpoints(FiretaskBase):
@@ -16,24 +44,27 @@ class FT_LoopKpoints(FiretaskBase):
                        'k_dist_incr']
     optional_params = ['n_converge']
     def run_task(self, fw_spec):
-        from CommonWorkflows import GetEnergy_SWF
-        from HelperFunctions import GetValueFromNestedDict
-   
         if 'n_converge' in self:
             n_converge = self['n_converge']
         else:
             n_converge = 3
-            
-        import pprint
-        print('')
-        pprint.pprint(fw_spec)
-        print('')
-            
-        final_k_dist = fw_spec.get('final_k_distance')
+        final_k_dist = fw_spec.get('final_k_dist')
         
         if final_k_dist:
-            k_str = '->'.join(self['out_loc']+['k_distance'])
-            return FWAction(mod_spec=[{'_set': {k_str: final_k_dist}}])
+            k_array = np.asarray(fw_spec.get('k_dist_list'))
+            energy_array = np.asarray(fw_spec.get('energy_list'))
+            e_v_k = np.dstack((k_array, energy_array))
+            struct = self['structure']
+            comp_parameters = self['comp_params']
+            etol = comp_parameters['energy_tolerance']*struct.num_sites
+            k_dict = {'kpoints_info': {'energy_vs_k_dist': e_v_k,
+                                       'energy_tol': etol,
+                                       'final_k_distance': final_k_dist},
+                      'k_distance': final_k_dist}
+            
+            
+            return FWAction(mod_spec=[{'_set': {'k_info_dict': k_dict,
+                                                'final_k_distance': final_k_dist}}])
         else:
             FT_CK = FT_ConvergeKpoints(structure = self['structure'],
                                        out_loc = self['out_loc'],
@@ -60,8 +91,6 @@ class FT_ConvergeKpoints(FiretaskBase):
                        'k_dist_incr', 'n_converge']
     def run_task(self, fw_spec):
         from CommonWorkflows import GetEnergy_SWF
-        from HelperFunctions import GetValueFromNestedDict, IsEnergyConverged
-        
         energies = fw_spec.get('energy_list')
         n_converge = self['n_converge']
         struct = self['structure']
@@ -72,29 +101,9 @@ class FT_ConvergeKpoints(FiretaskBase):
         spec = fw_spec
         etol = comp_parameters['energy_tolerance']*struct.num_sites
         
-        final_k_dist = fw_spec.get('final_k_dist')
-        if final_k_dist:
-            to_pass = ['energy_list', 'k_dist_list', 'last_calc',
-                       'final_k_dist']
-            print('')
-            print('')
-            print('')
-            print('')
-            print('We need this too!')
-            print('')
-            print('')
-            print('')
-            print('')
-            print('')
-            print('')
-            FW = Firework(FT_PassSpec(key_list=to_pass), spec=fw_spec,
-                          name='Pass Spec FW at the end of Convergence')
-            return FWAction(detours=Workflow([FW]))
-        
-        import pprint
-        print('')
-        pprint.pprint(fw_spec)
-        print('')
+        # final_k_dist = fw_spec.get('final_k_dist')
+        # if final_k_dist:
+            
         
         if energies is None:
             to_pass = ['energy_list',  'last_calc']
@@ -120,6 +129,7 @@ class FT_ConvergeKpoints(FiretaskBase):
                             mod_spec=[{'_set': {'k_dist_list': k_list}}])
         else:
             if IsEnergyConverged(energies, etol, n_converge):
+                k_list = fw_spec.get('k_dist_list')
                 final_k_dist = fw_spec.get('k_dist_list')[-n_converge]
                 print('')
                 print('')
@@ -127,7 +137,9 @@ class FT_ConvergeKpoints(FiretaskBase):
                       .format(final_k_dist))
                 print('')
                 return FWAction(mod_spec=[{'_set':
-                                           {'final_k_dist': final_k_dist}}])
+                                           {'final_k_dist': final_k_dist,
+                                            'energy_list': energies,
+                                            'k_dist_list': k_list}}])
             else:
                 to_pass = ['energy_list', 'k_dist_list', 'last_calc']
                 k_list = fw_spec.get('k_dist_list')
@@ -171,7 +183,6 @@ class FT_GetEnergyFromDB(FiretaskBase):
     _fw_name = 'Get Energy'
     required_params = ['label', 'formula', 'out_loc']
     def run_task(self, fw_spec):
-        from atomate.vasp.database import VaspCalcDb
         db_file = fw_spec['_fw_env']['db_file']
         atomate_db = VaspCalcDb.from_db_file(db_file=db_file)
         
@@ -225,8 +236,6 @@ class FT_StartRelaxSubWorkflow(FiretaskBase):
                        'out_loc', 'to_pass']
     def run_task(self, fw_spec):
         from CommonWorkflows import Relax_SWF
-        from HelperFunctions import GetValueFromNestedDict
-        
         relax_type = self['relax_type']
         structure = GetValueFromNestedDict(fw_spec, self['structure_loc'])
         params = GetValueFromNestedDict(fw_spec, self['comp_parameters_loc'])
@@ -344,9 +353,6 @@ class FT_StructFromVaspOutput(FiretaskBase):
     required_params = ['out_struct_loc']
     optional_params = ['job_dir']
     def run_task(self, fw_spec):
-        from pymatgen.io.vasp.outputs import Outcar
-        from pymatgen.core import Structure
-        from HelperFunctions import WriteNestedDictFromList, UpdateNestedDict
         
         if 'job_dir' in self:
             job_dir = self['job_dir']
@@ -396,8 +402,6 @@ class FT_AddSelectiveDynamics(FiretaskBase):
     optional_params = ['selective_dynamics_array']
 
     def run_task(self, fw_spec):
-        import numpy as np
-        from pymatgen.io.vasp.inputs import Poscar
         struct = self['structure']
         
         if 'selective_dynamics_array' in self:
@@ -430,8 +434,7 @@ class FT_SpawnOptimizeFW(FiretaskBase):
     _fw_name = 'Spawn Optimize_Workflow'
 
     def run_task(self, fw_spec):
-        from atomate.vasp.fireworks.core import OptimizeFW
-        from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet
+
         
         structure = fw_spec['structures']['to_optimize']
         
@@ -551,9 +554,6 @@ class FT_FetchStructureFromFormula(FiretaskBase):
     optional_params = ['structure_loc']
     
     def run_task(self, fw_spec):
-        from HelperFunctions import GetLowEnergyStructure, \
-                                    GetValueFromNestedDict, GetGapFromMP, \
-                                    UpdateNestedDict, WriteNestedDictFromList
         
         mat_dict = self['materials_dict_loc']
         formula_loc = mat_dict+['formula']
@@ -620,7 +620,6 @@ class FT_FetchStructure(FiretaskBase):
     required_params = ['formula', 'MP_ID']
     
     def run_task(self, fw_spec):
-        from HelperFunctions import GetLowEnergyStructure
         
         structure, MP_ID = GetLowEnergyStructure(self['formula'],
                                                  MP_ID=self['MP_ID'],
@@ -730,9 +729,6 @@ class FT_CheckCompParamDict(FiretaskBase):
         Edit the essential and additional keys here if necessary, as well as
         the default values given for the additional keys.
         """
-        from HelperFunctions import GetValueFromNestedDict, \
-                                    WriteNestedDictFromList, \
-                                    UpdateNestedDict
         #Edit this block according to need, but be careful with the defaults!
         #####################################################################
         essential_keys = ['use_vdw']
@@ -858,9 +854,6 @@ class FT_CheckInterfaceParamDict(FiretaskBase):
         Edit the essential and additional keys here if necessary, as well as
         the default values given for the additional keys.
         """
-        from HelperFunctions import GetValueFromNestedDict, \
-                                    WriteNestedDictFromList, \
-                                    UpdateNestedDict
         #Edit this block according to need, but be careful with the defaults!
         #####################################################################
         essential_keys = ['max_area']
@@ -951,8 +944,6 @@ class FT_CheckMaterialInputDict(FiretaskBase):
     
     def run_task(self, fw_spec):
         """Run the FireTask."""
-        from HelperFunctions import UpdateNestedDict, GetValueFromNestedDict, \
-                                    WriteNestedDictFromList
         #Edit this block according to need, but be careful with the defaults!
         #####################################################################
         essential_keys = ['formula', 'miller']
@@ -1206,11 +1197,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
     optional_params = ['out_loc']
     
     def run_task(self, fw_spec):
-        from mpinterfaces.transformations import get_aligned_lattices
-        from mpinterfaces.transformations import generate_all_configs
-        from HelperFunctions import UpdateNestedDict, \
-                                    GetValueFromNestedDict, \
-                                    WriteNestedDictFromList
+
         parameters = GetValueFromNestedDict(fw_spec, self['parameters_loc'])
         bottom_slab = GetValueFromNestedDict(fw_spec, self['bottom_slab_loc'])
         top_slab = GetValueFromNestedDict(fw_spec, self['top_slab_loc'])
@@ -1311,9 +1298,6 @@ class FT_MakeSlabFromStructure(FiretaskBase):
     optional_params = ['out_loc']
     
     def run_task(self, fw_spec):
-        from mpinterfaces.interface import Interface
-        from HelperFunctions import UpdateNestedDict, GetValueFromNestedDict,\
-                                    WriteNestedDictFromList
         
         bulk_structure = GetValueFromNestedDict(fw_spec, self['bulk_loc'])
         param_dict = GetValueFromNestedDict(fw_spec, self['dict_loc'])
@@ -1372,8 +1356,6 @@ class FT_MakeSlabFromFormula(FiretaskBase):
     optional_params = ['mp_id', 'vacuum']
     
     def run_task(self, fw_spec):
-        from HelperFunctions import GetLowEnergyStructure
-        from mpinterfaces.interface import Interface
         
         if 'mp_id' in self:
             MP_ID = self['mp_id']
@@ -1409,7 +1391,6 @@ class FT_WritePrecalc(FiretaskBase):
     _fw_name = "Write PRECALC file"
     required_params = ['PrecalcDict']
     def run_task(self, fw_spec):
-        from HelperFunctions import WriteFileFromDict
         WriteFileFromDict(self['PrecalcDict'], 'PRECALC')
 
 @explicit_serialize
@@ -1438,7 +1419,6 @@ class FT_WriteGeneralKpointsInputs(FiretaskBase):
     optional_params = ['IncarDict', 'WorkDir']
 
     def run_task(self, fw_spec):
-        from HelperFunctions import WriteFileFromDict
         
         if 'WorkDir' in self:
             workdir = self['WorkDir']
@@ -1495,9 +1475,9 @@ class FT_GetKpoints(FiretaskBase):
             with open(workdir+'KPOINTS.log') as f:
                 Kpoints_Info = f.readlines()
             return FWAction(stored_data={'KPOINTS_Info': Kpoints_Info},
-                             mod_spec=[{'_push': out_dict}])
+                             mod_spec=[{'_set': out_dict}])
         else:
-            return FWAction(mod_spec=[{'_push': out_dict}])
+            return FWAction(mod_spec=[{'_set': out_dict}])
 
 
 @explicit_serialize
@@ -1513,7 +1493,6 @@ class FT_CleanUpGeneralizedKpointFiles(FiretaskBase):
     optional_params = ['WorkDir']
 
     def run_task(self, fw_spec):
-        from HelperFunctions import RemoveMatchingFiles
         
         if self['WorkDir']:
             workdir = self['WorkDir']

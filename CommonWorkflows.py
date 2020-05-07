@@ -17,7 +17,8 @@ from atomate.common.firetasks.glue_tasks import PassCalcLocs, \
     CopyFilesFromCalcLoc
 from CommonFiretasks import FT_AddSelectiveDynamics, FT_WritePrecalc, \
     FT_PrintSpec, FT_StructFromVaspOutput, FT_FetchStructureFromFormula, \
-    FT_MakeSlabFromStructure, FT_MakeHeteroStructure, FT_PassSpec
+    FT_MakeSlabFromStructure, FT_MakeHeteroStructure, FT_PassSpec, \
+    FT_LoopKpoints, FT_PassKpointsInfo
 from CommonFireworks import CheckInputsFW, ConvergeParametersFW, \
     FixParametersFW, StartDetourWF_FW, ParsePrevVaspCalc_FW
 from HelperFunctions import GetCustomVaspRelaxSettings, \
@@ -173,6 +174,31 @@ def Heterogeneous_WF(inputs):
     WF = Workflow(WF, Dependencies, name='Dummy Heterogeneous Workflow')
     return WF
 
+def ConvergeKpoints_SWF(structure, comp_parameters, out_loc,
+                    k_dist_start, to_pass, spec, k_dist_incr=1.0,
+                    n_converge=3):
+    
+    name = 'Kpoint_Convergence SWF of '+structure.composition.reduced_formula
+    
+    if 'energy_tolerance' not in comp_parameters:
+        comp_parameters['energy_tolerance'] = 0.001
+    
+    FT_Loop_Kpoints = FT_LoopKpoints(structure = structure,
+                                   out_loc = out_loc,
+                                   comp_params = comp_parameters,
+                                   k_dist_start = k_dist_start,
+                                   k_dist_incr = k_dist_incr,
+                                   n_converge = n_converge)
+    FT_PassOn = FT_PassSpec(key_list=to_pass)
+    
+    FW = Firework([FT_Loop_Kpoints, FT_PassOn], spec=spec,
+                  name = 'Start Convergence')
+    FW_2 = Firework([FT_PassKpointsInfo(out_loc=out_loc), FT_PassOn,
+                     FT_PrintSpec()], spec=spec,
+                    name = 'Prepare Output and Pass Spec')
+    WF = Workflow([FW, FW_2], {FW: [FW_2]}, name=name)
+    return WF
+    
 def GetEnergy_SWF(structure, comp_parameters, static_type, out_loc,
                   to_pass, spec, push_energy_loc=None):
     CalcName = structure.composition.reduced_formula+' GetEnergy'
