@@ -5,9 +5,10 @@
 Created on Mon Mar 23 14:33:47 2020
 @author: mwo
 """
+import os
 import numpy as np
 from pymatgen.core import Structure
-from pymatgen.io.vasp.inputs import Poscar
+from pymatgen.io.vasp.inputs import Poscar, Kpoints
 from pymatgen.io.vasp.outputs import Outcar
 from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet
 from fireworks import Workflow
@@ -20,7 +21,7 @@ from mpinterfaces.transformations import get_aligned_lattices, \
     generate_all_configs
 from HelperFunctions import GetValueFromNestedDict, IsEnergyConverged, \
     WriteNestedDictFromList, UpdateNestedDict, GetLowEnergyStructure, \
-    GetGapFromMP, WriteFileFromDict, RemoveMatchingFiles
+    GetGapFromMP, WriteFileFromDict, RemoveMatchingFiles, GetGeneralizedKmesh
             
         
         
@@ -103,30 +104,39 @@ class FT_ConvergeKpoints(FiretaskBase):
         
         # final_k_dist = fw_spec.get('final_k_dist')
         # if final_k_dist:
-            
-        
         if energies is None:
             to_pass = ['energy_list',  'last_calc']
             k_dist = self['k_dist_start']
             comp_parameters['k_distance'] = k_dist
+            KPTS = GetGeneralizedKmesh(struct, k_dist)
+            KPTS_info = KPTS.as_dict().get('comment')
             return FWAction(detours=GetEnergy_SWF(struct, comp_parameters,
-                                                  static_type, out_loc,
-                                                  to_pass, spec,
-                                                  push_energy_loc=['energy_list']
-                                                  ),
-                            mod_spec=[{'_set': {'k_dist_list': [k_dist]}}])
+                                            static_type, out_loc,
+                                            to_pass, spec,
+                                            push_energy_loc=['energy_list']),
+                            mod_spec=[{'_set': {'k_dist_list': [k_dist],
+                                                'last_KPTS_info': KPTS_info}}])
         elif len(energies) <= n_converge:
             to_pass = ['energy_list', 'k_dist_list', 'last_calc']
             k_list = fw_spec.get('k_dist_list')
-            k_dist = k_list[-1] + self['k_dist_incr']
+            k_incr = self['k_dist_incr']
+            k_dist = k_list[-1] + k_incr
+            Last_KPTS_info = fw_spec['last_KPTS_info']
+            KPTS = GetGeneralizedKmesh(struct, k_dist)
+            KPTS_info = KPTS.as_dict().get('comment')
+            while KPTS_info == Last_KPTS_info:
+                k_dist = k_dist + k_incr
+                KPTS = GetGeneralizedKmesh(struct, k_dist)
+                KPTS_info = KPTS.as_dict().get('comment')
             k_list.append(k_dist)
+            info = KPTS.as_dict().get('comment')
             comp_parameters['k_distance'] = k_dist
             return FWAction(detours=GetEnergy_SWF(struct, comp_parameters,
-                                                  static_type, out_loc,
-                                                  to_pass, spec,
-                                                  push_energy_loc=['energy_list']
-                                                  ),
-                            mod_spec=[{'_set': {'k_dist_list': k_list}}])
+                                            static_type, out_loc,
+                                            to_pass, spec,
+                                            push_energy_loc=['energy_list']),
+                            mod_spec=[{'_set': {'k_dist_list': k_list,
+                                                'last_KPTS_info': KPTS_info}}])
         else:
             if IsEnergyConverged(energies, etol, n_converge):
                 k_list = fw_spec.get('k_dist_list')
@@ -143,19 +153,24 @@ class FT_ConvergeKpoints(FiretaskBase):
             else:
                 to_pass = ['energy_list', 'k_dist_list', 'last_calc']
                 k_list = fw_spec.get('k_dist_list')
-                k_dist = k_list[-1] + self['k_dist_incr']
+                k_incr = self['k_dist_incr']
+                k_dist = k_list[-1] + k_incr
+                Last_KPTS_info = fw_spec['last_KPTS_info']
+                KPTS = GetGeneralizedKmesh(struct, k_dist)
+                KPTS_info = KPTS.as_dict().get('comment')
+                while KPTS_info == Last_KPTS_info:
+                    k_dist = k_dist + k_incr
+                    KPTS = GetGeneralizedKmesh(struct, k_dist)
+                    KPTS_info = KPTS.as_dict().get('comment')
                 k_list.append(k_dist)
                 comp_parameters['k_distance'] = k_dist
                 return FWAction(detours=GetEnergy_SWF(struct, comp_parameters,
-                                                  static_type, out_loc,
-                                                  to_pass, spec,
-                                                  push_energy_loc=['energy_list']
-                                                  ),
-                                mod_spec=[{'_set': {'k_dist_list': k_list}}])
+                                            static_type, out_loc,
+                                            to_pass, spec,
+                                            push_energy_loc=['energy_list']),
+                            mod_spec=[{'_set': {'k_dist_list': k_list,
+                                                'last_KPTS_info': KPTS_info}}])
             
-        
-        
-
 @explicit_serialize
 class FT_GetEnergyFromDB(FiretaskBase):
     """Make a database query to get the final energy for a VASP calculation.
@@ -195,7 +210,74 @@ class FT_GetEnergyFromDB(FiretaskBase):
                                                      'output']['energy']
         out_str = '->'.join(out_loc)
         return FWAction(mod_spec=[{'_set': {out_str: energy}}])
+
+@explicit_serialize
+class FT_StartKptsConvSubWorkflow(FiretaskBase):
+    """Start a ConvergeKpoints_SWF as a detour.
     
+    This Firetask is intendet to be used within a StartDetourWF_FW Firework.
+    A ConvergeKpoints_SWF is started as a detour using a FWAction. The current
+    fw_spec is passed on to the subworkflow.
+    
+    Parameters
+    ----------
+    structure_loc : list of str
+        List of keys that point to the structure to be relaxed in the fw_spec.
+    comp_parameters_loc : list of str
+        List of keys that point to the computational parameters to be used for
+        the relaxation in the fw_spec.
+    out_loc : list of str
+        List of keys that point to the relaxed structure in the fw_spec.
+    k_dist_start : float
+        Minimal k_distance for the start of the convergence series
+    to_pass : list of str
+        List of keys that each represent a location in the first level of the
+        fw_spec and signifies which of those are to be passed to the next
+        Firework. E.g. if the fw_sec = {'a': a, 'b': {'b1'; b1, 'b2': b2},
+        'c': c}} and to_pass = ['a', 'b'], the spec in the next FW will be:
+        {'a': a, 'b': {'b1'; b1, 'b2': b2}}
+    k_dist_incr : float, optional
+        Increment for the k_distance during the convergence. Defaults to 1.0
+    n_converge : int, optional
+        Number of calculations that have to show the same energy as the last
+        one as to signify convergence, Defaults to 3.
+    
+    See Also
+    --------
+    StartDetourWF_FW in CommonFireworks and ConvergeKpoints_SWF in
+    CommonWorkflows.
+    
+    Returns
+    -------
+    FWAction with a detour starting a ConvergeKpoints_SWF subworkflow.
+    """
+    
+    _fw_name = 'Starting Relaxation Subworkflow'
+    required_params = ['structure_loc', 'comp_parameters_loc', 'out_loc',
+                       'k_dist_start', 'to_pass']
+    optional_params = ['k_dist_incr', 'n_converge']
+    def run_task(self, fw_spec):
+        from CommonWorkflows import ConvergeKpoints_SWF
+        structure = GetValueFromNestedDict(fw_spec, self['structure_loc'])
+        params = GetValueFromNestedDict(fw_spec, self['comp_parameters_loc'])
+        out_loc = self['out_loc']
+        k_dist_start = self['k_dist_start']
+        to_pass = self['to_pass']
+        
+        if self.get('k_dist_incr'):
+            k_dist_incr = self.get('k_dist_incr')
+        else:
+            k_dist_incr = 1.0
+            
+        if self.get('n_converge'):
+            n_converge = self.get('n_converge')
+        else:
+            n_converge = 3
+        
+        SWF = ConvergeKpoints_SWF(structure, params, out_loc, k_dist_start,
+                                  to_pass, fw_spec, k_dist_incr, n_converge)
+        return FWAction(detours=SWF)    
+
 @explicit_serialize
 class FT_StartRelaxSubWorkflow(FiretaskBase):
     """Start a RelaxSubWorkflow as a detour.
@@ -512,8 +594,8 @@ class FT_PrintSpec(FiretaskBase):
         
         pprint.pprint(fw_spec)
         
-        #spec = fw_spec
-        #return FWAction(update_spec = spec)        
+        spec = fw_spec
+        return FWAction(update_spec = spec)        
 
 @explicit_serialize
 class FT_FetchStructureFromFormula(FiretaskBase):
@@ -1452,9 +1534,7 @@ class FT_GetKpoints(FiretaskBase):
     optional_params = ['WorkDir', 'KPTS_loc']
 
     def run_task(self, fw_spec):
-        import os
-        from pymatgen.io.vasp.inputs import Kpoints
-        from HelperFunctions import WriteNestedDictFromList
+
         
         if 'WorkDir' in self:
             workdir = self['WorkDir']

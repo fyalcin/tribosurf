@@ -1,4 +1,47 @@
 """A collection of HelperFunctions to be used for the FireFlow project."""
+import os
+import subprocess
+from pymatgen import MPRester, Structure
+from pymatgen.io.vasp.inputs import Kpoints
+from fireworks.core.firework import FWAction
+
+
+def GetGeneralizedKmesh(structure, k_dist):
+    """Get a generalized Monkhorst pack mesh for a given structure.
+    
+    Prepares the necessary files (POSCAR, PRECALC, but not INCAR)
+    for the K-Point Grid Generator of the Mueller group at John Hopkins
+    http://muellergroup.jhu.edu/K-Points.html
+    Runs the getKPoints script and reads the KPOINT file produced into a
+    pymnatgen Kpoints object.
+    
+    Parameters
+    ----------
+    structure : pymatgen.core.structure.Structure
+        Structure for which the kpoints grid is to be generated.
+    k_dist : float
+        The minimum allowed distance between lattice points on the real-space
+        superlattice. This determines the density of the k-point grid. A larger
+        value will result in denser grids.
+
+    Returns
+    -------
+    KPTS : pymatgen.io.vasp.inputs.Kpoints
+        Pymatgen Kpoints object representing a generalized MP mesh.
+
+    """
+    precalc_dict = {'MINDISTANCE': k_dist,
+                    'MINTOTALKPOINTS': 4,
+                    'GAPDISTANCE': 6,
+                    'MONOCLINIC_SEARCH_DEPTH': 2500,
+                    'TRICLINIC_SEARCH_DEPTH': 1500}
+    WriteFileFromDict(precalc_dict, 'PRECALC')
+    structure.to(fmt='poscar', filename='POSCAR')
+    get_kpoints_file = subprocess.Popen('getKPoints')
+    get_kpoints_file.communicate()
+    KPTS = Kpoints().from_file('KPOINTS')
+    RemoveMatchingFiles(['KPOINTS*', 'POSCAR*', 'INCAR', 'PRECALC'])
+    return KPTS
 
 def IsEnergyConverged(energy_list, etol, n=3):
     """Check if the last n values of an array are within etol of each other.
@@ -50,7 +93,6 @@ def SetInSpecFWAction(key_list, value):
         FWAction that handles the modification of the spec.
 
     """
-    from fireworks.core.firework import FWAction
     out_str = '->'.join(key_list)
     FA = FWAction(mod_spec=[{'_set': {out_str: value}}])
     return FA
@@ -430,7 +472,6 @@ def GetGapFromMP(MP_ID):
         to decide if the material is a metal or not).
 
     """
-    from pymatgen import MPRester
     with MPRester() as mpr:
         band_gap = mpr.query(criteria={'material_id': MP_ID},
                              properties=['band_gap'])
@@ -456,8 +497,6 @@ def GetLowEnergyStructure(chem_formula, MP_ID=None, PrintInfo=False):
                         
     Returns: pymatgen Structure object and associated MP_ID
     """
-    
-    from pymatgen import Structure, MPRester
 
     # load structure from MaterialsProjct Website
     with MPRester() as mpr:

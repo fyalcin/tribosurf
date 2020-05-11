@@ -60,12 +60,17 @@ def StartDetourWF_FW(WF_type, name, **kwargs):
     """
     # Add more subworkflows here and also the necessary parameters that need
     # to be passed.
-    allowed_types = ['Relax_SWF', 'None']
+    allowed_types = ['Relax_SWF', 'Converge_Kpoints_SWF', 'None']
     needed_params = {'Relax_SWF': ['structure_loc',
                                    'comp_parameters_loc',
                                    'relax_type',
                                    'out_loc',
                                    'to_pass'],
+                     'Converge_Kpoints_SWF': ['structure_loc',
+                                              'comp_parameters_loc',
+                                              'out_loc',
+                                              'k_dist_start',
+                                              'to_pass'],
                      'None': ['structure_loc', 'out_loc', 'to_pass']}
     if WF_type in allowed_types:
         if not all (k in kwargs for k in needed_params[WF_type]):
@@ -82,6 +87,13 @@ def StartDetourWF_FW(WF_type, name, **kwargs):
                             comp_parameters_loc=kwargs['comp_parameters_loc'],
                             relax_type=kwargs['relax_type'],
                             out_loc=kwargs['out_loc'],
+                            to_pass=kwargs['to_pass']), name=name)
+    elif WF_type == 'Converge_Kpoints_SWF':
+        FW = Firework(FT_StartKptsConvSubWorkflow(
+                            structure_loc=kwargs['structure_loc'],
+                            comp_parameters_loc=kwargs['comp_parameters_loc'],
+                            out_loc=kwargs['out_loc'],
+                            k_dist_start=kwargs['k_dist_start'],
                             to_pass=kwargs['to_pass']), name=name)
     elif WF_type == 'None':
         FT_copy = FT_CopyInSpec(in_loc=kwargs['structure_loc'],

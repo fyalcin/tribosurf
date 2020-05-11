@@ -193,9 +193,8 @@ def ConvergeKpoints_SWF(structure, comp_parameters, out_loc,
     
     FW = Firework([FT_Loop_Kpoints, FT_PassOn], spec=spec,
                   name = 'Start Convergence')
-    FW_2 = Firework([FT_PassKpointsInfo(out_loc=out_loc), FT_PassOn,
-                     FT_PrintSpec()], spec=spec,
-                    name = 'Prepare Output and Pass Spec')
+    FW_2 = Firework([FT_PassKpointsInfo(out_loc=out_loc), FT_PassOn],
+                    spec=spec, name = 'Prepare Output and Pass Spec')
     WF = Workflow([FW, FW_2], {FW: [FW_2]}, name=name)
     return WF
     
