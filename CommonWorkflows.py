@@ -174,9 +174,46 @@ def Heterogeneous_WF(inputs):
     WF = Workflow(WF, Dependencies, name='Dummy Heterogeneous Workflow')
     return WF
 
-def ConvergeKpoints_SWF(structure, comp_parameters, out_loc,
-                    k_dist_start, to_pass, spec, k_dist_incr=1.0,
-                    n_converge=3):
+def ConvergeKpoints_SWF(structure, comp_parameters, out_loc, to_pass, spec,
+                        k_dist_incr=1.0, n_converge=3):
+    """Subworkflows that converges the k_distance for generalized MP-meshes.
+    
+    Takes a given structure and computational parameters and makes consecutive
+    VASP calculations with increasingly dense generalized Monkhorst-Pack
+    K-meshes until the total energy is converged. Uses an external script and
+    K-point grid generator from the Mueller group at John Hopkins
+    http://muellergroup.jhu.edu/K-Points.html
+
+    Parameters
+    ----------
+    structure : pymatgen.core.structure.Structure
+        The structure for which to converge the K-pint grids.
+    comp_parameters : dict
+        Dictionary of computational parameters for the VASP calculations.
+    out_loc : list of str
+        DESCRIPTION.
+    to_pass : list of str
+        List of keys that each represent a location in the first level of the
+        fw_spec and signifies which of those are to be passed to the next
+        Firework. E.g. if the fw_sec = {'a': a, 'b': {'b1'; b1, 'b2': b2},
+        'c': c}} and to_pass = ['a', 'b'], the spec in the next FW will be:
+        {'a': a, 'b': {'b1'; b1, 'b2': b2}}
+    spec : dict
+        Previous fw_spec that will be updated and/or passed on for child
+        Fireworks.
+    k_dist_incr : float, optional
+        Increment for the k_distance during the convergence. Defaults to 1.0
+    n_converge : int, optional
+        Number of calculations that have to show the same energy as the last
+        one as to signify convergence, Defaults to 3.
+
+    Returns
+    -------
+    WF : fireworks.core.firework.Workflow
+        A subworkflow intended to find the converged k_distance for a given
+        structure.
+
+    """
     
     name = 'Kpoint_Convergence SWF of '+structure.composition.reduced_formula
     
@@ -186,7 +223,6 @@ def ConvergeKpoints_SWF(structure, comp_parameters, out_loc,
     FT_Loop_Kpoints = FT_LoopKpoints(structure = structure,
                                    out_loc = out_loc,
                                    comp_params = comp_parameters,
-                                   k_dist_start = k_dist_start,
                                    k_dist_incr = k_dist_incr,
                                    n_converge = n_converge)
     FT_PassOn = FT_PassSpec(key_list=to_pass)
@@ -200,6 +236,40 @@ def ConvergeKpoints_SWF(structure, comp_parameters, out_loc,
     
 def GetEnergy_SWF(structure, comp_parameters, static_type, out_loc,
                   to_pass, spec, push_energy_loc=None):
+    """Return a subworkflow that computes the total energy of a given structure.
+    
+    Parameters
+    ----------
+    structure : pymatgen.core.structure.Structure
+        The structure for which to converge the K-pint grids.
+    comp_parameters : dict
+        Dictionary of computational parameters for the VASP calculations.
+    static_type : str
+        Specifies in which way the vasp input parameters are set. Check
+        HelperFunction.GetCustomVaspStaticSettings for details.
+    out_loc : list of str
+        List of keys that specify in which location the output data will be
+        stored.
+    to_pass : list of str
+        List of keys that each represent a location in the first level of the
+        fw_spec and signifies which of those are to be passed to the next
+        Firework. E.g. if the fw_sec = {'a': a, 'b': {'b1'; b1, 'b2': b2},
+        'c': c}} and to_pass = ['a', 'b'], the spec in the next FW will be:
+        {'a': a, 'b': {'b1'; b1, 'b2': b2}}
+    spec : dict
+        Previous fw_spec that will be updated and/or passed on for child
+        Fireworks.
+    push_energy_loc : list of str, optional
+        The parsed total energy will be appended to an array at this location
+        in the fw_spec if this is given. The default is None.
+
+    Returns
+    -------
+    WF : fireworks.core.firework.Workflow
+        A subworkflow intended to compute the total energy for a given
+        structure using VASP.
+
+    """
     CalcName = structure.composition.reduced_formula+' GetEnergy'
     
     vis, uis, vdw = GetCustomVaspStaticSettings(structure, comp_parameters,

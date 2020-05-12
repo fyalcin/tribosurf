@@ -27,6 +27,23 @@ from HelperFunctions import GetValueFromNestedDict, IsEnergyConverged, \
         
 @explicit_serialize
 class FT_PassKpointsInfo(FiretaskBase):
+    """Modify the fw_spec to pass on information about the kpoint convergence.
+    
+    Works only if the necessary data are already in the spec. Used for a
+    subworkflow that converges generalized K-grids.
+    
+    Parameters
+    ----------
+    out_loc : list of str
+        Location in the spec as specified by a list of keys into which the
+        output dictionary should be written.
+        
+    Returns
+    -------
+    A dictionary at the out_loc containing information about the kpoint
+    convergence.
+    """
+    
     _fw_name = 'Pass Kpoints Info'
     required_params = ['out_loc']
     def run_task(self, fw_spec):
@@ -40,9 +57,34 @@ class FT_PassKpointsInfo(FiretaskBase):
 
 @explicit_serialize
 class FT_LoopKpoints(FiretaskBase):
+    """Check if KpointsConvergence is finished and start new cycle if not.
+    
+    This works together with the FT_ConvergeKpoints to form a loop of
+    subsequent detours until the a Kmesh is converged.
+    
+    Parameters
+    ----------
+   structure_loc : list of str
+        List of keys that point to the structure to be relaxed in the fw_spec.
+    out_loc : list of str
+        List of keys that point to the relaxed structure in the fw_spec.
+    comp_params : dict
+        Computational parameters that are passed further on for the calculation
+        of total energies.
+    k_dist_incr : float
+        Increment for the k_distance during the convergence.
+    n_converge : int, optional
+        Number of calculations that have to show the same energy as the last
+        one as to signify convergence, Defaults to 3.
+        
+    Returns
+    -------
+    A FWAction that either puts a convergence information dictionary in the
+    spec or a new detour workflow that continues the convergence study.
+    """
+    
     _fw_name = 'Converge Kpoints'
-    required_params = ['structure', 'out_loc', 'comp_params', 'k_dist_start',
-                       'k_dist_incr']
+    required_params = ['structure', 'out_loc', 'comp_params', 'k_dist_incr']
     optional_params = ['n_converge']
     def run_task(self, fw_spec):
         if 'n_converge' in self:
@@ -70,7 +112,6 @@ class FT_LoopKpoints(FiretaskBase):
             FT_CK = FT_ConvergeKpoints(structure = self['structure'],
                                        out_loc = self['out_loc'],
                                        comp_params = self['comp_params'],
-                                       k_dist_start = self['k_dist_start'],
                                        k_dist_incr = self['k_dist_incr'],
                                        n_converge = n_converge)
             FW_CK = Firework([FT_CK], spec=fw_spec,
@@ -78,7 +119,6 @@ class FT_LoopKpoints(FiretaskBase):
             FT_LK = FT_LoopKpoints(structure = self['structure'],
                                    out_loc = self['out_loc'],
                                    comp_params = self['comp_params'],
-                                   k_dist_start = self['k_dist_start'],
                                    k_dist_incr = self['k_dist_incr'],
                                    n_converge = n_converge)
             FW_LK = Firework([FT_LK], name = 'Loop Kpoints FW')
@@ -87,9 +127,34 @@ class FT_LoopKpoints(FiretaskBase):
             
 @explicit_serialize
 class FT_ConvergeKpoints(FiretaskBase):
+    """Increment the kpoints list and start new total energy calculations.
+    
+    This works together with the FT_LoopKpoints to form a loop of
+    subsequent detours until the a Kmesh is converged.
+    
+    Parameters
+    ----------
+   structure_loc : list of str
+        List of keys that point to the structure to be relaxed in the fw_spec.
+    out_loc : list of str
+        List of keys that point to the relaxed structure in the fw_spec.
+    comp_params : dict
+        Computational parameters that are passed further on for the calculation
+        of total energies.
+    k_dist_incr : float
+        Increment for the k_distance during the convergence.
+    n_converge : int, optional
+        Number of calculations that have to show the same energy as the last
+        one as to signify convergence, Defaults to 3.
+        
+    Returns
+    -------
+    A FWAction that either puts a final k_distance in the spec if convergence
+    is reached, or starts a new total energy calculation at a larger k_dist.
+    """
     _fw_name = 'Converge Kpoints'
-    required_params = ['structure', 'out_loc', 'comp_params', 'k_dist_start',
-                       'k_dist_incr', 'n_converge']
+    required_params = ['structure', 'out_loc', 'comp_params', 'k_dist_incr',
+                       'n_converge']
     def run_task(self, fw_spec):
         from CommonWorkflows import GetEnergy_SWF
         energies = fw_spec.get('energy_list')
@@ -105,8 +170,11 @@ class FT_ConvergeKpoints(FiretaskBase):
         # final_k_dist = fw_spec.get('final_k_dist')
         # if final_k_dist:
         if energies is None:
+            if comp_parameters.get('is_metal'):
+                k_dist = 20.0
+            else:
+                k_dist = 10.0
             to_pass = ['energy_list',  'last_calc']
-            k_dist = self['k_dist_start']
             comp_parameters['k_distance'] = k_dist
             KPTS = GetGeneralizedKmesh(struct, k_dist)
             KPTS_info = KPTS.as_dict().get('comment')
@@ -227,9 +295,8 @@ class FT_StartKptsConvSubWorkflow(FiretaskBase):
         List of keys that point to the computational parameters to be used for
         the relaxation in the fw_spec.
     out_loc : list of str
-        List of keys that point to the relaxed structure in the fw_spec.
-    k_dist_start : float
-        Minimal k_distance for the start of the convergence series
+        List of keys that point to the information about the K-point
+        convergence in the fw_spec.
     to_pass : list of str
         List of keys that each represent a location in the first level of the
         fw_spec and signifies which of those are to be passed to the next
@@ -254,14 +321,13 @@ class FT_StartKptsConvSubWorkflow(FiretaskBase):
     
     _fw_name = 'Starting Relaxation Subworkflow'
     required_params = ['structure_loc', 'comp_parameters_loc', 'out_loc',
-                       'k_dist_start', 'to_pass']
+                       'to_pass']
     optional_params = ['k_dist_incr', 'n_converge']
     def run_task(self, fw_spec):
         from CommonWorkflows import ConvergeKpoints_SWF
         structure = GetValueFromNestedDict(fw_spec, self['structure_loc'])
         params = GetValueFromNestedDict(fw_spec, self['comp_parameters_loc'])
         out_loc = self['out_loc']
-        k_dist_start = self['k_dist_start']
         to_pass = self['to_pass']
         
         if self.get('k_dist_incr'):
@@ -274,8 +340,8 @@ class FT_StartKptsConvSubWorkflow(FiretaskBase):
         else:
             n_converge = 3
         
-        SWF = ConvergeKpoints_SWF(structure, params, out_loc, k_dist_start,
-                                  to_pass, fw_spec, k_dist_incr, n_converge)
+        SWF = ConvergeKpoints_SWF(structure, params, out_loc, to_pass,
+                                  fw_spec, k_dist_incr, n_converge)
         return FWAction(detours=SWF)    
 
 @explicit_serialize
@@ -665,8 +731,6 @@ class FT_FetchStructureFromFormula(FiretaskBase):
                                                                '_fromMP'],
                                                      structure, d={})
         
-        
-        import pprint
         spec = fw_spec
         spec = UpdateNestedDict(spec, updated_mpid)
         spec = UpdateNestedDict(spec, updated_metal)

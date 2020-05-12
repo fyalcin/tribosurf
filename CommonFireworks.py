@@ -15,6 +15,39 @@ __date__ = 'March 11th, 2020'
 
 def ParsePrevVaspCalc_FW(CalcName, OutLoc, PassOnList, PushEnergyLoc=None,
                          spec=None, Name='Parse Vasp Output'):
+    """Parse the OUTCAR of a finished VASP caluculation and put it in the spec.
+    
+    Uses pymatgen to parse the OUTCAR of a previous VASP run and put a
+    dictionary containing the final energy, the Fermi energy, the local
+    charges, and the local magnetic moments in the fw_spec. If PushEnergyLoc
+    is specified, the final energy is also pushed to the end of the array
+    at this location in the spec.
+
+    Parameters
+    ----------
+    CalcName : str
+        Label of the previous VASP Calc as given in the CalcLoc.
+    OutLoc : list of str
+        Each str represents a key specifying the location of the output
+        dictionary in the fw_spec.
+    PassOnList : list of str
+        Specifies the first level keys of the spec that should be passed on to
+        the next Firework.
+    PushEnergyLoc : list of str, optional
+        The parsed total energy will be appended to an array at this location
+        in the fw_spec if this is given. The default is None.
+    spec : dict, optional
+        Previous fw_spec that will be partially updated and/or passed on.
+        The default is None.
+    Name : str, optional
+        Name of the Firework. The default is 'Parse Vasp Output'.
+
+    Returns
+    -------
+    FW : fireworks.core.firework.Firework
+        A Firework parsing VASP OUTCAR output and putting it in the fw_spec.
+
+    """
     from atomate.common.firetasks.glue_tasks import CopyFilesFromCalcLoc
     task_list = []
     task_list.append(CopyFilesFromCalcLoc(calc_loc=CalcName))
@@ -69,7 +102,6 @@ def StartDetourWF_FW(WF_type, name, **kwargs):
                      'Converge_Kpoints_SWF': ['structure_loc',
                                               'comp_parameters_loc',
                                               'out_loc',
-                                              'k_dist_start',
                                               'to_pass'],
                      'None': ['structure_loc', 'out_loc', 'to_pass']}
     if WF_type in allowed_types:
@@ -93,7 +125,6 @@ def StartDetourWF_FW(WF_type, name, **kwargs):
                             structure_loc=kwargs['structure_loc'],
                             comp_parameters_loc=kwargs['comp_parameters_loc'],
                             out_loc=kwargs['out_loc'],
-                            k_dist_start=kwargs['k_dist_start'],
                             to_pass=kwargs['to_pass']), name=name)
     elif WF_type == 'None':
         FT_copy = FT_CopyInSpec(in_loc=kwargs['structure_loc'],
