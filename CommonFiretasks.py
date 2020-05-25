@@ -23,6 +23,53 @@ from HelperFunctions import GetValueFromNestedDict, IsEnergyConverged, \
     WriteNestedDictFromList, UpdateNestedDict, GetLowEnergyStructure, \
     GetGapFromMP, WriteFileFromDict, RemoveMatchingFiles, GetGeneralizedKmesh
             
+
+@explicit_serialize
+class FT_ChooseCompParams(FiretaskBase):
+    """Choose the computational parameters for the interface calculations.
+    
+    Here computatinal parameters are selected for the interface based on the
+    converged parameters of the two constituent materials.
+    
+    Parameters
+    ----------
+    loc_1 : list of str
+        Location in the spec of the converged parameters of the first material.
+    loc_2 : list of str
+        Location in the spec of the converged parameters of the second
+        material.
+    out_loc : list of str
+        Location in the spec as specified by a list of keys into which the
+        output should be written.
+        
+    Returns
+    -------
+    FWAction that modifys the spec for the next firewoks at the out_loc.
+    """
+    
+    _fw_name = 'Choose Comp Params'
+    required_params = ['loc_1', 'loc_2', 'out_loc']
+    def run_task(self, fw_spec):
+        
+        k_dens1 = GetValueFromNestedDict(fw_spec, self['loc_1']+['k_distance'])
+        k_dens2 = GetValueFromNestedDict(fw_spec, self['loc_2']+['k_distance'])
+        metal_1 = GetValueFromNestedDict(fw_spec, self['loc_1']+['is_metal'])
+        metal_2 = GetValueFromNestedDict(fw_spec, self['loc_2']+['is_metal'])
+        out_str_k = '->'.join(self['out_loc']+['k_distance'])
+        out_str_metal = '->'.join(self['out_loc']+['is_metal'])
+        
+        if k_dens1 >= k_dens2:
+            k_dens = k_dens1
+        else:
+            k_dens = k_dens2
+            
+        if metal_1 or metal_2:
+            metal = True
+        else:
+            metal = False
+            
+        return FWAction(mod_spec=[{'_set': {out_str_k: k_dens,
+                                            out_str_metal: metal}}])
         
         
 @explicit_serialize

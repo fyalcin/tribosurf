@@ -26,9 +26,7 @@ inputs = {'material_1': {'formula': 'Cu',
                          'min_thickness': 6
                          },
           'computational_params':{'functional': 'PBE',
-                                  'use_vdw': 'False',
-                                  'use_spin': 'True'
-                                  },
+                                  'use_vdw': 'False'},
           'interface_params':{'interface_distance': 1.5,
                               'max_area': 500,
                               'r1r2_tol': 0.05
@@ -39,4 +37,4 @@ inputs = {'material_1': {'formula': 'Cu',
 lpad = LaunchPad.auto_load() # loads this based on the FireWorks configuration
 lpad.add_wf(Heterogeneous_WF(inputs))
 
-rapidfire(lpad)
+#rapidfire(lpad)

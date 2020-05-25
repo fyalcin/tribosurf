@@ -61,19 +61,31 @@ def Heterogeneous_WF(inputs):
                             name='Get '+inputs['material_2']['formula']+' bulk')
     WF.append(Start_M2)
     
-    Converge_M1 = ConvergeParametersFW(key_list=['material_1',
-                                                 'interface_params',
-                                                 'computational_params'],
-                                       name='Converge Parameters for'+' '+
-                                            inputs['material_1']['formula'])
+    bulk_loc = ['material_1', inputs['material_1']['formula']+'_fromMP']
+    Converge_M1 = StartDetourWF_FW('Converge_Kpoints_SWF',
+                            name='Converge Kpoints '+
+                            inputs['material_1']['formula'],
+                            structure_loc=bulk_loc,
+                            comp_parameters_loc=['material_1'],
+                            out_loc=['material_1'],
+                            to_pass=['material_1'])
     WF.append(Converge_M1)
     
-    Converge_M2 = ConvergeParametersFW(key_list=['material_2'],
-                                        name='Converge Parameters for'+' '+
-                                             inputs['material_2']['formula'])
+    bulk_loc = ['material_2', inputs['material_2']['formula']+'_fromMP']
+    Converge_M2 = StartDetourWF_FW('Converge_Kpoints_SWF',
+                            name='Converge Kpoints '+
+                            inputs['material_2']['formula'],
+                            structure_loc=bulk_loc,
+                            comp_parameters_loc=['material_2'],
+                            out_loc=['material_2'],
+                            to_pass=['material_2', 'computational_params',
+                                     'interface_params'])
     WF.append(Converge_M2)
     
-    Final_Params = FixParametersFW(key_list=['_all'],
+    Final_Params = FixParametersFW(loc_1=['material_1'],
+                                   loc_2=['material_2'],
+                                   out_loc=['interface_params'],
+                                   to_pass=['_all'],
                                    name='Select computational parameters')
     WF.append(Final_Params)
     

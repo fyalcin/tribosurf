@@ -144,13 +144,13 @@ def TestFW(in_loc, out_loc, pass_list):
     FW = Firework([FT1, FT2, FT3, FT5])
     return FW
 
-def FixParametersFW(key_list, name):
+def FixParametersFW(loc_1, loc_2, out_loc, to_pass, name):
 # =============================================================================
-#     TODO: Take convergence parameters from both systems and take the higher
-#           ones for the rest of the workflow.
+#     TODO: Include Encut convergence once it is ready.
 # =============================================================================
-    FW = Firework(FT_PrintSpec(), name=name)
-    FW = Firework(FT_PassSpec(key_list = key_list), name=name)
+    FT_K = FT_ChooseCompParams(loc_1=loc_1, loc_2=loc_2, out_loc=out_loc)
+    FT_Pass = FT_PassSpec(key_list = to_pass)
+    FW = Firework([FT_K, FT_Pass], name=name)
     return FW
 
 
