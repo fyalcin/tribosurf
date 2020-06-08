@@ -19,10 +19,28 @@ from atomate.vasp.fireworks.core import OptimizeFW
 from mpinterfaces.interface import Interface
 from mpinterfaces.transformations import get_aligned_lattices, \
     generate_all_configs
-from HelperFunctions import GetValueFromNestedDict, IsEnergyConverged, \
+from HelperFunctions import GetValueFromNestedDict, IsListConverged, \
     WriteNestedDictFromList, UpdateNestedDict, GetLowEnergyStructure, \
     GetGapFromMP, WriteFileFromDict, RemoveMatchingFiles, GetGeneralizedKmesh
             
+
+@explicit_serialize
+class FT_EnergyCutoffConvo(FiretaskBase):
+    
+    _fw_name = 'Energy Cutoff Convergence'
+    required_params = ['structure', 'out_loc', 'comp_params', 'encut_incr']
+    optional_params = ['n_converge']
+    def run_task(self, fw_spec):
+        if 'n_converge' in self:
+            n_converge = self['n_converge']
+        else:
+            n_converge = 3
+            
+        comp_params = self['comp_params']
+        vol_tol = comp_params.get('volume_tolerence', 0.001)
+        BM_tol = comp_params.get('BM_tolerence', 0.01)
+        
+        final_encut = fw_spec.get('final_encut')
 
 @explicit_serialize
 class FT_ChooseCompParams(FiretaskBase):
@@ -253,7 +271,7 @@ class FT_ConvergeKpoints(FiretaskBase):
                             mod_spec=[{'_set': {'k_dist_list': k_list,
                                                 'last_KPTS_info': KPTS_info}}])
         else:
-            if IsEnergyConverged(energies, etol, n_converge):
+            if IsListConverged(energies, etol, n_converge):
                 k_list = fw_spec.get('k_dist_list')
                 final_k_dist = fw_spec.get('k_dist_list')[-n_converge]
                 print('')
