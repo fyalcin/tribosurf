@@ -32,8 +32,8 @@ def GetLastBMDatafromDB(formula, db_file='/home/mwo/FireWorks/config/db.json'):
     """
     db = GetDB(db_file)
     cursor = db.eos.find({'formula_pretty': formula}).sort(
-        'created_at', pymongo.ASCENDING)
-    return cursor[-1]
+        'created_at', pymongo.DESCENDING)
+    return cursor[0]
 
 def GetDB(db_file='/home/mwo/FireWorks/config/db.json'):
     """Connect to the MongoDB database specified in the db_file.
