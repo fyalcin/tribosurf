@@ -7,6 +7,8 @@ Created on Mon Mar 23 14:33:47 2020
 """
 import os
 import numpy as np
+from datetime import datetime
+from uuid import uuid4
 from pymatgen.core import Structure
 from pymatgen.io.vasp.inputs import Poscar, Kpoints
 from pymatgen.io.vasp.outputs import Outcar
@@ -27,7 +29,83 @@ from HelperFunctions import GetValueFromNestedDict, IsListConverged, \
     GetGapFromMP, WriteFileFromDict, RemoveMatchingFiles, \
     GetGeneralizedKmesh, GetLastBMDatafromDB, GetCustomVaspStaticSettings, \
     GetDB
-            
+
+
+@explicit_serialize
+class FT_StartEncutConvSubWorkflow(FiretaskBase):
+    """Start a ConvergeEncut_SWF as a detour.
+    
+    This Firetask is intendet to be used within a StartDetourWF_FW Firework.
+    A ConvergeEncut_SWF is started as a detour using a FWAction. The current
+    fw_spec is passed on to the subworkflow.
+    
+    Parameters
+    ----------
+    structure_loc : list of str
+        List of keys that point to the structure to be relaxed in the fw_spec.
+    comp_parameters_loc : list of str
+        List of keys that point to the computational parameters to be used for
+        the relaxation in the fw_spec.
+    out_loc : list of str
+        List of keys that point to the information about the K-point
+        convergence in the fw_spec.
+    to_pass : list of str
+        List of keys that each represent a location in the first level of the
+        fw_spec and signifies which of those are to be passed to the next
+        Firework. E.g. if the fw_spec = {'a': a, 'b': {'b1'; b1, 'b2': b2},
+        'c': c}} and to_pass = ['a', 'b'], the spec in the next FW will be:
+        {'a': a, 'b': {'b1'; b1, 'b2': b2}}
+    encut_start : float, optional
+        Starting encut value for the first run. Defaults to 200.
+    encut_incr : float, optional
+        Increment for the encut during the convergence. Defaults to 25.
+    n_converge : int, optional
+        Number of calculations that have to show the same minimum volume and 
+        bulk modulus as the last one as to signify convergence, Defaults to 3.
+    
+    See Also
+    --------
+    StartDetourWF_FW in CommonFireworks
+    
+    Returns
+    -------
+    FWAction with a detour starting a ConvergeEncut_SWF subworkflow.
+    """
+    
+    _fw_name = 'Starting Encut Convergence Subworkflow'
+    required_params = ['structure_loc', 'comp_parameters_loc', 'out_loc',
+                       'to_pass']
+    optional_params = ['encut_start', 'encut_incr', 'n_converge']
+    def run_task(self, fw_spec):
+        from CommonWorkflows import ConvergeKpoints_SWF
+        structure = GetValueFromNestedDict(fw_spec, self['structure_loc'])
+        params = GetValueFromNestedDict(fw_spec, self['comp_parameters_loc'])
+        out_loc = self['out_loc']
+        to_pass = self['to_pass']
+        
+        encut_start = self.get('encut_start', 200)
+        encut_incr = self.get('encut_incr', 25)
+        n_converge = self.get('n_converge', 3)
+        
+        tag = "BM group: {}".format(str(uuid4()))
+        
+        FT_EncutConvo = FT_EnergyCutoffConvo(structure = structure,
+                                             out_loc = out_loc,
+                                             comp_params = params,
+                                             tag = tag,
+                                             encut_incr = encut_incr,
+                                             encut_start = encut_start)
+        FT_PassECInfo = FT_PassEncutInfo(out_loc=out_loc)
+        
+        FW_CE = Firework(FT_EncutConvo, spec=fw_spec,
+                         name='Start Encut Convergence')
+        FW_CE = Firework(FT_PassECInfo, spec=fw_spec,
+                         name='Pass on the output')
+        
+        
+        SWF = ConvergeKpoints_SWF(structure, params, out_loc, to_pass,
+                                  fw_spec, k_dist_incr, n_converge)
+        return FWAction(detours=SWF)         
 
 @explicit_serialize
 class FT_UpdateBMLists(FiretaskBase):
@@ -62,6 +140,37 @@ class FT_UpdateBMLists(FiretaskBase):
         
 
 @explicit_serialize
+class FT_PassEncutInfo(FiretaskBase):
+    """Modify the fw_spec to pass on information about the encut convergence.
+    
+    Works only if the necessary data are already in the spec. Used for a
+    subworkflow that converges encut via EOS fits.
+    
+    Parameters
+    ----------
+    out_loc : list of str
+        Location in the spec as specified by a list of keys into which the
+        output dictionary should be written.
+        
+    Returns
+    -------
+    A dictionary at the out_loc containing information about the encut
+    convergence.
+    """
+    
+    _fw_name = 'Pass Encut Info'
+    required_params = ['out_loc']
+    def run_task(self, fw_spec):
+        
+        prev_data = GetValueFromNestedDict(fw_spec, self['out_loc'])
+        if not prev_data:
+            prev_data = {}
+        encut_info = fw_spec.get('encut_info_dict')
+        out_dict = UpdateNestedDict(prev_data, encut_info)
+        out_str = '->'.join(self['out_loc'])
+        return FWAction(mod_spec=[{'_set': {out_str: out_dict}}])
+
+@explicit_serialize
 class FT_EnergyCutoffConvo(FiretaskBase):
     
     _fw_name = 'Energy Cutoff Convergence'
@@ -74,7 +183,7 @@ class FT_EnergyCutoffConvo(FiretaskBase):
             dm=np.eye(3)*i
             deforms.append(dm)  
         n_converge = self.get('n_converge', 3)
-        encut_start = self.get('encut_start', 300)
+        encut_start = self.get('encut_start', 200)
         encut_incr = self.get('encut_incr', 25)
         deformations = self.get('deformations', deforms)
         db_file = self.get('db_file')
@@ -131,6 +240,8 @@ class FT_EnergyCutoffConvo(FiretaskBase):
             
             #set up the entry for the data arrays in the database
             set_data = {'tag': tag,
+                        'chem_formula': formula,
+                        'created_on': str(datetime.now()),
                         'Encut_list': Encut_list,
                         'BM_list': [],
                         'V0_list': []}
@@ -152,15 +263,30 @@ class FT_EnergyCutoffConvo(FiretaskBase):
                       .format(final_encut, final_BM, final_V0))
                 print('')
                 print('')
-                prev_data = GetValueFromNestedDict(fw_spec, self['out_loc'])
-                if not prev_data:
-                    prev_data = {}
-                encut_info = {'final_encut': final_encut,
-                              'final_BM': final_BM,
-                              'final_volume': final_V0}
-                out_dict = UpdateNestedDict(prev_data, encut_info)
-                out_str = '->'.join(self['out_loc'])
-                return FWAction(mod_spec=[{'_set': {out_str: out_dict}}])
+                encut_info = {'encut_info': {'final_encut': final_encut,
+                                             'final_BM': final_BM,
+                                             'final_volume': final_V0,
+                                             'BM_list': BM_list,
+                                             'V0_list': V0_list,
+                                             'Encut_list': Encut_list,
+                                             'BM_tol_abs': BM_tol,
+                                             'BM_tol_rel': BM_tolerance,
+                                             'V0_tol_abs': V0_tol,
+                                             'V0_tol_rel': V0_tolerance},
+                              'encut': final_encut,
+                              'equilibrium_volume': final_V0,
+                              'bulk_moduls': final_BM}
+                
+                DB.coll.update_one({'tag': tag},
+                               {'$set': {'final_encut': final_encut,
+                                         'final_BM': final_BM,
+                                         'final_volume': final_V0,
+                                         'BM_tol_abs': BM_tol,
+                                         'BM_tol_rel': BM_tolerance,
+                                         'V0_tol_abs': V0_tol,
+                                         'V0_tol_rel': V0_tolerance}})
+                return FWAction(update_spec=[{'encut_info_dict': encut_info}])
+            
             else:
                 vis, uis, vdw = GetCustomVaspStaticSettings(struct, comp_params,
                                                         'bulk_from_scratch')
@@ -496,7 +622,7 @@ class FT_GetEnergyFromDB(FiretaskBase):
                                                  'formula_pretty': formula})[
                                                      'output']['energy']
         out_str = '->'.join(out_loc)
-        return FWAction(mod_spec=[{'_set': {out_str: energy}}])
+        return FWAction(mod_spec=[{'_set': {out_str: energy}}]) 
 
 @explicit_serialize
 class FT_StartKptsConvSubWorkflow(FiretaskBase):
@@ -538,7 +664,7 @@ class FT_StartKptsConvSubWorkflow(FiretaskBase):
     FWAction with a detour starting a ConvergeKpoints_SWF subworkflow.
     """
     
-    _fw_name = 'Starting Relaxation Subworkflow'
+    _fw_name = 'Starting Kpoints Convergence Subworkflow'
     required_params = ['structure_loc', 'comp_parameters_loc', 'out_loc',
                        'to_pass']
     optional_params = ['k_dist_incr', 'n_converge']

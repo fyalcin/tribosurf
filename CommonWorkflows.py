@@ -186,6 +186,75 @@ def Heterogeneous_WF(inputs):
     WF = Workflow(WF, Dependencies, name='Dummy Heterogeneous Workflow')
     return WF
 
+def ConvergeEncut_SWF(structure, comp_parameters, out_loc, to_pass, spec,
+                      deformations=None, encut_start=200, encut_incr=25,
+                      n_converge=3, db_file='>>db_file<<'):
+    """Subworkflows that converges the Encut using a fit to an BM-EOS.
+    
+    Takes a given structure, computational parameters, and a optional list
+    of deformations and uses these deformations to compute an
+    Birch-Murgnahan equation of state for higher and higher energy cutoffs.
+    Once bulk modulus and equilibrium volume do not change any longer,
+    convergence is reached.
+
+    Parameters
+    ----------
+    structure : pymatgen.core.structure.Structure
+        The structure for which to converge the K-pint grids.
+    comp_parameters : dict
+        Dictionary of computational parameters for the VASP calculations.
+    out_loc : list of str
+        location in the spec where the end results are stored.
+    to_pass : list of str
+        List of keys that each represent a location in the first level of the
+        fw_spec and signifies which of those are to be passed to the next
+        Firework. E.g. if the fw_sec = {'a': a, 'b': {'b1'; b1, 'b2': b2},
+        'c': c}} and to_pass = ['a', 'b'], the spec in the next FW will be:
+        {'a': a, 'b': {'b1'; b1, 'b2': b2}}
+    spec : dict
+        Previous fw_spec that will be updated and/or passed on for child
+        Fireworks.
+    deformations: list of lists, optional
+        List of deformation matrices for the fit to the EOS. Defaults to None,
+        which results in 5 volumes from 90% to 110% of the initial volume.
+    encut_start : float, optional
+        Starting encut value for the first run. Defaults to 200.
+    encut_incr : float, optional
+        Increment for the encut during the convergence. Defaults to 25.
+    n_converge : int, optional
+        Number of calculations that have to show the same energy as the last
+        one as to signify convergence, Defaults to 3.
+    db_file : str
+        Full path to the db.json file that should be used. Defaults to
+        '>>db_file<<', to use env_chk.
+
+    Returns
+    -------
+    WF : fireworks.core.firework.Workflow
+        A subworkflow intended to find the converged k_distance for a given
+        structure.
+
+    """
+    
+    name = 'Encut Convergence SWF of '+structure.composition.reduced_formula
+    
+    tag = "BM group: {}".format(str(uuid4()))
+        
+    FT_EncutConvo = FT_EnergyCutoffConvo(structure = structure,
+                                         out_loc = out_loc,
+                                         comp_params = params,
+                                         tag = tag,
+                                         encut_incr = encut_incr,
+                                         encut_start = encut_start)
+    FT_PassECInfo = FT_PassEncutInfo(out_loc=out_loc)
+        
+    FW_CE = Firework(FT_EncutConvo, spec=fw_spec,
+                     name='Start Encut Convergence')
+    FW_CE = Firework(FT_PassECInfo, spec=fw_spec,
+                     name='Pass on the output')
+    WF = Workflow([FW, FW_2], {FW: [FW_2]}, name=name)
+    return WF
+
 def ConvergeKpoints_SWF(structure, comp_parameters, out_loc, to_pass, spec,
                         k_dist_incr=1.0, n_converge=3):
     """Subworkflows that converges the k_distance for generalized MP-meshes.
