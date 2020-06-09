@@ -14,33 +14,187 @@ from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet
 from fireworks import Workflow
 from fireworks.core.firework import FWAction, FiretaskBase, Firework
 from fireworks.utilities.fw_utilities import explicit_serialize
+from atomate.utils.utils import env_chk
+from atomate.vasp.config import VASP_CMD, DB_FILE
 from atomate.vasp.database import VaspCalcDb
 from atomate.vasp.fireworks.core import OptimizeFW
+from atomate.vasp.workflows.base.bulk_modulus import get_wf_bulk_modulus
 from mpinterfaces.interface import Interface
 from mpinterfaces.transformations import get_aligned_lattices, \
     generate_all_configs
 from HelperFunctions import GetValueFromNestedDict, IsListConverged, \
     WriteNestedDictFromList, UpdateNestedDict, GetLowEnergyStructure, \
-    GetGapFromMP, WriteFileFromDict, RemoveMatchingFiles, GetGeneralizedKmesh
+    GetGapFromMP, WriteFileFromDict, RemoveMatchingFiles, \
+    GetGeneralizedKmesh, GetLastBMDatafromDB, GetCustomVaspStaticSettings, \
+    GetDB
             
+
+@explicit_serialize
+class FT_UpdateBMLists(FiretaskBase):
+    
+    _fw_name = 'Update Bulk Modulus Lists'
+    required_params = ['formula', 'tag']
+    optional_params = ['db_file']
+    def run_task(self, fw_spec):
+        formula = self.get('formula')
+        tag = self.get('tag')
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
+        
+        BM_list = fw_spec.get('BM_list', [])
+        V0_list = fw_spec.get('V0_list', [])
+        
+        results = GetLastBMDatafromDB(formula, db_file)
+        
+        BM = results['bulk_modulus']
+        V0 = results['results']['v0']
+        
+        #update data arrays in the database
+        DB = GetDB(db_file)
+        DB.coll = DB['BM_data_sharing']
+        DB.coll.update_one({'tag': tag},
+                           {'$push': {'BM_list': BM,
+                                      'V0_list': V0}})
+        
+        return FWAction(mod_spec=[{'_set': {'BM_list': BM_list,
+                                            'V0_list': V0_list}}])
+        
 
 @explicit_serialize
 class FT_EnergyCutoffConvo(FiretaskBase):
     
     _fw_name = 'Energy Cutoff Convergence'
-    required_params = ['structure', 'out_loc', 'comp_params', 'encut_incr']
-    optional_params = ['n_converge']
+    required_params = ['structure', 'out_loc', 'comp_params', 'tag']
+    optional_params = ['deformations', 'n_converge', 'encut_start',
+                       'encut_incr', 'db_file']
     def run_task(self, fw_spec):
-        if 'n_converge' in self:
-            n_converge = self['n_converge']
-        else:
-            n_converge = 3
+        deforms = []
+        for i in np.arange(0.9, 1.1, 0.05):
+            dm=np.eye(3)*i
+            deforms.append(dm)  
+        n_converge = self.get('n_converge', 3)
+        encut_start = self.get('encut_start', 300)
+        encut_incr = self.get('encut_incr', 25)
+        deformations = self.get('deformations', deforms)
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
             
+        struct = self['structure']
+        out_loc = self['out_loc']
         comp_params = self['comp_params']
-        vol_tol = comp_params.get('volume_tolerence', 0.001)
-        BM_tol = comp_params.get('BM_tolerence', 0.01)
+        tag = self['tag']
         
-        final_encut = fw_spec.get('final_encut')
+        V0_tolerance = comp_params.get('volume_tolerence', 0.001)
+        BM_tolerance = comp_params.get('BM_tolerence', 0.01)
+        
+        
+        #get the data arrays from the database (returns None when not there)
+        DB = GetDB(db_file)
+        DB.coll = DB['BM_data_sharing']
+        data = DB.coll.find_one({'tag': tag})
+        if data:
+            BM_list = data.get('BM_list')
+            V0_list = data.get('V0_list')
+            Encut_list = data.get('Encut_list')
+        else:
+            BM_list = None
+            V0_list = None
+            Encut_list = None
+        
+        if BM_list is None:
+            vis, uis, vdw = GetCustomVaspStaticSettings(struct, comp_params,
+                                                        'bulk_from_scratch')
+            uis['ENCUT'] = encut_start
+            Encut_list = [encut_start]
+            BM_WF = get_wf_bulk_modulus(struct, deformations,
+                                        vasp_input_set=None,
+                                        vasp_cmd=VASP_CMD, db_file=db_file,
+                                        user_kpoints_settings=None,
+                                        eos='birch_murnaghan', tag=tag,
+                                        user_incar_settings=uis)
+            
+            formula=struct.composition.reduced_formula
+            UAL_FW = Firework([FT_UpdateBMLists(formula=formula, tag=tag),
+                               FT_EnergyCutoffConvo(structure=struct,
+                                                    out_loc=out_loc,
+                                                    comp_params=comp_params,
+                                                    tag=tag,
+                                                    deformations=deformations,
+                                                    n_converge=n_converge,
+                                                    encut_start=encut_start,
+                                                    encut_incr=encut_incr)],
+                              name='Update BM Lists and Loop')
+            
+            BM_WF.append_wf(Workflow.from_Firework(UAL_FW), BM_WF.leaf_fw_ids)
+            
+            #set up the entry for the data arrays in the database
+            set_data = {'tag': tag,
+                        'Encut_list': Encut_list,
+                        'BM_list': [],
+                        'V0_list': []}
+            DB.coll.insert_one(set_data)
+            
+            return FWAction(detours=BM_WF)
+        
+        else:
+            BM_tol = BM_list[-1]*BM_tolerance
+            V0_tol = V0_list[-1]*V0_tolerance
+            if (IsListConverged(BM_list, BM_tol, n_converge)
+            and IsListConverged(V0_list, V0_tol, n_converge)):
+                final_encut = Encut_list[-n_converge]
+                final_BM = BM_list[-n_converge]
+                final_V0 = V0_list[-n_converge]
+                print('')
+                print(' Convergence reached for BM and cell volume.')
+                print(' Final encut = {}eV; Final BM = {}GPa; Final Volume = {}'
+                      .format(final_encut, final_BM, final_V0))
+                print('')
+                print('')
+                prev_data = GetValueFromNestedDict(fw_spec, self['out_loc'])
+                if not prev_data:
+                    prev_data = {}
+                encut_info = {'final_encut': final_encut,
+                              'final_BM': final_BM,
+                              'final_volume': final_V0}
+                out_dict = UpdateNestedDict(prev_data, encut_info)
+                out_str = '->'.join(self['out_loc'])
+                return FWAction(mod_spec=[{'_set': {out_str: out_dict}}])
+            else:
+                vis, uis, vdw = GetCustomVaspStaticSettings(struct, comp_params,
+                                                        'bulk_from_scratch')
+            encut = Encut_list[-1]+encut_incr
+            uis['ENCUT'] = encut
+            
+            BM_WF = get_wf_bulk_modulus(struct, deformations,
+                                        vasp_input_set=None,
+                                        vasp_cmd=VASP_CMD, db_file=DB_FILE,
+                                        user_kpoints_settings=None,
+                                        eos='birch_murnaghan', tag=tag,
+                                        user_incar_settings=uis)
+            
+            formula=struct.composition.reduced_formula
+            UAL_FW = Firework([FT_UpdateBMLists(formula=formula, tag=tag),
+                               FT_EnergyCutoffConvo(structure=struct,
+                                                    out_loc=out_loc,
+                                                    comp_params=comp_params,
+                                                    tag=tag,
+                                                    deformations=deformations,
+                                                    n_converge=n_converge,
+                                                    encut_start=encut_start,
+                                                    encut_incr=encut_incr)],
+                              name='Update BM Lists and Loop')
+            
+            BM_WF.append_wf(Workflow.from_Firework(UAL_FW), BM_WF.leaf_fw_ids)
+            
+            #Update Database entry for Encut list
+            DB.coll.update_one({'tag': tag},
+                               {'$push': {'Encut_list': encut}})
+            return FWAction(detours=BM_WF)
+                
+        
+        
 
 @explicit_serialize
 class FT_ChooseCompParams(FiretaskBase):
@@ -273,7 +427,7 @@ class FT_ConvergeKpoints(FiretaskBase):
         else:
             if IsListConverged(energies, etol, n_converge):
                 k_list = fw_spec.get('k_dist_list')
-                final_k_dist = fw_spec.get('k_dist_list')[-n_converge]
+                final_k_dist = k_list[-n_converge]
                 print('')
                 print('')
                 print('Kpoint convergence reached. Ideal k-distance = {}'
@@ -365,7 +519,7 @@ class FT_StartKptsConvSubWorkflow(FiretaskBase):
     to_pass : list of str
         List of keys that each represent a location in the first level of the
         fw_spec and signifies which of those are to be passed to the next
-        Firework. E.g. if the fw_sec = {'a': a, 'b': {'b1'; b1, 'b2': b2},
+        Firework. E.g. if the fw_spec = {'a': a, 'b': {'b1'; b1, 'b2': b2},
         'c': c}} and to_pass = ['a', 'b'], the spec in the next FW will be:
         {'a': a, 'b': {'b1'; b1, 'b2': b2}}
     k_dist_incr : float, optional
@@ -431,7 +585,7 @@ class FT_StartRelaxSubWorkflow(FiretaskBase):
     to_pass : list of str
         List of keys that each represent a location in the first level of the
         fw_spec and signifies which of those are to be passed to the next
-        Firework. E.g. if the fw_sec = {'a': a, 'b': {'b1'; b1, 'b2': b2},
+        Firework. E.g. if the fw_spec = {'a': a, 'b': {'b1'; b1, 'b2': b2},
         'c': c}} and to_pass = ['a', 'b'], the spec in the next FW will be:
         {'a': a, 'b': {'b1'; b1, 'b2': b2}}
     

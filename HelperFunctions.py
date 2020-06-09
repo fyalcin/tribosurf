@@ -4,9 +4,23 @@ import subprocess
 import pymongo
 from pymatgen import MPRester
 from pymatgen.io.vasp.inputs import Kpoints
-from fireworks.core.firework import FWAction
+from fireworks.core.firework import FWAction, Workflow
+from fireworks.user_objects.dupefinders.dupefinder_exact import DupeFinderExact
 from atomate.vasp.database import VaspCalcDb
 
+
+def AddDupeCheckToWF(wf):
+    workflow_dict = wf.as_dict()
+    new_wf_dict = workflow_dict
+    df = {'_dupefinder': DupeFinderExact()}
+    for fw in workflow_dict['fws']:
+        fw['spec'].update(df)
+    new_wf_dict['fws'] = workflow_dict['fws']
+    WF = Workflow.from_dict(new_wf_dict)
+    return WF
+        
+        
+    
 
 def GetLastBMDatafromDB(formula, db_file='/home/mwo/FireWorks/config/db.json'):
     """Query the FireWorks database for the last bulk modulus data for formula.
@@ -111,13 +125,16 @@ def IsListConverged(input_list, tol, n=3):
         True if input_list is converged, False otherwise.
 
     """
-    check_list = [False]*n
-    el = input_list.copy()
-    el.reverse()
-    for i, b in enumerate(check_list):
-        if abs(el[0]-el[i+1]) < tol:
-            check_list[i] = True
-    return all(check_list)
+    if len(input_list) <= n:
+        return False
+    else:
+        check_list = [False]*n
+        l = input_list.copy()
+        l.reverse()
+        for i, b in enumerate(check_list):
+            if abs(l[0]-l[i+1]) < tol:
+                check_list[i] = True
+        return all(check_list)
 
 def SetInSpecFWAction(key_list, value):
     """Generate A FWAction that puts something in the spec using mod_spec.
