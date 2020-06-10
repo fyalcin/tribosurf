@@ -6,7 +6,7 @@ Created on Thu Apr 16 15:46:22 2020
 @author: mwo
 """
 
-
+from uuid import uuid4
 from fireworks import Workflow, ScriptTask, Firework, FileTransferTask
 from atomate.vasp.config import VASP_CMD
 from atomate.utils.utils import env_chk
@@ -18,9 +18,9 @@ from atomate.common.firetasks.glue_tasks import PassCalcLocs, \
 from CommonFiretasks import FT_AddSelectiveDynamics, FT_WritePrecalc, \
     FT_PrintSpec, FT_StructFromVaspOutput, FT_FetchStructureFromFormula, \
     FT_MakeSlabFromStructure, FT_MakeHeteroStructure, FT_PassSpec, \
-    FT_LoopKpoints, FT_PassKpointsInfo
-from CommonFireworks import CheckInputsFW, ConvergeParametersFW, \
-    FixParametersFW, StartDetourWF_FW, ParsePrevVaspCalc_FW
+    FT_LoopKpoints, FT_PassKpointsInfo, FT_EnergyCutoffConvo
+from CommonFireworks import CheckInputsFW, FixParametersFW, \
+    StartDetourWF_FW, ParsePrevVaspCalc_FW, FT_PassEncutInfo
 from HelperFunctions import GetCustomVaspRelaxSettings, \
     GetCustomVaspStaticSettings
 
@@ -241,18 +241,17 @@ def ConvergeEncut_SWF(structure, comp_parameters, out_loc, to_pass, spec,
     tag = "BM group: {}".format(str(uuid4()))
         
     FT_EncutConvo = FT_EnergyCutoffConvo(structure = structure,
-                                         out_loc = out_loc,
-                                         comp_params = params,
+                                         comp_params = comp_parameters,
                                          tag = tag,
                                          encut_incr = encut_incr,
                                          encut_start = encut_start)
     FT_PassECInfo = FT_PassEncutInfo(out_loc=out_loc)
         
-    FW_CE = Firework(FT_EncutConvo, spec=fw_spec,
+    FW_CE = Firework(FT_EncutConvo, spec=spec,
                      name='Start Encut Convergence')
-    FW_CE = Firework(FT_PassECInfo, spec=fw_spec,
+    FW_CE_Info = Firework(FT_PassECInfo, spec=spec,
                      name='Pass on the output')
-    WF = Workflow([FW, FW_2], {FW: [FW_2]}, name=name)
+    WF = Workflow([FW_CE, FW_CE_Info], {FW_CE: [FW_CE_Info]}, name=name)
     return WF
 
 def ConvergeKpoints_SWF(structure, comp_parameters, out_loc, to_pass, spec,

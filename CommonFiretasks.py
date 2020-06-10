@@ -62,6 +62,9 @@ class FT_StartEncutConvSubWorkflow(FiretaskBase):
     n_converge : int, optional
         Number of calculations that have to show the same minimum volume and 
         bulk modulus as the last one as to signify convergence, Defaults to 3.
+    db_file : str, optional
+        Full path to the db.json file detailing access to the database.
+        Defaults to '>>db_file<<' to use with env_chk.
     
     See Also
     --------
@@ -75,40 +78,54 @@ class FT_StartEncutConvSubWorkflow(FiretaskBase):
     _fw_name = 'Starting Encut Convergence Subworkflow'
     required_params = ['structure_loc', 'comp_parameters_loc', 'out_loc',
                        'to_pass']
-    optional_params = ['encut_start', 'encut_incr', 'n_converge']
+    optional_params = ['encut_start', 'encut_incr', 'n_converge', 'db_file']
     def run_task(self, fw_spec):
-        from CommonWorkflows import ConvergeKpoints_SWF
+        from CommonWorkflows import ConvergeEncut_SWF
         structure = GetValueFromNestedDict(fw_spec, self['structure_loc'])
         params = GetValueFromNestedDict(fw_spec, self['comp_parameters_loc'])
         out_loc = self['out_loc']
         to_pass = self['to_pass']
         
+        
         encut_start = self.get('encut_start', 200)
         encut_incr = self.get('encut_incr', 25)
         n_converge = self.get('n_converge', 3)
+        db_file = self.get('db_file', '>>db_file<<')
         
-        tag = "BM group: {}".format(str(uuid4()))
-        
-        FT_EncutConvo = FT_EnergyCutoffConvo(structure = structure,
-                                             out_loc = out_loc,
-                                             comp_params = params,
-                                             tag = tag,
-                                             encut_incr = encut_incr,
-                                             encut_start = encut_start)
-        FT_PassECInfo = FT_PassEncutInfo(out_loc=out_loc)
-        
-        FW_CE = Firework(FT_EncutConvo, spec=fw_spec,
-                         name='Start Encut Convergence')
-        FW_CE = Firework(FT_PassECInfo, spec=fw_spec,
-                         name='Pass on the output')
-        
-        
-        SWF = ConvergeKpoints_SWF(structure, params, out_loc, to_pass,
-                                  fw_spec, k_dist_incr, n_converge)
+        SWF = ConvergeEncut_SWF(structure = structure,
+                                comp_parameters = params,
+                                out_loc = out_loc,
+                                to_pass = to_pass,
+                                spec = fw_spec, deformations = None,
+                                encut_start = encut_start,
+                                encut_incr = encut_incr,
+                                n_converge = n_converge,
+                                db_file = db_file)
         return FWAction(detours=SWF)         
 
 @explicit_serialize
 class FT_UpdateBMLists(FiretaskBase):
+    """Fetch information about the EOS fit from the DB and update the lists.
+    
+    Used with FT_EnergyCutoffConvo to converge energy cutoffs using the
+    get_wf_bulk_modulus workflow of atomate. This Firetasks reads the
+    neccessary information from the eos collection of the database. Since no
+    usefull tag is placed, the identification of the correct entry is done
+    by the chemical formula and the timestamp. The shared date entry for the
+    convergence is then identified via a tag and updated with the new
+    equilibrium volume and the bulk modulus.
+    
+    Parameters
+    ----------
+    formula : str
+        Chemical formula on the material to be matched with the database.
+    tag : str
+        String from a uuid4 to identify the shared data entry in the database.
+    db_file : str, optional
+        Full path to the db.json file detailing access to the database.
+        Defaults to '>>db_file<<' to use with env_chk.
+    
+    """
     
     _fw_name = 'Update Bulk Modulus Lists'
     required_params = ['formula', 'tag']
@@ -119,9 +136,6 @@ class FT_UpdateBMLists(FiretaskBase):
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
-        
-        BM_list = fw_spec.get('BM_list', [])
-        V0_list = fw_spec.get('V0_list', [])
         
         results = GetLastBMDatafromDB(formula, db_file)
         
@@ -134,9 +148,7 @@ class FT_UpdateBMLists(FiretaskBase):
         DB.coll.update_one({'tag': tag},
                            {'$push': {'BM_list': BM,
                                       'V0_list': V0}})
-        
-        return FWAction(mod_spec=[{'_set': {'BM_list': BM_list,
-                                            'V0_list': V0_list}}])
+
         
 
 @explicit_serialize
@@ -172,9 +184,43 @@ class FT_PassEncutInfo(FiretaskBase):
 
 @explicit_serialize
 class FT_EnergyCutoffConvo(FiretaskBase):
+    """Converge the encut for a material via fits to an EOS raising encut.
+    
+    Uses the get_bulk_modulus workflow of atomate to fit Birch-Murnaghen EOS
+    for increasing values of the energy cutoff. Once bulk modulus and
+    equilibrium volume are converged, the subsequent detours are stopped and
+    the convergence data is passed on.
+    
+    Parameters
+    ----------
+    structure : pymatgen.core.structure.Structure
+        The structure for which to converge the K-pint grids.
+    comp_parameters : dict
+        Dictionary of computational parameters for the VASP calculations.
+    tag : str
+        String from a uuid4 to identify the shared data entry in the database
+        and group the deformations calculations together.
+    deformations: list of lists, optional
+        List of deformation matrices for the fit to the EOS. Defaults to None,
+        which results in 5 volumes from 90% to 110% of the initial volume.
+    encut_start : float, optional
+        Starting encut value for the first run. Defaults to 200.
+    encut_incr : float, optional
+        Increment for the encut during the convergence. Defaults to 25.
+    n_converge : int, optional
+        Number of calculations that have to show the same energy as the last
+        one as to signify convergence, Defaults to 3.
+    db_file : str
+        Full path to the db.json file that should be used. Defaults to
+        '>>db_file<<', to use env_chk.
+        
+    Returns
+    -------
+    FWActions that produce detour subworkflows until convergence is reached.
+    """
     
     _fw_name = 'Energy Cutoff Convergence'
-    required_params = ['structure', 'out_loc', 'comp_params', 'tag']
+    required_params = ['structure', 'comp_params', 'tag']
     optional_params = ['deformations', 'n_converge', 'encut_start',
                        'encut_incr', 'db_file']
     def run_task(self, fw_spec):
@@ -191,7 +237,6 @@ class FT_EnergyCutoffConvo(FiretaskBase):
             db_file = env_chk('>>db_file<<', fw_spec)
             
         struct = self['structure']
-        out_loc = self['out_loc']
         comp_params = self['comp_params']
         tag = self['tag']
         
@@ -227,7 +272,6 @@ class FT_EnergyCutoffConvo(FiretaskBase):
             formula=struct.composition.reduced_formula
             UAL_FW = Firework([FT_UpdateBMLists(formula=formula, tag=tag),
                                FT_EnergyCutoffConvo(structure=struct,
-                                                    out_loc=out_loc,
                                                     comp_params=comp_params,
                                                     tag=tag,
                                                     deformations=deformations,
@@ -285,7 +329,8 @@ class FT_EnergyCutoffConvo(FiretaskBase):
                                          'BM_tol_rel': BM_tolerance,
                                          'V0_tol_abs': V0_tol,
                                          'V0_tol_rel': V0_tolerance}})
-                return FWAction(update_spec=[{'encut_info_dict': encut_info}])
+                
+                return FWAction(update_spec = {'encut_info_dict': encut_info})
             
             else:
                 vis, uis, vdw = GetCustomVaspStaticSettings(struct, comp_params,
@@ -303,7 +348,6 @@ class FT_EnergyCutoffConvo(FiretaskBase):
             formula=struct.composition.reduced_formula
             UAL_FW = Firework([FT_UpdateBMLists(formula=formula, tag=tag),
                                FT_EnergyCutoffConvo(structure=struct,
-                                                    out_loc=out_loc,
                                                     comp_params=comp_params,
                                                     tag=tag,
                                                     deformations=deformations,
@@ -351,22 +395,20 @@ class FT_ChooseCompParams(FiretaskBase):
         
         k_dens1 = GetValueFromNestedDict(fw_spec, self['loc_1']+['k_distance'])
         k_dens2 = GetValueFromNestedDict(fw_spec, self['loc_2']+['k_distance'])
+        encut1 = GetValueFromNestedDict(fw_spec, self['loc_1']+['encut'])
+        encut2 = GetValueFromNestedDict(fw_spec, self['loc_2']+['encut'])
         metal_1 = GetValueFromNestedDict(fw_spec, self['loc_1']+['is_metal'])
         metal_2 = GetValueFromNestedDict(fw_spec, self['loc_2']+['is_metal'])
         out_str_k = '->'.join(self['out_loc']+['k_distance'])
+        out_str_encut = '->'.join(self['out_loc']+['encut'])
         out_str_metal = '->'.join(self['out_loc']+['is_metal'])
         
-        if k_dens1 >= k_dens2:
-            k_dens = k_dens1
-        else:
-            k_dens = k_dens2
-            
-        if metal_1 or metal_2:
-            metal = True
-        else:
-            metal = False
+        k_dens = max(k_dens1, k_dens2)
+        encut = max(encut1, encut2)
+        metal = any((metal_1, metal_2))
             
         return FWAction(mod_spec=[{'_set': {out_str_k: k_dens,
+                                            out_str_encut: encut,
                                             out_str_metal: metal}}])
         
         
@@ -1992,4 +2034,3 @@ class FT_CleanUpGeneralizedKpointFiles(FiretaskBase):
                             workdir+'POSCAR*',
                             workdir+'INCAR', 
                             workdir+'PRECALC'])
-

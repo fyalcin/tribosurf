@@ -93,7 +93,8 @@ def StartDetourWF_FW(WF_type, name, **kwargs):
     """
     # Add more subworkflows here and also the necessary parameters that need
     # to be passed.
-    allowed_types = ['Relax_SWF', 'Converge_Kpoints_SWF', 'None']
+    allowed_types = ['Relax_SWF', 'Converge_Kpoints_SWF',
+                     'Converge_Encut_SWF', 'None']
     needed_params = {'Relax_SWF': ['structure_loc',
                                    'comp_parameters_loc',
                                    'relax_type',
@@ -103,6 +104,10 @@ def StartDetourWF_FW(WF_type, name, **kwargs):
                                               'comp_parameters_loc',
                                               'out_loc',
                                               'to_pass'],
+                     'Converge_Encut_SWF': ['structure_loc',
+                                            'comp_parameters_loc',
+                                            'out_loc',
+                                            'to_pass'],
                      'None': ['structure_loc', 'out_loc', 'to_pass']}
     if WF_type in allowed_types:
         if not all (k in kwargs for k in needed_params[WF_type]):
@@ -126,6 +131,21 @@ def StartDetourWF_FW(WF_type, name, **kwargs):
                             comp_parameters_loc=kwargs['comp_parameters_loc'],
                             out_loc=kwargs['out_loc'],
                             to_pass=kwargs['to_pass']), name=name)
+    elif WF_type == 'Converge_Encut_SWF':
+        deformations = kwargs.get('deformations', None)
+        encut_start = kwargs.get('encut_start', 200)
+        encut_incr = kwargs.get('encut_incr', 25)
+        n_converge = kwargs.get('n_converge', 3)
+        db_file = kwargs.get('db_file', '>>db_file<<')
+        FW = Firework(FT_StartEncutConvSubWorkflow(
+                            structure_loc=kwargs['structure_loc'],
+                            comp_parameters_loc=kwargs['comp_parameters_loc'],
+                            out_loc=kwargs['out_loc'],
+                            to_pass=kwargs['to_pass'],
+                            encut_start=encut_start,
+                            encut_incr=encut_incr,
+                            n_converge=n_converge,
+                            db_file=db_file), name=name)
     elif WF_type == 'None':
         FT_copy = FT_CopyInSpec(in_loc=kwargs['structure_loc'],
                                 out_loc=kwargs['out_loc'])
