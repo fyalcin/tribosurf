@@ -62,6 +62,15 @@ def Heterogeneous_WF(inputs):
     WF.append(Start_M2)
     
     bulk_loc = ['material_1', inputs['material_1']['formula']+'_fromMP']
+    ConvergeEncut_M1 = StartDetourWF_FW('Converge_Encut_SWF',
+                            name='Converge Encut '+
+                            inputs['material_1']['formula'],
+                            structure_loc=bulk_loc,
+                            comp_parameters_loc=['material_1'],
+                            out_loc=['material_1'],
+                            to_pass=['material_1'])
+    WF.append(ConvergeEncut_M1)
+    
     Converge_M1 = StartDetourWF_FW('Converge_Kpoints_SWF',
                             name='Converge Kpoints '+
                             inputs['material_1']['formula'],
@@ -72,6 +81,15 @@ def Heterogeneous_WF(inputs):
     WF.append(Converge_M1)
     
     bulk_loc = ['material_2', inputs['material_2']['formula']+'_fromMP']
+    ConvergeEncut_M2 = StartDetourWF_FW('Converge_Encut_SWF',
+                            name='Converge Encut '+
+                            inputs['material_2']['formula'],
+                            structure_loc=bulk_loc,
+                            comp_parameters_loc=['material_2'],
+                            out_loc=['material_2'],
+                            to_pass=['material_2'])
+    WF.append(ConvergeEncut_M2)
+    
     Converge_M2 = StartDetourWF_FW('Converge_Kpoints_SWF',
                             name='Converge Kpoints '+
                             inputs['material_2']['formula'],
@@ -170,10 +188,12 @@ def Heterogeneous_WF(inputs):
     #Define dependencies:
     Dependencies = {Initialize: [Check_Inputs],
                     Check_Inputs: [Start_M1, Start_M2],
-                    Start_M1: [Converge_M1],
-                    Start_M2: [Converge_M2],
-                    Converge_M2: [Final_Params],
+                    Start_M1: [ConvergeEncut_M1],
+                    Start_M2: [ConvergeEncut_M2],
+                    ConvergeEncut_M1: [Converge_M1],
+                    ConvergeEncut_M2: [Converge_M2],
                     Converge_M1: [Final_Params],
+                    Converge_M2: [Final_Params],
                     Final_Params: [Relax_M1, Relax_M2],
                     Relax_M1: [Make_Slab_M1],
                     Relax_M2: [Make_Slab_M2],
@@ -245,7 +265,7 @@ def ConvergeEncut_SWF(structure, comp_parameters, out_loc, to_pass, spec,
                                          tag = tag,
                                          encut_incr = encut_incr,
                                          encut_start = encut_start)
-    FT_PassECInfo = FT_PassEncutInfo(out_loc=out_loc)
+    FT_PassECInfo = FT_PassEncutInfo(out_loc=out_loc, structure=stucture)
         
     FW_CE = Firework(FT_EncutConvo, spec=spec,
                      name='Start Encut Convergence')

@@ -156,7 +156,8 @@ class FT_PassEncutInfo(FiretaskBase):
     """Modify the fw_spec to pass on information about the encut convergence.
     
     Works only if the necessary data are already in the spec. Used for a
-    subworkflow that converges encut via EOS fits.
+    subworkflow that converges encut via EOS fits. Also scales a structure
+    to the converged equilibrium volume and puts it in the spec.
     
     Parameters
     ----------
@@ -171,14 +172,22 @@ class FT_PassEncutInfo(FiretaskBase):
     """
     
     _fw_name = 'Pass Encut Info'
-    required_params = ['out_loc']
+    required_params = ['structure', 'out_loc']
     def run_task(self, fw_spec):
+        
+        encut_info = fw_spec.get('encut_info_dict')
+        V0 = encut_info.get('final_volume')
+        struct = self.get('structure')
+        scaled_structure = struct.scale_lattice(V0)
         
         prev_data = GetValueFromNestedDict(fw_spec, self['out_loc'])
         if not prev_data:
             prev_data = {}
-        encut_info = fw_spec.get('encut_info_dict')
-        out_dict = UpdateNestedDict(prev_data, encut_info)
+        
+        struct_name = struct.composition.reduced_formula+'_equiVol'
+        info_dict = encut_info.update({struct_name: scaled_structure})
+        
+        out_dict = UpdateNestedDict(prev_data, info_dict)
         out_str = '->'.join(self['out_loc'])
         return FWAction(mod_spec=[{'_set': {out_str: out_dict}}])
 
