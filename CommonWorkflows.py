@@ -71,6 +71,7 @@ def Heterogeneous_WF(inputs):
                             to_pass=['material_1'])
     WF.append(ConvergeEncut_M1)
     
+    bulk_loc = ['material_1', inputs['material_1']['formula']+'_equiVol']
     Converge_M1 = StartDetourWF_FW('Converge_Kpoints_SWF',
                             name='Converge Kpoints '+
                             inputs['material_1']['formula'],
@@ -87,9 +88,11 @@ def Heterogeneous_WF(inputs):
                             structure_loc=bulk_loc,
                             comp_parameters_loc=['material_2'],
                             out_loc=['material_2'],
-                            to_pass=['material_2'])
+                            to_pass=['material_2', 'computational_params',
+                                     'interface_params'])
     WF.append(ConvergeEncut_M2)
     
+    bulk_loc = ['material_2', inputs['material_2']['formula']+'_equiVol']
     Converge_M2 = StartDetourWF_FW('Converge_Kpoints_SWF',
                             name='Converge Kpoints '+
                             inputs['material_2']['formula'],
@@ -107,7 +110,7 @@ def Heterogeneous_WF(inputs):
                                    name='Select computational parameters')
     WF.append(Final_Params)
     
-    bulk_loc = ['material_1', inputs['material_1']['formula']+'_fromMP']
+    bulk_loc = ['material_1', inputs['material_1']['formula']+'_equiVol']
     out_loc = ['material_1', inputs['material_1']['formula']+'_relaxed']
     Relax_M1 = StartDetourWF_FW('None',
                             name='Relax '+inputs['material_1']['formula'],
@@ -119,7 +122,7 @@ def Heterogeneous_WF(inputs):
                                      'interface_params'])
     WF.append(Relax_M1)
     
-    bulk_loc = ['material_2', inputs['material_2']['formula']+'_fromMP']
+    bulk_loc = ['material_2', inputs['material_2']['formula']+'_equiVol']
     out_loc = ['material_2', inputs['material_2']['formula']+'_relaxed']
     Relax_M2 = StartDetourWF_FW('None',
                             name='Relax '+inputs['material_2']['formula'],
@@ -147,11 +150,11 @@ def Heterogeneous_WF(inputs):
                          inputs['material_1']['miller']]
     out_loc = ['material_1', inputs['material_1']['formula']+
                          inputs['material_1']['miller']+'_relaxed']
-    Relax_Slab_M1 = StartDetourWF_FW('None',
+    Relax_Slab_M1 = StartDetourWF_FW('Relax_SWF',
                             name='Relax '+inputs['material_1']['formula']+
                             ' slab',
                             structure_loc=bottom_slab_loc,
-                            comp_parameters_loc=['material_2'],
+                            comp_parameters_loc=['material_1'],
                             relax_type='slab_pos_relax',
                             out_loc=out_loc,
                             to_pass=['material_1', 'computational_params',
@@ -162,7 +165,7 @@ def Heterogeneous_WF(inputs):
                          inputs['material_2']['miller']]
     out_loc = ['material_2', inputs['material_2']['formula']+
                          inputs['material_2']['miller']+'_relaxed']
-    Relax_Slab_M2 = StartDetourWF_FW('None',
+    Relax_Slab_M2 = StartDetourWF_FW('Relax_SWF',
                             name='Relax '+inputs['material_2']['formula']+
                             ' slab',
                             structure_loc=top_slab_loc,
@@ -265,11 +268,13 @@ def ConvergeEncut_SWF(structure, comp_parameters, out_loc, to_pass, spec,
                                          tag = tag,
                                          encut_incr = encut_incr,
                                          encut_start = encut_start)
-    FT_PassECInfo = FT_PassEncutInfo(out_loc=out_loc, structure=stucture)
+    FT_PassECInfo = FT_PassEncutInfo(out_loc=out_loc, structure=structure)
         
+    FT_PassOn = FT_PassSpec(key_list=to_pass)
+    
     FW_CE = Firework(FT_EncutConvo, spec=spec,
                      name='Start Encut Convergence')
-    FW_CE_Info = Firework(FT_PassECInfo, spec=spec,
+    FW_CE_Info = Firework([FT_PassECInfo, FT_PassOn], spec=spec,
                      name='Pass on the output')
     WF = Workflow([FW_CE, FW_CE_Info], {FW_CE: [FW_CE_Info]}, name=name)
     return WF
@@ -472,7 +477,6 @@ def Relax_SWF(structure, comp_parameters, relax_type, out_loc, to_pass, spec):
     vis, uis, vdw = GetCustomVaspRelaxSettings(structure, comp_parameters,
                                                relax_type)
     
-            
     custom_params = {'user_incar_settings': uis,
                      'vdw': vdw,
                      'user_potcar_functional': 'PBE_54'}
@@ -537,7 +541,8 @@ def Relax_SWF(structure, comp_parameters, relax_type, out_loc, to_pass, spec):
     FW_PP = Firework([CopyFilesFromCalcLoc(calc_loc=CalcName,
                                            filenames=['OUTCAR.relax2.gz',
                                                       'CONTCAR.relax2.gz']),
-                      FT_StructFromVaspOutput(out_struct_loc=out_loc),
+                      FT_StructFromVaspOutput(out_struct_loc=out_loc,
+                                              input_struct=structure),
                       FT_PassSpec(key_list=to_pass)],
                      spec=spec, name=CalcName+' post processing FW')
     

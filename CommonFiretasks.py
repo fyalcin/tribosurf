@@ -10,6 +10,7 @@ import numpy as np
 from datetime import datetime
 from uuid import uuid4
 from pymatgen.core import Structure
+from pymatgen.core.surface import Slab
 from pymatgen.io.vasp.inputs import Poscar, Kpoints
 from pymatgen.io.vasp.outputs import Outcar
 from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet
@@ -176,18 +177,19 @@ class FT_PassEncutInfo(FiretaskBase):
     def run_task(self, fw_spec):
         
         encut_info = fw_spec.get('encut_info_dict')
-        V0 = encut_info.get('final_volume')
+        V0 = encut_info.get('equilibrium_volume')
         struct = self.get('structure')
-        scaled_structure = struct.scale_lattice(V0)
+        scaled_structure = struct.copy()
+        scaled_structure.scale_lattice(V0)
         
         prev_data = GetValueFromNestedDict(fw_spec, self['out_loc'])
         if not prev_data:
             prev_data = {}
         
         struct_name = struct.composition.reduced_formula+'_equiVol'
-        info_dict = encut_info.update({struct_name: scaled_structure})
+        encut_info.update({struct_name: scaled_structure})
         
-        out_dict = UpdateNestedDict(prev_data, info_dict)
+        out_dict = UpdateNestedDict(prev_data, encut_info)
         out_str = '->'.join(self['out_loc'])
         return FWAction(mod_spec=[{'_set': {out_str: out_dict}}])
 
@@ -894,7 +896,7 @@ class FT_StructFromVaspOutput(FiretaskBase):
     """
     
     _fw_name = 'Make Structure from Vasp Output'
-    required_params = ['out_struct_loc']
+    required_params = ['out_struct_loc', 'input_struct']
     optional_params = ['job_dir']
     def run_task(self, fw_spec):
         
@@ -914,8 +916,19 @@ class FT_StructFromVaspOutput(FiretaskBase):
                 structure.replace(i, structure.species[i],
                                   properties={'magmom': mag_tuple[i]['tot']})
         
-        output = WriteNestedDictFromList(self['out_struct_loc'],
-                                         structure, d={})
+        # This block ensures that if a pymatgen.core.surface.Slab structure
+        # is relaxed, the output is also a Slab and not a structure.
+        input_struct = self['input_struct']
+        if type(input_struct) is Slab:
+            slab = input_struct.copy()
+            slab.lattice = structure.lattice
+            for i, site in enumerate(slab.sites):
+                slab.replace(i, structure.species[i])
+            output = WriteNestedDictFromList(self['out_struct_loc'],
+                                             slab, d={})
+        else:
+            output = WriteNestedDictFromList(self['out_struct_loc'],
+                                             structure, d={})
 
         spec = fw_spec
         updated_spec = UpdateNestedDict(spec, output)
