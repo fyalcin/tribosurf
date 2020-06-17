@@ -50,6 +50,7 @@ from HelperFunctions import GetLowEnergyStructure, GetGapFromMP
 # THIS IS A TEST WHERE A THE SUBWORKFLOW IS CALLED FROM ANOTHER WORKFLOW:
 # =============================================================================
 
+from atomate.vasp.powerups import clean_up_files
 from CommonFiretasks import FT_PrintSpec, FT_FetchStructureFromFormula
 from CommonFireworks import StartDetourWF_FW
 from CommonFireworks import CheckInputsFW
@@ -70,7 +71,7 @@ inputs = {'material_1': {'formula': 'Al',
                           'min_thickness': 6
                           },
           'computational_params':{'functional': 'PBE',
-                                  'use_vdw': 'False'},
+                                  'use_vdw': 'True'},
           'interface_params':{'interface_distance': 1.5,
                               'max_area': 500,
                               'r1r2_tol': 0.05
@@ -103,7 +104,7 @@ FWs.append(Start_M2)
 
 bulk_loc = ['material_1', inputs['material_1']['formula']+'_fromMP']
 out_loc = ['material_1', inputs['material_1']['formula']+'_relaxed']
-Relax_M1 = StartDetourWF_FW('None',
+Relax_M1 = StartDetourWF_FW('Relax_SWF',
                             name='Relax '+inputs['material_1']['formula'],
                             structure_loc=bulk_loc,
                             comp_parameters_loc=['material_1'],
@@ -134,8 +135,9 @@ Dependencies = {Initialize: [Check_Inputs],
                 Relax_M2: [End]}
 
 wf = Workflow(FWs, Dependencies, name='Test Relax Subworkflow')
+mod_wf = clean_up_files(wf, ('WAVECAR*', 'CHGCAR*'))
 
 # finally, instatiate the LaunchPad and add the workflow to it
 lpad = LaunchPad.auto_load() # loads this based on the FireWorks configuration
-lpad.add_wf(wf)
+lpad.add_wf(mod_wf)
 rapidfire(lpad)

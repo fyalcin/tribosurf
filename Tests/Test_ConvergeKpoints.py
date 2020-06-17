@@ -64,19 +64,19 @@ from CommonFireworks import CheckInputsFW, StartDetourWF_FW
 
 #Create the input dictionary
 
-inputs = {'material_1': {'formula': 'ZrO2',
+inputs = {'material_1': {'formula': 'FeO',
                           'miller': '111',
                           'min_vacuum': 25,
                           'min_thickness': 5
                           },
-          'material_2': {'formula': 'Fe',
-                          'mp_id': 'mp-13',
+          'material_2': {'formula': 'Al',
+                          #'mp_id': 'mp-13',
                           'miller': '110',
                           'min_vacuum': 25,
                           'min_thickness': 6
                           },
           'computational_params':{'functional': 'PBE',
-                                  'use_vdw': 'True'},
+                                  'use_vdw': 'False'},
           'interface_params':{'interface_distance': 1.5,
                               'max_area': 500,
                               'r1r2_tol': 0.05
@@ -115,20 +115,19 @@ KPTSConvo_M1 = StartDetourWF_FW('Converge_Kpoints_SWF',
                             structure_loc=bulk_loc,
                             comp_parameters_loc=['material_1'],
                             out_loc=out_loc,
-                            k_dist_start=10,
                             to_pass=['material_1'])
 FWs.append(KPTSConvo_M1)
 
 bulk_loc = ['material_2', inputs['material_2']['formula']+'_fromMP']
-out_loc = ['material_2', inputs['material_2']['formula']+'_relaxed']
-Relax_M2 = StartDetourWF_FW('None',
-                            name='Relax '+inputs['material_2']['formula'],
+out_loc = ['material_2']
+KPTSConvo_M2 = StartDetourWF_FW('Converge_Kpoints_SWF',
+                            name='Converge Kpoints '+
+                            inputs['material_2']['formula'],
                             structure_loc=bulk_loc,
                             comp_parameters_loc=['material_2'],
-                            relax_type='bulk_full_relax',
                             out_loc=out_loc,
                             to_pass=['material_2'])
-FWs.append(Relax_M2)
+FWs.append(KPTSConvo_M2)
 
 End = Firework(FT_PrintSpec(), name='End of the workflow')
 FWs.append(End)
@@ -136,9 +135,9 @@ FWs.append(End)
 Dependencies = {Initialize: [Check_Inputs],
                 Check_Inputs: [Start_M1, Start_M2],
                 Start_M1: [KPTSConvo_M1],
-                Start_M2: [Relax_M2],
+                Start_M2: [KPTSConvo_M2],
                 KPTSConvo_M1: [End],
-                Relax_M2: [End]}
+                KPTSConvo_M2: [End]}
 
 wf = Workflow(FWs, Dependencies, name='Test Kpoints Convergence Subworkflow')
 mod_wf = clean_up_files(wf, ('WAVECAR*', 'CHGCAR*'))
@@ -146,4 +145,4 @@ mod_wf = clean_up_files(wf, ('WAVECAR*', 'CHGCAR*'))
 # finally, instatiate the LaunchPad and add the workflow to it
 lpad = LaunchPad.auto_load() # loads this based on the FireWorks configuration
 lpad.add_wf(mod_wf)
-rapidfire(lpad)
+#rapidfire(lpad)
