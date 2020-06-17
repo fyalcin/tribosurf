@@ -1,899 +1,44 @@
 {
     "spec": {
-        "_launch_dir": "/home/mwo/FireWorks/FireFlow/fireflow/Tests",
         "_tasks": [
             {
-                "bottom_slab_name": "CuO001",
-                "top_slab_name": "GaAs001",
-                "parameters": {
-                    "max_area": 179.58563260221302,
-                    "max_mismatch": 0.04489640815055326,
-                    "max_angle_diff": 1.79585632602213,
-                    "r1r2_tol": 0.04489640815055326,
-                    "interface_distance": 1.5
-                },
-                "_fw_name": "{{CommonFiretasks.FT_MakeHeteroStructure}}"
+                "tag": "bulk_modulus group: >>b0dc60ba-26de-4456-a71b-a4a384bc908a<<",
+                "db_file": ">>db_file<<",
+                "eos": "birch_murnaghan",
+                "_fw_name": "{{atomate.vasp.firetasks.parse_outputs.FitEOSToDb}}"
             }
         ],
-        "_fw_env": {
-            "db_file": "/home/mwo/FireWorks/config/db.json",
-            "vasp_cmd": "mpirun -n 4 vasp6.MKL.openmpi_std",
-            "scratch_dir": "/home/mwo/VASP_CALCS"
-        },
-        "CuO001": {
-            "@module": "pymatgen.core.surface",
-            "@class": "Slab",
-            "charge": null,
-            "lattice": {
-                "matrix": [
-                    [
-                        2.9386891705215374,
-                        0.0,
-                        1.7994281431840957e-16
-                    ],
-                    [
-                        0.02451133093567732,
-                        5.160688588994279,
-                        3.1600460239782153e-16
-                    ],
-                    [
-                        0.0,
-                        0.0,
-                        32.34790232550867
-                    ]
-                ],
-                "a": 2.9386891705215374,
-                "b": 5.160746798470159,
-                "c": 32.34790232550867,
-                "alpha": 90.0,
-                "beta": 90.0,
-                "gamma": 89.72786863066192,
-                "volume": 490.5772776718573
+        "calc_locs": [
+            {
+                "name": "bulk_modulus group: >>b0dc60ba-26de-4456-a71b-a4a384bc908a<< bulk_modulus deformation 4",
+                "filesystem": null,
+                "path": "/home/mwo/FireWorks/FireFlow/fireflow/Tests/launcher_2020-06-04-15-10-27-966740"
             },
-            "sites": [
-                {
-                    "species": [
-                        {
-                            "element": "Cu",
-                            "occu": 1
-                        }
-                    ],
-                    "abc": [
-                        0.5097330104966008,
-                        0.5105896170303551,
-                        0.43198955614269163
-                    ],
-                    "xyz": [
-                        1.5104621088790537,
-                        2.6349940102675125,
-                        13.973955967743633
-                    ],
-                    "label": "Cu",
-                    "properties": {}
-                },
-                {
-                    "species": [
-                        {
-                            "element": "Cu",
-                            "occu": 1
-                        }
-                    ],
-                    "abc": [
-                        0.9979801608824832,
-                        0.009269131892816366,
-                        0.38658920590972434
-                    ],
-                    "xyz": [
-                        2.9329806899400066,
-                        0.04783510318914036,
-                        12.505349872863722
-                    ],
-                    "label": "Cu",
-                    "properties": {}
-                },
-                {
-                    "species": [
-                        {
-                            "element": "O",
-                            "occu": 1
-                        }
-                    ],
-                    "abc": [
-                        0.49616633617013567,
-                        0.2592262867798813,
-                        0.3867612283656817
-                    ],
-                    "xyz": [
-                        1.4644326201830147,
-                        1.337786140152292,
-                        12.510914438466825
-                    ],
-                    "label": "O",
-                    "properties": {}
-                },
-                {
-                    "species": [
-                        {
-                            "element": "O",
-                            "occu": 1
-                        }
-                    ],
-                    "abc": [
-                        0.49979716926215145,
-                        0.7593762601049063,
-                        0.3864238204448528
-                    ],
-                    "xyz": [
-                        1.4873618515841325,
-                        3.918904400276541,
-                        12.499999999999998
-                    ],
-                    "label": "O",
-                    "properties": {}
-                },
-                {
-                    "species": [
-                        {
-                            "element": "Cu",
-                            "occu": 1
-                        }
-                    ],
-                    "abc": [
-                        0.5333125908185902,
-                        0.5132311923340342,
-                        0.5227828678489193
-                    ],
-                    "xyz": [
-                        1.5798199147431866,
-                        2.6486263577941784,
-                        16.910929146626145
-                    ],
-                    "label": "Cu",
-                    "properties": {}
-                },
-                {
-                    "species": [
-                        {
-                            "element": "Cu",
-                            "occu": 1
-                        }
-                    ],
-                    "abc": [
-                        0.021559741204472127,
-                        0.011910707196495549,
-                        0.4773825176159521
-                    ],
-                    "xyz": [
-                        0.06364932528260046,
-                        0.061467450715806615,
-                        15.44232305174624
-                    ],
-                    "label": "Cu",
-                    "properties": {}
-                },
-                {
-                    "species": [
-                        {
-                            "element": "O",
-                            "occu": 1
-                        }
-                    ],
-                    "abc": [
-                        0.5197459164921251,
-                        0.2618678620835605,
-                        0.4775545400719095
-                    ],
-                    "xyz": [
-                        1.5337904260471478,
-                        1.3514184876789581,
-                        15.447887617349345
-                    ],
-                    "label": "O",
-                    "properties": {}
-                },
-                {
-                    "species": [
-                        {
-                            "element": "O",
-                            "occu": 1
-                        }
-                    ],
-                    "abc": [
-                        0.5233767495841409,
-                        0.7620178354085855,
-                        0.4772171321510806
-                    ],
-                    "xyz": [
-                        1.5567196574482658,
-                        3.9325367478032076,
-                        15.436973178882518
-                    ],
-                    "label": "O",
-                    "properties": {}
-                },
-                {
-                    "species": [
-                        {
-                            "element": "Cu",
-                            "occu": 1
-                        }
-                    ],
-                    "abc": [
-                        0.5568921711405795,
-                        0.5158727676377135,
-                        0.613576179555147
-                    ],
-                    "xyz": [
-                        1.6491777206073195,
-                        2.662258705320845,
-                        19.847902325508663
-                    ],
-                    "label": "Cu",
-                    "properties": {}
-                },
-                {
-                    "species": [
-                        {
-                            "element": "Cu",
-                            "occu": 1
-                        }
-                    ],
-                    "abc": [
-                        0.04513932152646149,
-                        0.014552282500174764,
-                        0.56817582932218
-                    ],
-                    "xyz": [
-                        0.13300713114673335,
-                        0.07509979824247304,
-                        18.379296230628764
-                    ],
-                    "label": "Cu",
-                    "properties": {}
-                },
-                {
-                    "species": [
-                        {
-                            "element": "O",
-                            "occu": 1
-                        }
-                    ],
-                    "abc": [
-                        0.5433254968141144,
-                        0.26450943738723975,
-                        0.5683478517781373
-                    ],
-                    "xyz": [
-                        1.6031482319112804,
-                        1.3650508352056248,
-                        18.384860796231866
-                    ],
-                    "label": "O",
-                    "properties": {}
-                },
-                {
-                    "species": [
-                        {
-                            "element": "O",
-                            "occu": 1
-                        }
-                    ],
-                    "abc": [
-                        0.5469563299061302,
-                        0.7646594107122646,
-                        0.5680104438573083
-                    ],
-                    "xyz": [
-                        1.6260774633123984,
-                        3.9461690953298736,
-                        18.373946357765032
-                    ],
-                    "label": "O",
-                    "properties": {}
-                }
-            ],
-            "oriented_unit_cell": {
-                "@module": "pymatgen.core.structure",
-                "@class": "Structure",
-                "charge": null,
-                "lattice": {
-                    "matrix": [
-                        [
-                            2.9386891705215374,
-                            0.0,
-                            0.0
-                        ],
-                        [
-                            0.024511330935676492,
-                            5.160688588994279,
-                            0.0
-                        ],
-                        [
-                            0.0,
-                            0.0,
-                            32.34790232550867
-                        ]
-                    ],
-                    "a": 2.9386891705215374,
-                    "b": 5.160746798470159,
-                    "c": 32.34790232550867,
-                    "alpha": 90.0,
-                    "beta": 90.0,
-                    "gamma": 89.72786863066192,
-                    "volume": 490.5772776718573
-                },
-                "sites": [
-                    {
-                        "species": [
-                            {
-                                "element": "Cu",
-                                "occu": 1
-                            }
-                        ],
-                        "abc": [
-                            0.5097330104966008,
-                            0.5105896170303551,
-                            0.43198955614269163
-                        ],
-                        "xyz": [
-                            1.5104621088790533,
-                            2.6349940102675125,
-                            13.973955967743633
-                        ],
-                        "label": "Cu",
-                        "properties": {}
-                    },
-                    {
-                        "species": [
-                            {
-                                "element": "Cu",
-                                "occu": 1
-                            }
-                        ],
-                        "abc": [
-                            0.9979801608824831,
-                            0.009269131892816366,
-                            0.3865892059097244
-                        ],
-                        "xyz": [
-                            2.932980689940006,
-                            0.04783510318914036,
-                            12.505349872863723
-                        ],
-                        "label": "Cu",
-                        "properties": {}
-                    },
-                    {
-                        "species": [
-                            {
-                                "element": "O",
-                                "occu": 1
-                            }
-                        ],
-                        "abc": [
-                            0.49616633617013567,
-                            0.2592262867798813,
-                            0.3867612283656817
-                        ],
-                        "xyz": [
-                            1.4644326201830145,
-                            1.337786140152292,
-                            12.510914438466825
-                        ],
-                        "label": "O",
-                        "properties": {}
-                    },
-                    {
-                        "species": [
-                            {
-                                "element": "O",
-                                "occu": 1
-                            }
-                        ],
-                        "abc": [
-                            0.49979716926215145,
-                            0.7593762601049063,
-                            0.3864238204448528
-                        ],
-                        "xyz": [
-                            1.487361851584132,
-                            3.918904400276541,
-                            12.499999999999998
-                        ],
-                        "label": "O",
-                        "properties": {}
-                    },
-                    {
-                        "species": [
-                            {
-                                "element": "Cu",
-                                "occu": 1
-                            }
-                        ],
-                        "abc": [
-                            0.5333125908185902,
-                            0.5132311923340342,
-                            0.5227828678489194
-                        ],
-                        "xyz": [
-                            1.5798199147431862,
-                            2.6486263577941784,
-                            16.91092914662615
-                        ],
-                        "label": "Cu",
-                        "properties": {}
-                    },
-                    {
-                        "species": [
-                            {
-                                "element": "Cu",
-                                "occu": 1
-                            }
-                        ],
-                        "abc": [
-                            0.021559741204472127,
-                            0.011910707196495549,
-                            0.47738251761595213
-                        ],
-                        "xyz": [
-                            0.06364932528260045,
-                            0.061467450715806615,
-                            15.442323051746241
-                        ],
-                        "label": "Cu",
-                        "properties": {}
-                    },
-                    {
-                        "species": [
-                            {
-                                "element": "O",
-                                "occu": 1
-                            }
-                        ],
-                        "abc": [
-                            0.5197459164921251,
-                            0.2618678620835605,
-                            0.4775545400719095
-                        ],
-                        "xyz": [
-                            1.5337904260471475,
-                            1.3514184876789581,
-                            15.447887617349345
-                        ],
-                        "label": "O",
-                        "properties": {}
-                    },
-                    {
-                        "species": [
-                            {
-                                "element": "O",
-                                "occu": 1
-                            }
-                        ],
-                        "abc": [
-                            0.5233767495841408,
-                            0.7620178354085855,
-                            0.4772171321510806
-                        ],
-                        "xyz": [
-                            1.556719657448265,
-                            3.9325367478032076,
-                            15.436973178882518
-                        ],
-                        "label": "O",
-                        "properties": {}
-                    },
-                    {
-                        "species": [
-                            {
-                                "element": "Cu",
-                                "occu": 1
-                            }
-                        ],
-                        "abc": [
-                            0.5568921711405794,
-                            0.5158727676377135,
-                            0.6135761795551471
-                        ],
-                        "xyz": [
-                            1.6491777206073188,
-                            2.662258705320845,
-                            19.847902325508667
-                        ],
-                        "label": "Cu",
-                        "properties": {}
-                    },
-                    {
-                        "species": [
-                            {
-                                "element": "Cu",
-                                "occu": 1
-                            }
-                        ],
-                        "abc": [
-                            0.045139321526461496,
-                            0.014552282500174764,
-                            0.56817582932218
-                        ],
-                        "xyz": [
-                            0.13300713114673335,
-                            0.07509979824247304,
-                            18.379296230628764
-                        ],
-                        "label": "Cu",
-                        "properties": {}
-                    },
-                    {
-                        "species": [
-                            {
-                                "element": "O",
-                                "occu": 1
-                            }
-                        ],
-                        "abc": [
-                            0.5433254968141144,
-                            0.26450943738723975,
-                            0.5683478517781373
-                        ],
-                        "xyz": [
-                            1.6031482319112802,
-                            1.3650508352056248,
-                            18.384860796231866
-                        ],
-                        "label": "O",
-                        "properties": {}
-                    },
-                    {
-                        "species": [
-                            {
-                                "element": "O",
-                                "occu": 1
-                            }
-                        ],
-                        "abc": [
-                            0.5469563299061302,
-                            0.7646594107122646,
-                            0.5680104438573084
-                        ],
-                        "xyz": [
-                            1.6260774633123978,
-                            3.9461690953298736,
-                            18.373946357765035
-                        ],
-                        "label": "O",
-                        "properties": {}
-                    }
-                ]
+            {
+                "name": "bulk_modulus group: >>b0dc60ba-26de-4456-a71b-a4a384bc908a<< bulk_modulus deformation 3",
+                "filesystem": null,
+                "path": "/home/mwo/FireWorks/FireFlow/fireflow/Tests/launcher_2020-06-04-15-10-59-275705"
             },
-            "miller_index": [
-                0,
-                0,
-                1
-            ],
-            "shift": 0.0,
-            "scale_factor": null,
-            "reconstruction": null,
-            "energy": null
-        },
-        "GaAs001": {
-            "@module": "pymatgen.core.surface",
-            "@class": "Slab",
-            "charge": null,
-            "lattice": {
-                "matrix": [
-                    [
-                        4.065993139261057,
-                        0.0,
-                        2.4897027416755757e-16
-                    ],
-                    [
-                        2.032996572763594,
-                        3.521253343782205,
-                        2.489702739224463e-16
-                    ],
-                    [
-                        0.0,
-                        0.0,
-                        32.46970634867628
-                    ]
-                ],
-                "a": 4.065993139261057,
-                "b": 4.065993135258086,
-                "c": 32.46970634867628,
-                "alpha": 90.0,
-                "beta": 90.0,
-                "gamma": 59.99999991645359,
-                "volume": 464.88151188688414
+            {
+                "name": "bulk_modulus group: >>b0dc60ba-26de-4456-a71b-a4a384bc908a<< bulk_modulus deformation 2",
+                "filesystem": null,
+                "path": "/home/mwo/FireWorks/FireFlow/fireflow/Tests/launcher_2020-06-04-15-11-30-408420"
             },
-            "sites": [
-                {
-                    "species": [
-                        {
-                            "element": "Ga",
-                            "occu": 1
-                        }
-                    ],
-                    "abc": [
-                        0.0,
-                        0.0,
-                        0.38497422384325314
-                    ],
-                    "xyz": [
-                        0.0,
-                        0.0,
-                        12.5
-                    ],
-                    "label": "Ga",
-                    "properties": {}
-                },
-                {
-                    "species": [
-                        {
-                            "element": "As",
-                            "occu": 1
-                        }
-                    ],
-                    "abc": [
-                        0.3333333330064734,
-                        0.3333333333346401,
-                        0.4105355074336413
-                    ],
-                    "xyz": [
-                        2.03299656934853,
-                        1.1737511145986699,
-                        13.329967372075142
-                    ],
-                    "label": "As",
-                    "properties": {}
-                },
-                {
-                    "species": [
-                        {
-                            "element": "Ga",
-                            "occu": 1
-                        }
-                    ],
-                    "abc": [
-                        0.3333333320258937,
-                        0.33333333333856086,
-                        0.487219358204806
-                    ],
-                    "xyz": [
-                        2.0329965653694706,
-                        1.1737511146124757,
-                        15.819869488300574
-                    ],
-                    "label": "Ga",
-                    "properties": {}
-                },
-                {
-                    "species": [
-                        {
-                            "element": "As",
-                            "occu": 1
-                        }
-                    ],
-                    "abc": [
-                        0.6666666650323672,
-                        0.666666666673201,
-                        0.5127806417951941
-                    ],
-                    "xyz": [
-                        4.065993134718001,
-                        2.3475022292111456,
-                        16.649836860375714
-                    ],
-                    "label": "As",
-                    "properties": {}
-                },
-                {
-                    "species": [
-                        {
-                            "element": "Ga",
-                            "occu": 1
-                        }
-                    ],
-                    "abc": [
-                        0.6666666640517874,
-                        0.6666666666771217,
-                        0.5894644925663587
-                    ],
-                    "xyz": [
-                        4.065993130738941,
-                        2.3475022292249514,
-                        19.13973897660114
-                    ],
-                    "label": "Ga",
-                    "properties": {}
-                },
-                {
-                    "species": [
-                        {
-                            "element": "As",
-                            "occu": 1
-                        }
-                    ],
-                    "abc": [
-                        0.9999999970582607,
-                        1.1761924767483833e-11,
-                        0.6150257761567469
-                    ],
-                    "xyz": [
-                        4.0659931273238765,
-                        4.141671691681718e-11,
-                        19.969706348676283
-                    ],
-                    "label": "As",
-                    "properties": {}
-                }
-            ],
-            "oriented_unit_cell": {
-                "@module": "pymatgen.core.structure",
-                "@class": "Structure",
-                "charge": null,
-                "lattice": {
-                    "matrix": [
-                        [
-                            4.065993139261057,
-                            0.0,
-                            0.0
-                        ],
-                        [
-                            2.0329965727635946,
-                            3.521253343782205,
-                            0.0
-                        ],
-                        [
-                            0.0,
-                            0.0,
-                            32.46970634867628
-                        ]
-                    ],
-                    "a": 4.065993139261057,
-                    "b": 4.065993135258086,
-                    "c": 32.46970634867628,
-                    "alpha": 90.0,
-                    "beta": 90.0,
-                    "gamma": 59.99999991645358,
-                    "volume": 464.88151188688414
-                },
-                "sites": [
-                    {
-                        "species": [
-                            {
-                                "element": "Ga",
-                                "occu": 1
-                            }
-                        ],
-                        "abc": [
-                            0.0,
-                            0.0,
-                            0.38497422384325314
-                        ],
-                        "xyz": [
-                            0.0,
-                            0.0,
-                            12.5
-                        ],
-                        "label": "Ga",
-                        "properties": {}
-                    },
-                    {
-                        "species": [
-                            {
-                                "element": "As",
-                                "occu": 1
-                            }
-                        ],
-                        "abc": [
-                            0.33333333300647333,
-                            0.3333333333346401,
-                            0.4105355074336413
-                        ],
-                        "xyz": [
-                            2.03299656934853,
-                            1.1737511145986699,
-                            13.329967372075142
-                        ],
-                        "label": "As",
-                        "properties": {}
-                    },
-                    {
-                        "species": [
-                            {
-                                "element": "Ga",
-                                "occu": 1
-                            }
-                        ],
-                        "abc": [
-                            0.33333333202589366,
-                            0.33333333333856086,
-                            0.48721935820480594
-                        ],
-                        "xyz": [
-                            2.0329965653694706,
-                            1.1737511146124757,
-                            15.819869488300572
-                        ],
-                        "label": "Ga",
-                        "properties": {}
-                    },
-                    {
-                        "species": [
-                            {
-                                "element": "As",
-                                "occu": 1
-                            }
-                        ],
-                        "abc": [
-                            0.6666666650323672,
-                            0.666666666673201,
-                            0.5127806417951941
-                        ],
-                        "xyz": [
-                            4.065993134718001,
-                            2.3475022292111456,
-                            16.649836860375714
-                        ],
-                        "label": "As",
-                        "properties": {}
-                    },
-                    {
-                        "species": [
-                            {
-                                "element": "Ga",
-                                "occu": 1
-                            }
-                        ],
-                        "abc": [
-                            0.6666666640517873,
-                            0.6666666666771217,
-                            0.5894644925663587
-                        ],
-                        "xyz": [
-                            4.065993130738941,
-                            2.3475022292249514,
-                            19.13973897660114
-                        ],
-                        "label": "Ga",
-                        "properties": {}
-                    },
-                    {
-                        "species": [
-                            {
-                                "element": "As",
-                                "occu": 1
-                            }
-                        ],
-                        "abc": [
-                            0.9999999970582607,
-                            1.1761924767483833e-11,
-                            0.6150257761567469
-                        ],
-                        "xyz": [
-                            4.0659931273238765,
-                            4.141671691681718e-11,
-                            19.969706348676283
-                        ],
-                        "label": "As",
-                        "properties": {}
-                    }
-                ]
+            {
+                "name": "bulk_modulus group: >>b0dc60ba-26de-4456-a71b-a4a384bc908a<< bulk_modulus deformation 1",
+                "filesystem": null,
+                "path": "/home/mwo/FireWorks/FireFlow/fireflow/Tests/launcher_2020-06-04-15-12-02-537721"
             },
-            "miller_index": [
-                0,
-                0,
-                1
-            ],
-            "shift": 0.0,
-            "scale_factor": null,
-            "reconstruction": null,
-            "energy": null
-        }
+            {
+                "name": "bulk_modulus group: >>b0dc60ba-26de-4456-a71b-a4a384bc908a<< bulk_modulus deformation 0",
+                "filesystem": null,
+                "path": "/home/mwo/FireWorks/FireFlow/fireflow/Tests/launcher_2020-06-04-15-12-31-026306"
+            }
+        ]
     },
-    "fw_id": 13,
-    "created_on": "2020-04-08T15:41:22.089892",
-    "updated_on": "2020-04-08T15:41:22.968600",
+    "fw_id": 1,
+    "created_on": "2020-06-04T15:10:27.266466",
+    "updated_on": "2020-06-04T15:41:17.323105",
     "launches": [
         {
             "fworker": {
@@ -903,11 +48,12 @@
                 "env": {
                     "db_file": "/home/mwo/FireWorks/config/db.json",
                     "vasp_cmd": "mpirun -n 4 vasp6.MKL.openmpi_std",
+                    "vdw_kernel_dir": "/home/mwo/bin/vdw_kernel",
                     "scratch_dir": "/home/mwo/VASP_CALCS"
                 }
             },
-            "fw_id": 13,
-            "launch_dir": "/home/mwo/FireWorks/FireFlow/fireflow/Tests/launcher_2020-04-08-15-41-22-781196",
+            "fw_id": 1,
+            "launch_dir": "/home/mwo/FireWorks/FireFlow/fireflow/Tests",
             "host": "RyzeUp",
             "ip": "127.0.1.1",
             "trackers": [],
@@ -916,13 +62,257 @@
             "state_history": [
                 {
                     "state": "RUNNING",
-                    "created_on": "2020-04-08T15:41:22.941546",
-                    "updated_on": "2020-04-08T15:41:22.941549"
+                    "created_on": "2020-06-04T15:41:17.289180",
+                    "updated_on": "2020-06-04T15:41:17.289184"
                 }
             ],
-            "launch_id": 13
+            "launch_id": 10
+        }
+    ],
+    "archived_launches": [
+        {
+            "fworker": {
+                "name": "RyzeUp",
+                "category": "",
+                "query": "{}",
+                "env": {
+                    "db_file": "/home/mwo/FireWorks/config/db.json",
+                    "vasp_cmd": "mpirun -n 4 vasp6.MKL.openmpi_std",
+                    "vdw_kernel_dir": "/home/mwo/bin/vdw_kernel",
+                    "scratch_dir": "/home/mwo/VASP_CALCS"
+                }
+            },
+            "fw_id": 1,
+            "launch_dir": "/home/mwo/FireWorks/FireFlow/fireflow/Tests/launcher_2020-06-04-15-12-59-657318",
+            "host": "RyzeUp",
+            "ip": "127.0.1.1",
+            "trackers": [],
+            "action": {
+                "stored_data": {
+                    "_message": "runtime error during task",
+                    "_task": {
+                        "tag": "bulk_modulus group: >>b0dc60ba-26de-4456-a71b-a4a384bc908a<<",
+                        "db_file": ">>db_file<<",
+                        "eos": "birch_murnaghan",
+                        "_fw_name": "{{atomate.vasp.firetasks.parse_outputs.FitEOSToDb}}"
+                    },
+                    "_exception": {
+                        "_stacktrace": "Traceback (most recent call last):\n  File \"/home/mwo/FireWorks/atomate_env/lib/python3.7/site-packages/fireworks/core/rocket.py\", line 262, in run\n    m_action = t.run_task(my_spec)\n  File \"/home/mwo/FireWorks/atomate_env/lib/python3.7/site-packages/atomate/vasp/firetasks/parse_outputs.py\", line 648, in run_task\n    all_task_ids.append(d[\"task_id\"])\nTypeError: 'NoneType' object is not subscriptable\n",
+                        "_details": null
+                    }
+                },
+                "exit": true,
+                "update_spec": {},
+                "mod_spec": [],
+                "additions": [],
+                "detours": [],
+                "defuse_children": false,
+                "defuse_workflow": false
+            },
+            "state": "FIZZLED",
+            "state_history": [
+                {
+                    "state": "RUNNING",
+                    "created_on": "2020-06-04T15:12:59.800462",
+                    "updated_on": "2020-06-04T15:13:00.745980",
+                    "checkpoint": {
+                        "_task_n": 0,
+                        "_all_stored_data": {},
+                        "_all_update_spec": {},
+                        "_all_mod_spec": []
+                    }
+                },
+                {
+                    "state": "FIZZLED",
+                    "created_on": "2020-06-04T15:13:00.805738",
+                    "checkpoint": {
+                        "_task_n": 0,
+                        "_all_stored_data": {},
+                        "_all_update_spec": {},
+                        "_all_mod_spec": []
+                    }
+                }
+            ],
+            "launch_id": 6
+        },
+        {
+            "fworker": {
+                "name": "RyzeUp",
+                "category": "",
+                "query": "{}",
+                "env": {
+                    "db_file": "/home/mwo/FireWorks/config/db.json",
+                    "vasp_cmd": "mpirun -n 4 vasp6.MKL.openmpi_std",
+                    "vdw_kernel_dir": "/home/mwo/bin/vdw_kernel",
+                    "scratch_dir": "/home/mwo/VASP_CALCS"
+                }
+            },
+            "fw_id": 1,
+            "launch_dir": "/home/mwo/FireWorks/FireFlow/fireflow/Tests",
+            "host": "RyzeUp",
+            "ip": "127.0.1.1",
+            "trackers": [],
+            "action": {
+                "stored_data": {
+                    "_message": "runtime error during task",
+                    "_task": {
+                        "tag": "bulk_modulus group: >>b0dc60ba-26de-4456-a71b-a4a384bc908a<<",
+                        "db_file": ">>db_file<<",
+                        "eos": "birch_murnaghan",
+                        "_fw_name": "{{atomate.vasp.firetasks.parse_outputs.FitEOSToDb}}"
+                    },
+                    "_exception": {
+                        "_stacktrace": "Traceback (most recent call last):\n  File \"/home/mwo/FireWorks/atomate_env/lib/python3.7/site-packages/fireworks/core/rocket.py\", line 262, in run\n    m_action = t.run_task(my_spec)\n  File \"/home/mwo/FireWorks/atomate_env/lib/python3.7/site-packages/atomate/vasp/firetasks/parse_outputs.py\", line 648, in run_task\n    all_task_ids.append(d[\"task_id\"])\nTypeError: 'NoneType' object is not subscriptable\n",
+                        "_details": null
+                    }
+                },
+                "exit": true,
+                "update_spec": {},
+                "mod_spec": [],
+                "additions": [],
+                "detours": [],
+                "defuse_children": false,
+                "defuse_workflow": false
+            },
+            "state": "FIZZLED",
+            "state_history": [
+                {
+                    "state": "RUNNING",
+                    "created_on": "2020-06-04T15:16:26.518139",
+                    "updated_on": "2020-06-04T15:16:27.631923",
+                    "checkpoint": {
+                        "_task_n": 0,
+                        "_all_stored_data": {},
+                        "_all_update_spec": {},
+                        "_all_mod_spec": []
+                    }
+                },
+                {
+                    "state": "FIZZLED",
+                    "created_on": "2020-06-04T15:16:27.684351",
+                    "checkpoint": {
+                        "_task_n": 0,
+                        "_all_stored_data": {},
+                        "_all_update_spec": {},
+                        "_all_mod_spec": []
+                    }
+                }
+            ],
+            "launch_id": 7
+        },
+        {
+            "fworker": {
+                "name": "RyzeUp",
+                "category": "",
+                "query": "{}",
+                "env": {
+                    "db_file": "/home/mwo/FireWorks/config/db.json",
+                    "vasp_cmd": "mpirun -n 4 vasp6.MKL.openmpi_std",
+                    "vdw_kernel_dir": "/home/mwo/bin/vdw_kernel",
+                    "scratch_dir": "/home/mwo/VASP_CALCS"
+                }
+            },
+            "fw_id": 1,
+            "launch_dir": "/home/mwo/FireWorks/FireFlow/fireflow/Tests",
+            "host": "RyzeUp",
+            "ip": "127.0.1.1",
+            "trackers": [],
+            "action": {
+                "stored_data": {
+                    "_message": "runtime error during task",
+                    "_task": {
+                        "tag": "bulk_modulus group: >>b0dc60ba-26de-4456-a71b-a4a384bc908a<<",
+                        "db_file": ">>db_file<<",
+                        "eos": "birch_murnaghan",
+                        "_fw_name": "{{atomate.vasp.firetasks.parse_outputs.FitEOSToDb}}"
+                    },
+                    "_exception": {
+                        "_stacktrace": "Traceback (most recent call last):\n  File \"/home/mwo/FireWorks/atomate_env/lib/python3.7/site-packages/fireworks/core/rocket.py\", line 262, in run\n    m_action = t.run_task(my_spec)\n  File \"/home/mwo/FireWorks/atomate_env/lib/python3.7/site-packages/atomate/vasp/firetasks/parse_outputs.py\", line 648, in run_task\n    \"formula_pretty\": structure.composition.reduced_formula})\nUnboundLocalError: local variable 'structure' referenced before assignment\n",
+                        "_details": null
+                    }
+                },
+                "exit": true,
+                "update_spec": {},
+                "mod_spec": [],
+                "additions": [],
+                "detours": [],
+                "defuse_children": false,
+                "defuse_workflow": false
+            },
+            "state": "FIZZLED",
+            "state_history": [
+                {
+                    "state": "RUNNING",
+                    "created_on": "2020-06-04T15:20:46.990420",
+                    "updated_on": "2020-06-04T15:20:48.028159",
+                    "checkpoint": {
+                        "_task_n": 0,
+                        "_all_stored_data": {},
+                        "_all_update_spec": {},
+                        "_all_mod_spec": []
+                    }
+                },
+                {
+                    "state": "FIZZLED",
+                    "created_on": "2020-06-04T15:20:48.082298",
+                    "checkpoint": {
+                        "_task_n": 0,
+                        "_all_stored_data": {},
+                        "_all_update_spec": {},
+                        "_all_mod_spec": []
+                    }
+                }
+            ],
+            "launch_id": 8
+        },
+        {
+            "fworker": {
+                "name": "RyzeUp",
+                "category": "",
+                "query": "{}",
+                "env": {
+                    "db_file": "/home/mwo/FireWorks/config/db.json",
+                    "vasp_cmd": "mpirun -n 4 vasp6.MKL.openmpi_std",
+                    "vdw_kernel_dir": "/home/mwo/bin/vdw_kernel",
+                    "scratch_dir": "/home/mwo/VASP_CALCS"
+                }
+            },
+            "fw_id": 1,
+            "launch_dir": "/home/mwo/FireWorks/FireFlow/fireflow/Tests",
+            "host": "RyzeUp",
+            "ip": "127.0.1.1",
+            "trackers": [],
+            "action": {
+                "stored_data": {},
+                "exit": false,
+                "update_spec": {},
+                "mod_spec": [],
+                "additions": [],
+                "detours": [],
+                "defuse_children": false,
+                "defuse_workflow": false
+            },
+            "state": "COMPLETED",
+            "state_history": [
+                {
+                    "state": "RUNNING",
+                    "created_on": "2020-06-04T15:21:46.220710",
+                    "updated_on": "2020-06-04T15:21:47.357877",
+                    "checkpoint": {
+                        "_task_n": 0,
+                        "_all_stored_data": {},
+                        "_all_update_spec": {},
+                        "_all_mod_spec": []
+                    }
+                },
+                {
+                    "state": "COMPLETED",
+                    "created_on": "2020-06-04T15:21:47.407557"
+                }
+            ],
+            "launch_id": 9
         }
     ],
     "state": "RUNNING",
-    "name": "Unnamed FW"
+    "name": "fit equation of state"
 }

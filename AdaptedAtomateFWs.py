@@ -105,8 +105,8 @@ class OptimizeFW_Mod(Firework):
                                   auto_npar=auto_npar,
                                   half_kpts_first_relax=half_kpts_first_relax))
         t.append(PassCalcLocs(name=name))
-        t.append(
-            VaspToDb(db_file=db_file, additional_fields={"task_label": name}))
+        t.append(VaspToDb(db_file=db_file,
+                          additional_fields={"task_label": name}))
         super(OptimizeFW_Mod, self).__init__(t, parents=parents, name="{}-{}".
                                          format(
                                              structure_spec_loc[-1], name),
