@@ -6,12 +6,13 @@ Created on Wed Jun 17 15:47:39 2020
 
 from uuid import uuid4
 from fireworks import Workflow, Firework
-from triboflow.firetasks.encut_convergence import FT_EnergyCutoffConvo
+from triboflow.firetasks.encut_convergence import FT_EnergyCutoffConvo, \
+    FT_PutEncutInfoInDB
 
 from triboflow.helper_functions import GetCustomVaspRelaxSettings, \
     GetCustomVaspStaticSettings
 
-def ConvergeEncut_SWF(structure, comp_parameters, spec,
+def ConvergeEncut_SWF(structure, comp_parameters, spec, mp_id, functional,
                       deformations=None, encut_start=200, encut_incr=25,
                       n_converge=3, db_file='>>db_file<<'):
     """Subworkflows that converges the Encut using a fit to an BM-EOS.
@@ -60,15 +61,13 @@ def ConvergeEncut_SWF(structure, comp_parameters, spec,
     FT_EncutConvo = FT_EnergyCutoffConvo(structure = structure,
                                          comp_params = comp_parameters,
                                          tag = tag,
+                                         mp_id = mp_id,
+                                         functional = functional,
+                                         db_file = db_file,
                                          encut_incr = encut_incr,
-                                         encut_start = encut_start)
-    FT_PassECInfo = FT_PassEncutInfo(out_loc=out_loc, structure=structure)
-        
-    FT_PassOn = FT_PassSpec(key_list=to_pass)
+                                         encut_start = encut_start)        
     
     FW_CE = Firework(FT_EncutConvo, spec=spec,
-                     name='Start Encut Convergence')
-    FW_CE_Info = Firework([FT_PassECInfo, FT_PassOn], spec=spec,
-                     name='Pass on the output')
-    WF = Workflow([FW_CE, FW_CE_Info], {FW_CE: [FW_CE_Info]}, name=name)
+                     name='Encut Convergence')
+    WF = Workflow([FW_CE], name=name)
     return WF

@@ -4,8 +4,24 @@ Created on Wed Jun 17 15:59:59 2020
 @author: mwo
 """
 
+from pprint import pprint
 from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
+from atomate.utils.utils import env_chk
+from triboflow.helper_functions import GetBulkFromDB
+
+@explicit_serialize
+class FT_PrintFromBulkDB(FiretaskBase):
+    _fw_name = 'Print bulk data from DB'
+    required_params = ['mp_id', 'functional']
+    optional_params = ['db_file']
+    def run_task(self, fw_spec):
+        db_file = self.get('db_file', env_chk('>>db_file<<', fw_spec))
+        bulk_dict = GetBulkFromDB(self['mp_id'], db_file, self['functional'])
+        print('')
+        pprint(bulk_dict)
+        print('')
+        
 
 @explicit_serialize
 class FT_PassSpec(FiretaskBase):

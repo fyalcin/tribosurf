@@ -7,7 +7,28 @@ from pymatgen.io.vasp.inputs import Kpoints
 from fireworks.core.firework import FWAction, Workflow
 from fireworks.user_objects.dupefinders.dupefinder_exact import DupeFinderExact
 from atomate.vasp.database import VaspCalcDb
-        
+    
+
+def GetHighLevelDB(db_file):
+    """Return the triboflow MongoDB database.
+    
+    Parameters
+    ----------
+    db_file : str, optional
+        Full path to the db.json file which holds the location and access
+        credentials to the database.
+        The default is '/home/mwo/FireWorks/config/db.json'.
+    
+    Returns
+    -------
+    db : pymongo.database.Database
+        Triboflow high-level MongoDB database accessed by pymongo.
+    """
+    db = GetDB(db_file)
+    tribo_db = db.client.triboflow
+    
+    return tribo_db
+    
 def AddBulkToDB(structure, mp_id, db_file, functional):
     db = GetDB(db_file)
     tribo_db = db.client.triboflow
@@ -35,8 +56,8 @@ def GetBulkFromDB(mp_id, db_file, functional):
     if out_dict:
         return out_dict
     else:
-        raise IOError('No bulk material with MP-ID {} is found in the'+
-                      'bulk_data collection.'.format(mp_id))
+        raise IOError('No bulk material with MP-ID {} is found in the'
+                      '{}.bulk_data collection.'.format(mp_id, functional))
         
 
 def GetLastBMDatafromDB(formula, db_file='/home/mwo/FireWorks/config/db.json'):

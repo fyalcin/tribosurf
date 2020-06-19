@@ -13,7 +13,6 @@ __date__ = 'March 11th, 2020'
 # Custom FireWorks
 # =============================================================================
 
-
 def CheckInputsFW(mat1loc, mat2loc, compparamloc, interparamloc, name):
     """Check the input parameters for completeness and add default values.
     
