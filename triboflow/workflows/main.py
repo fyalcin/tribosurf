@@ -195,6 +195,6 @@ def Heterogeneous_WF(inputs):
                     Relax_Slab_M2: [Make_Hetero_Structure],
                     Make_Hetero_Structure: [Print_spec]}
 
-    WF = Workflow(WF, Dependencies, name='Dummy Heterogeneous Workflow')
+    WF = Workflow(WF, Dependencies, name='Heterogeneous Workflow')
     return WF
 
