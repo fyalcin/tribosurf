@@ -7,8 +7,103 @@ Created on Mon Jun 22 12:29:28 2020
 from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
-from triboflow.helper_functions import GetBulkFromD
+from triboflow.helper_functions import GetLowEnergyStructure, GetHighLevelDB, \
+    InterfaceName
 
+
+@explicit_serialize
+class FT_MakeInterfaceInDB(FiretaskBase):
+    _fw_name = 'Make bulk entry into high level DB'
+    required_params = ['mat1_data_loc', 'mat2_data_loc', 'comp_data_loc',
+                       'interface_data_loc']
+    optional_params = ['db_file']
+    def run_task(self, fw_spec):
+        data1 = fw_spec[self['mat1_data_loc']]
+        data2 = fw_spec[self['mat1_data_loc']]
+        comp_data = fw_spec[self['comp_data_loc']]
+        interface_data = fw_spec[self['interface_data_loc']]
+        db_file = self.get('db_file', env_chk('>>db_file<<', fw_spec))
+        
+        functional = comp_data['functional']
+        struct1, mp_id_1 = GetLowEnergyStructure(data1['formula'],
+                                                 data1['mp_id'])
+        struct2, mp_id_2 = GetLowEnergyStructure(data2['formula'],
+                                                 data2['mp_id'])
+        
+        db = GetHighLevelDB(db_file)
+        col = db[functional+'.interface_data']
+
+        name = InterfaceName(mp_id_1, data1['miller'],
+                             mp_id_2, data2['miller'])
+        
+        if col.find_one({'name': name}):
+            print('{} interface can not be added to {}.interface_data '
+                  'collection because an interface with that name is already '
+                  'present.'.format(name, functional))
+            return
+        else:
+             col.insert_one({'name': name,
+                             'comp_parameters': comp_data,
+                             'interface_parameters': interface_data})
+             return
+
+@explicit_serialize
+class FT_MakeSlabInDB(FiretaskBase):
+    _fw_name = 'Make bulk entry into high level DB'
+    required_params = ['mat_data_loc', 'comp_data_loc']
+    optional_params = ['db_file']
+    def run_task(self, fw_spec):
+        data = fw_spec[self['mat_data_loc']]
+        comp_data = fw_spec[self['comp_data_loc']]
+        db_file = self.get('db_file', env_chk('>>db_file<<', fw_spec))
+        
+        functional = comp_data['functional']
+        struct, mp_id = GetLowEnergyStructure(data['formula'], data['mp_id'])
+        
+        db = GetHighLevelDB(db_file)
+        col = db[functional+'.slab_data']
+        
+        if col.find_one({'mpid': mp_id, 'miller': data['miller']}):
+            print('{}-{} slab can not be added to {}.slab_data collection'
+                  'because a material with MP-ID {} is already present.'
+                  .format(data['formula'], data['miller'], mp_id, functional))
+            return
+        else:
+             col.insert_one({'mpid': mp_id,
+                             'formula': data['formula'],
+                             'miller': data['miller'],
+                             'comp_parameters': comp_data})
+             return
+
+@explicit_serialize
+class FT_MakeBulkInDB(FiretaskBase):
+    _fw_name = 'Make bulk entry into high level DB'
+    required_params = ['mat_data_loc', 'comp_data_loc']
+    optional_params = ['db_file']
+    def run_task(self, fw_spec):
+        data = fw_spec[self['mat_data_loc']]
+        comp_data = fw_spec[self['comp_data_loc']]
+        db_file = self.get('db_file', env_chk('>>db_file<<', fw_spec))
+        
+        functional = comp_data['functional']
+        struct, mp_id = GetLowEnergyStructure(data['formula'], data['mp_id'])
+        
+        db = GetHighLevelDB(db_file)
+        col = db[functional+'.bulk_data']
+        
+        if col.find_one({'mpid': mp_id}):
+            print('{} bulk can not be added to bulk_data collection because a'
+              'material with MP-ID {} is already present in the {} '
+              'collection!'.format(data['formula'], mp_id, functional))
+            return
+        else:
+             col.insert_one({'mpid': mp_id,
+                             'formula': data['formula'],
+                             'structure_fromMP': struct.as_dict(),
+                             'comp_parameters': comp_data})
+             return
+        
+    
 
 @explicit_serialize
 class FT_CheckCompParamDict(FiretaskBase):
@@ -60,7 +155,6 @@ class FT_CheckCompParamDict(FiretaskBase):
         #####################################################################
         
         input_dict = self['input_dict']
-        
         output_dict_name = self.get('output_dict_name', 'comp_parameters')
 
         #Define all known keys here
@@ -156,8 +250,8 @@ class FT_CheckInterfaceParamDict(FiretaskBase):
     """
 
     _fw_name = 'Check Input Dict'
-    required_params = ['input_dict_loc']
-    optional_params = ['output_dict_loc']
+    required_params = ['input_dict']
+    optional_params = ['output_dict_name']
     
     def run_task(self, fw_spec):
         """Run the FireTask.
@@ -176,13 +270,9 @@ class FT_CheckInterfaceParamDict(FiretaskBase):
                     'max_angle_diff': 2.0,
                     'r1r2_tol': 0.05}
         #####################################################################
-        
-        input_dict = GetValueFromNestedDict(fw_spec, self['input_dict_loc'])
-        
-        if 'output_dict_loc' in self:
-            out_loc = self['output_dict_loc']
-        else:
-            out_loc = self['input_dict_loc']
+         
+        input_dict = self['input_dict']
+        output_dict_name = self.get('output_dict_name', 'interface_params')
 
         #Define all known keys here
         known_keys = essential_keys + additional_keys
@@ -218,10 +308,7 @@ class FT_CheckInterfaceParamDict(FiretaskBase):
             else:
                 out_dict[key] = defaults[key]
                 
-        spec = fw_spec
-        final_output = WriteNestedDictFromList(out_loc, out_dict, d={})
-        updated_spec = UpdateNestedDict(spec, final_output)
-        return FWAction(update_spec=updated_spec)
+        return FWAction(mod_spec=[{'_set': {output_dict_name: out_dict}}])
 
 @explicit_serialize
 class FT_CheckMaterialInputDict(FiretaskBase):
@@ -250,8 +337,8 @@ class FT_CheckMaterialInputDict(FiretaskBase):
     """
 
     _fw_name = 'Check Material Input Dict'
-    required_params = ['input_dict_loc']
-    optional_params = ['output_dict_loc']
+    required_params = ['input_dict']
+    optional_params = ['output_dict_name']
     
     def run_task(self, fw_spec):
         """Run the FireTask."""
@@ -264,11 +351,9 @@ class FT_CheckMaterialInputDict(FiretaskBase):
         min_thickness_default = 10.0
         min_vacuum_default = 25.0
         #####################################################################
-        input_dict = GetValueFromNestedDict(fw_spec, self['input_dict_loc'])
-        if 'output_dict_name' in self:
-            out_loc = self['output_dict_loc']
-        else:
-            out_loc = self['input_dict_loc']
+        
+        input_dict = self['input_dict']
+        output_dict_name = self.get('output_dict_name', 'interface_params')
 
         #Define all known keys here
         known_keys = essential_keys + additional_keys
@@ -324,8 +409,5 @@ class FT_CheckMaterialInputDict(FiretaskBase):
                 else:
                     out_dict['min_vacuum'] = min_vacuum_default
         
-        spec = fw_spec
-        spec_update = WriteNestedDictFromList(out_loc, out_dict, d={})
-        updated_spec = UpdateNestedDict(spec, spec_update)
-        return FWAction(update_spec=updated_spec)
+        return FWAction(mod_spec=[{'_set': {output_dict_name: out_dict}}])
 

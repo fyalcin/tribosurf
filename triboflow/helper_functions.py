@@ -9,6 +9,33 @@ from fireworks.user_objects.dupefinders.dupefinder_exact import DupeFinderExact
 from atomate.vasp.database import VaspCalcDb
     
 
+def InterfaceName(mp_id_1, miller_1, mp_id_2, miller_2):
+    """Return a name for an interface based on MP-IDs and miller indices.
+
+    Parameters
+    ----------
+    mp_id_1 : str
+        MP-ID of the first material.
+    miller_1 : list of int
+        Miller indices of the first material
+    mp_id_2 : str
+        MP-ID of the second material.
+    miller_2 : list of int
+        Miller indices of the second material
+
+    Returns
+    -------
+    name : stre
+        Unique name for the interface of two slabs.
+
+    """
+    f1 = GetPropertyFromMP(mp_id_1, 'pretty_formula')
+    f2 = GetPropertyFromMP(mp_id_2, 'pretty_formula')
+    m1 = ''.join(str(s) for s in miller_1)
+    m2 = ''.join(str(s) for s in miller_2)
+    name = '_'.join((f1+m1, f2+m2, mp_id_1, mp_id_2))
+    return name
+
 def GetHighLevelDB(db_file):
     """Return the triboflow MongoDB database.
     
@@ -386,6 +413,40 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
         
     return vis, uis, vdw
 
+
+def GetPropertyFromMP(MP_ID, prop):
+    """Get a certain property for a single material from the MP database.
+    
+    Return the selected property of the selected material from the Material
+    Projects database using the MPRester from Pymatgen.
+
+    Parameters
+    ----------
+    MP_ID : str
+        Valid materials project ID.
+    prop : str
+        Property for which to query. If not in the supported list, a warning
+        will be printed
+
+    Returns
+    -------
+    variable type
+        The query result from the MP database. Type depends on the query.
+        If nothing is found or the property is not in the list, NoneType is
+        returned.
+    """
+    with MPRester() as mpr:
+        
+        if prop not in mpr.supported_task_properties:
+            print('{} is not in the list of supported task properties!\n'
+                  'This is the supported list:\n{}'
+                  .format(prop, mpr.supported_task_properties))
+            return None
+        else:
+            query=mpr.query(criteria={'material_id': MP_ID},
+                            properties=[prop])
+            return query[0][prop]
+    
 
 def GetGapFromMP(MP_ID):
     """Get the bandgap of a structure from the MaterialsProject database.
