@@ -33,7 +33,10 @@ def InterfaceName(mp_id_1, miller_1, mp_id_2, miller_2):
     f2 = GetPropertyFromMP(mp_id_2, 'pretty_formula')
     m1 = ''.join(str(s) for s in miller_1)
     m2 = ''.join(str(s) for s in miller_2)
-    name = '_'.join((f1+m1, f2+m2, mp_id_1, mp_id_2))
+    n1 = min(f1+m1, f2+m2)
+    n2 = max(f1+m1, f2+m2)
+    ids = min(mp_id_1+'_'+mp_id_2, mp_id_2+'_'+mp_id_1)
+    name = '_'.join((n1, n2, ids))
     return name
 
 def GetHighLevelDB(db_file):
