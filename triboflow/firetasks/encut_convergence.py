@@ -49,32 +49,6 @@ class FT_StartEncutConvo(FiretaskBase):
             return FWAction(detours=SWF, update_spec=fw_spec)
         else:
             return FWAction(update_spec=fw_spec)
-            
-
-@explicit_serialize
-class FT_PutEncutInfoInDB(FiretaskBase):
-    _fw_name = 'Put Encut Info in DB'
-    required_params = ['structure', 'mp_id', 'functional']
-    optional_params = ['db_file']
-    def run_task(self, fw_spec):
-        mp_id = self.get('mp_id')
-        functional = self.get('functional')
-        db_file = self.get('db_file', env_chk('>>db_file<<', fw_spec))
-        
-        encut_info = fw_spec.get('encut_info_dict')
-        info = encut_info['encut_info']
-        V0 = encut_info.get('equilibrium_volume')
-        struct = self.get('structure')
-        scaled_structure = struct.copy()
-        scaled_structure.scale_lattice(V0)
-        struct_name = struct.composition.reduced_formula+'_equiVol'
-        encut_info.update({struct_name: scaled_structure})
-        
-        tribo_db = GetHighLevelDB(db_file)
-        
-        coll = tribo_db[functional+'.bulk_data']
-        coll.update_one({'mpid': mp_id},
-                        {'$set': {'encut_info': 'test'}})
         
 
 @explicit_serialize
