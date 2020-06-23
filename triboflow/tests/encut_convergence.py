@@ -13,7 +13,7 @@ from triboflow.firetasks.utils import FT_PrintFromBulkDB
 from triboflow.firetasks.encut_convergence import FT_StartEncutConvo
 
 struct , mp_id = GetLowEnergyStructure('Au')
-functional = 'PBE'
+functional = 'SCAN'
 db_file='/home/mwo/FireWorks/config/db.json'
 AddBulkToDB(struct, mp_id, db_file, functional)
 

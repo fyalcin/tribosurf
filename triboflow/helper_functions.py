@@ -229,6 +229,7 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
     
     if static_type.startswith('slab_'):
         uis['NELMDL'] = -15
+        uis['NELM'] = 200
     elif comp_parameters.get('functional') == 'SCAN':
         uis['NELMDL'] = -10
     else:
@@ -329,6 +330,7 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
     if relax_type.startswith('slab_') or relax_type.startswith('interface_'):
         uis['NELMDL'] = -15
         uis['EDIFFG'] = -0.02
+        uis['NELM'] = 200
     else:
         uis['NELMDL'] = -6
         uis['EDIFFG'] = -0.01
