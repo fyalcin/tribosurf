@@ -25,7 +25,7 @@ def InterfaceName(mp_id_1, miller_1, mp_id_2, miller_2):
 
     Returns
     -------
-    name : stre
+    name : str
         Unique name for the interface of two slabs.
 
     """
@@ -449,27 +449,6 @@ def GetPropertyFromMP(MP_ID, prop):
             query=mpr.query(criteria={'material_id': MP_ID},
                             properties=[prop])
             return query[0][prop]
-    
-
-def GetGapFromMP(MP_ID):
-    """Get the bandgap of a structure from the MaterialsProject database.
-    
-    Parameters
-    ----------
-    MP_ID : str
-        Materials Project material_id
-
-    Returns
-    -------
-    float
-        Bandgap of the material (is usually not accurate, but can be used
-        to decide if the material is a metal or not).
-
-    """
-    with MPRester() as mpr:
-        band_gap = mpr.query(criteria={'material_id': MP_ID},
-                             properties=['band_gap'])
-    return band_gap[0]['band_gap']
 
 def GetLowEnergyStructure(chem_formula, MP_ID=None, PrintInfo=False):
     """

@@ -8,7 +8,7 @@ from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 from triboflow.helper_functions import GetLowEnergyStructure, GetHighLevelDB, \
-    InterfaceName
+    InterfaceName, GetPropertyFromMP
 
 
 @explicit_serialize
@@ -60,6 +60,12 @@ class FT_MakeSlabInDB(FiretaskBase):
         functional = comp_data['functional']
         struct, mp_id = GetLowEnergyStructure(data['formula'], data['mp_id'])
         
+        bandgap = GetPropertyFromMP(mp_id, 'band_gap')
+        if bandgap > 0.5:
+            comp_data['is_metal'] = False
+        else:
+            comp_data['is_metal'] = True
+        
         db = GetHighLevelDB(db_file)
         col = db[functional+'.slab_data']
         
@@ -87,6 +93,12 @@ class FT_MakeBulkInDB(FiretaskBase):
         
         functional = comp_data['functional']
         struct, mp_id = GetLowEnergyStructure(data['formula'], data['mp_id'])
+        
+        bandgap = GetPropertyFromMP(mp_id, 'band_gap')
+        if bandgap > 0.2:
+            comp_data['is_metal'] = False
+        else:
+            comp_data['is_metal'] = True
         
         db = GetHighLevelDB(db_file)
         col = db[functional+'.bulk_data']
