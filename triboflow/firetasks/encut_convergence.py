@@ -244,9 +244,9 @@ class FT_EnergyCutoffConvo(FiretaskBase):
                                                'BM_tol_rel': BM_tolerance,
                                                'V0_tol_abs': V0_tol,
                                                'V0_tol_rel': V0_tolerance},
-                                        'encut': final_encut,
                                         'equilibrium_volume': final_V0,
                                         'bulk_moduls': final_BM,
+                                        'comp_parameters.encut': final_encut,
                                         struct_name: struct_dict}})
                 
                 DB.coll.update_one({'tag': tag},

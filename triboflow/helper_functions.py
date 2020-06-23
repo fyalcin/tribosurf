@@ -2,6 +2,7 @@
 
 import subprocess
 import pymongo
+from pprint import pprint
 from pymatgen import MPRester
 from pymatgen.io.vasp.inputs import Kpoints
 from fireworks.core.firework import FWAction, Workflow
@@ -67,7 +68,7 @@ def AddBulkToDB(structure, mp_id, db_file, functional):
     formula = structure.composition.reduced_formula
     
     if col.find_one({'mpid': mp_id}):
-        print('{} bulk can not be added to bulk_data collection because a'
+        print('{} bulk can not be added to bulk_data collection because a '
               'material with MP-ID {} is already present in the {} '
               'collection!'.format(formula, mp_id, functional))
         return
@@ -166,32 +167,6 @@ def IsListConverged(input_list, tol, n=3):
             if abs(l[0]-l[i+1]) < tol:
                 check_list[i] = True
         return all(check_list)
-
-def SetInSpecFWAction(key_list, value):
-    """Generate A FWAction that puts something in the spec using mod_spec.
-    
-    A FireWorkAction is returned that puts the value in the fw_spec using
-    the mod_spec method and the '_set'option. Nested dictionary updates are
-    supported
-
-    Parameters
-    ----------
-    key_list : list of str
-        List of keys to the location the value needs to be put in the nested
-        fw_spec
-    value :
-        Whatever needs to be put in the fw_spec at the given location.
-        Variable type
-
-    Returns
-    -------
-    FA : fireworks.core.firework.FWAction
-        FWAction that handles the modification of the spec.
-
-    """
-    out_str = '->'.join(key_list)
-    FA = FWAction(mod_spec=[{'_set': {out_str: value}}])
-    return FA
 
 def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
     """Make custom vasp settings for static calculations.
@@ -429,7 +404,7 @@ def GetPropertyFromMP(MP_ID, prop):
         Valid materials project ID.
     prop : str
         Property for which to query. If not in the supported list, a warning
-        will be printed
+        will be printed.
 
     Returns
     -------

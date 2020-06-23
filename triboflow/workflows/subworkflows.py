@@ -6,11 +6,7 @@ Created on Wed Jun 17 15:47:39 2020
 
 from uuid import uuid4
 from fireworks import Workflow, Firework
-from triboflow.firetasks.encut_convergence import FT_EnergyCutoffConvo, \
-    FT_PutEncutInfoInDB
-
-from triboflow.helper_functions import GetCustomVaspRelaxSettings, \
-    GetCustomVaspStaticSettings
+from triboflow.firetasks.encut_convergence import FT_EnergyCutoffConvo
 
 def ConvergeEncut_SWF(structure, comp_parameters, spec, mp_id, functional,
                       deformations=None, encut_start=200, encut_incr=25,
@@ -52,8 +48,7 @@ def ConvergeEncut_SWF(structure, comp_parameters, spec, mp_id, functional,
         A subworkflow intended to find the converged k_distance for a given
         structure.
 
-    """
-    
+    """   
     name = 'Encut Convergence SWF of '+structure.composition.reduced_formula
     
     tag = "BM group: {}".format(str(uuid4()))
