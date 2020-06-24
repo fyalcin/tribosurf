@@ -8,7 +8,69 @@ from pymatgen.io.vasp.inputs import Kpoints
 from fireworks.core.firework import FWAction, Workflow
 from fireworks.user_objects.dupefinders.dupefinder_exact import DupeFinderExact
 from atomate.vasp.database import VaspCalcDb
+
+def RemoveMatchingFiles(list_of_patterns):
+    """
+    Remove all files matching the patterns (wildcards) in the current
+    directory.
+    """
+    import os, glob
+    remove_list=[]
+    for pattern in list_of_patterns:
+        remove_list.extend(glob.glob(pattern))
+    if remove_list is []:
+        return
+    else:
+        for file_to_remove in remove_list:
+            os.remove(file_to_remove)
+        return
+
+def GetGeneralizedKmesh(structure, k_dist, RemoveSymm=False):
+    """Get a generalized Monkhorst pack mesh for a given structure.
     
+    Prepares the necessary files (POSCAR, PRECALC, and, if the structure has
+    a 'magmom' site property also INCAR) for the K-Point Grid Generator of the
+    Mueller group at John Hopkins http://muellergroup.jhu.edu/K-Points.html
+    Runs the getKPoints script and reads the KPOINT file produced into a
+    pymnatgen Kpoints object.
+    
+    Parameters
+    ----------
+    structure : pymatgen.core.structure.Structure
+        Structure for which the kpoints grid is to be generated.
+    k_dist : float
+        The minimum allowed distance between lattice points on the real-space
+        superlattice. This determines the density of the k-point grid. A larger
+        value will result in denser grids.
+
+    Returns
+    -------
+    KPTS : pymatgen.io.vasp.inputs.Kpoints
+        Pymatgen Kpoints object representing a generalized MP mesh.
+
+    """
+    precalc = ['MINDISTANCE = '+str(k_dist),
+               'MINTOTALKPOINTS = 4',
+               'GAPDISTANCE = 6 ',
+               'MONOCLINIC_SEARCH_DEPTH = 2500',
+               'TRICLINIC_SEARCH_DEPTH = 1500']
+    if RemoveSymm in ['STRUCTURAL', 'TIME_REVERSAL', 'ALL']:
+        precalc.append('REMOVE_SYMMETRY = '+RemoveSymm)
+    with open('PRECALC', 'w') as out:
+        for line in precalc:
+            out.write(line+'\n')
+            
+    magmom_list = structure.site_properties.get('magmom')
+    if magmom_list:
+        with open('INCAR', 'w') as out:
+            out.write('MAGMOM = '+' '.join(str(m) for m in magmom_list))
+    
+    structure.to(fmt='poscar', filename='POSCAR')
+    get_kpoints_file = subprocess.Popen('getKPoints')
+    get_kpoints_file.communicate()
+    KPTS = Kpoints().from_file('KPOINTS')
+    RemoveMatchingFiles(['KPOINTS*', 'POSCAR*', 'INCAR', 'PRECALC'])
+    return KPTS
 
 def InterfaceName(mp_id_1, miller_1, mp_id_2, miller_2):
     """Return a name for an interface based on MP-IDs and miller indices.

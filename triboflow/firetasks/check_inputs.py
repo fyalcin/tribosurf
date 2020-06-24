@@ -22,7 +22,9 @@ class FT_MakeInterfaceInDB(FiretaskBase):
         data2 = fw_spec[self['mat1_data_loc']]
         comp_data = fw_spec[self['comp_data_loc']]
         interface_data = fw_spec[self['interface_data_loc']]
-        db_file = self.get('db_file', env_chk('>>db_file<<', fw_spec))
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
         
         functional = comp_data['functional']
         struct1, mp_id_1 = GetLowEnergyStructure(data1['formula'],
@@ -55,7 +57,9 @@ class FT_MakeSlabInDB(FiretaskBase):
     def run_task(self, fw_spec):
         data = fw_spec[self['mat_data_loc']]
         comp_data = fw_spec[self['comp_data_loc']]
-        db_file = self.get('db_file', env_chk('>>db_file<<', fw_spec))
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
         
         functional = comp_data['functional']
         struct, mp_id = GetLowEnergyStructure(data['formula'], data['mp_id'])
@@ -89,7 +93,9 @@ class FT_MakeBulkInDB(FiretaskBase):
     def run_task(self, fw_spec):
         data = fw_spec[self['mat_data_loc']]
         comp_data = fw_spec[self['comp_data_loc']]
-        db_file = self.get('db_file', env_chk('>>db_file<<', fw_spec))
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
         
         functional = comp_data['functional']
         struct, mp_id = GetLowEnergyStructure(data['formula'], data['mp_id'])

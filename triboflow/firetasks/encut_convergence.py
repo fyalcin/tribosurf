@@ -26,7 +26,9 @@ class FT_StartEncutConvo(FiretaskBase):
         from triboflow.workflows.subworkflows import ConvergeEncut_SWF
         mp_id = self.get('mp_id')
         functional = self.get('functional')
-        db_file = self.get('db_file', env_chk('>>db_file<<', fw_spec))
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
         deformations = self.get('deformations')
         encut_start = self.get('encut_start', 200)
         encut_incr = self.get('encut_incr', 25)
@@ -81,7 +83,9 @@ class FT_UpdateBMLists(FiretaskBase):
     def run_task(self, fw_spec):
         formula = self.get('formula')
         tag = self.get('tag')
-        db_file = self.get('db_file', env_chk('>>db_file<<', fw_spec))
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
         
         results = GetLastBMDatafromDB(formula, db_file)
         
@@ -147,7 +151,9 @@ class FT_EnergyCutoffConvo(FiretaskBase):
         encut_start = self.get('encut_start', 200)
         encut_incr = self.get('encut_incr', 25)
         deformations = self.get('deformations', deforms)
-        db_file = self.get('db_file', env_chk('>>db_file<<', fw_spec))
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
             
         struct = self['structure']
         comp_params = self['comp_params']

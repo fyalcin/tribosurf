@@ -4,6 +4,7 @@ Created on Wed Jun 17 15:59:59 2020
 @author: mwo
 """
 import numpy as np
+import subprocess
 from datetime import datetime
 from pymatgen.core.structure import Structure
 from pymatgen.io.vasp.inputs import Kpoints
@@ -11,11 +12,9 @@ from pymatgen.io.vasp.sets import MPStaticSet
 from fireworks import FWAction, FiretaskBase, Firework, Workflow
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
-from atomate.vasp.config import VASP_CMD, DB_FILE
 from atomate.vasp.fireworks.core import StaticFW
-from triboflow.helper_functions import GetLastBMDatafromDB, \
-    GetCustomVaspStaticSettings, GetDB, IsListConverged, GetBulkFromDB, \
-    GetHighLevelDB
+from triboflow.helper_functions import  GetCustomVaspStaticSettings, GetDB, \
+    IsListConverged, GetBulkFromDB, GetHighLevelDB
 
 
 @explicit_serialize
@@ -27,7 +26,9 @@ class FT_StartKPointConvo(FiretaskBase):
         from triboflow.workflows.subworkflows import ConvergeKpoints_SWF
         mp_id = self.get('mp_id')
         functional = self.get('functional')
-        db_file = self.get('db_file', env_chk('>>db_file<<', fw_spec))
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
         k_dens_start = self.get('k_dens_start', 500)
         k_dens_incr = self.get('k_dens_incr', 50)
         n_converge = self.get('n_converge', 3)
@@ -78,7 +79,9 @@ class FT_UpdateELists(FiretaskBase):
         
         tag = self.get('tag')
         calc_label = self.get('calc_label')
-        db_file = self.get('db_file', env_chk('>>db_file<<', fw_spec))
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
         DB = GetDB(db_file)
         
         #Get energy from last vasp run
@@ -86,7 +89,7 @@ class FT_UpdateELists(FiretaskBase):
         energy = vasp_calc['output']['energy']
         
         #update data array in the database
-        DB.coll = DB['Kpoints_data_sharing']
+        DB.coll = DB['kpoints_data_sharing']
         DB.coll.update_one({'tag': tag},
                            {'$push': {'E_list': energy}})
 
@@ -132,7 +135,9 @@ class FT_KpointsConvo(FiretaskBase):
         n_converge = self.get('n_converge', 3)
         k_dens_start = self.get('k_dens_start', 500)
         k_dens_incr = self.get('k_dens_incr', 50)
-        db_file = self.get('db_file', env_chk('>>db_file<<', fw_spec))
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
             
         struct = self['structure']
         comp_params = self['comp_params']
@@ -144,7 +149,7 @@ class FT_KpointsConvo(FiretaskBase):
         
         #get the data arrays from the database (returns None when not there)
         DB = GetDB(db_file)
-        DB.coll = DB['Kpoint_data_sharing']
+        DB.coll = DB['kpoints_data_sharing']
         data = DB.coll.find_one({'tag': tag})
         if data:
             E_list = data.get('E_list')
@@ -155,10 +160,10 @@ class FT_KpointsConvo(FiretaskBase):
         
         if E_list is None:
             
-            label = tag+'_calc 1'
+            label = tag+' calc 0'
             vis, uis, vdw = GetCustomVaspStaticSettings(struct, comp_params,
                                                         'bulk_from_scratch')
-            kpoints = Kpoints.automatic_density(struct, k_dens_start)
+            kpoints = Kpoints.automatic_gamma_density(struct, k_dens_start)
             k_dens_list = [k_dens_start]
             vis = MPStaticSet(struct, user_incar_settings=uis,
                   user_kpoints_settings=kpoints)
@@ -191,7 +196,8 @@ class FT_KpointsConvo(FiretaskBase):
                         'created_on': str(datetime.now()),
                         'k_dens_list': k_dens_list,
                         'last_mesh': kpoints.kpts,
-                        'E_list': []}
+                        'E_list': [],
+                        'k-meshes': [kpoints.as_dict()]}
             DB.coll.insert_one(set_data)
             
             return FWAction(detours = K_convo_WF)
@@ -234,12 +240,14 @@ class FT_KpointsConvo(FiretaskBase):
                 return FWAction(update_spec = fw_spec)
             
             else:
+                calc_nr = len(E_list)
+                label = tag+' calc '+str(calc_nr)
                 vis, uis, vdw = GetCustomVaspStaticSettings(struct, comp_params,
                                                         'bulk_from_scratch')
                 last_mesh = data['last_mesh']
                 k_dens = k_dens_list[-1]+k_dens_incr
-                kpoints = Kpoints.automatic_density(struct, k_dens)
-                while kpoints.kpts is last_mesh:
+                kpoints = Kpoints.automatic_gamma_density(struct, k_dens)
+                while kpoints.kpts == last_mesh:
                     k_dens = k_dens + k_dens_incr
                     kpoints = Kpoints.automatic_density(struct, k_dens)
                 vis = MPStaticSet(struct, user_incar_settings=uis,
@@ -268,7 +276,8 @@ class FT_KpointsConvo(FiretaskBase):
             
                 #Update Database entry for Encut list
                 DB.coll.update_one({'tag': tag},
-                                   {'$push': {'k_dens_list': k_dens}},
-                                   {'$set': {'last_mesh': kpoints.kpts}})
+                               {'$push': {'k_dens_list': k_dens,
+                                          'k-meshes': kpoints.as_dict()},
+                                '$set': {'last_mesh': kpoints.kpts}})
                 return FWAction(detours=K_convo_WF)
 
