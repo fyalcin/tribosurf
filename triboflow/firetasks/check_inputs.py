@@ -19,7 +19,7 @@ class FT_MakeInterfaceInDB(FiretaskBase):
     optional_params = ['db_file']
     def run_task(self, fw_spec):
         data1 = fw_spec[self['mat1_data_loc']]
-        data2 = fw_spec[self['mat1_data_loc']]
+        data2 = fw_spec[self['mat2_data_loc']]
         comp_data = fw_spec[self['comp_data_loc']]
         interface_data = fw_spec[self['interface_data_loc']]
         db_file = self.get('db_file')
@@ -365,13 +365,14 @@ class FT_CheckMaterialInputDict(FiretaskBase):
         essential_keys = ['formula', 'miller']
         additional_keys = ['min_vacuum', 'mp_id', 'min_thickness']
         
-        MP_ID_default = None
         min_thickness_default = 10.0
         min_vacuum_default = 25.0
+        #MPID of the minimum energy structure for this formula will be used
+        #as default.
         #####################################################################
         
         input_dict = self['input_dict']
-        output_dict_name = self.get('output_dict_name', 'interface_params')
+        output_dict_name = self.get('output_dict_name', 'materials_params')
 
         #Define all known keys here
         known_keys = essential_keys + additional_keys
@@ -415,7 +416,8 @@ class FT_CheckMaterialInputDict(FiretaskBase):
                 if key in input_dict:
                     out_dict['mp_id'] = str(input_dict[key])
                 else:
-                    out_dict['mp_id'] = MP_ID_default
+                    s, MPID = GetLowEnergyStructure(str(input_dict['formula']))
+                    out_dict['mp_id'] = MPID
             if key == 'min_thickness':
                 if key in input_dict:
                     out_dict['min_thickness'] = float(input_dict[key])

@@ -11,20 +11,21 @@ from fireworks.core.rocket_launcher import rapidfire
 from triboflow.fireworks.common import CheckInputsFW
 
 
-inputs = {'material_1': {'formula': 'Au',
-                         'miller': '111',
+inputs = {'material_1': {'formula': 'C',
+                         'miller': '001',
+                         'mp_id': 'mp-66',
                          'min_vacuum': 25,
                          'min_thickness': 5
                          },
-          'material_2': {'formula': 'Fe',
+          'material_2': {'formula': 'Al',
                          #'mp_id': 'mp-13',
-                         'miller': '110',
+                         'miller': '111',
                          'min_vacuum': 25,
                          'min_thickness': 6
                          },
-          'computational_params':{'functional': 'SCAN',
-                                  'energy_tolerance': 0.01,
-                                  'volume_tolerance': 0.01,
+          'computational_params':{'functional': 'PBE',
+                                  'energy_tolerance': 0.001,
+                                  'volume_tolerance': 0.001,
                                   'BM_tolerance': 0.01,
                                   'use_vdw': 'False'},
           'interface_params':{'interface_distance': 2.5,

@@ -7,26 +7,23 @@ Created on Fri Jun 19 16:15:02 2020
 """
 
 from pymatgen.core.structure import Structure
-from pymatgen.io.vasp.sets import MPStaticSet
-from pymatgen.io.vasp.inputs import Kpoints
-from fireworks import LaunchPad, Firework, Workflow
+from fireworks import LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
-from atomate.vasp.fireworks.core import StaticFW
-from atomate.vasp.powerups import add_modify_incar
 from triboflow.workflows.subworkflows import ConvergeKpoints_SWF
-from triboflow.helper_functions import (
-        GetBulkFromDB, GetCustomVaspStaticSettings)
+from triboflow.helper_functions import GetBulkFromDB
 
 
 db_file = '/home/mwo/FireWorks/config/db.json'
 
-data = GetBulkFromDB("mp-81", db_file, 'PBE')
+data = GetBulkFromDB("mp-134", db_file, 'PBE')
 
-struct = Structure.from_dict(data['structure_equiVol'])
+struct = Structure.from_dict(data['structure_fromMP'])
 comp_parameters = data['comp_parameters']
 
+comp_parameters['encut'] = 500
 
-WF = ConvergeKpoints_SWF(struct, comp_parameters, {}, 'mp-81', 'PBE')
+WF = ConvergeKpoints_SWF(struct, comp_parameters, {}, data['mpid'],
+                         comp_parameters['functional'])
 
 #mod_WF = add_modify_incar(WF, modify_incar_params={'incar_update': uis})
 

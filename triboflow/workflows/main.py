@@ -5,13 +5,10 @@ Created on Wed Jun 17 15:47:39 2020
 """
 
 from fireworks import Workflow, Firework
-from triboflow.common_firetasks import FT_AddSelectiveDynamics, FT_WritePrecalc, \
-    FT_PrintSpec, FT_StructFromVaspOutput, FT_FetchStructureFromFormula, \
-    FT_MakeSlabFromStructure, FT_MakeHeteroStructure, FT_PassSpec, \
-    FT_LoopKpoints, FT_PassKpointsInfo, FT_EnergyCutoffConvo
-
-from triboflow.helper_functions import GetCustomVaspRelaxSettings, \
-    GetCustomVaspStaticSettings
+from triboflow.fireworks.common import CheckInputsFW
+from triboflow.firetasks.encut_convergence import FT_StartEncutConvo
+from triboflow.firetasks.kpoint_convergence import FT_StartKPointConvo
+from triboflow.helper_functions import GetLowEnergyStructure
 
 def Heterogeneous_WF(inputs):
     """Return main workflow for heterogeneous interfaces within Triboflow.
@@ -27,70 +24,57 @@ def Heterogeneous_WF(inputs):
     WF : FireWorks Workflow
         Main Triboflow workflow for heterogeneous interfaces.
 
-    """
+    """   
+    mat_1 = inputs.get('material_1')
+    mat_2 = inputs.get('material_2')
+    comp_params = inputs.get('computational_params')
+    inter_params = inputs.get('interface_params')
+    
+    if not all([mat_1, mat_2, comp_params, inter_params]):
+        raise SystemExit('The inputs-dictionary for this workflow must '
+                         'contain the following keys:\n'
+                         'material_1\nmaterial_2\ncomputational_params\n'
+                         'interface_params')
+        
+    struct_1, mp_id_1 = GetLowEnergyStructure(mat_1.get('formula'),
+                                              mat_1.get('mp_id'))
+    struct_2, mp_id_2 = GetLowEnergyStructure(mat_1.get('formula'),
+                                              mat_1.get('mp_id'))
+    
+    functional = comp_params.get('functional', 'SCAN')
+    
     WF = []
 
-    Initialize = Firework(FT_PrintSpec(), spec=inputs,
-                                    name= 'Initialize Workflow')
+    Initialize = CheckInputsFW(mat1_params = mat_1,
+                               mat2_params = mat_2,
+                               compparams = comp_params,
+                               interface_params = inter_params,
+                               FW_name = 'Check input parameters FW')
     WF.append(Initialize)
     
-    Check_Inputs = CheckInputsFW(mat1loc=['material_1'], mat2loc=['material_2'],
-                                 compparamloc=['computational_params'],
-                                 interparamloc=['interface_params'],
-                                 name='Check Inputs')
-    WF.append(Check_Inputs)
-    
-    Start_M1 = Firework(FT_FetchStructureFromFormula(
-                            materials_dict_loc=['material_1']),
-                            name='Get '+inputs['material_1']['formula']+' bulk')
-    WF.append(Start_M1)
-    
-    Start_M2 = Firework(FT_FetchStructureFromFormula(
-                            materials_dict_loc=['material_2']),
-                            name='Get '+inputs['material_2']['formula']+' bulk')
-    WF.append(Start_M2)
-    
-    bulk_loc = ['material_1', inputs['material_1']['formula']+'_fromMP']
-    ConvergeEncut_M1 = StartDetourWF_FW('Converge_Encut_SWF',
-                            name='Converge Encut '+
-                            inputs['material_1']['formula'],
-                            structure_loc=bulk_loc,
-                            comp_parameters_loc=['material_1'],
-                            out_loc=['material_1'],
-                            to_pass=['material_1'])
+    ConvergeEncut_M1 = Firework(FT_StartEncutConvo(mp_id = mp_id_1,
+                                                   functional = functional),
+                                name = 'Start encut convergence for {}'
+                                        .format(mat_1['formula']))
     WF.append(ConvergeEncut_M1)
     
-    bulk_loc = ['material_1', inputs['material_1']['formula']+'_equiVol']
-    Converge_M1 = StartDetourWF_FW('Converge_Kpoints_SWF',
-                            name='Converge Kpoints '+
-                            inputs['material_1']['formula'],
-                            structure_loc=bulk_loc,
-                            comp_parameters_loc=['material_1'],
-                            out_loc=['material_1'],
-                            to_pass=['material_1'])
-    WF.append(Converge_M1)
-    
-    bulk_loc = ['material_2', inputs['material_2']['formula']+'_fromMP']
-    ConvergeEncut_M2 = StartDetourWF_FW('Converge_Encut_SWF',
-                            name='Converge Encut '+
-                            inputs['material_2']['formula'],
-                            structure_loc=bulk_loc,
-                            comp_parameters_loc=['material_2'],
-                            out_loc=['material_2'],
-                            to_pass=['material_2', 'computational_params',
-                                     'interface_params'])
+    ConvergeEncut_M2 = Firework(FT_StartEncutConvo(mp_id = mp_id_2,
+                                                   functional = functional),
+                                name = 'Start encut convergence for {}'
+                                        .format(mat_2['formula']))
     WF.append(ConvergeEncut_M2)
     
-    bulk_loc = ['material_2', inputs['material_2']['formula']+'_equiVol']
-    Converge_M2 = StartDetourWF_FW('Converge_Kpoints_SWF',
-                            name='Converge Kpoints '+
-                            inputs['material_2']['formula'],
-                            structure_loc=bulk_loc,
-                            comp_parameters_loc=['material_2'],
-                            out_loc=['material_2'],
-                            to_pass=['material_2', 'computational_params',
-                                     'interface_params'])
-    WF.append(Converge_M2)
+    ConvergeKpoints_M1 = Firework(FT_StartKPointConvo(mp_id = mp_id_1,
+                                                   functional = functional),
+                                name = 'Start kpoints convergence for {}'
+                                        .format(mat_1['formula']))
+    WF.append(ConvergeKpoints_M1)
+    
+    ConvergeKpoints_M2 = Firework(FT_StartKPointConvo(mp_id = mp_id_2,
+                                                   functional = functional),
+                                name = 'Start kpoints convergence for {}'
+                                        .format(mat_2['formula']))
+    WF.append(ConvergeKpoints_M2)
     
     Final_Params = FixParametersFW(loc_1=['material_1'],
                                    loc_2=['material_2'],

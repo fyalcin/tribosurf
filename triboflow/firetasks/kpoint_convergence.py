@@ -3,8 +3,6 @@
 Created on Wed Jun 17 15:59:59 2020
 @author: mwo
 """
-import numpy as np
-import subprocess
 from datetime import datetime
 from pymatgen.core.structure import Structure
 from pymatgen.io.vasp.inputs import Kpoints
@@ -14,7 +12,7 @@ from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 from atomate.vasp.fireworks.core import StaticFW
 from triboflow.helper_functions import  GetCustomVaspStaticSettings, GetDB, \
-    IsListConverged, GetBulkFromDB, GetHighLevelDB
+    IsListConverged, GetBulkFromDB, GetHighLevelDB, GetGeneralizedKmesh
 
 
 @explicit_serialize
@@ -29,8 +27,8 @@ class FT_StartKPointConvo(FiretaskBase):
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
-        k_dens_start = self.get('k_dens_start', 500)
-        k_dens_incr = self.get('k_dens_incr', 50)
+        k_dens_start = self.get('k_dens_start', 35)
+        k_dens_incr = self.get('k_dens_incr', 0.5)
         n_converge = self.get('n_converge', 3)
         
         data = GetBulkFromDB(mp_id, db_file, functional)
@@ -133,8 +131,8 @@ class FT_KpointsConvo(FiretaskBase):
     def run_task(self, fw_spec):
         
         n_converge = self.get('n_converge', 3)
-        k_dens_start = self.get('k_dens_start', 500)
-        k_dens_incr = self.get('k_dens_incr', 50)
+        k_dens_start = self.get('k_dens_start', 35)
+        k_dens_incr = self.get('k_dens_incr', 0.5)
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
@@ -163,11 +161,16 @@ class FT_KpointsConvo(FiretaskBase):
             label = tag+' calc 0'
             vis, uis, vdw = GetCustomVaspStaticSettings(struct, comp_params,
                                                         'bulk_from_scratch')
-            kpoints = Kpoints.automatic_gamma_density(struct, k_dens_start)
+            #kpoints = Kpoints.automatic_gamma_density(struct, k_dens_start)
+            kpoints = GetGeneralizedKmesh(struct, k_dens_start)
             k_dens_list = [k_dens_start]
             vis = MPStaticSet(struct, user_incar_settings=uis,
                   user_kpoints_settings=kpoints)
             
+            print(comp_params)
+            print(uis)
+            print(vis.incar)
+                
             RunVASP_FW = StaticFW(structure=struct, vasp_input_set=vis,
                                   name=label)
             
@@ -208,7 +211,7 @@ class FT_KpointsConvo(FiretaskBase):
                 final_E = E_list[-n_converge]
                 print('')
                 print(' Convergence reached for total energy per atom.')
-                print(' Final kappa = {}; Final energy = {}eV;'
+                print(' Final k_dens = {}; Final energy = {}eV;'
                       .format(final_k_dens, final_E))
                 print('')
                 print('')
@@ -217,23 +220,23 @@ class FT_KpointsConvo(FiretaskBase):
         
                 tribo_db = GetHighLevelDB(db_file)
         
-                coll = tribo_db[functional+'.bulk_data']
-                coll.update_one({'mpid': mp_id},
-                                {'$set': {'k_dens_info': 
-                                              {'final_kappa': final_k_dens,
+                hl_coll = tribo_db[functional+'.bulk_data']
+                hl_coll.update_one({'mpid': mp_id},
+                                   {'$set': {'k_dens_info': 
+                                              {'final_k_dens': final_k_dens,
                                                'final_energy': final_E,
                                                'energy_list': E_list,
-                                               'kappa_list': k_dens_list,
+                                               'k_dens_list': k_dens_list,
                                                'Energy_tol_abs': E_tol,
                                                'Energy_tol_rel': E_tolerance},
-                                     'total_energy@equiVol'
-                                     'comp_parameters.kappa': final_k_dens}})
+                                    'total_energy@equiVol': final_E,
+                                    'comp_parameters.k_dens': final_k_dens}})
                 
                 DB.coll.update_one({'tag': tag},
-                               {'$set': {'final_kappa': final_k_dens,
+                               {'$set': {'final_k_dens': final_k_dens,
                                          'final_energy': final_E,
                                          'energy_list': E_list,
-                                         'kappa_list': k_dens_list,
+                                         'k_dens_list': k_dens_list,
                                          'Energy_tol_abs': E_tol,
                                          'Energy_tol_rel': E_tolerance}})
                 
@@ -246,12 +249,17 @@ class FT_KpointsConvo(FiretaskBase):
                                                         'bulk_from_scratch')
                 last_mesh = data['last_mesh']
                 k_dens = k_dens_list[-1]+k_dens_incr
-                kpoints = Kpoints.automatic_gamma_density(struct, k_dens)
+                #kpoints = Kpoints.automatic_gamma_density(struct, k_dens)
+                kpoints = GetGeneralizedKmesh(struct, k_dens)
                 while kpoints.kpts == last_mesh:
                     k_dens = k_dens + k_dens_incr
-                    kpoints = Kpoints.automatic_density(struct, k_dens)
+                    #kpoints = Kpoints.automatic_density(struct, k_dens)
+                    kpoints = GetGeneralizedKmesh(struct, k_dens)
                 vis = MPStaticSet(struct, user_incar_settings=uis,
                                   user_kpoints_settings=kpoints)
+                
+                print(comp_params)
+                print(vis.incar)
 
                 RunVASP_FW = StaticFW(structure=struct, vasp_input_set=vis,
                                       name=label)

@@ -181,6 +181,7 @@ class FT_EnergyCutoffConvo(FiretaskBase):
                                                         'bulk_from_scratch')
             uis['ENCUT'] = encut_start
             Encut_list = [encut_start]
+            uks = {'reciprocal_density': 1000}
             BM_WF = get_wf_bulk_modulus(struct, deformations,
                                         vasp_input_set=None,
                                         vasp_cmd=VASP_CMD, db_file=db_file,

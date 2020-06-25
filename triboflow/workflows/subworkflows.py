@@ -10,13 +10,13 @@ from triboflow.firetasks.encut_convergence import FT_EnergyCutoffConvo
 from triboflow.firetasks.kpoint_convergence import FT_KpointsConvo
 
 def ConvergeKpoints_SWF(structure, comp_parameters, spec, mp_id, functional,
-                      kappa_start=500, kappa_incr=50,
+                      k_dens_start=35, k_dens_incr=0.5,
                       n_converge=3, db_file=None):
     """Subworkflows that converges the the kmesh density via total energy.
     
     Takes a given structure, computational parameters (which includes the
     convergence criterion in eV/atom) and runs static vasp calculations with
-    a denser and denser mesh (larger kappa parameter) until convergence in the
+    a denser and denser mesh (larger k_dens parameter) until convergence in the
     total energy is achieved. Output is printed to the screen and saved in the
     high-level triboflow database where it can be queried using the mp_id
     of the material.
@@ -32,9 +32,9 @@ def ConvergeKpoints_SWF(structure, comp_parameters, spec, mp_id, functional,
     spec : dict
         Previous fw_spec that will be updated and/or passed on for child
         Fireworks.
-    kappa_start : int, optional
+    k_dens_start : int, optional
         Starting density value for the first run. Defaults to 500.
-    kappa_incr : int, optional
+    k_dens_incr : int, optional
         Increment for the k-mesh density during the convergence. Defaults to
         50. The increment might actually be larger if otherwise no new mesh
         would be formed!
@@ -63,8 +63,8 @@ def ConvergeKpoints_SWF(structure, comp_parameters, spec, mp_id, functional,
                                    mp_id = mp_id,
                                    functional = functional,
                                    db_file = db_file,
-                                   k_dens_incr = kappa_incr,
-                                   k_dens_start = kappa_start,
+                                   k_dens_incr = k_dens_incr,
+                                   k_dens_start = k_dens_start,
                                    n_converge = n_converge)
     
     FW_CE = Firework(FT_KptsConvo, spec=spec,

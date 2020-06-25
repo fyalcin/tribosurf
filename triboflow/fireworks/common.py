@@ -1,7 +1,6 @@
 #! /.fs/data/wolloch/atomate_test/atomate_env/bin/python
 
-from fireworks import Firework, ScriptTask
-from triboflow.firetasks.utils import FT_PrintSpec
+from fireworks import Firework
 from triboflow.firetasks.check_inputs import FT_CheckCompParamDict, \
     FT_CheckInterfaceParamDict, FT_CheckMaterialInputDict, FT_MakeBulkInDB, \
     FT_MakeSlabInDB, FT_MakeInterfaceInDB
@@ -51,7 +50,6 @@ def CheckInputsFW(mat1_params, mat2_params, compparams,
         Firework for checking the parameters.
 
     """
-    
     FT_Mat1 = FT_CheckMaterialInputDict(input_dict = mat1_params,
                                         output_dict_name = 'mat_1')
     FT_Mat2 = FT_CheckMaterialInputDict(input_dict = mat2_params,

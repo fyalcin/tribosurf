@@ -32,7 +32,7 @@ def GetGeneralizedKmesh(structure, k_dist, RemoveSymm=False):
     a 'magmom' site property also INCAR) for the K-Point Grid Generator of the
     Mueller group at John Hopkins http://muellergroup.jhu.edu/K-Points.html
     Runs the getKPoints script and reads the KPOINT file produced into a
-    pymnatgen Kpoints object.
+    pymatgen Kpoints object.
     
     Parameters
     ----------
@@ -63,6 +63,7 @@ def GetGeneralizedKmesh(structure, k_dist, RemoveSymm=False):
     magmom_list = structure.site_properties.get('magmom')
     if magmom_list:
         with open('INCAR', 'w') as out:
+            out.write('ISPIN = 2')
             out.write('MAGMOM = '+' '.join(str(m) for m in magmom_list))
     
     structure.to(fmt='poscar', filename='POSCAR')
@@ -79,12 +80,14 @@ def InterfaceName(mp_id_1, miller_1, mp_id_2, miller_2):
     ----------
     mp_id_1 : str
         MP-ID of the first material.
-    miller_1 : list of int
-        Miller indices of the first material
+    miller_1 : list of int, or str
+        Miller indices of the first material given either as list or str with
+        3 letters.
     mp_id_2 : str
         MP-ID of the second material.
-    miller_2 : list of int
-        Miller indices of the second material
+    miller_2 : list of int, or str
+        Miller indices of the second material given either as list or str with
+        3 letters.
 
     Returns
     -------
@@ -94,8 +97,14 @@ def InterfaceName(mp_id_1, miller_1, mp_id_2, miller_2):
     """
     f1 = GetPropertyFromMP(mp_id_1, 'pretty_formula')
     f2 = GetPropertyFromMP(mp_id_2, 'pretty_formula')
-    m1 = ''.join(str(s) for s in miller_1)
-    m2 = ''.join(str(s) for s in miller_2)
+    if type(miller_1) is list:
+        m1 = ''.join(str(s) for s in miller_1)
+    else:
+        m1 = miller_1
+    if type(miller_2) is list:
+        m2 = ''.join(str(s) for s in miller_2)
+    else:
+        m2 = miller_2
     n1 = min(f1+m1, f2+m2)
     n2 = max(f1+m1, f2+m2)
     ids = min(mp_id_1+'_'+mp_id_2, mp_id_2+'_'+mp_id_1)
@@ -281,6 +290,9 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
     uis['SIGMA'] = 0.05
     uis['ISMEAR'] = -5
     uis['EDIFF'] = 1.0e-6
+    
+    if static_type.endswith('from_scratch'):
+        uis['ICHARG'] = 2
     
     if structure.num_sites < 20:
         uis['LREAL'] = '.FALSE.'
