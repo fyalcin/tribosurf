@@ -15,7 +15,9 @@ from triboflow.helper_functions import GetBulkFromDB
 
 db_file = '/home/mwo/FireWorks/config/db.json'
 
-data = GetBulkFromDB("mp-134", db_file, 'PBE')
+#data = GetBulkFromDB("mp-134", db_file, 'PBE') #Al
+data = GetBulkFromDB("mp-81", db_file, 'PBE') #Au
+#data = GetBulkFromDB("mp-66", db_file, 'PBE') #diamond C
 
 struct = Structure.from_dict(data['structure_fromMP'])
 comp_parameters = data['comp_parameters']
@@ -23,7 +25,8 @@ comp_parameters = data['comp_parameters']
 comp_parameters['encut'] = 500
 
 WF = ConvergeKpoints_SWF(struct, comp_parameters, {}, data['mpid'],
-                         comp_parameters['functional'])
+                         comp_parameters['functional'], k_dens_start=500,
+                         k_dens_incr=50)
 
 #mod_WF = add_modify_incar(WF, modify_incar_params={'incar_update': uis})
 

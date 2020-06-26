@@ -12,12 +12,12 @@ from triboflow.fireworks.common import CheckInputsFW
 
 
 inputs = {'material_1': {'formula': 'C',
-                         'miller': '001',
+                         'miller': '111',
                          'mp_id': 'mp-66',
                          'min_vacuum': 25,
                          'min_thickness': 5
                          },
-          'material_2': {'formula': 'Al',
+          'material_2': {'formula': 'Au',
                          #'mp_id': 'mp-13',
                          'miller': '111',
                          'min_vacuum': 25,

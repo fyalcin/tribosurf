@@ -5,28 +5,26 @@ Created on Fri Jun 19 16:15:02 2020
 
 @author: mwo
 """
-from uuid import uuid4
-from fireworks import LaunchPad, Firework, Workflow
+from pymatgen.core.structure import Structure
+from fireworks import LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
-from triboflow.helper_functions import GetLowEnergyStructure, AddBulkToDB
-from triboflow.firetasks.utils import FT_PrintFromBulkDB
-from triboflow.firetasks.encut_convergence import FT_StartEncutConvo
+from triboflow.workflows.subworkflows import ConvergeEncut_SWF
+from triboflow.helper_functions import GetBulkFromDB
 
-struct , mp_id = GetLowEnergyStructure('Au')
-functional = 'SCAN'
-db_file='/home/mwo/FireWorks/config/db.json'
-AddBulkToDB(struct, mp_id, db_file, functional)
 
-tag = "BM group: {}".format(str(uuid4()))
+db_file = '/home/mwo/FireWorks/config/db.json'
 
-FT1 = FT_StartEncutConvo(mp_id = mp_id, functional = functional)
-FT2 = FT_PrintFromBulkDB(mp_id = mp_id, functional = functional)
+data = GetBulkFromDB("mp-134", db_file, 'PBE')
 
-FW1 = Firework([FT1], name='Converge Encut Firework')
-FW2 = Firework([FT2], name='Print Results Firework')
+struct = Structure.from_dict(data['structure_fromMP'])
+comp_parameters = data['comp_parameters']
 
-WF = Workflow([FW1, FW2], {FW1: [FW2]}, name='Encut Convergence Workflow')
+comp_parameters['encut'] = 500
+
+WF = ConvergeEncut_SWF(struct, comp_parameters, {}, data['mpid'],
+                         comp_parameters['functional'])
+
 
 lpad = LaunchPad.auto_load()
 lpad.add_wf(WF)
-rapidfire(lpad)
+#rapidfire(lpad)
