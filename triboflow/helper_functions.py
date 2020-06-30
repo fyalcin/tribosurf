@@ -5,6 +5,7 @@ import pymongo
 from pprint import pprint
 from pymatgen import MPRester
 from pymatgen.io.vasp.inputs import Kpoints
+from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet, MPStaticSet
 from fireworks.core.firework import FWAction, Workflow
 from fireworks.user_objects.dupefinders.dupefinder_exact import DupeFinderExact
 from atomate.vasp.database import VaspCalcDb
@@ -160,6 +161,31 @@ def GetBulkFromDB(mp_id, db_file, functional):
     else:
         raise IOError('No bulk material with MP-ID {} is found in the'
                       '{}.bulk_data collection.'.format(mp_id, functional))
+        
+def GetSlabFromDB(mp_id, db_file, miller, functional):
+    db = GetDB(db_file)
+    tribo_db = db.client.triboflow
+    col_name=functional+'.slab_data'
+    col = tribo_db[col_name]
+    out_dict = col.find_one({'mpid': mp_id, 'miller': miller})
+    if out_dict:
+        return out_dict
+    else:
+        raise IOError('No slab with MP-ID {} and miller indices {} was found'
+                      ' in the {}.slab_data collection.'
+                      .format(mp_id, miller, functional))
+        
+def GetInterfaceFromDB(name, db_file, functional):
+    db = GetDB(db_file)
+    tribo_db = db.client.triboflow
+    col_name=functional+'.interface_data'
+    col = tribo_db[col_name]
+    out_dict = col.find_one({'name': name})
+    if out_dict:
+        return out_dict
+    else:
+        raise IOError('No interface with name {} was found in the '
+                      '{}.interface_data collection.'.format(name, functional))
         
 
 def GetLastBMDatafromDB(formula, db_file='/home/mwo/FireWorks/config/db.json'):
@@ -371,12 +397,9 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
 
     Returns
     -------
-    vis : str
+    vis : pymatgen.io.vasp.sets.MPScanRelaxSet or
+          pymatgen.io.vasp.sets.MPRelaxSet, depending on input
         A vasp input set for pymatgen.
-    uis : dict
-        User input settings that will override the standard setting in the vis.
-    vdw : str
-        Specifies which vdw functional is used. (optB86b or rVV10)
 
     """
     allowed_types = ['bulk_full_relax', 'bulk_vol_relax', 'bulk_pos_relax',
@@ -452,20 +475,29 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
     else:
         vdw = None
         
+    if 'k_dens' in comp_parameters:
+        uks = Kpoints.automatic_gamma_density(structure,
+                                              comp_parameters['k_dens'])
+    else:
+        uks = None
+        
     if 'functional' in comp_parameters:
         if comp_parameters['functional'] == 'SCAN':
-            vis = 'MPScanRelaxSet'
             #Algo All does not play well with tetrahedron method
             if 'is_metal' in comp_parameters:
                 if not comp_parameters['is_metal']:
                     uis['SIGMA'] = 0.1
                     uis['ISMEAR'] = 0
+            vis = MPScanRelaxSet(structure, user_incar_settings = uis,
+                                 vdw = vdw, user_kpoints_settings = uks)
         else:
-            vis = 'MPRelaxSet'
+            vis = MPRelaxSet(structure, user_incar_settings = uis, vdw = vdw,
+                             user_kpoints_settings = uks)
     else:
-        vis = 'MPRelaxSet'
+       vis = MPRelaxSet(structure, user_incar_settings = uis, vdw = vdw,
+                        user_kpoints_settings = uks)
         
-    return vis, uis, vdw
+    return vis
 
 
 def GetPropertyFromMP(MP_ID, prop):
