@@ -28,13 +28,13 @@ class FT_StartKPointConvo(FiretaskBase):
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
-        k_dens_start = self.get('k_dens_start', 35)
-        k_dens_incr = self.get('k_dens_incr', 0.5)
+        k_dens_start = self.get('k_dens_start', 500)
+        k_dens_incr = self.get('k_dens_incr', 50)
         n_converge = self.get('n_converge', 3)
         
         data = GetBulkFromDB(mp_id, db_file, functional)
         
-        stop_convergence = data.get('kpoint_info')
+        stop_convergence = data.get('k_dens_info')
         
         if not stop_convergence:
             structure = Structure.from_dict(data.get('structure_equiVol'))
@@ -132,8 +132,8 @@ class FT_KpointsConvo(FiretaskBase):
     def run_task(self, fw_spec):
         
         n_converge = self.get('n_converge', 3)
-        k_dens_start = self.get('k_dens_start', 35)
-        k_dens_incr = self.get('k_dens_incr', 0.5)
+        k_dens_start = self.get('k_dens_start', 500)
+        k_dens_incr = self.get('k_dens_incr', 50)
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
@@ -283,7 +283,7 @@ class FT_KpointsConvo(FiretaskBase):
                                       name = 'Kpoint Convergence Loop')
                 #Have to use this as a workaround as pymatgen forces ISMEAR=0
                 #on a custom generated Kgrid, even if tetrahedra are provided.
-                K_convo_WF = add_modify_incar(K_convo_WF, {'incar_update': uis})
+                #K_convo_WF = add_modify_incar(K_convo_WF, {'incar_update': uis})
                 
                 #Update Database entry for Encut list
                 DB.coll.update_one({'tag': tag},

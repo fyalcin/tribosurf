@@ -8,8 +8,61 @@ from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 from triboflow.helper_functions import GetLowEnergyStructure, GetHighLevelDB, \
-    InterfaceName, GetPropertyFromMP
+    InterfaceName, GetPropertyFromMP, GetBulkFromDB
 
+
+@explicit_serialize
+class FT_UpdateCompParams(FiretaskBase):
+    _fw_name = 'Update computational parameters in high level DB'
+    required_params = ['mp_id_1', 'miller_1', 'mp_id_2', 'miller_2',
+                       'functional']
+    optional_params = ['db_file']
+    def run_task(self, fw_spec):
+        mp_id_1 = self.get('mp_id_1')
+        mp_id_2 = self.get('mp_id_2')
+        if type(self['miller_1']) == str:
+            miller_1 = [int(k) for k in list(self['miller_1'])]
+        else:
+            miller_1 = self['miller_1']
+        if type(self['miller_2']) == str:
+            miller_2 = [int(k) for k in list(self['miller_2'])]
+        else:
+            miller_2 = self['miller_2']
+        functional = self.get('functional')
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
+        
+        bulk_1 = GetBulkFromDB(mp_id_1, db_file, functional)
+        bulk_2 = GetBulkFromDB(mp_id_2, db_file, functional)
+        
+        encut_1 = bulk_1['comp_parameters']['encut']
+        encut_2 = bulk_2['comp_parameters']['encut']
+        encut_inter = max(encut_1, encut_2)
+        k_dens_1 = bulk_1['comp_parameters']['k_dens']
+        k_dens_2 = bulk_2['comp_parameters']['k_dens']
+        k_dens_inter = max(k_dens_1, k_dens_2)
+        metal_1 = bulk_1['comp_parameters']['is_metal']
+        metal_2 = bulk_2['comp_parameters']['is_metal']
+        metal_inter = any((metal_1, metal_2))
+        
+        
+        db = GetHighLevelDB(db_file)
+        slab_col = db[functional+'.slab_data']
+        inter_col = db[functional+'.interface_data']
+        
+        slab_col.update_one({'mpid': mp_id_1, 'miller': miller_1},
+                            {'$set': {'comp_parameters.encut': encut_1,
+                                      'comp_parameters.k_dens': k_dens_1}})
+        slab_col.update_one({'mpid': mp_id_2, 'miller': miller_2},
+                            {'$set': {'comp_parameters.encut': encut_2,
+                                      'comp_parameters.k_dens': k_dens_2}})
+        
+        inter_name = InterfaceName(mp_id_1, miller_1, mp_id_2, miller_2)
+        inter_col.update_one({'name': inter_name},
+                             {'$set': {'comp_parameters.encut': encut_inter,
+                                       'comp_parameters.k_dens': k_dens_inter,
+                                       'comp_parameters.is_metal': metal_inter}})
 
 @explicit_serialize
 class FT_MakeInterfaceInDB(FiretaskBase):
@@ -82,6 +135,8 @@ class FT_MakeSlabInDB(FiretaskBase):
              col.insert_one({'mpid': mp_id,
                              'formula': data['formula'],
                              'miller': data['miller'],
+                             'min_thickness': data['min_thickness'],
+                             'min_vacuum': data['min_vacuum'],
                              'comp_parameters': comp_data})
              return
 

@@ -8,9 +8,56 @@ from uuid import uuid4
 from fireworks import Workflow, Firework
 from triboflow.firetasks.encut_convergence import FT_EnergyCutoffConvo
 from triboflow.firetasks.kpoint_convergence import FT_KpointsConvo
+from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \
+    FT_StartSlabRelax, FT_GetRelaxedSlab
+from triboflow.helper_functions import GetPropertyFromMP
+
+def MakeAndRelaxSlab_SWF(mp_id, miller, functional,
+                       relax_type = 'slab_pos_relax',
+                       bulk_struct_name = 'structure_equiVol',
+                       slab_struct_name = 'unrelaxed_slab',
+                       out_struct_name = 'relaxed_slab',
+                       spec = {}):
+    
+    if type(miller) == str:
+        miller_str = miller
+        miller = [int(k) for k in list(miller)]
+    else:
+        miller = miller
+        miller_str = ''.join(str(s) for s in miller)
+        
+    formula = GetPropertyFromMP(mp_id, 'pretty_formula')
+    
+    tag = formula+miller_str+'_'+str(uuid4())
+            
+    FTs = []
+    
+    FTs.append(FT_MakeSlabInDB(mp_id = mp_id, miller = miller,
+                               functional = functional,
+                               bulk_struct_name = bulk_struct_name))
+    
+    FTs.append(FT_StartSlabRelax(mp_id = mp_id, miller = miller,
+                                 functional = functional, tag = tag,
+                                 slab_struct_name = slab_struct_name,
+                                 relax_type = relax_type))
+    
+    FW = Firework(FTs, spec = spec,
+                  name = 'Make and relax '+formula+miller_str+' slab')
+    
+    FW2 = Firework(FT_GetRelaxedSlab(mp_id = mp_id, miller = miller,
+                                 functional = functional, tag = tag,
+                                 struct_out_name = out_struct_name,
+                                 input_struct_name = slab_struct_name),
+                   spec = spec,
+                   name = 'Put relaxed '+formula+miller_str+' slab in DB')
+    
+    SWF = Workflow([FW, FW2], {FW: [FW2]},
+                   name = 'Make and relax '+formula+miller_str+' SWF')
+    return SWF
+
 
 def ConvergeKpoints_SWF(structure, comp_parameters, spec, mp_id, functional,
-                      k_dens_start=35, k_dens_incr=0.5,
+                      k_dens_start=500, k_dens_incr=50,
                       n_converge=3, db_file=None):
     """Subworkflows that converges the the kmesh density via total energy.
     

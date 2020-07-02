@@ -1,5 +1,6 @@
 #! /.fs/data/wolloch/atomate_test/atomate_env/bin/python
 
+
 from fireworks import Firework
 from triboflow.firetasks.check_inputs import FT_CheckCompParamDict, \
     FT_CheckInterfaceParamDict, FT_CheckMaterialInputDict, FT_MakeBulkInDB, \

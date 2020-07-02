@@ -8,6 +8,9 @@ from fireworks import Workflow, Firework
 from triboflow.fireworks.common import CheckInputsFW
 from triboflow.firetasks.encut_convergence import FT_StartEncutConvo
 from triboflow.firetasks.kpoint_convergence import FT_StartKPointConvo
+from triboflow.firetasks.structure_manipulation import FT_StartSlabRelaxSWF, \
+    FT_MakeHeteroStructure
+from triboflow.firetasks.check_inputs import FT_UpdateCompParams
 from triboflow.helper_functions import GetLowEnergyStructure
 
 def Heterogeneous_WF(inputs):
@@ -38,8 +41,8 @@ def Heterogeneous_WF(inputs):
         
     struct_1, mp_id_1 = GetLowEnergyStructure(mat_1.get('formula'),
                                               mat_1.get('mp_id'))
-    struct_2, mp_id_2 = GetLowEnergyStructure(mat_1.get('formula'),
-                                              mat_1.get('mp_id'))
+    struct_2, mp_id_2 = GetLowEnergyStructure(mat_2.get('formula'),
+                                              mat_2.get('mp_id'))
     
     functional = comp_params.get('functional', 'SCAN')
     
@@ -49,7 +52,7 @@ def Heterogeneous_WF(inputs):
                                mat2_params = mat_2,
                                compparams = comp_params,
                                interface_params = inter_params,
-                               FW_name = 'Check input parameters FW')
+                               FW_name = 'Check input parameters')
     WF.append(Initialize)
     
     ConvergeEncut_M1 = Firework(FT_StartEncutConvo(mp_id = mp_id_1,
@@ -76,109 +79,46 @@ def Heterogeneous_WF(inputs):
                                         .format(mat_2['formula']))
     WF.append(ConvergeKpoints_M2)
     
-    Final_Params = FixParametersFW(loc_1=['material_1'],
-                                   loc_2=['material_2'],
-                                   out_loc=['interface_params'],
-                                   to_pass=['_all'],
-                                   name='Select computational parameters')
+    Final_Params = Firework(FT_UpdateCompParams(mp_id_1 = mp_id_1,
+                                                mp_id_2 = mp_id_2,
+                                                miller_1 = mat_1.get('miller'),
+                                                miller_2 = mat_2.get('miller'),
+                                                functional = functional),
+                            name = 'Consolidate computational paramters')
     WF.append(Final_Params)
     
-    bulk_loc = ['material_1', inputs['material_1']['formula']+'_equiVol']
-    out_loc = ['material_1', inputs['material_1']['formula']+'_relaxed']
-    Relax_M1 = StartDetourWF_FW('None',
-                            name='Relax '+inputs['material_1']['formula'],
-                            structure_loc=bulk_loc,
-                            comp_parameters_loc=['material_1'],
-                            relax_type='bulk_full_relax',
-                            out_loc=out_loc,
-                            to_pass=['material_1', 'computational_params',
-                                     'interface_params'])
-    WF.append(Relax_M1)
+    MakeSlabs_M1 = Firework(FT_StartSlabRelaxSWF(mp_id = mp_id_1,
+                                                 miller = mat_1.get('miller'),
+                                                 functional = functional),
+                            name = 'Make and relax slabs for {}'
+                                    .format(mat_1['formula']))
+    WF.append(MakeSlabs_M1)
     
-    bulk_loc = ['material_2', inputs['material_2']['formula']+'_equiVol']
-    out_loc = ['material_2', inputs['material_2']['formula']+'_relaxed']
-    Relax_M2 = StartDetourWF_FW('None',
-                            name='Relax '+inputs['material_2']['formula'],
-                            structure_loc=bulk_loc,
-                            comp_parameters_loc=['material_2'],
-                            relax_type='bulk_full_relax',
-                            out_loc=out_loc,
-                            to_pass=['material_2', 'computational_params',
-                                     'interface_params'])
-    WF.append(Relax_M2)
+    MakeSlabs_M2 = Firework(FT_StartSlabRelaxSWF(mp_id = mp_id_2,
+                                                 miller = mat_2.get('miller'),
+                                                 functional = functional),
+                            name = 'Make and relax slabs for {}'
+                                    .format(mat_2['formula']))
+    WF.append(MakeSlabs_M2)
     
-    bulk_loc = ['material_1', inputs['material_1']['formula']+'_relaxed']
-    Make_Slab_M1 = Firework(FT_MakeSlabFromStructure(bulk_loc=bulk_loc,
-                                                     dict_loc=['material_1']),
-                    name='Make '+inputs['material_1']['formula']+' slab')
-    WF.append(Make_Slab_M1)
-    
-    bulk_loc = ['material_2', inputs['material_2']['formula']+'_relaxed']
-    Make_Slab_M2 = Firework(FT_MakeSlabFromStructure(bulk_loc=bulk_loc,
-                                                     dict_loc=['material_2']),
-                    name='Make '+inputs['material_2']['formula']+' slab')
-    WF.append(Make_Slab_M2)
-    
-    bottom_slab_loc = ['material_1', inputs['material_1']['formula']+
-                         inputs['material_1']['miller']]
-    out_loc = ['material_1', inputs['material_1']['formula']+
-                         inputs['material_1']['miller']+'_relaxed']
-    Relax_Slab_M1 = StartDetourWF_FW('Relax_SWF',
-                            name='Relax '+inputs['material_1']['formula']+
-                            ' slab',
-                            structure_loc=bottom_slab_loc,
-                            comp_parameters_loc=['material_1'],
-                            relax_type='slab_pos_relax',
-                            out_loc=out_loc,
-                            to_pass=['material_1', 'computational_params',
-                                     'interface_params'])
-    WF.append(Relax_Slab_M1)
-    
-    top_slab_loc = ['material_2', inputs['material_2']['formula']+
-                         inputs['material_2']['miller']]
-    out_loc = ['material_2', inputs['material_2']['formula']+
-                         inputs['material_2']['miller']+'_relaxed']
-    Relax_Slab_M2 = StartDetourWF_FW('Relax_SWF',
-                            name='Relax '+inputs['material_2']['formula']+
-                            ' slab',
-                            structure_loc=top_slab_loc,
-                            comp_parameters_loc=['material_2'],
-                            relax_type='slab_pos_relax',
-                            out_loc=out_loc,
-                            to_pass=['material_2', 'computational_params',
-                                     'interface_params'])
-    WF.append(Relax_Slab_M2)
-    
-    bottom_slab_loc = ['material_1', inputs['material_1']['formula']+
-                         inputs['material_1']['miller']+'_relaxed']
-    top_slab_loc = ['material_2', inputs['material_2']['formula']+
-                         inputs['material_2']['miller']+'_relaxed']
-    Make_Hetero_Structure = Firework(FT_MakeHeteroStructure(
-        bottom_slab_loc=bottom_slab_loc, top_slab_loc=top_slab_loc,
-        parameters_loc=['interface_params']), name='Make the interface')
-    WF.append(Make_Hetero_Structure)
-    
-    Print_spec = Firework(FT_PrintSpec(), name='Print Spec at the end')
-    WF.append(Print_spec)
+    MakeInterface = Firework(FT_MakeHeteroStructure(mp_id_1 = mp_id_1,
+                                                mp_id_2 = mp_id_2,
+                                                miller_1 = mat_1.get('miller'),
+                                                miller_2 = mat_2.get('miller'),
+                                                functional = functional),
+                             name = 'Match the interface')
+    WF.append(MakeInterface)
     
     #Define dependencies:
-    Dependencies = {Initialize: [Check_Inputs],
-                    Check_Inputs: [Start_M1, Start_M2],
-                    Start_M1: [ConvergeEncut_M1],
-                    Start_M2: [ConvergeEncut_M2],
-                    ConvergeEncut_M1: [Converge_M1],
-                    ConvergeEncut_M2: [Converge_M2],
-                    Converge_M1: [Final_Params],
-                    Converge_M2: [Final_Params],
-                    Final_Params: [Relax_M1, Relax_M2],
-                    Relax_M1: [Make_Slab_M1],
-                    Relax_M2: [Make_Slab_M2],
-                    Make_Slab_M1: [Relax_Slab_M1],
-                    Make_Slab_M2: [Relax_Slab_M2],
-                    Relax_Slab_M1: [Make_Hetero_Structure],
-                    Relax_Slab_M2: [Make_Hetero_Structure],
-                    Make_Hetero_Structure: [Print_spec]}
+    Dependencies = {Initialize: [ConvergeEncut_M1, ConvergeEncut_M2],
+                    ConvergeEncut_M1: [ConvergeKpoints_M1],
+                    ConvergeEncut_M2: [ConvergeKpoints_M2],
+                    ConvergeKpoints_M1: [Final_Params],
+                    ConvergeKpoints_M2: [Final_Params],
+                    Final_Params: [MakeSlabs_M1, MakeSlabs_M2],
+                    MakeSlabs_M1: [MakeInterface],
+                    MakeSlabs_M2: [MakeInterface]}
 
-    WF = Workflow(WF, Dependencies, name='Heterogeneous Workflow')
+    WF = Workflow(WF, Dependencies, name='Heterogeneous TriboFlow')
     return WF
 

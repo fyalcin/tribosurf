@@ -161,6 +161,7 @@ class FT_EnergyCutoffConvo(FiretaskBase):
         
         V0_tolerance = comp_params.get('volume_tolerence', 0.001)
         BM_tolerance = comp_params.get('BM_tolerence', 0.01)
+        uks = {'reciprocal_density': 1000}
         
         
         #get the data arrays from the database (returns None when not there)
@@ -181,11 +182,11 @@ class FT_EnergyCutoffConvo(FiretaskBase):
                                                         'bulk_from_scratch')
             uis['ENCUT'] = encut_start
             Encut_list = [encut_start]
-            uks = {'reciprocal_density': 1000}
+
             BM_WF = get_wf_bulk_modulus(struct, deformations,
                                         vasp_input_set=None,
                                         vasp_cmd=VASP_CMD, db_file=db_file,
-                                        user_kpoints_settings=None,
+                                        user_kpoints_settings=uks,
                                         eos='birch_murnaghan', tag=tag,
                                         user_incar_settings=uis)
             
@@ -276,7 +277,7 @@ class FT_EnergyCutoffConvo(FiretaskBase):
             BM_WF = get_wf_bulk_modulus(struct, deformations,
                                         vasp_input_set=None,
                                         vasp_cmd=VASP_CMD, db_file=DB_FILE,
-                                        user_kpoints_settings=None,
+                                        user_kpoints_settings=uks,
                                         eos='birch_murnaghan', tag=tag,
                                         user_incar_settings=uis)
             

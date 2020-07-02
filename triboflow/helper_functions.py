@@ -420,6 +420,7 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
     uis['LORBIT'] = 11
     uis['MAXMIX'] = 100
     uis['NELMIN'] = 4
+    uis['EDIFF'] = 1.0E-5
     
     if structure.num_sites < 20:
         uis['LREAL'] = '.FALSE.'
