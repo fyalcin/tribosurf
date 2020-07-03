@@ -3,6 +3,7 @@
 Created on Wed Jun 17 15:59:59 2020
 @author: mwo
 """
+import monty
 import numpy as np
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import Slab
@@ -205,7 +206,7 @@ class FT_MakeSlabInDB(FiretaskBase):
         db = GetHighLevelDB(db_file)
         coll = db[functional+'.slab_data']
         
-        slab_dict = MakeSlabBSONable(slab.as_dict())
+        slab_dict = monty.json.jsanitize(slab.as_dict(), allow_bson=True)
         
         coll.update_one({'mpid': mp_id, 'miller': miller},
                         {'$set': {'unrelaxed_slab': slab_dict}})
