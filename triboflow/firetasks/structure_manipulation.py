@@ -19,18 +19,42 @@ from mpinterfaces.transformations import get_aligned_lattices, \
 from triboflow.helper_functions import GetBulkFromDB, GetSlabFromDB,\
     GetHighLevelDB, GetCustomVaspRelaxSettings, GetDB, InterfaceName
 
-
-def MakeSlabBSONable(slab_dict):
-    for i in slab_dict['sites']:
-        i['properties']['bulk_equivalent'] = int(i['properties']['bulk_equivalent'])
-    for i in slab_dict['oriented_unit_cell']['sites']:
-        i['properties']['bulk_equivalent'] = int(i['properties']['bulk_equivalent'])
-    slab_dict['scale_factor'] = slab_dict['scale_factor'].tolist()
-    return slab_dict
-
-
 @explicit_serialize
 class FT_StartSlabRelaxSWF(FiretaskBase):
+    """Start a subworkflow as a detour to make a slab and relax it.
+
+    Parameters
+    ----------
+    mp_id : str
+        ID number for structures in the material project.
+    miller : list of int or str
+        Miller indices for the slab generation. Either single str e.g. '111',
+        or a list of int e.g. [1, 1, 1]
+    functional : str
+        functional that is used for the calculation.
+    tag : str
+        Unique identifier for the Optimize FW.
+    db_file : str, optional
+        Full path to the db.json file which holds the location and access
+        credentials to the database. If not given uses env_chk.
+    slab_struct_name : str, optional
+        Name of the slab to be put in the DB (identified by mp_id and miller).
+        Defaults to 'unrelaxed_slab'.
+    relax_type : str
+        Relaxation type for the GetCustomVaspRelaxSettings helper_function.
+    bulk_struct_name : str, optional
+        Name of the bulk structure in the bulk database (material is
+        identified by mp_id, but there might be differnt structures of the
+        same material.) Defaults to 'structure_equiVol'.
+    slab_out_name : str, optional
+        Name of the slab to be put in the DB (identified by mp_id and miller).
+        Defaults to 'relaxed_slab'.
+        
+    Returns
+    -------
+        Starts a new subworkflow as a detour to the current workflow.
+    """
+    
     required_params = ['mp_id', 'miller', 'functional']
     optional_params = ['db_file', 'slab_struct_name', 'relax_type',
                        'bulk_struct_name', 'slab_out_name']
@@ -62,6 +86,34 @@ class FT_StartSlabRelaxSWF(FiretaskBase):
     
 @explicit_serialize
 class FT_GetRelaxedSlab(FiretaskBase):
+    """Get the relaxed structure from the DB, and put a Slab into the high-level DB.
+
+    Parameters
+    ----------
+    mp_id : str
+        ID number for structures in the material project.
+    miller : list of int or str
+        Miller indices for the slab generation. Either single str e.g. '111',
+        or a list of int e.g. [1, 1, 1]
+    functional : str
+        functional that is used for the calculation.
+    tag : str
+        Unique identifier for the Optimize FW.
+    db_file : str, optional
+        Full path to the db.json file which holds the location and access
+        credentials to the database. If not given uses env_chk.
+    struct_out_name : str, optional
+        Name of the slab to be put in the DB (identified by mp_id and miller).
+        Defaults to 'relaxed_slab'.
+    input_struct_name : str, optional
+       Name for the slab prior of relaxations in the DB. If not given, the
+       relaxed slab will not be converted to a Slab, but stay a Structure.
+    
+    Returns
+    -------
+        Pymatgen Slab into the high-level DB.
+    """
+    
     required_params = ['mp_id', 'miller', 'functional', 'tag']
     optional_params = ['db_file', 'struct_out_name', 'input_struct_name']
     def run_task(self, fw_spec):
@@ -114,6 +166,33 @@ class FT_GetRelaxedSlab(FiretaskBase):
             
 @explicit_serialize
 class FT_StartSlabRelax(FiretaskBase):
+    """Fetch a Slab from the DB and relax it using an atomate OptimizeFW.
+
+    Parameters
+    ----------
+    mp_id : str
+        ID number for structures in the material project.
+    miller : list of int or str
+        Miller indices for the slab generation. Either single str e.g. '111',
+        or a list of int e.g. [1, 1, 1]
+    functional : str
+        functional that is used for the calculation.
+    tag : str
+        Unique identifier for the Optimize FW.
+    db_file : str, optional
+        Full path to the db.json file which holds the location and access
+        credentials to the database. If not given uses env_chk.
+    slab_struct_name : str, optional
+        Name of the slab to be put in the DB (identified by mp_id and miller).
+        Defaults to 'unrelaxed_slab'.
+    relax_type : str
+        Relaxation type for the GetCustomVaspRelaxSettings helper_function.
+    
+    Returns
+    -------
+        Pymatgen Slab into the high-level DB.
+    """
+    
     required_params = ['mp_id', 'miller', 'functional', 'tag']
     optional_params = ['db_file', 'slab_struct_name', 'relax_type']
     def run_task(self, fw_spec):
@@ -155,11 +234,27 @@ class FT_MakeSlabInDB(FiretaskBase):
 
     Parameters
     ----------
-    
+    mp_id : str
+        ID number for structures in the material project.
+    miller : list of int or str
+        Miller indices for the slab generation. Either single str e.g. '111',
+        or a list of int e.g. [1, 1, 1]
+    functional : str
+        functional that is used for the calculation.
+    db_file : str, optional
+        Full path to the db.json file which holds the location and access
+        credentials to the database. If not given uses env_chk.
+    bulk_struct_name : str, optional
+        Name of the bulk structure in the bulk database (material is
+        identified by mp_id, but there might be differnt structures of the
+        same material.) Defaults to 'structure_equiVol'.
+    slab_struct_name : str, optional
+        Name of the slab to be put in the DB (identified by mp_id and miller).
+        Defaults to 'unrelaxed_slab'.
     
     Returns
     -------
-        Pymatgen slab structure to the high-level DB.
+        Pymatgen Slab into the high-level DB.
     """
     
     _fw_name = 'Make slab from bulk structure'
@@ -222,10 +317,28 @@ class FT_MakeHeteroStructure(FiretaskBase):
 
     If the match fails, the accuracy criteria are relaxed in steps of 5% until
     a match is found.
+    
+    Parameters
+    ----------
+    mp_id_1 : str
+        ID number from the MP to identify material 1.
+    miller_1 : list of int or str
+        Miller indices for identification of the slab of material 1. Either
+        single str e.g. '111', or a list of int e.g. [1, 1, 1].
+    mp_id_2 : str
+        ID number from the MP for material 2.
+    miller_2 : list of int or str
+        Miller indices for identification of the slab of material 2. Either
+        single str e.g. '111', or a list of int e.g. [1, 1, 1].
+    functional : str
+        functional that is used for the calculation.
+    db_file : str, optional
+        Full path to the db.json file which holds the location and access
+        credentials to the database. If not given uses env_chk.
 
     Returns
     -------
-    Matched interface structure and bottom and top slabs in the fw_spec.
+    Matched interface structure and bottom and top slabs in interface_data DB.
     """
     
     _fw_name = 'Make Hetero Structure'

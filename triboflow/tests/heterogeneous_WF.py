@@ -22,7 +22,7 @@ inputs = {'material_1': {'formula': 'C',
                          'min_vacuum': 25,
                          'min_thickness': 10
                          },
-          'computational_params':{'functional': 'PBE',
+          'computational_params':{'functional': 'SCAN',
                                   'energy_tolerance': 0.001,
                                   'volume_tolerance': 0.001,
                                   'BM_tolerance': 0.01,
