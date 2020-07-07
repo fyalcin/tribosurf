@@ -6,7 +6,7 @@ Created on Mon Jun 15 12:10:30 2020
 @author: mwo
 """
 
-from HelperFunctions import GetDB
+from triboflow.helper_functions import GetDB
 
 
 db = GetDB()
