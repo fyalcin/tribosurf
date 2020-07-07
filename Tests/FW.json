@@ -1,0 +1,318 @@
+{
+    "spec": {
+        "_tasks": [
+            {
+                "tag": "bulk_modulus group: >>b0dc60ba-26de-4456-a71b-a4a384bc908a<<",
+                "db_file": ">>db_file<<",
+                "eos": "birch_murnaghan",
+                "_fw_name": "{{atomate.vasp.firetasks.parse_outputs.FitEOSToDb}}"
+            }
+        ],
+        "calc_locs": [
+            {
+                "name": "bulk_modulus group: >>b0dc60ba-26de-4456-a71b-a4a384bc908a<< bulk_modulus deformation 4",
+                "filesystem": null,
+                "path": "/home/mwo/FireWorks/FireFlow/fireflow/Tests/launcher_2020-06-04-15-10-27-966740"
+            },
+            {
+                "name": "bulk_modulus group: >>b0dc60ba-26de-4456-a71b-a4a384bc908a<< bulk_modulus deformation 3",
+                "filesystem": null,
+                "path": "/home/mwo/FireWorks/FireFlow/fireflow/Tests/launcher_2020-06-04-15-10-59-275705"
+            },
+            {
+                "name": "bulk_modulus group: >>b0dc60ba-26de-4456-a71b-a4a384bc908a<< bulk_modulus deformation 2",
+                "filesystem": null,
+                "path": "/home/mwo/FireWorks/FireFlow/fireflow/Tests/launcher_2020-06-04-15-11-30-408420"
+            },
+            {
+                "name": "bulk_modulus group: >>b0dc60ba-26de-4456-a71b-a4a384bc908a<< bulk_modulus deformation 1",
+                "filesystem": null,
+                "path": "/home/mwo/FireWorks/FireFlow/fireflow/Tests/launcher_2020-06-04-15-12-02-537721"
+            },
+            {
+                "name": "bulk_modulus group: >>b0dc60ba-26de-4456-a71b-a4a384bc908a<< bulk_modulus deformation 0",
+                "filesystem": null,
+                "path": "/home/mwo/FireWorks/FireFlow/fireflow/Tests/launcher_2020-06-04-15-12-31-026306"
+            }
+        ]
+    },
+    "fw_id": 1,
+    "created_on": "2020-06-04T15:10:27.266466",
+    "updated_on": "2020-06-04T15:41:17.323105",
+    "launches": [
+        {
+            "fworker": {
+                "name": "RyzeUp",
+                "category": "",
+                "query": "{}",
+                "env": {
+                    "db_file": "/home/mwo/FireWorks/config/db.json",
+                    "vasp_cmd": "mpirun -n 4 vasp6.MKL.openmpi_std",
+                    "vdw_kernel_dir": "/home/mwo/bin/vdw_kernel",
+                    "scratch_dir": "/home/mwo/VASP_CALCS"
+                }
+            },
+            "fw_id": 1,
+            "launch_dir": "/home/mwo/FireWorks/FireFlow/fireflow/Tests",
+            "host": "RyzeUp",
+            "ip": "127.0.1.1",
+            "trackers": [],
+            "action": null,
+            "state": "RUNNING",
+            "state_history": [
+                {
+                    "state": "RUNNING",
+                    "created_on": "2020-06-04T15:41:17.289180",
+                    "updated_on": "2020-06-04T15:41:17.289184"
+                }
+            ],
+            "launch_id": 10
+        }
+    ],
+    "archived_launches": [
+        {
+            "fworker": {
+                "name": "RyzeUp",
+                "category": "",
+                "query": "{}",
+                "env": {
+                    "db_file": "/home/mwo/FireWorks/config/db.json",
+                    "vasp_cmd": "mpirun -n 4 vasp6.MKL.openmpi_std",
+                    "vdw_kernel_dir": "/home/mwo/bin/vdw_kernel",
+                    "scratch_dir": "/home/mwo/VASP_CALCS"
+                }
+            },
+            "fw_id": 1,
+            "launch_dir": "/home/mwo/FireWorks/FireFlow/fireflow/Tests/launcher_2020-06-04-15-12-59-657318",
+            "host": "RyzeUp",
+            "ip": "127.0.1.1",
+            "trackers": [],
+            "action": {
+                "stored_data": {
+                    "_message": "runtime error during task",
+                    "_task": {
+                        "tag": "bulk_modulus group: >>b0dc60ba-26de-4456-a71b-a4a384bc908a<<",
+                        "db_file": ">>db_file<<",
+                        "eos": "birch_murnaghan",
+                        "_fw_name": "{{atomate.vasp.firetasks.parse_outputs.FitEOSToDb}}"
+                    },
+                    "_exception": {
+                        "_stacktrace": "Traceback (most recent call last):\n  File \"/home/mwo/FireWorks/atomate_env/lib/python3.7/site-packages/fireworks/core/rocket.py\", line 262, in run\n    m_action = t.run_task(my_spec)\n  File \"/home/mwo/FireWorks/atomate_env/lib/python3.7/site-packages/atomate/vasp/firetasks/parse_outputs.py\", line 648, in run_task\n    all_task_ids.append(d[\"task_id\"])\nTypeError: 'NoneType' object is not subscriptable\n",
+                        "_details": null
+                    }
+                },
+                "exit": true,
+                "update_spec": {},
+                "mod_spec": [],
+                "additions": [],
+                "detours": [],
+                "defuse_children": false,
+                "defuse_workflow": false
+            },
+            "state": "FIZZLED",
+            "state_history": [
+                {
+                    "state": "RUNNING",
+                    "created_on": "2020-06-04T15:12:59.800462",
+                    "updated_on": "2020-06-04T15:13:00.745980",
+                    "checkpoint": {
+                        "_task_n": 0,
+                        "_all_stored_data": {},
+                        "_all_update_spec": {},
+                        "_all_mod_spec": []
+                    }
+                },
+                {
+                    "state": "FIZZLED",
+                    "created_on": "2020-06-04T15:13:00.805738",
+                    "checkpoint": {
+                        "_task_n": 0,
+                        "_all_stored_data": {},
+                        "_all_update_spec": {},
+                        "_all_mod_spec": []
+                    }
+                }
+            ],
+            "launch_id": 6
+        },
+        {
+            "fworker": {
+                "name": "RyzeUp",
+                "category": "",
+                "query": "{}",
+                "env": {
+                    "db_file": "/home/mwo/FireWorks/config/db.json",
+                    "vasp_cmd": "mpirun -n 4 vasp6.MKL.openmpi_std",
+                    "vdw_kernel_dir": "/home/mwo/bin/vdw_kernel",
+                    "scratch_dir": "/home/mwo/VASP_CALCS"
+                }
+            },
+            "fw_id": 1,
+            "launch_dir": "/home/mwo/FireWorks/FireFlow/fireflow/Tests",
+            "host": "RyzeUp",
+            "ip": "127.0.1.1",
+            "trackers": [],
+            "action": {
+                "stored_data": {
+                    "_message": "runtime error during task",
+                    "_task": {
+                        "tag": "bulk_modulus group: >>b0dc60ba-26de-4456-a71b-a4a384bc908a<<",
+                        "db_file": ">>db_file<<",
+                        "eos": "birch_murnaghan",
+                        "_fw_name": "{{atomate.vasp.firetasks.parse_outputs.FitEOSToDb}}"
+                    },
+                    "_exception": {
+                        "_stacktrace": "Traceback (most recent call last):\n  File \"/home/mwo/FireWorks/atomate_env/lib/python3.7/site-packages/fireworks/core/rocket.py\", line 262, in run\n    m_action = t.run_task(my_spec)\n  File \"/home/mwo/FireWorks/atomate_env/lib/python3.7/site-packages/atomate/vasp/firetasks/parse_outputs.py\", line 648, in run_task\n    all_task_ids.append(d[\"task_id\"])\nTypeError: 'NoneType' object is not subscriptable\n",
+                        "_details": null
+                    }
+                },
+                "exit": true,
+                "update_spec": {},
+                "mod_spec": [],
+                "additions": [],
+                "detours": [],
+                "defuse_children": false,
+                "defuse_workflow": false
+            },
+            "state": "FIZZLED",
+            "state_history": [
+                {
+                    "state": "RUNNING",
+                    "created_on": "2020-06-04T15:16:26.518139",
+                    "updated_on": "2020-06-04T15:16:27.631923",
+                    "checkpoint": {
+                        "_task_n": 0,
+                        "_all_stored_data": {},
+                        "_all_update_spec": {},
+                        "_all_mod_spec": []
+                    }
+                },
+                {
+                    "state": "FIZZLED",
+                    "created_on": "2020-06-04T15:16:27.684351",
+                    "checkpoint": {
+                        "_task_n": 0,
+                        "_all_stored_data": {},
+                        "_all_update_spec": {},
+                        "_all_mod_spec": []
+                    }
+                }
+            ],
+            "launch_id": 7
+        },
+        {
+            "fworker": {
+                "name": "RyzeUp",
+                "category": "",
+                "query": "{}",
+                "env": {
+                    "db_file": "/home/mwo/FireWorks/config/db.json",
+                    "vasp_cmd": "mpirun -n 4 vasp6.MKL.openmpi_std",
+                    "vdw_kernel_dir": "/home/mwo/bin/vdw_kernel",
+                    "scratch_dir": "/home/mwo/VASP_CALCS"
+                }
+            },
+            "fw_id": 1,
+            "launch_dir": "/home/mwo/FireWorks/FireFlow/fireflow/Tests",
+            "host": "RyzeUp",
+            "ip": "127.0.1.1",
+            "trackers": [],
+            "action": {
+                "stored_data": {
+                    "_message": "runtime error during task",
+                    "_task": {
+                        "tag": "bulk_modulus group: >>b0dc60ba-26de-4456-a71b-a4a384bc908a<<",
+                        "db_file": ">>db_file<<",
+                        "eos": "birch_murnaghan",
+                        "_fw_name": "{{atomate.vasp.firetasks.parse_outputs.FitEOSToDb}}"
+                    },
+                    "_exception": {
+                        "_stacktrace": "Traceback (most recent call last):\n  File \"/home/mwo/FireWorks/atomate_env/lib/python3.7/site-packages/fireworks/core/rocket.py\", line 262, in run\n    m_action = t.run_task(my_spec)\n  File \"/home/mwo/FireWorks/atomate_env/lib/python3.7/site-packages/atomate/vasp/firetasks/parse_outputs.py\", line 648, in run_task\n    \"formula_pretty\": structure.composition.reduced_formula})\nUnboundLocalError: local variable 'structure' referenced before assignment\n",
+                        "_details": null
+                    }
+                },
+                "exit": true,
+                "update_spec": {},
+                "mod_spec": [],
+                "additions": [],
+                "detours": [],
+                "defuse_children": false,
+                "defuse_workflow": false
+            },
+            "state": "FIZZLED",
+            "state_history": [
+                {
+                    "state": "RUNNING",
+                    "created_on": "2020-06-04T15:20:46.990420",
+                    "updated_on": "2020-06-04T15:20:48.028159",
+                    "checkpoint": {
+                        "_task_n": 0,
+                        "_all_stored_data": {},
+                        "_all_update_spec": {},
+                        "_all_mod_spec": []
+                    }
+                },
+                {
+                    "state": "FIZZLED",
+                    "created_on": "2020-06-04T15:20:48.082298",
+                    "checkpoint": {
+                        "_task_n": 0,
+                        "_all_stored_data": {},
+                        "_all_update_spec": {},
+                        "_all_mod_spec": []
+                    }
+                }
+            ],
+            "launch_id": 8
+        },
+        {
+            "fworker": {
+                "name": "RyzeUp",
+                "category": "",
+                "query": "{}",
+                "env": {
+                    "db_file": "/home/mwo/FireWorks/config/db.json",
+                    "vasp_cmd": "mpirun -n 4 vasp6.MKL.openmpi_std",
+                    "vdw_kernel_dir": "/home/mwo/bin/vdw_kernel",
+                    "scratch_dir": "/home/mwo/VASP_CALCS"
+                }
+            },
+            "fw_id": 1,
+            "launch_dir": "/home/mwo/FireWorks/FireFlow/fireflow/Tests",
+            "host": "RyzeUp",
+            "ip": "127.0.1.1",
+            "trackers": [],
+            "action": {
+                "stored_data": {},
+                "exit": false,
+                "update_spec": {},
+                "mod_spec": [],
+                "additions": [],
+                "detours": [],
+                "defuse_children": false,
+                "defuse_workflow": false
+            },
+            "state": "COMPLETED",
+            "state_history": [
+                {
+                    "state": "RUNNING",
+                    "created_on": "2020-06-04T15:21:46.220710",
+                    "updated_on": "2020-06-04T15:21:47.357877",
+                    "checkpoint": {
+                        "_task_n": 0,
+                        "_all_stored_data": {},
+                        "_all_update_spec": {},
+                        "_all_mod_spec": []
+                    }
+                },
+                {
+                    "state": "COMPLETED",
+                    "created_on": "2020-06-04T15:21:47.407557"
+                }
+            ],
+            "launch_id": 9
+        }
+    ],
+    "state": "RUNNING",
+    "name": "fit equation of state"
+}
