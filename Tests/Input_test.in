@@ -1,7 +1,0 @@
-#Test input file
-formula = FeO
-functional = SCAN
-miller = 001
-
-use_vdw = False # try a trainling comment
-use_spin = True
