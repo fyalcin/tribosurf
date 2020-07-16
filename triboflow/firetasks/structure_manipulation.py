@@ -286,6 +286,9 @@ class FT_MakeSlabInDB(FiretaskBase):
         
         SG = SlabGenerator(initial_structure = bulk_conv,
                            miller_index = miller,
+                           center_slab = True,
+                           primitive = True,
+                           lll_reduce = True,
                            min_slab_size = min_thickness,
                            min_vacuum_size = min_vacuum)
         
