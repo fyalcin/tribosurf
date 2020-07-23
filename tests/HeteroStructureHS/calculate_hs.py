@@ -161,6 +161,12 @@ coating = Slab(coating.lattice,
                 scale_factor=np.eye(3, dtype=np.int),
                 site_properties=coating.site_properties)
 
+# During a copy the x axis is oriented along 100, if the basal plane of the
+# cell is not orthogonal we have problem when running get_interface
+
+substrate = substrate.copy()
+coating   = coating.copy()
+
 
 substrate.to(fmt = 'poscar', filename = element1 + mill1_str + '_align.POSCAR')
 coating.to(fmt = 'poscar', filename = element2 + mill2_str + '_align.POSCAR')
