@@ -10,6 +10,7 @@ from fireworks import FWAction, FiretaskBase, Firework, Workflow
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 from atomate.vasp.config import VASP_CMD, DB_FILE
+from atomate.vasp.powerups import add_modify_incar
 from atomate.vasp.workflows.base.bulk_modulus import get_wf_bulk_modulus
 from triboflow.helper_functions import GetLastBMDatafromDB, \
     GetCustomVaspStaticSettings, GetDB, IsListConverged, GetBulkFromDB, \
@@ -105,7 +106,7 @@ class FT_EnergyCutoffConvo(FiretaskBase):
     """Converge the encut for a material via fits to an EOS, raising encut.
     
     Uses the get_bulk_modulus workflow of atomate to fit Birch-Murnaghen EOS
-    for increasing values of the energy cutoff. Once bulk modulus and
+    for increasing values of the d = mmdb.collection.find_one({"task_label": {"$regex": "{} bulk_modulus*".format(tag)}})energy cutoff. Once bulk modulus and
     equilibrium volume are converged, the subsequent detours are stopped and
     the convergence data is passed on.
     
@@ -178,13 +179,13 @@ class FT_EnergyCutoffConvo(FiretaskBase):
             Encut_list = None
         
         if BM_list is None:
-            vis, uis, vdw = GetCustomVaspStaticSettings(struct, comp_params,
-                                                        'bulk_from_scratch')
-            uis['ENCUT'] = encut_start
+            vis = GetCustomVaspStaticSettings(struct, comp_params,
+                                              'bulk_from_scratch')
+            uis = {'ENCUT': encut_start}
             Encut_list = [encut_start]
 
             BM_WF = get_wf_bulk_modulus(struct, deformations,
-                                        vasp_input_set=None,
+                                        vasp_input_set=vis,
                                         vasp_cmd=VASP_CMD, db_file=db_file,
                                         user_kpoints_settings=uks,
                                         eos='birch_murnaghan', tag=tag,
@@ -203,7 +204,9 @@ class FT_EnergyCutoffConvo(FiretaskBase):
                               name='Update BM Lists and Loop')
             
             BM_WF.append_wf(Workflow.from_Firework(UAL_FW), BM_WF.leaf_fw_ids)
-            
+            #Use add_modify_incar powerup to add KPAR and NCORE settings
+            #based on env_chk in my_fworker.yaml
+            BM_WF = add_modify_incar(BM_WF)
             #set up the entry for the data arrays in the database
             set_data = {'tag': tag,
                         'chem_formula': formula,
@@ -269,10 +272,10 @@ class FT_EnergyCutoffConvo(FiretaskBase):
                 return FWAction(update_spec = fw_spec)
             
             else:
-                vis, uis, vdw = GetCustomVaspStaticSettings(struct, comp_params,
-                                                        'bulk_from_scratch')
+                vis = GetCustomVaspStaticSettings(struct, comp_params,
+                                                  'bulk_from_scratch')
             encut = Encut_list[-1]+encut_incr
-            uis['ENCUT'] = encut
+            uis={'ENCUT': encut}
             
             BM_WF = get_wf_bulk_modulus(struct, deformations,
                                         vasp_input_set=None,
@@ -294,6 +297,9 @@ class FT_EnergyCutoffConvo(FiretaskBase):
                               name='Update BM Lists and Loop')
             
             BM_WF.append_wf(Workflow.from_Firework(UAL_FW), BM_WF.leaf_fw_ids)
+            #Use add_modify_incar powerup to add KPAR and NCORE settings
+            #based on env_chk in my_fworker.yaml
+            BM_WF = add_modify_incar(BM_WF)
             
             #Update Database entry for Encut list
             DB.coll.update_one({'tag': tag},
