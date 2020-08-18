@@ -160,13 +160,12 @@ class FT_KpointsConvo(FiretaskBase):
         if E_list is None:
             
             label = tag+' calc 0'
-            vis, uis, vdw = GetCustomVaspStaticSettings(struct, comp_params,
+            comp_params['k_dens'] = k_dens_start
+            vis = GetCustomVaspStaticSettings(struct, comp_params,
                                                         'bulk_from_scratch')
             kpoints = Kpoints.automatic_gamma_density(struct, k_dens_start)
             #kpoints = GetGeneralizedKmesh(struct, k_dens_start)
             k_dens_list = [k_dens_start]
-            vis = MPStaticSet(struct, user_incar_settings=uis,
-                  user_kpoints_settings=kpoints)
                 
             RunVASP_FW = StaticFW(structure=struct, vasp_input_set=vis,
                                   name=label)
@@ -188,9 +187,8 @@ class FT_KpointsConvo(FiretaskBase):
             K_convo_WF = Workflow([RunVASP_FW, ParseAndUpdate_FW],
                                   {RunVASP_FW: [ParseAndUpdate_FW]},
                                   name = 'Kpoint Convergence Loop')
-            #Have to use this as a workaround as pymatgen forces ISMEAR=0
-            #on a custom generated Kgrid, even if tetrahedra are provided.
-            #K_convo_WF = add_modify_incar(K_convo_WF, {'incar_update': uis})
+            
+            K_convo_WF = add_modify_incar(K_convo_WF)
             
             #set up the entry for the data arrays in the database
             formula=struct.composition.reduced_formula
@@ -245,21 +243,19 @@ class FT_KpointsConvo(FiretaskBase):
             else:
                 calc_nr = len(E_list)
                 label = tag+' calc '+str(calc_nr)
-                vis, uis, vdw = GetCustomVaspStaticSettings(struct, comp_params,
-                                                        'bulk_from_scratch')
+                
                 last_mesh = data['last_mesh']
                 k_dens = k_dens_list[-1]+k_dens_incr
                 kpoints = Kpoints.automatic_gamma_density(struct, k_dens)
+                
                 #kpoints = GetGeneralizedKmesh(struct, k_dens)
                 while kpoints.kpts == last_mesh:
                     k_dens = k_dens + k_dens_incr
                     kpoints = Kpoints.automatic_gamma_density(struct, k_dens)
                     #kpoints = GetGeneralizedKmesh(struct, k_dens)
-                vis = MPStaticSet(struct, user_incar_settings=uis,
-                                  user_kpoints_settings=kpoints)
-                
-                print(comp_params)
-                print(vis.incar)
+                comp_params['k_dens'] = k_dens
+                vis = GetCustomVaspStaticSettings(struct, comp_params,
+                                                  'bulk_from_scratch')
 
                 RunVASP_FW = StaticFW(structure=struct, vasp_input_set=vis,
                                       name=label)
@@ -281,9 +277,8 @@ class FT_KpointsConvo(FiretaskBase):
                 K_convo_WF = Workflow([RunVASP_FW, ParseAndUpdate_FW],
                                       {RunVASP_FW: [ParseAndUpdate_FW]},
                                       name = 'Kpoint Convergence Loop')
-                #Have to use this as a workaround as pymatgen forces ISMEAR=0
-                #on a custom generated Kgrid, even if tetrahedra are provided.
-                #K_convo_WF = add_modify_incar(K_convo_WF, {'incar_update': uis})
+                
+                K_convo_WF = add_modify_incar(K_convo_WF)
                 
                 #Update Database entry for Encut list
                 DB.coll.update_one({'tag': tag},

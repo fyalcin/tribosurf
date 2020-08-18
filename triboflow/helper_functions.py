@@ -287,12 +287,8 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
 
     Returns
     -------
-    vis : str
-        A vasp input set for pymatgen.
-    uis : dict
-        User input settings that will override the standard setting in the vis.
-    vdw : str
-        Specifies which vdw functional is used. (optB86b or rVV10)
+    vis : pymatgen.io.vasp.sets.MPStaticSet
+        
     """
 
     allowed_types = ['bulk_from_scratch', 'bulk_follow_up', 'bulk_nscf',
@@ -301,9 +297,6 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
     if static_type not in allowed_types:
         raise SystemExit('relax type is not known. Please select from: {}'
                          .format(allowed_types))
-
-    # Set vasp input set (currently none available for static SCAN!)
-    vis = 'MPStaticSet'
         
     #Set user incar settings:
     uis = {}
@@ -373,7 +366,17 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
         uis['ICHARG'] = 11
         uis['NELMDL'] = -1
         
-    return vis, uis, vdw
+    if 'k_dens' in comp_parameters:
+        uks = Kpoints.automatic_gamma_density(structure,
+                                              comp_parameters['k_dens'])
+    else:
+        uks = None
+        
+    # Set vasp input set (currently none available for static SCAN!)
+    vis = MPStaticSet(structure, user_incar_settings = uis, vdw = vdw,
+                             user_kpoints_settings = uks)
+        
+    return vis
 
 def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
     """Make custom vasp settings for relaxations.
