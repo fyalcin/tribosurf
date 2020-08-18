@@ -15,7 +15,7 @@ from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 from atomate.vasp.fireworks.core import OptimizeFW
 from mpinterfaces.transformations import get_aligned_lattices, \
-    generate_all_configs
+    get_interface#generate_all_configs
 from triboflow.helper_functions import GetBulkFromDB, GetSlabFromDB,\
     GetHighLevelDB, GetCustomVaspRelaxSettings, GetDB, InterfaceName
 
@@ -400,13 +400,15 @@ class FT_MakeHeteroStructure(FiretaskBase):
 #       If generate all configs will work, we just have to remove the
 #       [0] index and move the whole list of structures to the spec.
 # ============================================================================
-                hetero_interfaces = generate_all_configs(top_aligned,
+                #hetero_interfaces = generate_all_configs(top_aligned,
+                hetero_interfaces = get_interface(top_aligned,
                                                      bottom_aligned,
                                                      nlayers_2d = 1,
                                                      nlayers_substrate = 1,
                             seperation = inter_params['interface_distance'])
         
-                inter_slab = hetero_interfaces[0]
+                #inter_slab = hetero_interfaces[0]
+                inter_slab = hetero_interfaces
                 
                 inter_dict = inter_slab.as_dict()
                 bottom_dict = bottom_aligned.as_dict()
