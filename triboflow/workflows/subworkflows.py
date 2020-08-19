@@ -46,8 +46,7 @@ def MakeAndRelaxSlab_SWF(mp_id, miller, functional,
     
     FW2 = Firework(FT_GetRelaxedSlab(mp_id = mp_id, miller = miller,
                                  functional = functional, tag = tag,
-                                 struct_out_name = out_struct_name,
-                                 input_struct_name = slab_struct_name),
+                                 struct_out_name = out_struct_name),
                    spec = spec,
                    name = 'Put relaxed '+formula+miller_str+' slab in DB')
     
