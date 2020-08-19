@@ -134,7 +134,7 @@ class FT_EnergyCutoffConvo(FiretaskBase):
         '>>db_file<<', to use env_chk.
         
     Returns
-    -------
+    -------vis.user_incar_settings.update(
     FWActions that produce detour subworkflows until convergence is reached.
     """
     
@@ -181,15 +181,14 @@ class FT_EnergyCutoffConvo(FiretaskBase):
         if BM_list is None:
             vis = GetCustomVaspStaticSettings(struct, comp_params,
                                               'bulk_from_scratch')
-            uis = {'ENCUT': encut_start}
+            vis.user_incar_settings.update({'ENCUT': encut_start})
             Encut_list = [encut_start]
 
             BM_WF = get_wf_bulk_modulus(struct, deformations,
                                         vasp_input_set=vis,
                                         vasp_cmd=VASP_CMD, db_file=db_file,
                                         user_kpoints_settings=uks,
-                                        eos='birch_murnaghan', tag=tag,
-                                        user_incar_settings=uis)
+                                        eos='birch_murnaghan', tag=tag)
             
             formula=struct.composition.reduced_formula
             UAL_FW = Firework([FT_UpdateBMLists(formula=formula, tag=tag),
@@ -275,14 +274,13 @@ class FT_EnergyCutoffConvo(FiretaskBase):
                 vis = GetCustomVaspStaticSettings(struct, comp_params,
                                                   'bulk_from_scratch')
             encut = Encut_list[-1]+encut_incr
-            uis={'ENCUT': encut}
+            vis.user_incar_settings.update({'ENCUT': encut})
             
             BM_WF = get_wf_bulk_modulus(struct, deformations,
                                         vasp_input_set=None,
                                         vasp_cmd=VASP_CMD, db_file=DB_FILE,
                                         user_kpoints_settings=uks,
-                                        eos='birch_murnaghan', tag=tag,
-                                        user_incar_settings=uis)
+                                        eos='birch_murnaghan', tag=tag)
             
             formula=struct.composition.reduced_formula
             UAL_FW = Firework([FT_UpdateBMLists(formula=formula, tag=tag),

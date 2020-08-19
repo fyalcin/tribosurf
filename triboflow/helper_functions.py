@@ -371,7 +371,8 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
         uks = Kpoints.automatic_gamma_density(structure,
                                               comp_parameters['k_dens'])
     else:
-        uks = None
+        #if no k-density is supplied in the comp_parameters, use a large value
+        uks = Kpoints.automatic_gamma_density(structure, 5000)
         
     # Set vasp input set (currently none available for static SCAN!)
     vis = MPStaticSet(structure, user_incar_settings = uis, vdw = vdw,
