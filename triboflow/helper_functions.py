@@ -312,6 +312,7 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
     
     if static_type.endswith('from_scratch'):
         uis['ICHARG'] = 2
+        uis['LAECHG'] = '.FALSE.'
     
     if structure.num_sites < 20:
         uis['LREAL'] = '.FALSE.'
@@ -424,6 +425,7 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
     uis['MAXMIX'] = 100
     uis['NELMIN'] = 4
     uis['EDIFF'] = 1.0E-5
+    uis['LAECHG'] = '.FALSE.'
     
     if structure.num_sites < 20:
         uis['LREAL'] = '.FALSE.'
