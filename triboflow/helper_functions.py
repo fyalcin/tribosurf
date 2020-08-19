@@ -486,7 +486,8 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
         uks = Kpoints.automatic_gamma_density(structure,
                                               comp_parameters['k_dens'])
     else:
-        uks = None
+        #if no k-density is supplied in the comp_parameters, use a large value
+        uks = Kpoints.automatic_gamma_density(structure, 5000)
         
     if 'functional' in comp_parameters:
         if comp_parameters['functional'] == 'SCAN':
