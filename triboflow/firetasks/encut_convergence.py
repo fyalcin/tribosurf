@@ -134,7 +134,7 @@ class FT_EnergyCutoffConvo(FiretaskBase):
         '>>db_file<<', to use env_chk.
         
     Returns
-    -------vis.user_incar_settings.update(
+    -------
     FWActions that produce detour subworkflows until convergence is reached.
     """
     
@@ -162,7 +162,7 @@ class FT_EnergyCutoffConvo(FiretaskBase):
         
         V0_tolerance = comp_params.get('volume_tolerence', 0.001)
         BM_tolerance = comp_params.get('BM_tolerence', 0.01)
-        uks = {'reciprocal_density': 1000}
+        #uks = {'reciprocal_density': 1000}
         
         
         #get the data arrays from the database (returns None when not there)
@@ -187,7 +187,7 @@ class FT_EnergyCutoffConvo(FiretaskBase):
             BM_WF = get_wf_bulk_modulus(struct, deformations,
                                         vasp_input_set=vis,
                                         vasp_cmd=VASP_CMD, db_file=db_file,
-                                        user_kpoints_settings=uks,
+                                        #user_kpoints_settings=uks,
                                         eos='birch_murnaghan', tag=tag)
             
             formula=struct.composition.reduced_formula
@@ -273,18 +273,18 @@ class FT_EnergyCutoffConvo(FiretaskBase):
             else:
                 vis = GetCustomVaspStaticSettings(struct, comp_params,
                                                   'bulk_from_scratch')
-            encut = Encut_list[-1]+encut_incr
-            vis.user_incar_settings.update({'ENCUT': encut})
+                encut = Encut_list[-1]+encut_incr
+                vis.user_incar_settings.update({'ENCUT': encut})
             
-            BM_WF = get_wf_bulk_modulus(struct, deformations,
-                                        vasp_input_set=None,
-                                        vasp_cmd=VASP_CMD, db_file=DB_FILE,
-                                        user_kpoints_settings=uks,
-                                        eos='birch_murnaghan', tag=tag)
+                BM_WF = get_wf_bulk_modulus(struct, deformations,
+                                            vasp_input_set=vis,
+                                            vasp_cmd=VASP_CMD, db_file=DB_FILE,
+                                            #user_kpoints_settings=uks,
+                                            eos='birch_murnaghan', tag=tag)
             
-            formula=struct.composition.reduced_formula
-            UAL_FW = Firework([FT_UpdateBMLists(formula=formula, tag=tag),
-                               FT_EnergyCutoffConvo(structure = struct,
+                formula=struct.composition.reduced_formula
+                UAL_FW = Firework([FT_UpdateBMLists(formula=formula, tag=tag),
+                                   FT_EnergyCutoffConvo(structure = struct,
                                          comp_params = comp_params,
                                          tag = tag,
                                          mp_id = self['mp_id'],
@@ -292,15 +292,15 @@ class FT_EnergyCutoffConvo(FiretaskBase):
                                          db_file = db_file,
                                          encut_incr = encut_incr,
                                          encut_start = encut_start)],
-                              name='Update BM Lists and Loop')
+                                  name='Update BM Lists and Loop')
             
-            BM_WF.append_wf(Workflow.from_Firework(UAL_FW), BM_WF.leaf_fw_ids)
-            #Use add_modify_incar powerup to add KPAR and NCORE settings
-            #based on env_chk in my_fworker.yaml
-            BM_WF = add_modify_incar(BM_WF)
+                BM_WF.append_wf(Workflow.from_Firework(UAL_FW), BM_WF.leaf_fw_ids)
+                #Use add_modify_incar powerup to add KPAR and NCORE settings
+                #based on env_chk in my_fworker.yaml
+                BM_WF = add_modify_incar(BM_WF)
             
-            #Update Database entry for Encut list
-            DB.coll.update_one({'tag': tag},
-                               {'$push': {'Encut_list': encut}})
-            return FWAction(detours=BM_WF)
+                #Update Database entry for Encut list
+                DB.coll.update_one({'tag': tag},
+                                   {'$push': {'Encut_list': encut}})
+                return FWAction(detours=BM_WF)
 
