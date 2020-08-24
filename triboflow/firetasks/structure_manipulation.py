@@ -151,7 +151,7 @@ class FT_GetRelaxedSlab(FiretaskBase):
                         miller,
                         Structure.from_sites(relaxed_slab, to_unit_cell=True),
                         shift=0,
-                        scale_factor=np.eye(3, dtype=np.int),
+                        scale_factor=[[1,0,0], [0,1,0], [0,0,1]],
                         site_properties=relaxed_slab.site_properties)
         
             coll.update_one({'mpid': mp_id, 'miller': miller},
@@ -382,6 +382,16 @@ class FT_MakeHeteroStructure(FiretaskBase):
             slab_2_dict = GetSlabFromDB(mp_id_2, db_file, miller_2, functional)
             slab_1 = Slab.from_dict(slab_1_dict['relaxed_slab'])
             slab_2 = Slab.from_dict(slab_2_dict['relaxed_slab'])
+            
+# =============================================================================
+# Running into crashes for max_angle_diff > ~1.5 for MPInterfaces 2020.6.19,
+# at least for certain interfaces. A match is found, but than ther is a 
+# LinAlgError("Singular matrix") error in forming the matched slabs?
+# The following lines ensures that max_angle_diff > 1.5. This is not a great
+# solution obviously. I also changed the default in FT_CheckInterfaceParamDict
+# =============================================================================
+            if inter_params['max_angle_diff'] > 1.5:
+                inter_params['max_angle_diff'] = 1.5
         
             bottom_aligned, top_aligned = get_aligned_lattices(
                 slab_1,
@@ -409,7 +419,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
                                                      bottom_aligned,
                                                      nlayers_2d = 1,
                                                      nlayers_substrate = 1,
-                            seperation = inter_params['interface_distance'])
+                            separation = inter_params['interface_distance'])
         
                 #inter_slab = hetero_interfaces[0]
                 inter_slab = hetero_interfaces

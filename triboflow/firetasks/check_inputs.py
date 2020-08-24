@@ -340,7 +340,7 @@ class FT_CheckInterfaceParamDict(FiretaskBase):
         
         defaults = {'interface_distance': 2.0,
                     'max_mismatch': 0.01,
-                    'max_angle_diff': 2.0,
+                    'max_angle_diff': 1.5,
                     'r1r2_tol': 0.05}
         #####################################################################
          
