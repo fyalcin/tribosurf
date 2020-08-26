@@ -14,7 +14,7 @@ from atomate.vasp.powerups import add_modify_incar
 from atomate.vasp.workflows.base.bulk_modulus import get_wf_bulk_modulus
 from triboflow.helper_functions import GetLastBMDatafromDB, \
     GetCustomVaspStaticSettings, GetDB, IsListConverged, GetBulkFromDB, \
-    GetHighLevelDB
+    GetHighLevelDB, GetEmin
 
 
 @explicit_serialize
@@ -31,7 +31,7 @@ class FT_StartEncutConvo(FiretaskBase):
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
         deformations = self.get('deformations')
-        encut_start = self.get('encut_start', 200)
+        encut_start = self.get('encut_start', None)
         encut_incr = self.get('encut_incr', 25)
         n_converge = self.get('n_converge', 3)
         
@@ -123,7 +123,8 @@ class FT_EnergyCutoffConvo(FiretaskBase):
         List of deformation matrices for the fit to the EOS. Defaults to None,
         which results in 5 volumes from 90% to 110% of the initial volume.
     encut_start : float, optional
-        Starting encut value for the first run. Defaults to 200.
+        Starting encut value for the first run. Defaults to the largest EMIN
+        in the POTCAR.
     encut_incr : float, optional
         Increment for the encut during the convergence. Defaults to 25.
     n_converge : int, optional
@@ -149,7 +150,7 @@ class FT_EnergyCutoffConvo(FiretaskBase):
             dm=np.eye(3)*i
             deforms.append(dm)  
         n_converge = self.get('n_converge', 3)
-        encut_start = self.get('encut_start', 200)
+        encut_start = self.get('encut_start', None)
         encut_incr = self.get('encut_incr', 25)
         deformations = self.get('deformations', deforms)
         db_file = self.get('db_file')
@@ -180,7 +181,13 @@ class FT_EnergyCutoffConvo(FiretaskBase):
         
         if BM_list is None:
             vis = GetCustomVaspStaticSettings(struct, comp_params,
-                                              'bulk_from_scratch')
+                                              'bulk_from_scratch')            
+            if not encut_start:
+                #Get the largest EMIN value of the potcar and round up to the
+                #next whole 25.
+                emin = GetEmin(vis.potcar)
+                encut_start = int(25 * np.ceil(emin/25))
+            
             vis.user_incar_settings.update({'ENCUT': encut_start})
             Encut_list = [encut_start]
 

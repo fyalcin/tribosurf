@@ -1,21 +1,49 @@
 """A collection of HelperFunctions to be used for the FireFlow project."""
 
+import os, glob
 import subprocess
 import pymongo
-from pprint import pprint
 from pymatgen import MPRester
 from pymatgen.io.vasp.inputs import Kpoints
 from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet, MPStaticSet
-from fireworks.core.firework import FWAction, Workflow
-from fireworks.user_objects.dupefinders.dupefinder_exact import DupeFinderExact
 from atomate.vasp.database import VaspCalcDb
+
+
+def GetEmin(potcar):
+    """
+    Return the minimal recommended  energy cutoff for a given Potcar object.
+    
+    Unfortunately I don not think that pymatgen Potcars can access the data
+    for the recommended cutoffs directly, so I write out a file first and
+    then scan for the ENMAX lines. The largest EMIN value found is returned
+    in the end.
+
+    Parameters
+    ----------
+    potcar : pymatgen.io.vasp.inputs.Potcar
+        The pymatgen representation of a VASP POTCAR file.
+
+    Returns
+    -------
+    float
+        The largest EMIN value of all species present in the potcar.
+
+    """
+    potcar.write_file('temp_potcar')
+    with open('temp_potcar', 'r') as pot:
+        emin = []
+        for l in pot:
+            if l.strip().startswith('ENMAX'):
+                emin.append(float(l.split()[-2]))
+    os.remove('temp_potcar')
+    return max(emin)
+                    
 
 def RemoveMatchingFiles(list_of_patterns):
     """
     Remove all files matching the patterns (wildcards) in the current
     directory.
     """
-    import os, glob
     remove_list=[]
     for pattern in list_of_patterns:
         remove_list.extend(glob.glob(pattern))
@@ -376,7 +404,8 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
         
     # Set vasp input set (currently none available for static SCAN!)
     vis = MPStaticSet(structure, user_incar_settings = uis, vdw = vdw,
-                             user_kpoints_settings = uks)
+                      user_kpoints_settings = uks,
+                      potcar_functional = 'PBE_54')
         
     return vis
 
@@ -503,7 +532,8 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
                              user_kpoints_settings = uks)
     else:
        vis = MPRelaxSet(structure, user_incar_settings = uis, vdw = vdw,
-                        user_kpoints_settings = uks)
+                        user_kpoints_settings = uks,
+                        potcar_functional = 'PBE_54')
         
     return vis
 
