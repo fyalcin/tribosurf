@@ -4,10 +4,49 @@ import os, glob
 import subprocess
 import pymongo
 from pymatgen import MPRester
-from pymatgen.io.vasp.inputs import Kpoints
+from pymatgen.core.sites import PeriodicSite
+from pymatgen.io.vasp.inputs import Kpoints, Poscar
 from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet, MPStaticSet
 from atomate.vasp.database import VaspCalcDb
 
+
+def StackAlignedSlabs(bottom_slab, top_slab, top_shift=[0,0,0]):
+    interface = bottom_slab.copy()
+    t_copy = top_slab.copy()
+    
+    t_copy.translate_sites(indices=range(len(t_copy.sites)),
+                           vector=top_shift,
+                           frac_coords=False, to_unit_cell=False)
+    
+    for s in t_copy.sites:
+        new_site = PeriodicSite(lattice=interface.lattice,
+                                coords=s.frac_coords,
+                                coords_are_cartesian=False,
+                                species=s.species)
+        interface.sites.append(new_site)
+    
+    return interface
+
+def ReCenterAlignedSlabs(top_slab, bottom_slab, d=2.5):
+    t_copy = top_slab.copy()
+    b_copy = bottom_slab.copy()
+    top_zs=[]
+    bot_zs=[]
+    for s in t_copy.sites:
+        top_zs.append(s.coords[-1])
+    top_shift = -min(top_zs) + d/2
+    
+    for s in b_copy.sites:
+        bot_zs.append(s.coords[-1])
+    bot_shift = -max(bot_zs) - d/2
+
+    t_copy.translate_sites(indices=range(len(t_copy.sites)),
+                           vector=[0,0,top_shift],
+                           frac_coords=False, to_unit_cell=False)
+    b_copy.translate_sites(indices=range(len(b_copy.sites)),
+                           vector=[0,0,bot_shift],
+                           frac_coords=False, to_unit_cell=False)
+    return t_copy, b_copy
 
 def GetEmin(potcar):
     """
@@ -405,7 +444,7 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
     # Set vasp input set (currently none available for static SCAN!)
     vis = MPStaticSet(structure, user_incar_settings = uis, vdw = vdw,
                       user_kpoints_settings = uks,
-                      potcar_functional = 'PBE_54')
+                      user_potcar_functional = 'PBE_54')
         
     return vis
 
@@ -439,7 +478,8 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
     allowed_types = ['bulk_full_relax', 'bulk_vol_relax', 'bulk_pos_relax',
                      'bulk_shape_relax',
                      'slab_shape_relax', 'slab_pos_relax',
-                     'interface_shape_relax', 'interface_pos_relax']
+                     'interface_shape_relax', 'interface_pos_relax',
+                     'interface_z_relax']
     
     if relax_type not in allowed_types:
         raise SystemExit('relax type is not known. Please select from: {}'
@@ -472,6 +512,13 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
         uis['ISIF'] = 3
     elif relax_type.endswith('pos_relax'):
         uis['ISIF'] = 2
+    elif relax_type.endswith('z_relax'):
+        uis['ISIF'] = 2
+        #Set up selective dynamics array for the structrues site property
+        sd_array = []
+        for i in range(len(structure.sites)):
+            sd_array.append([False, False, True])
+        structure.add_site_property('selective_dynamics', sd_array)
     elif relax_type.endswith('vol_relax'):
         uis['ISIF'] = 7
     elif relax_type.endswith('shape_relax'):
@@ -526,14 +573,16 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
                     uis['SIGMA'] = 0.1
                     uis['ISMEAR'] = 0
             vis = MPScanRelaxSet(structure, user_incar_settings = uis,
-                                 vdw = vdw, user_kpoints_settings = uks)
+                                 vdw = vdw, user_kpoints_settings = uks,
+                                 user_potcar_functional = 'PBE_54')
         else:
             vis = MPRelaxSet(structure, user_incar_settings = uis, vdw = vdw,
-                             user_kpoints_settings = uks)
+                             user_kpoints_settings = uks,
+                             user_potcar_functional = 'PBE_54')
     else:
        vis = MPRelaxSet(structure, user_incar_settings = uis, vdw = vdw,
                         user_kpoints_settings = uks,
-                        potcar_functional = 'PBE_54')
+                        user_potcar_functional = 'PBE_54')
         
     return vis
 
