@@ -11,6 +11,27 @@ from atomate.vasp.database import VaspCalcDb
 
 
 def StackAlignedSlabs(bottom_slab, top_slab, top_shift=[0,0,0]):
+    """
+    Combine slabs that are centered around 0 into a single structure.
+    
+    Optionally shift the top slab by a vector of cartesian coordinates.
+
+    Parameters
+    ----------
+    bottom_slab : pymatgen.core.structure.Structure
+        Bottom slab.
+    top_slab : pymatgen.core.structure.Structure
+        Top slab.
+    top_shift : list of 3 floats, optional
+        Vector of caresian coordinates with which to shift the top slab.
+        The default is [0,0,0].
+
+    Returns
+    -------
+    interface : pymatgen.core.structure.Structure
+        DESCRIPTION.
+
+    """
     interface = bottom_slab.copy()
     t_copy = top_slab.copy()
     
@@ -28,6 +49,26 @@ def StackAlignedSlabs(bottom_slab, top_slab, top_shift=[0,0,0]):
     return interface
 
 def ReCenterAlignedSlabs(top_slab, bottom_slab, d=2.5):
+    """
+    Center two slabs around z=0 and give them the distance d.
+
+    Parameters
+    ----------
+    top_slab : pymatgen.core.structure.Structure
+        The slab that should be on top.
+    bottom_slab : pymatgen.core.structure.Structure
+        The slab that should be on the bottom.
+    d : float, optional
+        The desired distance between the slabs. The default is 2.5.
+
+    Returns
+    -------
+    t_copy : pymatgen.core.structure.Structure
+        Top slab that is shifted so that the lowest atom is at +d/2
+    b_copy : pymatgen.core.structure.Structure
+        Bottom slab that is shifted so that the topmost atom is at -d/2
+
+    """
     t_copy = top_slab.copy()
     b_copy = bottom_slab.copy()
     top_zs=[]
