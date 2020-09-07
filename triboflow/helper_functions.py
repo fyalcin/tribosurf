@@ -10,6 +10,42 @@ from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet, MPStaticSet
 from atomate.vasp.database import VaspCalcDb
 
 
+def CleanUpSitePorperties(structure):
+    """
+    Cleans up site_properties of structures that contain NoneTypes.
+    
+    If an interface is created from two different structures, it is possible
+    that some site properties like magmom are not set for both structures.
+    This can lead later to problems since they are replaced by None.
+    This function replaces NoneTypes with 0.0 for magmom and deletes all other
+    site_properties if None entries are found in it.
+
+
+    Parameters
+    ----------
+    structure : pymatgen.core.structure.Structure
+        Input structure
+
+    Returns
+    -------
+    struct : pymatgen.core.structure.Structure
+        Output structure
+
+    """
+    struct = structure.copy()
+    for key in struct.site_properties.keys():
+        if key == 'magmom':
+            new_magmom = []
+            for m in struct.site_properties[key]:
+                if m == None:
+                    new_magmom.append(0.0)
+                else:
+                    new_magmom.append(m)
+            struct.add_site_property('magmom', new_magmom)
+        else:
+            struct.remove_site_property(key)
+    return struct
+
 def StackAlignedSlabs(bottom_slab, top_slab, top_shift=[0,0,0]):
     """
     Combine slabs that are centered around 0 into a single structure.
@@ -403,7 +439,7 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
                      'slab_from_scratch', 'slab_follow_up', 'slab_nscf']
     
     if static_type not in allowed_types:
-        raise SystemExit('relax type is not known. Please select from: {}'
+        raise SystemExit('static type is not known. Please select from: {}'
                          .format(allowed_types))
         
     #Set user incar settings:
@@ -476,11 +512,20 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
         uis['NELMDL'] = -1
         
     if 'k_dens' in comp_parameters:
-        uks = Kpoints.automatic_gamma_density(structure,
+        kpoints = Kpoints.automatic_gamma_density(structure,
                                               comp_parameters['k_dens'])
     else:
         #if no k-density is supplied in the comp_parameters, use a large value
-        uks = Kpoints.automatic_gamma_density(structure, 5000)
+        kpoints = Kpoints.automatic_gamma_density(structure, 5000)
+    
+    #If a structure has a vacuum layer, set the third kpoints devision to 1
+    #by force.
+    if static_type.startswith('slab_'):
+        uks = Kpoints(comment=kpoints.comment+'  adjusted for slabs',
+                      num_kpts=0,
+                      kpts=[[kpoints.kpts[0][0], kpoints.kpts[0][1], 1]])
+    else:
+        uks = kpoints
         
     # Set vasp input set (currently none available for static SCAN!)
     vis = MPStaticSet(structure, user_incar_settings = uis, vdw = vdw,
@@ -600,11 +645,20 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
         vdw = None
         
     if 'k_dens' in comp_parameters:
-        uks = Kpoints.automatic_gamma_density(structure,
+        kpoints = Kpoints.automatic_gamma_density(structure,
                                               comp_parameters['k_dens'])
     else:
         #if no k-density is supplied in the comp_parameters, use a large value
-        uks = Kpoints.automatic_gamma_density(structure, 5000)
+        kpoints = Kpoints.automatic_gamma_density(structure, 5000)
+
+    #If a structure has a vacuum layer, set the third kpoints devision to 1
+    #by force.
+    if relax_type.startswith('slab_') or relax_type.startswith('interface_'):
+        uks = Kpoints(comment=kpoints.comment+'  adjusted for slabs',
+                      num_kpts=0,
+                      kpts=[[kpoints.kpts[0][0], kpoints.kpts[0][1], 1]])
+    else:
+        uks = kpoints
         
     if 'functional' in comp_parameters:
         if comp_parameters['functional'] == 'SCAN':
