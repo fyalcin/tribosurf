@@ -5,12 +5,75 @@ Created on Wed Jun 17 15:47:39 2020
 """
 
 from uuid import uuid4
+import numpy as np
 from fireworks import Workflow, Firework
 from triboflow.firetasks.encut_convergence import FT_EnergyCutoffConvo
 from triboflow.firetasks.kpoint_convergence import FT_KpointsConvo
 from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \
     FT_StartSlabRelax, FT_GetRelaxedSlab
-from triboflow.helper_functions import GetPropertyFromMP
+from triboflow.firetasks.PPES import FT_DoPPESCalcs, FT_FitPPES
+from triboflow.helper_functions import GetPropertyFromMP, GetEmin, \
+    GetCustomVaspStaticSettings
+
+
+def CalcPPES_SWF(interface_name, functional, distance_list = [-0.5, -0.25, 0.0,
+                                0.25, 0.5, 2.5, 3.0, 4.0, 5.0, 7.5],
+             out_name = 'PPES@minimum', structure_name = 'minimum_relaxed',
+             spec = {}):
+    """
+    Generate a subworkflow that calculates a PPES using static calculations.
+    
+    For a given interface in the high-level database this subworkflow performs
+    static calculations for different distances of the two slabs modeling
+    brittle cleavage under mode 1 loading using the rigid separation model.
+    The results are saved in a energy vs distance array and saved i the high-
+    level database alongside a fit to a UBER curve.
+
+    Parameters
+    ----------
+    interface_name : str
+        Name of the interface in the high-level database.
+    functional : str
+        Which functional to use; has to be 'PBE' or 'SCAN'.
+    distance_list : list of float, optional
+        Modification of the equilibrium distance between the slabs.
+        The default is [-0.5, -0.25, 0.0, 0.25, 0.5, 2.5, 3.0, 4.0, 5.0, 7.5].
+    out_name : str, optional
+        Name for the PPES data in the high-level database. The default is
+        'PPES@minimum'.
+    structure_name : str, optional
+        Name of the structure in the interface entry to the high-level database
+        for which the PPES should be calculated. The default is
+        'minimum_relaxed'.
+    spec : dict, optional
+        fw_spec that can be passed to the SWF and will be passed on. The
+        default is {}.
+
+    Returns
+    -------
+    SWF : fireworks.core.firework.Workflow
+        Subworkflow to calculate the PPES for a certain interface.
+
+    """
+    tag = interface_name+'_'+str(uuid4())
+    
+    FW_1 = Firework(FT_DoPPESCalcs(interface_name=interface_name,
+                                   functional=functional,
+                                   distance_list = distance_list,
+                                   tag=tag,
+                                   structure_name = structure_name),
+                    spec=spec, name='PPES Calculations for '+interface_name)
+    
+    FW_2 = Firework(FT_FitPPES(interface_name=interface_name,
+                                   functional=functional,
+                                   distance_list = distance_list,
+                                   out_name = out_name,
+                                   tag = tag),
+                    spec=spec, name='PPES Fitting for '+interface_name)
+    
+    SWF = Workflow([FW_1, FW_2], {FW_1: [FW_2]},
+                   name = 'Calc PPES for '+interface_name+' SWF')
+    return SWF
 
 def MakeAndRelaxSlab_SWF(mp_id, miller, functional,
                        relax_type = 'slab_pos_relax',
@@ -18,7 +81,38 @@ def MakeAndRelaxSlab_SWF(mp_id, miller, functional,
                        slab_struct_name = 'unrelaxed_slab',
                        out_struct_name = 'relaxed_slab',
                        spec = {}):
-    
+    """
+    Make and relax a slab.
+
+    Parameters
+    ----------
+    mp_id : str
+        Materials project ID tag to identify the bulk and slab entries in the
+        high-level database.
+    miller : list of int or str
+        Miller indices of the slab to make.
+    functional : str
+        Which functional to use; has to be 'PBE' or 'SCAN'.
+    relax_type : str, optional
+        Which type of relaxation to run. See helper function:
+        GetCustomVaspRelaxSettings. The default is 'slab_pos_relax'.
+    bulk_struct_name : str, optional
+        Name of the bulk to use as the basis for the slab generation in the 
+        high-level database. The default is 'structure_equiVol'.
+    slab_struct_name : str, optional
+        Name of the unrelaxed slab in the high-level database.
+        The default is 'unrelaxed_slab'.
+    out_struct_name : TYPE, optional
+        DESCRIPTION. The default is 'relaxed_slab'.
+    spec : TYPE, optional
+        DESCRIPTION. The default is {}.
+
+    Returns
+    -------
+    SWF : TYPE
+        DESCRIPTION.
+
+    """
     if type(miller) == str:
         miller_str = miller
         miller = [int(k) for k in list(miller)]
@@ -119,7 +213,7 @@ def ConvergeKpoints_SWF(structure, comp_parameters, spec, mp_id, functional,
     return WF
 
 def ConvergeEncut_SWF(structure, comp_parameters, spec, mp_id, functional,
-                      deformations=None, encut_start=200, encut_incr=25,
+                      deformations=None, encut_start=None, encut_incr=25,
                       n_converge=3, db_file=None):
     """Subworkflows that converges the Encut using a fit to an BM-EOS.
     
@@ -144,7 +238,8 @@ def ConvergeEncut_SWF(structure, comp_parameters, spec, mp_id, functional,
         List of deformation matrices for the fit to the EOS. Defaults to None,
         which results in 5 volumes from 90% to 110% of the initial volume.
     encut_start : float, optional
-        Starting encut value for the first run. Defaults to 200.
+        Starting encut value for the first run. Defaults to the largest EMIN
+        in the POTCAR.
     encut_incr : float, optional
         Increment for the encut during the convergence. Defaults to 25.
     n_converge : int, optional
@@ -165,6 +260,15 @@ def ConvergeEncut_SWF(structure, comp_parameters, spec, mp_id, functional,
     
     tag = "BM group: {}".format(str(uuid4()))
         
+    
+    if not encut_start:
+        #Get the largest EMIN value of the potcar and round up to the
+        #next whole 25.
+        vis = GetCustomVaspStaticSettings(structure, comp_parameters,
+                                          'bulk_from_scratch')
+        emin = GetEmin(vis.potcar)
+        encut_start = int(25 * np.ceil(emin/25))
+    
     FT_EncutConvo = FT_EnergyCutoffConvo(structure = structure,
                                          comp_params = comp_parameters,
                                          tag = tag,
