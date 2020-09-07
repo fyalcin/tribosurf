@@ -14,12 +14,10 @@ from triboflow.helper_functions import GetBulkFromDB
 
 db_file = '/home/mwo/FireWorks/config/db.json'
 
-data = GetBulkFromDB("mp-134", db_file, 'PBE')
+data = GetBulkFromDB("mp-30", db_file, 'PBE')
 
 struct = Structure.from_dict(data['structure_fromMP'])
 comp_parameters = data['comp_parameters']
-
-comp_parameters['encut'] = 500
 
 WF = ConvergeEncut_SWF(struct, comp_parameters, {}, data['mpid'],
                          comp_parameters['functional'])

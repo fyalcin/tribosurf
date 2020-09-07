@@ -4,7 +4,6 @@ Created on Wed Jun 17 15:59:59 2020
 @author: mwo
 """
 import monty
-import numpy as np
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import Slab
 from pymatgen.core.surface import SlabGenerator
@@ -19,6 +18,7 @@ from mpinterfaces.transformations import get_aligned_lattices, \
     get_interface#generate_all_configs
 from triboflow.helper_functions import GetBulkFromDB, GetSlabFromDB,\
     GetHighLevelDB, GetCustomVaspRelaxSettings, GetDB, InterfaceName
+
 
 @explicit_serialize
 class FT_StartSlabRelaxSWF(FiretaskBase):
@@ -385,7 +385,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
             
 # =============================================================================
 # Running into crashes for max_angle_diff > ~1.5 for MPInterfaces 2020.6.19,
-# at least for certain interfaces. A match is found, but than ther is a 
+# at least for certain interfaces. A match is found, but than there is a 
 # LinAlgError("Singular matrix") error in forming the matched slabs?
 # The following lines ensures that max_angle_diff > 1.5. This is not a great
 # solution obviously. I also changed the default in FT_CheckInterfaceParamDict
