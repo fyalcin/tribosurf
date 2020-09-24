@@ -14,9 +14,9 @@ import matplotlib.patches as patches
 from mpl_toolkits.mplot3d import Axes3D
 
 from pymatgen.core.structure import Structure
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.core.surface import SlabGenerator, Slab
 from pymatgen.analysis.adsorption import AdsorbateSiteFinder, plot_slab
-from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.io.vasp.inputs import Poscar
 from pymatgen.transformations.standard_transformations import RotationTransformation
 
@@ -235,71 +235,102 @@ Poscar(hetero).write_file(filename='POSCAR')
 # CALCULATE HS POINTS
 # =============================================================================
 
-def ExtractHSPoints(material, near_reduce=0.01):
-    
-    # COLLECT UNIQUE HS POINTS
-    AdsMat = AdsorbateSiteFinder(material)
-    unique_sites = AdsMat.find_adsorption_sites( distance = 0, 
-                                       symm_reduce = 1e-06, 
-                                       near_reduce = near_reduce, 
-                                       no_obtuse_hollow = True )
-    
-    #COLLECT ALL THE HS POINTS
-    replica_sites = AdsMat.find_adsorption_sites( distance = 0, 
-                                       symm_reduce = 0, 
-                                       near_reduce = near_reduce, 
-                                       no_obtuse_hollow = True )
-    
-    # Extract and identify each unique HS point of materials and its replica
-    HS = GetUniqueHS(unique_sites)             
-    HS_ALL = GetReplicaHS(AdsMat, replica_sites, HS)
+def GetSlabHS(material, near_reduce=0.01, allowed_sites=['ontop', 'bridge', 'hollow']): 
+    """
+    Extract the High Simmetry (HS) points for a given slab. It returns the 
+    unique HS points for the slab and the unfolded points inside the lattice
+    cell
 
+    Parameters
+    ----------
+    material : pymatgen.core.surface.Slab
+        The slab of which you want to calculate the HS points of the surface
+    near_reduce : float, optional
+        Near reduction threshold to be feed into pymatgen. Default is 0.01
+        
+    Returns
+    -------
+    hs : dict
+        The unique HS points for the selected slab
+    hs_all : dict
+        HS points for the selected slab replicated inside the cell
+        
+    """
     
-    return HS, HS_ALL
-
-def GetUniqueHS(unique_sites):
+    adsf = AdsorbateSiteFinder(material)
     
-    HS = {} 
-    for k in ['ontop', 'bridge', 'hollow']:
-        if unique_sites[k] != []:
+    # Extract the unique HS points for the given surface
+    unique_sites = adsf.find_adsorption_sites( distance = 0, 
+                                               symm_reduce = 0.01, 
+                                               near_reduce = near_reduce, 
+                                               no_obtuse_hollow = True )
+    
+    #Extract all the HS points of the lattice cell for the given surface
+    replica_sites = adsf.find_adsorption_sites( distance = 0, 
+                                                symm_reduce = 0, 
+                                                near_reduce = near_reduce, 
+                                                no_obtuse_hollow = True )
+    
+    # Identify the unique HS points of the slab and unfold them in the cell
+    hs = {} 
+    for key in allowed_sites:
+        if unique_sites[key] != []:
             n=1
-            for data in unique_sites[k]:
-                HS[k+'_'+str(n)] = data
+            for data in unique_sites[key]:
+                hs[key+'_'+str(n)] = data
                 n += 1
-    HS['all'] = unique_sites['all']
-    
-    return HS
-    
-
-def GetReplicaHS(AdsMat, replica_sites, hs):
-    
-    # b is the object obtained from the AdsorbateSiteFinder function
-    # b_sites is the corresponding list of sites, replicated inside whole cell    
-    # Create an empty dictionary with the list of unique HS points as keys
-    HS_ALL = {}
+            
+    # Recognize of which unique HS point each site is the replica
+    hs_all = {}
     
     for k in hs.keys():
-        HS_ALL[k] = []
+        hs_all[k] = []
     
-    # Recognize of which unique HS point each sites is the replica
-    for key in HS_ALL.keys():
-        for site in replica_sites['all']:        
-            
-            HSToEvaluate = [hs[key].copy()]
-            HSToEvaluate.append(np.array(site))
-            
-            HSEvaluated = AdsMat.symm_reduce(HSToEvaluate)
+    for key in hs_all.keys():
+        for site in replica_sites['all']:         
+            pts_to_evaluate = [hs[key].copy()]
+            pts_to_evaluate.append(np.array(site))
+            pts = adsf.symm_reduce(pts_to_evaluate)
           
-            if len(HSEvaluated) == 1:
-                HS_ALL[key].append(site)
+            if len(pts) == 1:
+                hs_all[key].append(site)
     
-    HS_ALL['all'] = replica_sites['all']
+    #hs['all'] = unique_sites['all']
+    #hs_all['all'] = replica_sites['all']
 
-    return HS_ALL
+    return hs, hs_all
 
 
-hs_sub, hs_sub_all = ExtractHSPoints(substrate, 0.01)
-hs_coat, hs_coat_all = ExtractHSPoints(coating, 0.01)
+def GetInterfaceHS(hs_bot, hs_top):
+    
+    # Extract the keys from the HS dictionaries
+    kbot = list(hs_bot.keys())
+    ktop = list(hs_top.keys())
+    if 'all' in kbot:
+        kbot.remove('all')
+    if 'all' in ktop:
+        ktop.remove('all')
+    
+    hs = {}
+    for k1 in kbot:
+        for k2 in ktop:
+            shift_list = []
+            
+            for d1 in np.matrix(list(hs_bot[k1])):
+                for d2 in np.matrix(list(hs_top[k2])):                  
+                    shift = np.array(d1 - d2)                      
+                    shift_list.append([shift[0,0], shift[0,1]])
+             
+            hs[k1+' + '+k2] = np.array(shift_list)
+            
+    return hs
+
+
+hs_sub, hs_sub_all = GetSlabHS(substrate, 0.01)
+hs_coat, hs_coat_all = GetSlabHS(coating, 0.01)
+
+hs_inter = GetInterfaceHS(hs_sub, hs_coat)
+hs_inter_all = GetInterfaceHS(hs_sub_all, hs_coat_all)
 
 
 # =============================================================================
@@ -307,33 +338,33 @@ hs_coat, hs_coat_all = ExtractHSPoints(coating, 0.01)
 # =============================================================================
 
 
-# Extract information
+# # Extract information
 
-print(element1+mill1_str+' replica: '+str(hetero.lattice.a/slab1.lattice.a)+
-      'X' + str(hetero.lattice.b/slab1.lattice.b))
-print(element2+mill2_str+' replica: '+str(hetero.lattice.a/slab2.lattice.a)+
-      'X' + str(hetero.lattice.b/slab2.lattice.b))
-
-
-# Plot and save the aligned cells displaying the HS points
-# WARNING: plot_slab of pymatgen call adsorption_sites with symm_reduce!=0
-
-plot_slab_atoms_hs(substrate, hs_sub['all'], (hetero.lattice.a, hetero.lattice.b), 
-             element1, mill1_str)
-
-plot_slab_atoms_hs(coating, hs_coat['all'], (hetero.lattice.a, hetero.lattice.b), 
-             element2, mill2_str)
+# print(element1+mill1_str+' replica: '+str(hetero.lattice.a/slab1.lattice.a)+
+#       'X' + str(hetero.lattice.b/slab1.lattice.b))
+# print(element2+mill2_str+' replica: '+str(hetero.lattice.a/slab2.lattice.a)+
+#       'X' + str(hetero.lattice.b/slab2.lattice.b))
 
 
-# Plot the HS in the cell -- Replicated HS (!!!)
+# # Plot and save the aligned cells displaying the HS points
+# # WARNING: plot_slab of pymatgen call adsorption_sites with symm_reduce!=0
 
-plot_slab_hs_red(hs_sub_all['all'], (hetero.lattice.a, hetero.lattice.b), 
-                 element1+mill1_str+'_hs_all.pdf', c='b')
-plot_slab_hs_red(hs_coat_all['all'], (hetero.lattice.a, hetero.lattice.b), 
-                 element2+mill2_str+'hs_all.pdf', c='r')
+# plot_slab_atoms_hs(substrate, hs_sub['all'], (hetero.lattice.a, hetero.lattice.b), 
+#              element1, mill1_str)
 
-plot_slab_hs_red((hs_sub['all'], hs_coat['all']), (hetero.lattice.a, hetero.lattice.b), 
-                 'superposition_hs.pdf', c='r', tot=True)
+# plot_slab_atoms_hs(coating, hs_coat['all'], (hetero.lattice.a, hetero.lattice.b), 
+#              element2, mill2_str)
+
+
+# # Plot the HS in the cell -- Replicated HS (!!!)
+
+# plot_slab_hs_red(hs_sub_all['all'], (hetero.lattice.a, hetero.lattice.b), 
+#                  element1+mill1_str+'_hs_all.pdf', c='b')
+# plot_slab_hs_red(hs_coat_all['all'], (hetero.lattice.a, hetero.lattice.b), 
+#                  element2+mill2_str+'hs_all.pdf', c='r')
+
+# plot_slab_hs_red((hs_sub['all'], hs_coat['all']), (hetero.lattice.a, hetero.lattice.b), 
+#                  'superposition_hs.pdf', c='r', tot=True)
 
 
 # =============================================================================
@@ -341,58 +372,51 @@ plot_slab_hs_red((hs_sub['all'], hs_coat['all']), (hetero.lattice.a, hetero.latt
 # =============================================================================
 
 # Only working with squared lattices, at the moment
-def combine_hs(hetero, hs_sub, hs_coat): 
+# def combine_hs(hetero, hs_sub, hs_coat): 
     
-    alat1 = hetero.lattice.a
-    alat2 = hetero.lattice.b
+#     alat1 = hetero.lattice.a
+#     alat2 = hetero.lattice.b
     
-    hs_inter = []
-    sites = []
+#     hs_inter = []
+#     sites = []
         
-    ksub  = list(hs_sub.keys());  ksub.remove('all')
-    kcoat = list(hs_coat.keys()); kcoat.remove('all')
+#     ksub  = list(hs_sub.keys());  ksub.remove('all')
+#     kcoat = list(hs_coat.keys()); kcoat.remove('all')
             
-    for k1 in ksub:
-        for k2 in kcoat:
+#     for k1 in ksub:
+#         for k2 in kcoat:
                 
-            for i, d1 in enumerate(np.matrix(list(hs_sub[k1]))):
-                for j, d2 in enumerate(np.matrix(list(hs_coat[k2]))):
+#             for i, d1 in enumerate(np.matrix(list(hs_sub[k1]))):
+#                 for j, d2 in enumerate(np.matrix(list(hs_coat[k2]))):
                     
-                    #print(k1, d1, d2)
-                    shift = np.array(d1 - d2)
-                    #print(shift)
+#                     #print(k1, d1, d2)
+#                     shift = np.array(d1 - d2)
+#                     #print(shift)
                     
-                    if shift[0,0] < 0:
-                        shift[0,0] += alat1
-                    elif shift[0,0] >= alat1:
-                        shift[0,0] -= alat1
-                    if shift[0,1] < 0:
-                        shift[0,1] += alat2
-                    elif shift[0,1] >= alat2:
-                        shift[0,1] -= alat2
+#                     if shift[0,0] < 0:
+#                         shift[0,0] += alat1
+#                     elif shift[0,0] >= alat1:
+#                         shift[0,0] -= alat1
+#                     if shift[0,1] < 0:
+#                         shift[0,1] += alat2
+#                     elif shift[0,1] >= alat2:
+#                         shift[0,1] -= alat2
                         
-                    hs_inter.append([shift[0,0], shift[0,1]])
-                    sites.append('sub-'+k1+'#'+str(i)+'_VS_''coat-'+k2+'#'+str(j))
-    return np.array(hs_inter), sites
+#                     hs_inter.append([shift[0,0], shift[0,1]])
+#                     sites.append('sub-'+k1+'#'+str(i)+'_VS_''coat-'+k2+'#'+str(j))
+#     return np.array(hs_inter), sites
 
-hs_inter, sites = combine_hs(hetero, hs_sub, hs_coat)
-plot_slab_hs_red(hs_inter, (hetero.lattice.a, hetero.lattice.b), 'unfolded_hs.pdf',
-                 c='k')
+# hs_inter, sites = combine_hs(hetero, hs_sub, hs_coat)
+# plot_slab_hs_red(hs_inter, (hetero.lattice.a, hetero.lattice.b), 'unfolded_hs.pdf',
+#                  c='k')
 
-hs_inter_1, sites_1 = combine_hs(hetero, hs_sub, hs_coat_all)
-plot_slab_hs_red(hs_inter_1, (hetero.lattice.a, hetero.lattice.b), 'unfolded1_hs.pdf',
-                 c='k')
+# hs_inter_1, sites_1 = combine_hs(hetero, hs_sub, hs_coat_all)
+# plot_slab_hs_red(hs_inter_1, (hetero.lattice.a, hetero.lattice.b), 'unfolded1_hs.pdf',
+#                  c='k')
 
-hs_inter_2, sites_2 = combine_hs(hetero, hs_sub_all, hs_coat)
-plot_slab_hs_red(hs_inter_2, (hetero.lattice.a, hetero.lattice.b), 'unfolded2_hs.pdf',
-                 c='k')
-
-
-# =============================================================================
-# CALCULATE SHIFTS TO BE DONE FOR THE PES
-# =============================================================================
-
-
+# hs_inter_2, sites_2 = combine_hs(hetero, hs_sub_all, hs_coat)
+# plot_slab_hs_red(hs_inter_2, (hetero.lattice.a, hetero.lattice.b), 'unfolded2_hs.pdf',
+#                  c='k')
 
 
 # =============================================================================
