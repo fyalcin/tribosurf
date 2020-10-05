@@ -288,9 +288,43 @@ def Plot_SlabHS(slab, hs, to_fig=None):
         plt.savefig(to_fig+'.pdf', dpi=300)
     
     plt.show()
+
+
+
+def ApplyPbcToHS(slab, hs):
+    """
+    Apply pbc to the HS points of a slab/structure object in the axb plane
     
+    """
+    
+    from torch import Tensor
+    import nnp.pbc as pbc
+    
+    lattice_t = Tensor(slab.matrix.lattice)
+    hs_new = {}
+    
+    for k in slab.keys():
+        element_new = pbc.map2central(lattice_t, 
+                                  Tensor(slab[k]),
+                                  [True, True, False])
+        hs_new[k] = element_new
+            
+    return hs_new
+
     
 def PointIsInsideLattice(lattice, q):
+    
+    """
+    Determine wether a point q is inside a lattice unit cell.
+    Return the reponse (True or False), the closest point to q along the closed
+    contour made by axb, and the vector at which q is closest (a or b).
+    
+    TODO:
+        - For now only check for the planar quadrilateral given by axb.
+          To be generalized to a 3D lattice cell.
+        - VECTORIZE the function, to check simultaneously for an array q.
+    
+    """
     
     a = lattice[0, :]
     b = lattice[1, :]
@@ -345,7 +379,13 @@ def PointIsInsideLattice(lattice, q):
             isinside=True
     return not (np.dot(r, normal) >= 0), p, vector
 
+
 def CreateBoundary(lattice, step=0.05):
+    """
+    Given a lattice cell return an array containing all the points along the
+    closed contours formed by vector a and b (axb quadrilateral)
+    
+    """
     
     a = lattice[0, :]
     b = lattice[1, :]
@@ -368,7 +408,8 @@ def CreateBoundary(lattice, step=0.05):
 
 def IntermediatesPts(p1, p2, npts=100):
     """"
-    Return an array of npts equally spaced between p1 and p2
+    Return an array of npts equally spaced between p1 and p2.
+    Dependenceof CreateBoundary
     
     """
     
@@ -384,7 +425,8 @@ def IntermediatesPts(p1, p2, npts=100):
 
 def ClosestPoint(S, q):
     """
-    Find the closest point in the set of points S to q
+    Find the closest point in the set of points S to q.
+    Dependence of PointIsInsideLattice
     
     """
     
