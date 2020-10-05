@@ -45,7 +45,7 @@ def GetPES(interface, pes_dict, to_fig=None):
     rbf = Rbf(x, y, E, function='cubic')
     
     # Extend the PES on a uniform fine grid to plot it
-    x_new, y_new = ReplicatePESpoints(x, y, lattice, (5,5))   
+    x_new, y_new = ReplicatePESPoints(x, y, lattice, (5,5))   
     E_new = rbf(x_new, y_new)
     pes_grid = np.stack([x_new, y_new, E_new], axis=-1)
     
@@ -69,30 +69,32 @@ def ExtractDataForPES(pes_dict):
     return np.concatenate(x), np.concatenate(y), np.concatenate(E)
 
 
-def ReplicatePESPoints(x, y, lattice, replicate_of = (1, 1)):
+def ReplicatePESPoints(x, y, lattice, replicate_of=(1, 1)):
     """ 
-    Replicate the of (n,m)
+    Replicate the the PES points of the cell in a (n,m)-size lattice cell
     
     """
     
     n = replicate_of[0]
     m = replicate_of[1]
     
-    if n==0: n=1
-    if m==0: m=1
+    if n<=0: n=1
+    if m<=0: m=1
     
     if n == 1 and m == 1:
         return x, y
     else:
-    
+        n = int(n)
+        m = int(m)
+        
         a = lattice[0, :]
         b = lattice[1, :]
         
-        x_new = x.copy()
-        y_new = y.copy()
+        x_new = np.array([])
+        y_new = np.array([])
         
-        for i in range(1, n):
-                for j in range(1, m):
+        for i in range(n):
+                for j in range(m):
                     x_add = x + a[0]*i + b[0]*j
                     y_add = y + a[1]*i + b[1]*j
                     
@@ -102,7 +104,32 @@ def ReplicatePESPoints(x, y, lattice, replicate_of = (1, 1)):
         return x_new, y_new
 
 
-def GenerateGridForPES(alats, density, mod=0, default=5, to_plot=False):
+def GenerateGridForPES(lattice, density, mod=0, default=5, to_plot=False):
+    """
+    Generate a 2D-uniform grid of points of density=density on a lattice plane
+    given by lattice[0,:]xlattice[1,:]
+
+    Parameters
+    ----------
+    lattice : np.array
+        3x3 (or 2x3) array, reporting the components of (at least) the first
+        two lattice vectors
+    density : float
+        Surface density, the number of points per unit Angstrom^2 desired
+    mod : TYPE, optional
+        DESCRIPTION. The default is 0.
+    default : TYPE, optional
+        DESCRIPTION. The default is 5.
+    to_plot : TYPE, optional
+        DESCRIPTION. The default is False.
+
+    Returns
+    -------
+    matrix : TYPE
+        DESCRIPTION.
+
+    """
+    
     """
     alats must be a 2x3 matrix with the x, y, z components of a and b
     density is the number of points per unit A^2 required

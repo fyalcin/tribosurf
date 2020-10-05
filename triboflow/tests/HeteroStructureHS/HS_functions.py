@@ -288,3 +288,109 @@ def Plot_SlabHS(slab, hs, to_fig=None):
         plt.savefig(to_fig+'.pdf', dpi=300)
     
     plt.show()
+    
+    
+def PointIsInsideLattice(lattice, q):
+    
+    a = lattice[0, :]
+    b = lattice[1, :]
+    q = np.array(q)
+    
+    # Calculate the lattice boundary and find the closest point to q
+    S, lines = CreateBoundary(lattice)
+    p = ClosestPoint(S, q)   
+    
+    r = q - p
+    
+    if np.sqrt(r.dot(r)) < 1e-10:
+        return True # The point is inside!
+    else:
+        for n, line in enumerate(lines):
+            if (line - p == [0, 0, 0]).all() == 0:
+                if n == 0:
+                    belong_p = [np.zeros(3), a]
+                    vector = a
+                elif n == 1:
+                    belong_p = [a, a+b]
+                    vector = b
+                elif n == 2:
+                    belong_p = [a+b, b]
+                    vector = a
+                else:
+                    belong_p = [b, np.zeros(3)]
+                    vector = b
+                break
+       
+        # Hypothesis to find out the normal to the vector where p belongs, 
+        # and passing through q
+        alpha = ( (q[0]-belong_p[0][0])*(belong_p[1][0]-belong_p[0][0])   +  \
+                  (q[1]-belong_p[0][1])*(belong_p[1][1]-belong_p[0][1])   +  \
+                  (q[2]-belong_p[0][2])*(belong_p[1][2]-belong_p[0][2]) )     \
+                   /                                                          \
+        ( (belong_p[1][0]-belong_p[0][0])*(belong_p[1][0]-belong_p[0][0]) +   \
+          (belong_p[1][1]-belong_p[0][1])*(belong_p[1][1]-belong_p[0][1]) +   \
+          (belong_p[1][2]-belong_p[0][2])*(belong_p[1][2]-belong_p[0][2]) )
+
+        intersect = [ belong_p[0][0]+alpha*(belong_p[1][0]-belong_p[0][0]), 
+                      belong_p[0][1]+alpha*(belong_p[1][1]-belong_p[0][1]),
+                      belong_p[0][2]+alpha*(belong_p[1][2]-belong_p[0][2]) ]
+        intersect = np.array(intersect)
+        
+        normal = np.array(intersect) / np.sqrt(intersect.dot(intersect))
+    
+        # Check the scalar product between the normal to the surface and r
+        if np.dot(r, normal) >= 0:
+            isinside=False
+        else:
+            isinside=True
+    return not (np.dot(r, normal) >= 0), p, vector
+
+def CreateBoundary(lattice, step=0.05):
+    
+    a = lattice[0, :]
+    b = lattice[1, :]
+    n_a = int (np.sqrt(a.dot(a)) / step)
+    n_b = int (np.sqrt(b.dot(b)) / step)
+    
+    # Create the boundaries
+    line1 = IntermediatesPts(np.zeros(3), a, n_a)
+    line2 = IntermediatesPts(a, a+b, n_b)
+    line3 = IntermediatesPts(a+b, b, n_a)
+    line4 = IntermediatesPts(b, np.zeros(3), n_b)
+    
+    S = np.concatenate((np.zeros((1,3)), line1, [a],
+                        line2, [a+b], 
+                        line3, [b],
+                        line4))
+    
+    return S, [line1, line2, line3, line4]
+
+
+def IntermediatesPts(p1, p2, npts=100):
+    """"
+    Return an array of npts equally spaced between p1 and p2
+    
+    """
+    
+    delta_x = (p2[0] - p1[0]) / (npts + 1)
+    delta_y = (p2[1] - p1[1]) / (npts + 1)
+    delta_z = (p2[2] - p1[2]) / (npts + 1)
+    
+    pts = [ [p1[0] + i*delta_x, p1[1] + i*delta_y, p1[2] + i*delta_z] 
+            for i in range(1, npts+1) ]
+    
+    return np.array(pts)
+
+
+def ClosestPoint(S, q):
+    """
+    Find the closest point in the set of points S to q
+    
+    """
+    
+    closer_pts = np.zeros(3)
+    distance = np.sqrt( np.sum((q-S)*(q-S), axis=-1) )
+    
+    return S[np.argmin(distance), :]
+    
+    
