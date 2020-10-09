@@ -114,4 +114,23 @@ env:
         KPAR: <YourKparSetting>
         NCORE: <YourNcoreSetting>
 ~~~
-
+6. If the computer or cluster where you are installing TriboFlow has a job scheduler, you have to set up a file called `my_qadapter.yaml` in the `<YourPath>/config` directory. `<SchedulerType>` can be PBS/Torque, SLURM, SGE, or IBM LoadLeveler. `pre_rocket` and `post_rocket` are optional commands to be run in the job script before and after the workflow is executed, this is e.g. useful for loading and unloading modules. You probably will have to activate your conda environment here. The `--timeout` option tells the job to stop pulling new FireWorks from the Launchpad after `<sec>` number of seconds, which should of course be smaller than the walltime. E.g. if you have an allowed walltime of 72 hours, set the `--timeout` option to e.g. 172800 (2 days in seconds).  
+It is important to note that this type of rocket_launch will only work if the compute nodes on your cluster can access the MongoDB database, which is a problem for many clusters, since only the login nodes have access to the internet and firewall rules are strict. Possible solutions are described [here](https://materialsproject.github.io/fireworks/offline_tutorial.html). The `my_qadapter.yaml` file might look something like this:
+~~~
+_fw_name: CommonAdapter  
+_fw_q_type: <SchedulerType>
+rocket_launch: rlaunch -c <YourPath>/config rapidfire --timeout <sec>
+nodes: <NrOfNodes>
+walltime: <hh:mm:ss>
+queue: null  
+account: null  
+job_name: null  
+pre_rocket: <Custom commands to load modules and conda etc.>
+post_rocket: <Custom commands to unload modules etc.>
+logdir: <YourPath>/logs
+~~~
+7.  To tell TriboFlow (more precisely FireWorks) where to find the configuration files you just created, we will write the final configuration file `FW_config.yaml` with the line `CONFIG_FILE_DIR: <YourPath>/config`. We will also set an environment variable to tell FireWorks where this file is. Make sure not to use spaces before or after the ‘=’ sign, since this might lead to problems and type
+~~~
+conda env config vars set FW_CONFIG_FILE=<YourPath>/config FW_config.yaml  
+~~~
+8. You will have to restart your conda environment and afterward verify if this worked by e.g. typing conda env config vars list or simply `echo $FW_CONFIG_FILE.`
