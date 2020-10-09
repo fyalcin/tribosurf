@@ -329,8 +329,7 @@ def GetInterfaceHS(hs_bot, hs_top):
 hs_sub, hs_sub_all = GetSlabHS(substrate, 0.01)
 hs_coat, hs_coat_all = GetSlabHS(coating, 0.01)
 
-hs_inter = GetInterfaceHS(hs_sub, hs_coat)
-hs_inter_all = GetInterfaceHS(hs_sub_all, hs_coat_all)
+hs = GetInterfaceHS(hs_sub_all, hs_coat_all)
 
 
 # =============================================================================

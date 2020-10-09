@@ -3,24 +3,13 @@
 """
 Created on Tue Sep 22 14:52:15 2020
 
-Calculate the High Simmetry (HS) points for slab and interface + utility
+Calculate the High Simmetry (HS) points for slab and interface
 
 @author: gl
 """
 
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-from mpl_toolkits.mplot3d import Axes3D
-
-from pymatgen.core.structure import Structure
-from pymatgen.core.surface import SlabGenerator, Slab
-from pymatgen.analysis.adsorption import AdsorbateSiteFinder
-from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
-from pymatgen.io.vasp.inputs import Poscar
-from pymatgen.transformations.standard_transformations import RotationTransformation
-
-from mpinterfaces.transformations import get_aligned_lattices, get_interface
+from utility_functions import *
 
 
 # =============================================================================
@@ -69,6 +58,8 @@ def GetSlabHS(slab, allowed_sites=['ontop', 'bridge', 'hollow']):
         an hetero interface.
 
     """
+
+    from pymatgen.analysis.adsorption import AdsorbateSiteFinder
     
     adsf = AdsorbateSiteFinder(slab)
     
@@ -103,7 +94,7 @@ def GetSlabHS(slab, allowed_sites=['ontop', 'bridge', 'hollow']):
             if len(pts) == 1:
                 hs_all[key].append(site)
     
-    # Add a key to the dictionary related to all the sites
+    # Add a key to the dictionary related to all the sites. Not necessary
     #hs['all'] = unique_sites['all']
     #hs_all['all'] = replica_sites['all']
     
@@ -113,6 +104,34 @@ def GetSlabHS(slab, allowed_sites=['ontop', 'bridge', 'hollow']):
     hs_all = NormalizeHSDict(hs_all, to_array=True)
 
     return hs, hs_all
+
+
+def NormalizeHSDict(hs, to_array=True):
+    """
+    Convert the hs elements returned by GetSlabHS to proper np.array or lists 
+    Important to use with unfolded HS points, which are lists of arrays
+    
+    """
+    
+    hs_new = {}
+    
+    for k in hs.keys():
+        data = hs[k]
+        
+        # Default: convert everything in a list
+        if isinstance(data, list):
+            elements_list = []
+            for element in data:
+                elements_list.append(list(element))
+            hs_new[k] = elements_list
+        else:
+            hs_new[k] = [list(data)]
+        
+        # Convert to array, default and smart choice
+        if to_array == True:
+            hs_new[k] = np.array(hs_new[k])
+    
+    return hs_new
 
 
 # =============================================================================
@@ -139,300 +158,18 @@ def GetInterfaceHS(hs_1, hs_2):
     """
     
     hs = {}
-    # Loop over the keys
+    
+    # Calculate the shift between each HS point of the first material with each
+    # HS point of the second material
     for k1 in hs_1.keys():
-        for k2 in hs_2.keys():
+        for k2 in hs_2.keys():          
             shifts_stack = []
-            
-            # Check the shape of entry arrays
-            d1 = hs_1[k1].reshape((1,3)) if len(hs_2[k2].shape) == 1 \
-                                         else hs_1[k1]
-            d2 = hs_2[k2].reshape((1,3)) if len(hs_2[k2].shape) == 1 \
-                                         else hs_2[k2]
+            d1 = hs_1[k1]
+            d2 = hs_2[k2]
             
             for el_d1 in d1:
-                shift = (d2 - el_d1)[:, :2]
-                if shift.shape[0] == 1:
-                    shift = shift.reshape((2,))
-                shifts_stack.append(shift)
-            
+                shifts_stack.append( d2 - el_d1 )
+                
             hs[k1+' - '+k2] = np.concatenate(shifts_stack, axis=0)
             
     return hs
-
-
-# =============================================================================
-# EVALUATION OF THE PES ON HS POINTS AND UNFOLDING
-# =============================================================================
-
-
-def UnfoldHSPES(E, hs_all):
-    """
-    Unfold the energies calculated for the unique HS points of an interface,
-    by associating them to the replicated HS points of the interface of the
-    lattice cell.
-
-    Parameters
-    ----------
-    E : dict
-        Contains the energy calculated for each surfacial HS site.
-        
-    hs_all : dict
-        Contain the surfacial HS sites of the interface replicated to the whole
-        lattice cell.
-
-    Returns
-    -------
-    pes_dict : dict
-        Energy grid to compute the PES
-
-    """
-    
-    pes_all = {}
-    
-    # Find the shifts to be done
-    for k in hs_all.keys():
-        pes_all[k] = np.column_stack((hs_all[k], np.full(hs_all[k], E[k])))    
-    
-    return pes_all
-
-
-# =============================================================================
-# UTILITIES AND PLOT TOOLS
-# =============================================================================
-
-
-def NormalizeHSDict(hs, to_array=True):
-    """
-    Convert the hs elements returned by GetSlabHS to proper np.array or lists 
-    Relevant for unfolded HS sites, which are returned as lists of np.arrays.
-    
-    """
-    
-    hs_new = {}
-    
-    for k in hs.keys():
-        data = hs[k]
-        
-        # Default: convert everything in a list
-        if isinstance(data, list):
-            elements_list = []
-            for element in data:
-                elements_list.append(list(element[:2]))
-            hs_new[k] = elements_list
-        else:
-            hs_new[k] = list(data[:2])
-        
-        # Convert to array
-        if to_array == True:
-            hs_new[k] = np.array(hs_new[k])
-    
-    return hs_new
-    
-
-def Plot_SlabHS(slab, hs, to_fig=None):
-    """
-    Plot the slab slab, displaying the atoms and the HS sites of the surface
-    
-    Parameters
-    ----------
-    slab : pymatgen.core.surface.Slab 
-        The slab to be displayed
-        
-    hs : dict
-        HS sites of the slab.
-        
-    name_fig : string, optional
-        Name of the image that you want to save, it will be: 'name_fig'+'.pdf' 
-        Suggested name: 'Name of the material' + 'Miller index'.
-        The default is None and no images are saved.
-         
-        
-    Returns
-    -------
-    None.
-
-    """
- 
-    import matplotlib.pyplot as plt
-    import matplotlib.patches as patches
-    from mpl_toolkits.mplot3d import Axes3D    
-    from pymatgen.analysis.adsorption import plot_slab
-    
-    # Extract the lattice vector of the basal plane
-    a = slab.lattice.matrix[0, :]
-    b = slab.lattice.matrix[1, :]
-    
-    # plot the atoms and the lattice cell
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    
-    plot_slab(slab, ax, scale=0.8, repeat=3, window=1.25, 
-              draw_unit_cell=True, decay=0.2, adsorption_sites=False)
-    ax.set(xlim = ( -0.1*(a[0] + b[0]), 1.1*(a[0] + b[0]) ), 
-           ylim = ( -0.1*(a[1] + b[1]), 1.1*(a[1] + b[1]) ))
-    
-    # Add the HS sites with the proper labels
-    for k in hs.keys():
-        data = hs[k]
-        if len(data.shape) == 1:
-            plt.plot(data[0], data[1], marker='x', markersize=10, mew=3, 
-                     linestyle='', zorder=10000, label=k)     
-        else:
-            plt.plot(data[:,0], data[:,1], marker='x', markersize=7.5, mew=3, 
-                     linestyle='', zorder=10000, label=k)
- 
-    plt.legend(bbox_to_anchor=(1.025, 1), loc='upper left')
-    
-    if to_fig != None:
-        plt.savefig(to_fig+'.pdf', dpi=300)
-    
-    plt.show()
-
-
-
-def ApplyPbcToHS(slab, hs):
-    """
-    Apply pbc to the HS points of a slab/structure object in the axb plane
-    
-    """
-    
-    from torch import Tensor
-    import nnp.pbc as pbc
-    
-    lattice_t = Tensor(slab.matrix.lattice)
-    hs_new = {}
-    
-    for k in slab.keys():
-        element_new = pbc.map2central(lattice_t, 
-                                  Tensor(slab[k]),
-                                  [True, True, False])
-        hs_new[k] = element_new
-            
-    return hs_new
-
-    
-def PointIsInsideLattice(lattice, q):
-    
-    """
-    Determine wether a point q is inside a lattice unit cell.
-    Return the reponse (True or False), the closest point to q along the closed
-    contour made by axb, and the vector at which q is closest (a or b).
-    
-    TODO:
-        - For now only check for the planar quadrilateral given by axb.
-          To be generalized to a 3D lattice cell.
-        - VECTORIZE the function, to check simultaneously for an array q.
-    
-    """
-    
-    a = lattice[0, :]
-    b = lattice[1, :]
-    q = np.array(q)
-    
-    # Calculate the lattice boundary and find the closest point to q
-    S, lines = CreateBoundary(lattice)
-    p = ClosestPoint(S, q)   
-    
-    r = q - p
-    
-    if np.sqrt(r.dot(r)) < 1e-10:
-        return True # The point is inside!
-    else:
-        for n, line in enumerate(lines):
-            if (line - p == [0, 0, 0]).all() == 0:
-                if n == 0:
-                    belong_p = [np.zeros(3), a]
-                    vector = a
-                elif n == 1:
-                    belong_p = [a, a+b]
-                    vector = b
-                elif n == 2:
-                    belong_p = [a+b, b]
-                    vector = a
-                else:
-                    belong_p = [b, np.zeros(3)]
-                    vector = b
-                break
-       
-        # Hypothesis to find out the normal to the vector where p belongs, 
-        # and passing through q
-        alpha = ( (q[0]-belong_p[0][0])*(belong_p[1][0]-belong_p[0][0])   +  \
-                  (q[1]-belong_p[0][1])*(belong_p[1][1]-belong_p[0][1])   +  \
-                  (q[2]-belong_p[0][2])*(belong_p[1][2]-belong_p[0][2]) )     \
-                   /                                                          \
-        ( (belong_p[1][0]-belong_p[0][0])*(belong_p[1][0]-belong_p[0][0]) +   \
-          (belong_p[1][1]-belong_p[0][1])*(belong_p[1][1]-belong_p[0][1]) +   \
-          (belong_p[1][2]-belong_p[0][2])*(belong_p[1][2]-belong_p[0][2]) )
-
-        intersect = [ belong_p[0][0]+alpha*(belong_p[1][0]-belong_p[0][0]), 
-                      belong_p[0][1]+alpha*(belong_p[1][1]-belong_p[0][1]),
-                      belong_p[0][2]+alpha*(belong_p[1][2]-belong_p[0][2]) ]
-        intersect = np.array(intersect)
-        
-        normal = np.array(intersect) / np.sqrt(intersect.dot(intersect))
-    
-        # Check the scalar product between the normal to the surface and r
-        if np.dot(r, normal) >= 0:
-            isinside=False
-        else:
-            isinside=True
-    return not (np.dot(r, normal) >= 0), p, vector
-
-
-def CreateBoundary(lattice, step=0.05):
-    """
-    Given a lattice cell return an array containing all the points along the
-    closed contours formed by vector a and b (axb quadrilateral)
-    
-    """
-    
-    a = lattice[0, :]
-    b = lattice[1, :]
-    n_a = int (np.sqrt(a.dot(a)) / step)
-    n_b = int (np.sqrt(b.dot(b)) / step)
-    
-    # Create the boundaries
-    line1 = IntermediatesPts(np.zeros(3), a, n_a)
-    line2 = IntermediatesPts(a, a+b, n_b)
-    line3 = IntermediatesPts(a+b, b, n_a)
-    line4 = IntermediatesPts(b, np.zeros(3), n_b)
-    
-    S = np.concatenate((np.zeros((1,3)), line1, [a],
-                        line2, [a+b], 
-                        line3, [b],
-                        line4))
-    
-    return S, [line1, line2, line3, line4]
-
-
-def IntermediatesPts(p1, p2, npts=100):
-    """"
-    Return an array of npts equally spaced between p1 and p2.
-    Dependenceof CreateBoundary
-    
-    """
-    
-    delta_x = (p2[0] - p1[0]) / (npts + 1)
-    delta_y = (p2[1] - p1[1]) / (npts + 1)
-    delta_z = (p2[2] - p1[2]) / (npts + 1)
-    
-    pts = [ [p1[0] + i*delta_x, p1[1] + i*delta_y, p1[2] + i*delta_z] 
-            for i in range(1, npts+1) ]
-    
-    return np.array(pts)
-
-
-def ClosestPoint(S, q):
-    """
-    Find the closest point in the set of points S to q.
-    Dependence of PointIsInsideLattice
-    
-    """
-    
-    closer_pts = np.zeros(3)
-    distance = np.sqrt( np.sum((q-S)*(q-S), axis=-1) )
-    
-    return S[np.argmin(distance), :]
-    
-    
