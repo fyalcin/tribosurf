@@ -5,12 +5,12 @@ Triboflow uses the [FireWorks](https://materialsproject.github.io/fireworks/inde
 
 The project is a collaboration between [Michael Wolloch](https://www.researchgate.net/profile/Michael_Wolloch) at the University of Vienna and the [Group of Prof. M. Clelia Righi](http://www.tribchem.it/) at the University of Bologna.
 
-
+<a name="toc"></a>
  1. [Download and Installation](#install)
 	  1. [Create a virtual environment for TriboFlow](#virtualenv)
 	  2. [ Install and configure MonogoDB locally if you want your database to run also in conda](#mongodb)
 	  3. [Create a folder structure, download and install](#triboflowinstall)
-	  4. [Configuring FireWorks](#configure)
+	  4. [Configuring FireWorks](#configurefw)
 	  5. [Configuring pymatgen](#configurepymatgen)
  3. [Testing your installation of FireWorks](#testing)
  4. [Using TriboFlow](#using)
@@ -78,6 +78,8 @@ Now we will create an adminUser and a readOnlyUser by typing:
 `db.createUser({user: "<RootUser>", pwd: "<RootPassword>", roles: [{role: "root", db: "admin" }]})` and `db.createUser({user: "<ReadUser>", pwd: "<ReadPassword>", roles: [{role:"readAnyDatabase", db: "admin" }]})`
 Now exit the mongo shell: 
 `exit`
+
+[Back to top](#toc)
 ### Create a folder structure, download and install TriboFlow<a name="triboflowinstall"></a>
 1. Select a location where you want to have your TriboFlow files located. We will assume this is `<YourPath>`. Now create two subfolders: `<YourPath>/config` for your configuration files and `<YourPath>/pps` for your pseudopotentials.
 2. In the same folder we will now download the TriboFlow files from gitlab by typing `git clone https://gitlab.com/triboteam/TriboFlow.git`. This will (for now) only work if your gitlab account has authorisation!
@@ -144,6 +146,8 @@ logdir: <YourPath>/logs
 conda env config vars set FW_CONFIG_FILE=<YourPath>/config/FW_config.yaml  
 ~~~
 8. You will have to restart your conda environment and afterward verify if this worked by e.g. typing conda env config vars list or simply `echo $FW_CONFIG_FILE.`
+
+[Back to top](#toc)
 ### Configuring pymatgen<a name="configurepymatgen"></a>
 When running VASP calculations FireWorks relies heavily on   [pymatgen](https://pymatgen.org/) and [Custodian](https://materialsproject.github.io/custodian/). Some configuration of pymatgen is required:
 
@@ -172,6 +176,7 @@ pps
 3. For integration of the Materials Project REST API, you should register for free at the website [https://materialsproject.org/](https://materialsproject.org/) and get an API Key from your dashboard there. Put it in the configuration file:  
     `pmg config --add PMG_MAPI_KEY <Your_API_Key>`
 
+[Back to top](#toc)
 ## Testing your installation of FireWorks<a name="testing"></a>
  - Try to load a workflow (for a simple structure relaxation of Si) to the launchpad with `atwf add -l vasp -p wf_structure_optimization -m mp-149` and check that it has been added with `lpad get_wflows`. This should result in something like:
 ~~~
@@ -186,7 +191,9 @@ pps
 ~~~
  - Navigate to a scratch directory and run the workflow (without a scheduler) with `rlaunch rapidfire`
  - Afterwards you can run `lpad get_wflows` again to see that the state has changed from "READY" to "COMPLETED"
- - It would probably be a good idea to continue with the [tutorial of Atomate](https://atomate.org/running_workflows.html) if you are not familiar with it already, but you can also jump straight into TriboFlow in the next section:
+ - It would probably be a good idea to continue with the [tutorial of Atomate](https://atomate.org/running_workflows.html) if you are not familiar with it already, but you can also jump straight into TriboFlow in the next section.
+
+[Back to top](#toc)
 ## Using TriboFlow<a name="using"></a>
 This section is not really a complete user manual and more of a quickstart guide. More documentation is going to follow once the package is getting ready to be released.
 ### Running a workflow
@@ -194,7 +201,7 @@ Main workflows are located in the `triboflow.workflows.main` module. To run a wo
 ### The Heterogeneous_WF
 This workflow converges the computational parameters and the lattice parameters of two materials, constructs slabs from them using the supplied Miller indices to define the surface direction and matches those slabs to an interface.
 In the (near future), also the PES and PPES will be calculated alongside relevant tribological data.
-The workflow is loaded imported from the `triboflow.workflows.main` module as:
+The workflow is imported from the `triboflow.workflows.main` module as:
 ```
 from triboflow.workflows.main import Heterogeneous_WF
 ```
@@ -258,4 +265,5 @@ A full list of possible inputs with types are:
 	- max_angle_diff (float)
 	- r1r2_tol (float)
 
+[Back to top](#toc)
 
