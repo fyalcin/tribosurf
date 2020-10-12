@@ -1,11 +1,10 @@
-# Triboflow
+# Triboflow<a name="toc"></a>
 
 Triboflow is a collection of workflows designed to build up crystalline interfaces consisting of nearly arbitrary materials, calculate tribological figures of merit for them using DFT, and store the results in a database.
 Triboflow uses the [FireWorks](https://materialsproject.github.io/fireworks/index.html) framework and relies heavily on [pymatgen](https://pymatgen.org/), [atomate](https://atomate.org/), and the [Materialsproject](https://materialsproject.org/) in general.
 
 The project is a collaboration between [Michael Wolloch](https://www.researchgate.net/profile/Michael_Wolloch) at the University of Vienna and the [Group of Prof. M. Clelia Righi](http://www.tribchem.it/) at the University of Bologna.
 
-<a name="toc"></a>
  1. [Download and Installation](#install)
 	  1. [Create a virtual environment for TriboFlow](#virtualenv)
 	  2. [ Install and configure MonogoDB locally if you want your database to run also in conda](#mongodb)
@@ -25,6 +24,8 @@ Here we assume that you install Triboflow within a virtual python environment. W
  3. Switch to your new environment: `conda activate TriboFlow`
  4. Now install some fundamental packages with conda: `conda install numpy scipy matplotlib ipython vtk dnspython`
 
+
+[Back to top](#toc)
 ### Install and configure MonogoDB locally if you want your database to run also in conda<a name="mongodb"></a>
 This is **optional** and you should skip these steps if you **already have a database running** somewhere that you want to use and can access from the machine you are using. See also [this section](https://atomate.org/installation.html#mongodb) of the atomate installation instructions.
  1. Install the conda package (which is unfortunately a bit out of date) of MongoDB by simply running `conda install -c anaconda mongodb` while the TriboFlow environment is active.
@@ -86,6 +87,7 @@ Now exit the mongo shell:
 3. You should now see a folder `<YourPath>/TriboFlow`. `cd` into it and run `pip install .` to install TriboFlow and all the other packages that are required to run it into your active conda environment. 
 3a. If there is an error that the directory is not installable, there might not yet be a setup.py file in the master branch. Checkout a development branch by typing `git checkout development` or `git checkout mwo_dev` to switch branches and run `pip install .` again.
 
+[Back to top](#toc)
 ### Configuring FireWorks<a name="configurefw"></a>
 Here we assume that the database is locally installed in the same conda environment, but the procedure is not much different if a cloud service like Atlas is used or if the database is hosted on a different server.
 
