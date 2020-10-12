@@ -6,7 +6,13 @@ Triboflow uses the [FireWorks](https://materialsproject.github.io/fireworks/inde
 The project is a collaboration between [Michael Wolloch](https://www.researchgate.net/profile/Michael_Wolloch) at the University of Vienna and the [Group of Prof. M. Clelia Righi](http://www.tribchem.it/) at the University of Bologna.
 
 
-## Download and Installation
+## Table of Contents
+1. [Download and Installation](#install)
+2. [Testing your installation of FireWorks](#testing)
+3. [Using TriboFlow](#using)
+
+
+## Download and Installation <a name="install"></a>
 Here we assume that you install Triboflow within a virtual python environment. We use [conda](https://docs.conda.io/en/latest/) in this guide, but [virtualenv](https://virtualenv.pypa.io/en/latest/) or similar is also possible.
 
 ### Create a virtual environment for TriboFlow:
@@ -74,7 +80,7 @@ Now exit the mongo shell:
 3. You should now see a folder `<YourPath>/TriboFlow`. `cd` into it and run `pip install .` to install TriboFlow and all the other packages that are required to run it into your active conda environment. 
 3a. If there is an error that the directory is not installable, there might not yet be a setup.py file in the master branch. Checkout a development branch by typing `git checkout development` or `git checkout mwo_dev` to switch branches and run `pip install .` again.
 
-### Configuring everything
+### Configuring FireWorks
 Here we assume that the database is locally installed in the same conda environment, but the procedure is not much different if a cloud service like Atlas is used or if the database is hosted on a different server.
 
 1. Change into your `<YourPath>/config` folder and write a `db.json` file so FireWorks can access your database (If your database is not local, the "host" has to change of course, e.g. for a Atlas DB you might have something like `"mongodb+srv://cluster0-4bevc.mongodb.net"` instead of `"localhost"`):
@@ -131,6 +137,63 @@ logdir: <YourPath>/logs
 ~~~
 7.  To tell TriboFlow (more precisely FireWorks) where to find the configuration files you just created, we will write the final configuration file `FW_config.yaml` with the line `CONFIG_FILE_DIR: <YourPath>/config`. We will also set an environment variable to tell FireWorks where this file is. Make sure not to use spaces before or after the ‘=’ sign, since this might lead to problems and type
 ~~~
-conda env config vars set FW_CONFIG_FILE=<YourPath>/config FW_config.yaml  
+conda env config vars set FW_CONFIG_FILE=<YourPath>/config/FW_config.yaml  
 ~~~
 8. You will have to restart your conda environment and afterward verify if this worked by e.g. typing conda env config vars list or simply `echo $FW_CONFIG_FILE.`
+### Configuring pymatgen
+When running VASP calculations FireWorks relies heavily on   [pymatgen](https://pymatgen.org/) and [Custodian](https://materialsproject.github.io/custodian/). Some configuration of pymatgen is required:
+
+1. We assume that you have a folder `<EXTRACTED_VASP_POTCAR>` where you have the VASP pseudopotentials (delivered with the VASP package) already extracted. Type `pmg config -p <EXTRACTED_VASP_POTCAR> <YourPath>/pps` to put these potentials in an order where pymatgen can find them. The final file structure should look something like this (you maybe have to rename the directories in the pps folder):
+~~~
+pps
+├── POT_GGA_PAW_PBE  
+│   ├── POTCAR.Ac.gz  
+│   ├── POTCAR.Ac_s.gz  
+│   ├── POTCAR.Ag.gz  
+│   └── ...  
+├── POT_GGA_PAW_PW91  
+│   ├── POTCAR.Ac.gz  
+│   ├── POTCAR.Ac_s.gz  
+│   ├── POTCAR.Ag.gz  
+│   └── ...  
+└── POT_LDA_PAW  
+    ├── POTCAR.Ac.gz  
+    ├── POTCAR.Ac_s.gz  
+    ├── POTCAR.Ag.gz  
+    └── ...
+~~~
+2. Now we have to set a config variable (it will be a file .`pmgrc.yaml` in your home folder) so pymatgen can find the potentials and add your default functional as well (this could also be PBE_54) if you have this potential family and did not rename the folders in the previous step):  
+`pmg config --add PMG_VASP_PSP_DIR <YourPath>/pps`
+`pmg config --add PMG_DEFAULT_FUNCTIONAL PBE`
+3. For integration of the Materials Project REST API, you should register for free at the website [https://materialsproject.org/](https://materialsproject.org/) and get an API Key from your dashboard there. Put it in the configuration file:  
+    `pmg config --add PMG_MAPI_KEY <Your_API_Key>`
+
+## Testing your installation of FireWorks<a name="testing"></a>
+ - Try to load a workflow (for a simple structure relaxation of Si) to the launchpad with `atwf add -l vasp -p wf_structure_optimization -m mp-149` and check that it has been added with `lpad get_wflows`. This should result in something like:
+~~~
+[  
+ {  
+  "state": "READY",  
+  "name": "Si—1",  
+  "created_on": "2020-02-27T14:44:42.634000",  
+  "states_list": "REA"  
+ },  
+]
+~~~
+ - Navigate to a scratch directory and run the workflow (without a scheduler) with `rlaunch rapidfire`
+ - Afterwards you can run `lpad get_wflows` again to see that the state has changed from "READY" to "COMPLETED"
+ - It would probably be a good idea to continue with the [tutorial of Atomate](https://atomate.org/running_workflows.html) if you are not familiar with it already, but you can also jump straight into TriboFlow in the next section:
+## Using TriboFlow<a name="using"></a>
+This section is not really a complete user manual and more of a quickstart guide. More documentation is going to follow once the package is getting ready to be released.
+### Running a workflow
+Main workflows are located in the `triboflow.workflows.main` module. To run a workflow one has to import it from there and pass the input parameters in a dictionary.
+#### Inputs dictionaries
+For the (for now only option) heterogeneous interface workflow this input dictionary has to include the  4 keys, which each has to contain another dictionary with some essential inputs:
+ - material_1  = {'formula': 'Fe', 'miller': [1, 1, 0]}
+ - material_2 = {'formula': 'CuO, 'miller': '001'}
+ - computational_params = {'use_vdw': False}
+ - interface_params = {'max_area': 500}
+It is pretty self explanatory what these input are for: The two materials need to be defined (note that just defining the formula will fetch the structure with the lowest energy that matches the formula! Provide an 'mp_id' key for a clear selection) and need a surface orientation. Van der Waals forces can be taken into account or disregarded, and a maximal tolerated cell cross section area (in Angstrom squared) needs to be given to avoid humongous cells during the interface matching process.
+
+
+
