@@ -103,14 +103,14 @@ def GetPES(lattice, hs_all, E, to_fig=None):
     pes_dict : dict
         Dictionary containing the points and the associated energies divided
         by type. Useful to keep track of the type of the HS sites and their
-        energies. To be saved to DB
+        energies. To be saved to DB (?)
     
     pes_data : numpy.ndarray
         The entire set of HS points covering the interface with the 
         corresponding energies.
         Format:
             x[0]  y[0]  E[0]
-            y[1]  y[1]  E[1]
+            x[1]  y[1]  E[1]
              .     .     .
              .     .     .
              .     .     .
@@ -167,7 +167,7 @@ def UnfoldPES(E, hs_all):
         interpolate the PES. The structure of the matrix is:
             
             x[0]  y[0]  E[0]
-            y[1]  y[1]  E[1]
+            x[1]  y[1]  E[1]
              .     .     .
              .     .     .
              .     .     .

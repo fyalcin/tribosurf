@@ -88,14 +88,14 @@ if __name__ == '__main__':
     
     
     mat1_SlabGenerator = SlabGenerator(  mat1, mill1, 
-                                     min_slab_size     = thickness1, 
-                                     min_vacuum_size   = vacuum,
-                                     lll_reduce        = lll_reduce, 
-                                     center_slab       = centered, 
-                                     in_unit_planes    = unit_plane, 
-                                     primitive         = primitive, 
-                                     max_normal_search = None,
-                                     reorient_lattice  = True      )
+                                         min_slab_size     = thickness1, 
+                                         min_vacuum_size   = vacuum,
+                                         lll_reduce        = lll_reduce, 
+                                         center_slab       = centered, 
+                                         in_unit_planes    = unit_plane, 
+                                         primitive         = primitive, 
+                                         max_normal_search = None,
+                                         reorient_lattice  = True      )
     
     mat2_SlabGenerator = SlabGenerator(  mat2, mill2, 
                                          min_slab_size     = thickness2, 

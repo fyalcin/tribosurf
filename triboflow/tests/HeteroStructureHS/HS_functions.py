@@ -170,6 +170,6 @@ def GetInterfaceHS(hs_1, hs_2):
             for el_d1 in d1:
                 shifts_stack.append( d2 - el_d1 )
                 
-            hs[k1+' - '+k2] = np.concatenate(shifts_stack, axis=0)
+            hs[k1+'-'+k2] = np.concatenate(shifts_stack, axis=0)
             
     return hs
