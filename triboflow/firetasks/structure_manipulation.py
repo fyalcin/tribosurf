@@ -4,7 +4,6 @@ Created on Wed Jun 17 15:59:59 2020
 @author: mwo
 """
 import monty
-import numpy as np
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import Slab
 from pymatgen.core.surface import SlabGenerator
@@ -13,11 +12,13 @@ from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from fireworks import FWAction, FiretaskBase, Firework, Workflow
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
+from atomate.vasp.powerups import add_modify_incar
 from atomate.vasp.fireworks.core import OptimizeFW
 from mpinterfaces.transformations import get_aligned_lattices, \
-    generate_all_configs
+    get_interface#generate_all_configs
 from triboflow.helper_functions import GetBulkFromDB, GetSlabFromDB,\
     GetHighLevelDB, GetCustomVaspRelaxSettings, GetDB, InterfaceName
+
 
 @explicit_serialize
 class FT_StartSlabRelaxSWF(FiretaskBase):
@@ -105,9 +106,6 @@ class FT_GetRelaxedSlab(FiretaskBase):
     struct_out_name : str, optional
         Name of the slab to be put in the DB (identified by mp_id and miller).
         Defaults to 'relaxed_slab'.
-    input_struct_name : str, optional
-       Name for the slab prior of relaxations in the DB. If not given, the
-       relaxed slab will not be converted to a Slab, but stay a Structure.
     
     Returns
     -------
@@ -115,7 +113,7 @@ class FT_GetRelaxedSlab(FiretaskBase):
     """
     
     required_params = ['mp_id', 'miller', 'functional', 'tag']
-    optional_params = ['db_file', 'struct_out_name', 'input_struct_name']
+    optional_params = ['db_file', 'struct_out_name']
     def run_task(self, fw_spec):
         mp_id = self.get('mp_id')
         if type(self['miller']) == str:
@@ -144,19 +142,17 @@ class FT_GetRelaxedSlab(FiretaskBase):
             
             slab_data = coll.find_one({'mpid': mp_id, 'miller': miller})
         
-            # Since OptimizeFW parses a Structure not a Slab, we use the unrelaxed
-            # slab to transfer the needed parameters (e.g. Miller indices). This
-            # could however lead to troubles with the oriented_unit_cell if the
-            # cell parameters should change (e.g. for slab_shape_relax)
-            if self.get('input_struct_name'):
-                unrelaxed_slab = Slab.from_dict(slab_data.get(
-                                                    self['input_struct_name']))
-                slab = unrelaxed_slab.copy()
-                slab.lattice = relaxed_slab.lattice
-                for i, site in enumerate(relaxed_slab.sites):
-                    slab.replace(i, relaxed_slab.species[i])
-            else:
-                slab = relaxed_slab
+            #The following should be enough to transform the structure that
+            #is coming out of the relaxation (relaxed_slab) into a Slab object.
+                
+            slab = Slab(relaxed_slab.lattice,
+                        relaxed_slab.species_and_occu,
+                        relaxed_slab.frac_coords,
+                        miller,
+                        Structure.from_sites(relaxed_slab, to_unit_cell=True),
+                        shift=0,
+                        scale_factor=[[1,0,0], [0,1,0], [0,0,1]],
+                        site_properties=relaxed_slab.site_properties)
         
             coll.update_one({'mpid': mp_id, 'miller': miller},
                             {'$set': {out_name: slab.as_dict()}})
@@ -224,7 +220,11 @@ class FT_StartSlabRelax(FiretaskBase):
                                      vasp_input_set = vis,
                                      half_kpts_first_relax = True)
             wf_name = slab_data['formula']+miller_str+'_'+relax_type
-            return FWAction(detours=Workflow([Optimize_FW], name = wf_name))
+            #Use add_modify_incar powerup to add KPAR and NCORE settings
+            #based on env_chk in my_fworker.yaml
+            Optimize_WF = add_modify_incar(Workflow([Optimize_FW],
+                                                    name = wf_name))
+            return FWAction(detours=Optimize_WF)
 
 @explicit_serialize
 class FT_MakeSlabInDB(FiretaskBase):
@@ -382,6 +382,16 @@ class FT_MakeHeteroStructure(FiretaskBase):
             slab_2_dict = GetSlabFromDB(mp_id_2, db_file, miller_2, functional)
             slab_1 = Slab.from_dict(slab_1_dict['relaxed_slab'])
             slab_2 = Slab.from_dict(slab_2_dict['relaxed_slab'])
+            
+# =============================================================================
+# Running into crashes for max_angle_diff > ~1.5 for MPInterfaces 2020.6.19,
+# at least for certain interfaces. A match is found, but than there is a 
+# LinAlgError("Singular matrix") error in forming the matched slabs?
+# The following lines ensures that max_angle_diff > 1.5. This is not a great
+# solution obviously. I also changed the default in FT_CheckInterfaceParamDict
+# =============================================================================
+            if inter_params['max_angle_diff'] > 1.5:
+                inter_params['max_angle_diff'] = 1.5
         
             bottom_aligned, top_aligned = get_aligned_lattices(
                 slab_1,
@@ -399,14 +409,20 @@ class FT_MakeHeteroStructure(FiretaskBase):
 #       Check out AdsorbateSiteFinder of pymatgen.analysis.adsorption!!
 #       If generate all configs will work, we just have to remove the
 #       [0] index and move the whole list of structures to the spec.
+# EDIT (19.08.2020): It seems as if the code of MPInterfaces has been changed.
+#       Now the relevant function is called get_interface and not
+#       generate_all_configs any more, and only one Interface is returned... 
 # ============================================================================
-                hetero_interfaces = generate_all_configs(top_aligned,
+# ============================================================================
+                #hetero_interfaces = generate_all_configs(top_aligned,
+                hetero_interfaces = get_interface(top_aligned,
                                                      bottom_aligned,
                                                      nlayers_2d = 1,
                                                      nlayers_substrate = 1,
-                            seperation = inter_params['interface_distance'])
+                            separation = inter_params['interface_distance'])
         
-                inter_slab = hetero_interfaces[0]
+                #inter_slab = hetero_interfaces[0]
+                inter_slab = hetero_interfaces
                 
                 inter_dict = inter_slab.as_dict()
                 bottom_dict = bottom_aligned.as_dict()

@@ -10,10 +10,11 @@ from fireworks import FWAction, FiretaskBase, Firework, Workflow
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 from atomate.vasp.config import VASP_CMD, DB_FILE
+from atomate.vasp.powerups import add_modify_incar
 from atomate.vasp.workflows.base.bulk_modulus import get_wf_bulk_modulus
 from triboflow.helper_functions import GetLastBMDatafromDB, \
     GetCustomVaspStaticSettings, GetDB, IsListConverged, GetBulkFromDB, \
-    GetHighLevelDB
+    GetHighLevelDB, GetEmin
 
 
 @explicit_serialize
@@ -30,7 +31,7 @@ class FT_StartEncutConvo(FiretaskBase):
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
         deformations = self.get('deformations')
-        encut_start = self.get('encut_start', 200)
+        encut_start = self.get('encut_start', None)
         encut_incr = self.get('encut_incr', 25)
         n_converge = self.get('n_converge', 3)
         
@@ -105,7 +106,7 @@ class FT_EnergyCutoffConvo(FiretaskBase):
     """Converge the encut for a material via fits to an EOS, raising encut.
     
     Uses the get_bulk_modulus workflow of atomate to fit Birch-Murnaghen EOS
-    for increasing values of the energy cutoff. Once bulk modulus and
+    for increasing values of the d = mmdb.collection.find_one({"task_label": {"$regex": "{} bulk_modulus*".format(tag)}})energy cutoff. Once bulk modulus and
     equilibrium volume are converged, the subsequent detours are stopped and
     the convergence data is passed on.
     
@@ -122,7 +123,8 @@ class FT_EnergyCutoffConvo(FiretaskBase):
         List of deformation matrices for the fit to the EOS. Defaults to None,
         which results in 5 volumes from 90% to 110% of the initial volume.
     encut_start : float, optional
-        Starting encut value for the first run. Defaults to 200.
+        Starting encut value for the first run. Defaults to the largest EMIN
+        in the POTCAR.
     encut_incr : float, optional
         Increment for the encut during the convergence. Defaults to 25.
     n_converge : int, optional
@@ -148,7 +150,7 @@ class FT_EnergyCutoffConvo(FiretaskBase):
             dm=np.eye(3)*i
             deforms.append(dm)  
         n_converge = self.get('n_converge', 3)
-        encut_start = self.get('encut_start', 200)
+        encut_start = self.get('encut_start', None)
         encut_incr = self.get('encut_incr', 25)
         deformations = self.get('deformations', deforms)
         db_file = self.get('db_file')
@@ -161,7 +163,7 @@ class FT_EnergyCutoffConvo(FiretaskBase):
         
         V0_tolerance = comp_params.get('volume_tolerence', 0.001)
         BM_tolerance = comp_params.get('BM_tolerence', 0.01)
-        uks = {'reciprocal_density': 1000}
+        #uks = {'reciprocal_density': 1000}
         
         
         #get the data arrays from the database (returns None when not there)
@@ -178,17 +180,22 @@ class FT_EnergyCutoffConvo(FiretaskBase):
             Encut_list = None
         
         if BM_list is None:
-            vis, uis, vdw = GetCustomVaspStaticSettings(struct, comp_params,
-                                                        'bulk_from_scratch')
-            uis['ENCUT'] = encut_start
+            vis = GetCustomVaspStaticSettings(struct, comp_params,
+                                              'bulk_from_scratch')            
+            if not encut_start:
+                #Get the largest EMIN value of the potcar and round up to the
+                #next whole 25.
+                emin = GetEmin(vis.potcar)
+                encut_start = int(25 * np.ceil(emin/25))
+            
+            vis.user_incar_settings.update({'ENCUT': encut_start})
             Encut_list = [encut_start]
 
             BM_WF = get_wf_bulk_modulus(struct, deformations,
-                                        vasp_input_set=None,
+                                        vasp_input_set=vis,
                                         vasp_cmd=VASP_CMD, db_file=db_file,
-                                        user_kpoints_settings=uks,
-                                        eos='birch_murnaghan', tag=tag,
-                                        user_incar_settings=uis)
+                                        #user_kpoints_settings=uks,
+                                        eos='birch_murnaghan', tag=tag)
             
             formula=struct.composition.reduced_formula
             UAL_FW = Firework([FT_UpdateBMLists(formula=formula, tag=tag),
@@ -203,7 +210,9 @@ class FT_EnergyCutoffConvo(FiretaskBase):
                               name='Update BM Lists and Loop')
             
             BM_WF.append_wf(Workflow.from_Firework(UAL_FW), BM_WF.leaf_fw_ids)
-            
+            #Use add_modify_incar powerup to add KPAR and NCORE settings
+            #based on env_chk in my_fworker.yaml
+            BM_WF = add_modify_incar(BM_WF)
             #set up the entry for the data arrays in the database
             set_data = {'tag': tag,
                         'chem_formula': formula,
@@ -265,21 +274,18 @@ class FT_EnergyCutoffConvo(FiretaskBase):
                                          'BM_tol_rel': BM_tolerance,
                                          'V0_tol_abs': V0_tol,
                                          'V0_tol_rel': V0_tolerance}})
-                
                 return FWAction(update_spec = fw_spec)
             
-            else:
-                vis, uis, vdw = GetCustomVaspStaticSettings(struct, comp_params,
-                                                        'bulk_from_scratch')
+            vis = GetCustomVaspStaticSettings(struct, comp_params,
+                                              'bulk_from_scratch')
             encut = Encut_list[-1]+encut_incr
-            uis['ENCUT'] = encut
+            vis.user_incar_settings.update({'ENCUT': encut})
             
             BM_WF = get_wf_bulk_modulus(struct, deformations,
-                                        vasp_input_set=None,
+                                        vasp_input_set=vis,
                                         vasp_cmd=VASP_CMD, db_file=DB_FILE,
-                                        user_kpoints_settings=uks,
-                                        eos='birch_murnaghan', tag=tag,
-                                        user_incar_settings=uis)
+                                        #user_kpoints_settings=uks,
+                                        eos='birch_murnaghan', tag=tag)
             
             formula=struct.composition.reduced_formula
             UAL_FW = Firework([FT_UpdateBMLists(formula=formula, tag=tag),
@@ -294,9 +300,11 @@ class FT_EnergyCutoffConvo(FiretaskBase):
                               name='Update BM Lists and Loop')
             
             BM_WF.append_wf(Workflow.from_Firework(UAL_FW), BM_WF.leaf_fw_ids)
+            #Use add_modify_incar powerup to add KPAR and NCORE settings
+            #based on env_chk in my_fworker.yaml
+            BM_WF = add_modify_incar(BM_WF)
             
             #Update Database entry for Encut list
-            DB.coll.update_one({'tag': tag},
-                               {'$push': {'Encut_list': encut}})
+            DB.coll.update_one({'tag': tag}, {'$push': {'Encut_list': encut}})
             return FWAction(detours=BM_WF)
 

@@ -1,21 +1,165 @@
 """A collection of HelperFunctions to be used for the FireFlow project."""
 
+import os, glob
 import subprocess
 import pymongo
-from pprint import pprint
 from pymatgen import MPRester
-from pymatgen.io.vasp.inputs import Kpoints
+from pymatgen.core.sites import PeriodicSite
+from pymatgen.io.vasp.inputs import Kpoints, Poscar
 from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet, MPStaticSet
-from fireworks.core.firework import FWAction, Workflow
-from fireworks.user_objects.dupefinders.dupefinder_exact import DupeFinderExact
 from atomate.vasp.database import VaspCalcDb
+
+
+def CleanUpSitePorperties(structure):
+    """
+    Cleans up site_properties of structures that contain NoneTypes.
+    
+    If an interface is created from two different structures, it is possible
+    that some site properties like magmom are not set for both structures.
+    This can lead later to problems since they are replaced by None.
+    This function replaces NoneTypes with 0.0 for magmom and deletes all other
+    site_properties if None entries are found in it.
+
+
+    Parameters
+    ----------
+    structure : pymatgen.core.structure.Structure
+        Input structure
+
+    Returns
+    -------
+    struct : pymatgen.core.structure.Structure
+        Output structure
+
+    """
+    struct = structure.copy()
+    for key in struct.site_properties.keys():
+        if key == 'magmom':
+            new_magmom = []
+            for m in struct.site_properties[key]:
+                if m == None:
+                    new_magmom.append(0.0)
+                else:
+                    new_magmom.append(m)
+            struct.add_site_property('magmom', new_magmom)
+        else:
+            struct.remove_site_property(key)
+    return struct
+
+def StackAlignedSlabs(bottom_slab, top_slab, top_shift=[0,0,0]):
+    """
+    Combine slabs that are centered around 0 into a single structure.
+    
+    Optionally shift the top slab by a vector of cartesian coordinates.
+
+    Parameters
+    ----------
+    bottom_slab : pymatgen.core.structure.Structure
+        Bottom slab.
+    top_slab : pymatgen.core.structure.Structure
+        Top slab.
+    top_shift : list of 3 floats, optional
+        Vector of caresian coordinates with which to shift the top slab.
+        The default is [0,0,0].
+
+    Returns
+    -------
+    interface : pymatgen.core.structure.Structure
+        DESCRIPTION.
+
+    """
+    interface = bottom_slab.copy()
+    t_copy = top_slab.copy()
+    
+    t_copy.translate_sites(indices=range(len(t_copy.sites)),
+                           vector=top_shift,
+                           frac_coords=False, to_unit_cell=False)
+    
+    for s in t_copy.sites:
+        new_site = PeriodicSite(lattice=interface.lattice,
+                                coords=s.frac_coords,
+                                coords_are_cartesian=False,
+                                species=s.species)
+        interface.sites.append(new_site)
+    
+    return interface
+
+def ReCenterAlignedSlabs(top_slab, bottom_slab, d=2.5):
+    """
+    Center two slabs around z=0 and give them the distance d.
+
+    Parameters
+    ----------
+    top_slab : pymatgen.core.structure.Structure
+        The slab that should be on top.
+    bottom_slab : pymatgen.core.structure.Structure
+        The slab that should be on the bottom.
+    d : float, optional
+        The desired distance between the slabs. The default is 2.5.
+
+    Returns
+    -------
+    t_copy : pymatgen.core.structure.Structure
+        Top slab that is shifted so that the lowest atom is at +d/2
+    b_copy : pymatgen.core.structure.Structure
+        Bottom slab that is shifted so that the topmost atom is at -d/2
+
+    """
+    t_copy = top_slab.copy()
+    b_copy = bottom_slab.copy()
+    top_zs=[]
+    bot_zs=[]
+    for s in t_copy.sites:
+        top_zs.append(s.coords[-1])
+    top_shift = -min(top_zs) + d/2
+    
+    for s in b_copy.sites:
+        bot_zs.append(s.coords[-1])
+    bot_shift = -max(bot_zs) - d/2
+
+    t_copy.translate_sites(indices=range(len(t_copy.sites)),
+                           vector=[0,0,top_shift],
+                           frac_coords=False, to_unit_cell=False)
+    b_copy.translate_sites(indices=range(len(b_copy.sites)),
+                           vector=[0,0,bot_shift],
+                           frac_coords=False, to_unit_cell=False)
+    return t_copy, b_copy
+
+def GetEmin(potcar):
+    """
+    Return the minimal recommended  energy cutoff for a given Potcar object.
+    
+    Unfortunately I don not think that pymatgen Potcars can access the data
+    for the recommended cutoffs directly, so I write out a file first and
+    then scan for the ENMAX lines. The largest EMIN value found is returned
+    in the end.
+
+    Parameters
+    ----------
+    potcar : pymatgen.io.vasp.inputs.Potcar
+        The pymatgen representation of a VASP POTCAR file.
+
+    Returns
+    -------
+    float
+        The largest EMIN value of all species present in the potcar.
+
+    """
+    potcar.write_file('temp_potcar')
+    with open('temp_potcar', 'r') as pot:
+        emin = []
+        for l in pot:
+            if l.strip().startswith('ENMAX'):
+                emin.append(float(l.split()[-2]))
+    os.remove('temp_potcar')
+    return max(emin)
+                    
 
 def RemoveMatchingFiles(list_of_patterns):
     """
     Remove all files matching the patterns (wildcards) in the current
     directory.
     """
-    import os, glob
     remove_list=[]
     for pattern in list_of_patterns:
         remove_list.extend(glob.glob(pattern))
@@ -287,23 +431,16 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
 
     Returns
     -------
-    vis : str
-        A vasp input set for pymatgen.
-    uis : dict
-        User input settings that will override the standard setting in the vis.
-    vdw : str
-        Specifies which vdw functional is used. (optB86b or rVV10)
+    vis : pymatgen.io.vasp.sets.MPStaticSet
+        
     """
 
     allowed_types = ['bulk_from_scratch', 'bulk_follow_up', 'bulk_nscf',
                      'slab_from_scratch', 'slab_follow_up', 'slab_nscf']
     
     if static_type not in allowed_types:
-        raise SystemExit('relax type is not known. Please select from: {}'
+        raise SystemExit('static type is not known. Please select from: {}'
                          .format(allowed_types))
-
-    # Set vasp input set (currently none available for static SCAN!)
-    vis = 'MPStaticSet'
         
     #Set user incar settings:
     uis = {}
@@ -319,6 +456,7 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
     
     if static_type.endswith('from_scratch'):
         uis['ICHARG'] = 2
+        uis['LAECHG'] = '.FALSE.'
     
     if structure.num_sites < 20:
         uis['LREAL'] = '.FALSE.'
@@ -373,7 +511,28 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
         uis['ICHARG'] = 11
         uis['NELMDL'] = -1
         
-    return vis, uis, vdw
+    if 'k_dens' in comp_parameters:
+        kpoints = Kpoints.automatic_gamma_density(structure,
+                                              comp_parameters['k_dens'])
+    else:
+        #if no k-density is supplied in the comp_parameters, use a large value
+        kpoints = Kpoints.automatic_gamma_density(structure, 5000)
+    
+    #If a structure has a vacuum layer, set the third kpoints devision to 1
+    #by force.
+    if static_type.startswith('slab_'):
+        uks = Kpoints(comment=kpoints.comment+'  adjusted for slabs',
+                      num_kpts=0,
+                      kpts=[[kpoints.kpts[0][0], kpoints.kpts[0][1], 1]])
+    else:
+        uks = kpoints
+        
+    # Set vasp input set (currently none available for static SCAN!)
+    vis = MPStaticSet(structure, user_incar_settings = uis, vdw = vdw,
+                      user_kpoints_settings = uks,
+                      user_potcar_functional = 'PBE_54')
+        
+    return vis
 
 def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
     """Make custom vasp settings for relaxations.
@@ -405,7 +564,8 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
     allowed_types = ['bulk_full_relax', 'bulk_vol_relax', 'bulk_pos_relax',
                      'bulk_shape_relax',
                      'slab_shape_relax', 'slab_pos_relax',
-                     'interface_shape_relax', 'interface_pos_relax']
+                     'interface_shape_relax', 'interface_pos_relax',
+                     'interface_z_relax']
     
     if relax_type not in allowed_types:
         raise SystemExit('relax type is not known. Please select from: {}'
@@ -421,6 +581,7 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
     uis['MAXMIX'] = 100
     uis['NELMIN'] = 4
     uis['EDIFF'] = 1.0E-5
+    uis['LAECHG'] = '.FALSE.'
     
     if structure.num_sites < 20:
         uis['LREAL'] = '.FALSE.'
@@ -437,6 +598,13 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
         uis['ISIF'] = 3
     elif relax_type.endswith('pos_relax'):
         uis['ISIF'] = 2
+    elif relax_type.endswith('z_relax'):
+        uis['ISIF'] = 2
+        #Set up selective dynamics array for the structrues site property
+        sd_array = []
+        for i in range(len(structure.sites)):
+            sd_array.append([False, False, True])
+        structure.add_site_property('selective_dynamics', sd_array)
     elif relax_type.endswith('vol_relax'):
         uis['ISIF'] = 7
     elif relax_type.endswith('shape_relax'):
@@ -477,10 +645,20 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
         vdw = None
         
     if 'k_dens' in comp_parameters:
-        uks = Kpoints.automatic_gamma_density(structure,
+        kpoints = Kpoints.automatic_gamma_density(structure,
                                               comp_parameters['k_dens'])
     else:
-        uks = None
+        #if no k-density is supplied in the comp_parameters, use a large value
+        kpoints = Kpoints.automatic_gamma_density(structure, 5000)
+
+    #If a structure has a vacuum layer, set the third kpoints devision to 1
+    #by force.
+    if relax_type.startswith('slab_') or relax_type.startswith('interface_'):
+        uks = Kpoints(comment=kpoints.comment+'  adjusted for slabs',
+                      num_kpts=0,
+                      kpts=[[kpoints.kpts[0][0], kpoints.kpts[0][1], 1]])
+    else:
+        uks = kpoints
         
     if 'functional' in comp_parameters:
         if comp_parameters['functional'] == 'SCAN':
@@ -490,13 +668,16 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
                     uis['SIGMA'] = 0.1
                     uis['ISMEAR'] = 0
             vis = MPScanRelaxSet(structure, user_incar_settings = uis,
-                                 vdw = vdw, user_kpoints_settings = uks)
+                                 vdw = vdw, user_kpoints_settings = uks,
+                                 user_potcar_functional = 'PBE_54')
         else:
             vis = MPRelaxSet(structure, user_incar_settings = uis, vdw = vdw,
-                             user_kpoints_settings = uks)
+                             user_kpoints_settings = uks,
+                             user_potcar_functional = 'PBE_54')
     else:
        vis = MPRelaxSet(structure, user_incar_settings = uis, vdw = vdw,
-                        user_kpoints_settings = uks)
+                        user_kpoints_settings = uks,
+                        user_potcar_functional = 'PBE_54')
         
     return vis
 

@@ -11,7 +11,7 @@ from triboflow.firetasks.kpoint_convergence import FT_StartKPointConvo
 from triboflow.firetasks.structure_manipulation import FT_StartSlabRelaxSWF, \
     FT_MakeHeteroStructure
 from triboflow.firetasks.check_inputs import FT_UpdateCompParams
-from triboflow.helper_functions import GetLowEnergyStructure
+from triboflow.helper_functions import GetLowEnergyStructure, InterfaceName
 
 def Heterogeneous_WF(inputs):
     """Return main workflow for heterogeneous interfaces within Triboflow.
@@ -119,6 +119,9 @@ def Heterogeneous_WF(inputs):
                     MakeSlabs_M1: [MakeInterface],
                     MakeSlabs_M2: [MakeInterface]}
 
-    WF = Workflow(WF, Dependencies, name='Heterogeneous TriboFlow')
+    WF_Name = 'TriboFlow '+InterfaceName(mp_id_1, mat_1.get('miller'),
+                            mp_id_2, mat_2.get('miller'))
+
+    WF = Workflow(WF, Dependencies, name=WF_Name)
     return WF
 
