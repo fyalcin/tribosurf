@@ -11,8 +11,10 @@ The project is a collaboration between [Michael Wolloch](https://www.researchgat
 	  3. [Create a folder structure, download and install](#triboflowinstall)
 	  4. [Configuring FireWorks](#configurefw)
 	  5. [Configuring pymatgen](#configurepymatgen)
- 3. [Testing your installation of FireWorks](#testing)
- 4. [Using TriboFlow](#using)
+ 2. [Testing your installation of FireWorks](#testing)
+ 3. [Using TriboFlow](#using)
+	 1. [Running a workflow](#runningawf)
+	 2. [Looking at the results](#results)
 
 
 ## Download and Installation <a name="install"></a>
@@ -31,7 +33,7 @@ This is **optional** and you should skip these steps if you **already have a dat
  1. Install the conda package (which is unfortunately a bit out of date) of MongoDB by simply running `conda install -c anaconda mongodb` while the TriboFlow environment is active.
  2. You should now have access to the mongo shell via the `mongo`  command and the daemon via the `mongod` command. Before we create the database and set up the daemon, we have to prepare a configuration file and decide where the database should be located. The location will be referred to as `<YourMongoPath>`, and you put the configuration file `mongod.conf` there. It should look somewhat similar to the yaml file below, but you can also tune it according to the options given [here](https://docs.mongodb.com/v4.0/reference/configuration-options/). Importand settings are `storage.dbPath` (where your database will be located), `processManagement.fork` (If true, the process will run in the background and not block your shell), `net.port` (use the standard port for MongoDB: 27017), and `security.authorization` (should be disabled in the beginning to set up the users). Note that you must use spaces and not tabs in YAML!
 
-Example mongod.conf file:
+Example mongod.conf file:<a name="mongodconf"></a>
  ~~~
 storage:  
     dbPath: "<YourMongoPath>/data/db"  
@@ -92,6 +94,7 @@ Now exit the mongo shell:
 Here we assume that the database is locally installed in the same conda environment, but the procedure is not much different if a cloud service like Atlas is used or if the database is hosted on a different server.
 
 1. Change into your `<YourPath>/config` folder and write a `db.json` file so FireWorks can access your database (If your database is not local, the "host" has to change of course, e.g. for a Atlas DB you might have something like `"mongodb+srv://cluster0-4bevc.mongodb.net"` instead of `"localhost"`):
+<a name="dbjson"></a>
  ~~~
 {  
 	"host": "localhost",  
@@ -106,15 +109,15 @@ Here we assume that the database is locally installed in the same conda environm
 	"authsource": "admin"  
 }
 ~~~
-2. Test this by running the following python script inside your `<YourPath>/config` folder:
+3. Test this by running the following python script inside your `<YourPath>/config` folder:
 `from atomate.vasp.database import VaspCalcDb`
 `x = VaspCalcDb.from_db_file("db.json")`
 `x.reset()`
 `print("SUCCESS")`
 All is well if you see "SUCCESS" printed on screen.
-3. Now we setup the launchpad (A database where Fireworks are started from), using functionalities of FireWorks by typing `lpad init` and select the same database name, username (`<RootUser>`) and password as when you created the database. Keep the default (None) for the `ssl_ca_file` parameter, but enter `admin` as the `authsource` parameter as suggested by the prompt. You can check and modify the results by looking into `my_launchpad.yaml`. 
-4. Test this by typing `lpad -l my_launchpad.yaml reset`
-5. Now we will setup the local machine as a FireWorker, which is nothing else than a machine which can pull and execute calculations from the launchpad that are ready to run. It contains information about the database file, the command running VASP on this machine, and other information necessary to run VASP smoothly and efficiently on the local machine. For this we put a `my_fworker.yaml` file into the `<YourPath>/config` folder:
+4. Now we setup the launchpad (A database where Fireworks are started from), using functionalities of FireWorks by typing `lpad init` and select the same database name, username (`<RootUser>`) and password as when you created the database. Keep the default (None) for the `ssl_ca_file` parameter, but enter `admin` as the `authsource` parameter as suggested by the prompt. You can check and modify the results by looking into `my_launchpad.yaml`. 
+5. Test this by typing `lpad -l my_launchpad.yaml reset`
+6. Now we will setup the local machine as a FireWorker, which is nothing else than a machine which can pull and execute calculations from the launchpad that are ready to run. It contains information about the database file, the command running VASP on this machine, and other information necessary to run VASP smoothly and efficiently on the local machine. For this we put a `my_fworker.yaml` file into the `<YourPath>/config` folder:
 ~~~
 name: <WorkerName>
 category: ''
@@ -128,7 +131,7 @@ env:
         KPAR: <YourKparSetting>
         NCORE: <YourNcoreSetting>
 ~~~
-6. If the computer or cluster where you are installing TriboFlow has a job scheduler, you have to set up a file called `my_qadapter.yaml` in the `<YourPath>/config` directory. `<SchedulerType>` can be PBS/Torque, SLURM, SGE, or IBM LoadLeveler. `pre_rocket` and `post_rocket` are optional commands to be run in the job script before and after the workflow is executed, this is e.g. useful for loading and unloading modules. You probably will have to activate your conda environment here. The `--timeout` option tells the job to stop pulling new FireWorks from the Launchpad after `<sec>` number of seconds, which should of course be smaller than the walltime. E.g. if you have an allowed walltime of 72 hours, set the `--timeout` option to e.g. 172800 (2 days in seconds).  
+7. If the computer or cluster where you are installing TriboFlow has a job scheduler, you have to set up a file called `my_qadapter.yaml` in the `<YourPath>/config` directory. `<SchedulerType>` can be PBS/Torque, SLURM, SGE, or IBM LoadLeveler. `pre_rocket` and `post_rocket` are optional commands to be run in the job script before and after the workflow is executed, this is e.g. useful for loading and unloading modules. You probably will have to activate your conda environment here. The `--timeout` option tells the job to stop pulling new FireWorks from the Launchpad after `<sec>` number of seconds, which should of course be smaller than the walltime. E.g. if you have an allowed walltime of 72 hours, set the `--timeout` option to e.g. 172800 (2 days in seconds).  
 It is important to note that this type of rocket_launch will only work if the compute nodes on your cluster can access the MongoDB database, which is a problem for many clusters, since only the login nodes have access to the internet and firewall rules are strict. Possible solutions are described [here](https://materialsproject.github.io/fireworks/offline_tutorial.html). The `my_qadapter.yaml` file might look something like this:
 ~~~
 _fw_name: CommonAdapter  
@@ -143,11 +146,11 @@ pre_rocket: <Custom commands to load modules and conda etc.>
 post_rocket: <Custom commands to unload modules etc.>
 logdir: <YourPath>/logs
 ~~~
-7.  To tell TriboFlow (more precisely FireWorks) where to find the configuration files you just created, we will write the final configuration file `FW_config.yaml` with the line `CONFIG_FILE_DIR: <YourPath>/config`. We will also set an environment variable to tell FireWorks where this file is. Make sure not to use spaces before or after the ‘=’ sign, since this might lead to problems and type
+8.  To tell TriboFlow (more precisely FireWorks) where to find the configuration files you just created, we will write the final configuration file `FW_config.yaml` with the line `CONFIG_FILE_DIR: <YourPath>/config`. We will also set an environment variable to tell FireWorks where this file is. Make sure not to use spaces before or after the ‘=’ sign, since this might lead to problems and type
 ~~~
 conda env config vars set FW_CONFIG_FILE=<YourPath>/config/FW_config.yaml  
 ~~~
-8. You will have to restart your conda environment and afterward verify if this worked by e.g. typing conda env config vars list or simply `echo $FW_CONFIG_FILE.`
+9. You will have to restart your conda environment and afterward verify if this worked by e.g. typing conda env config vars list or simply `echo $FW_CONFIG_FILE.`
 
 [Back to top](#toc)
 ### Configuring pymatgen<a name="configurepymatgen"></a>
@@ -198,7 +201,7 @@ pps
 [Back to top](#toc)
 ## Using TriboFlow<a name="using"></a>
 This section is not really a complete user manual and more of a quickstart guide. More documentation is going to follow once the package is getting ready to be released.
-### Running a workflow
+### Running a workflow<a name="runningawf"></a>
 Main workflows are located in the `triboflow.workflows.main` module. To run a workflow one has to import it from there and pass the input parameters in a dictionary.
 ### The Heterogeneous_WF
 This workflow converges the computational parameters and the lattice parameters of two materials, constructs slabs from them using the supplied Miller indices to define the surface direction and matches those slabs to an interface.
@@ -266,6 +269,13 @@ A full list of possible inputs with types are:
 	- max_mismatch (float)
 	- max_angle_diff (float)
 	- r1r2_tol (float)
+
+[Back to top](#toc)
+
+### Looking at the results<a name="results"></a>
+The results of TribolFlow are saved in a separate MongoDB database, which nevertheless is hosted on the same server  (note that the `directoryPerDB: true` line in [`mongod.conf`](#mongodconf) assures that the results are stored in a different folder). This database of results is called "triboflow", in contrast to the "FireWorks" database that is used by FireWorks (see the [db.json](#dbjson) file). The results are stored in different [collections](https://docs.mongodb.com/manual/core/databases-and-collections/#databases), separated for the functional used (PBE, or SCAN) and then split between bulk, slab, and interfaces results. Data in the triboflow database can be queried of course directly from the [mongo shell](https://docs.mongodb.com/manual/mongo/), but it is probably more useful to use the python interface to MongoDB, [pymongo](https://pymongo.readthedocs.io/en/stable/). Some functions to aid with this are provided in the `triboflow.helper_functions` module. To look quickly at single results or get a feel for how the data is structured in the database, it might be beneficial to install a GUI for MongoDB, like [Compass](https://www.mongodb.com/products/compass). (Note that you can use the web-GUI of Atlas when you are using this cloud based solution instead of a local installation of MongoDB.)
+
+Also note that there is a web-GUI provided by FireWorks where you can check out the Workflows and Fireworks in your FireWorks database. Just type `lpad web_gui` for that.
 
 [Back to top](#toc)
 
