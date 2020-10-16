@@ -86,7 +86,7 @@ Now exit the mongo shell:
 ### Create a folder structure, download and install TriboFlow<a name="triboflowinstall"></a>
 1. Select a location where you want to have your TriboFlow files located. We will assume this is `<YourPath>`. Now create two subfolders: `<YourPath>/config` for your configuration files and `<YourPath>/pps` for your pseudopotentials.
 2. In the same folder we will now download the TriboFlow files from gitlab by typing `git clone https://gitlab.com/triboteam/TriboFlow.git`. This will (for now) only work if your gitlab account has authorisation!
-3. You should now see a folder `<YourPath>/TriboFlow`. `cd` into it and run `pip install .` to install TriboFlow and all the other packages that are required to run it into your active conda environment. 
+3. You should now see a folder `<YourPath>/TriboFlow`. `cd` into it and run `pip install -e .` to install TriboFlow and all the other packages that are required to run it into your active conda environment. 
 3a. If there is an error that the directory is not installable, there might not yet be a setup.py file in the master branch. Checkout a development branch by typing `git checkout development` or `git checkout mwo_dev` to switch branches and run `pip install .` again.
 
 [Back to top](#toc)
