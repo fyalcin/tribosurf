@@ -82,6 +82,14 @@ Now we will create an adminUser and a readOnlyUser by typing:
 Now exit the mongo shell: 
 `exit`
 
+5. Stop the mongo daemon by executing `mongod --shutdown --dbpath <YoutMongoPath>/data/db` and activate authorization in the `mongod.conf` file by changing the last line to `authorization: enabled`. Now, your database is password protected and you have to the username and password you created before in the mongo shell. To do that, while in the mongo shell, switch to the admin database by executing `use admin` and then authenticate with `db.auth(<RootUser>, <RootPassword>)`. Then exit the mongo shell again.
+
+6. It might be a good idea to define some aliases in your `.bashrc` or '.myaliases` files to start and stop the mongod daemon, so you can do it quickly if needed. E.g.:
+```
+alias mongo_start="mongod -f <YourMongoPath>/mongod.conf"
+alias mongo_stop="mongod --shutdown --dbpath <YourMongoPath>/data/db"
+```
+
 [Back to top](#toc)
 ### Create a folder structure, download and install TriboFlow<a name="triboflowinstall"></a>
 1. Select a location where you want to have your TriboFlow files located. We will assume this is `<YourPath>`. Now create two subfolders: `<YourPath>/config` for your configuration files and `<YourPath>/pps` for your pseudopotentials.
