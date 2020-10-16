@@ -9,7 +9,6 @@ Calculate the High Simmetry (HS) points for slab and interface
 """
 
 import numpy as np
-from utility_functions import *
 
 
 # =============================================================================
@@ -139,7 +138,7 @@ def NormalizeHSDict(hs, to_array=True):
 # =============================================================================
 
 def GetInterfaceHS(hs_1, hs_2):
-    """
+    """/fs/home/wolloch/git_test/TriboFlow/triboflow/
     Calculate the HS sites for a hetero interface by combining the HS sites of
     the bottom slab (hs_1) with the upper slab (hs_2) 
 
