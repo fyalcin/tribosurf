@@ -130,7 +130,7 @@ class FT_DoPPESCalcs(FiretaskBase):
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
-        structure_name = self.get('structure_name', 'minimum_relaxed')
+        structure_name = self.get('structure_name', 'relaxed_structure@min')
         
         d_list = self.get('distance_list')
         
