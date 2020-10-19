@@ -16,7 +16,7 @@ from utility_functions import *
 # CALCULATE THE HS POINTS FOR A SLAB
 # =============================================================================
 
-def GetSlabHS(slab, allowed_sites=['ontop', 'bridge', 'hollow']): 
+def GetSlabHS(slab, allowed_sites=['ontop', 'bridge', 'hollow'], to_array=True): 
     """
     Calculate the High Simmetry (HS) points for a material provided as input,
     which need to be a pymatgen object (Slab or Structure).
@@ -36,8 +36,8 @@ def GetSlabHS(slab, allowed_sites=['ontop', 'bridge', 'hollow']):
         Unless specific reasons, just leave the default and work on the sites 
         of your interest later. The default is ['ontop', 'bridge', 'hollow'].
         
-    normalize : bool, optional
-        The default is True.
+    to_array : bool, optional
+        If you want to return arrays or lists. The default is True.
 
     Returns
     -------
@@ -100,8 +100,8 @@ def GetSlabHS(slab, allowed_sites=['ontop', 'bridge', 'hollow']):
     
     # Convert the elements of the dictionaries to proper numpy arrays and 
     # remove the z coordinate of the HS sites
-    hs = NormalizeHSDict(hs, to_array=True)
-    hs_all = NormalizeHSDict(hs_all, to_array=True)
+    hs = NormalizeHSDict(hs, to_array)
+    hs_all = NormalizeHSDict(hs_all, to_array)
 
     return hs, hs_all
 

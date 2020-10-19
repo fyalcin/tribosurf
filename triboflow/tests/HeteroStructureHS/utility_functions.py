@@ -10,6 +10,7 @@ Utility tools to calculate the High Simmetry (HS) points for slab and interface
 
 import numpy as np
 from HS_functions import *
+from ase import Atoms
 
 
 # =============================================================================
@@ -287,3 +288,37 @@ def ClosestPoint(S, q):
     distance = np.sqrt( np.sum((q-S)*(q-S), axis=-1) )
     
     return S[np.argmin(distance), :]
+
+def ToList(hs, key):
+    """
+    Take a dictionary as input and key. Convert the element of the 
+    dictionary from a (n, 3) array into a list of lists.
+
+    """
+    
+    my_list = []
+    for row in hs[key]:
+        my_list.append(list(row))
+    return my_list
+    
+    
+def PBCPoints(hs, cell, z_red=True):
+    """
+    Create a "fake" molecule structure from the HS points calculated for
+    the tribological interface, in order to apply PBC to the sites.
+    Return a dictionary with the sites within cell. z_red remove the 
+    z-coordinates from the translations.
+
+    """
+    
+    hs_new = {}
+    for k in hs.keys():
+        sites = ToList(hs, k)
+        atoms_fake = Atoms(positions=sites, cell=cell, pbc=[1,1,1])
+        hs_new[k] = atoms_fake.get_positions( wrap=True, pbc=True)
+    
+    if z_red:
+        for k in hs_new.keys():
+            hs_new[k] = hs_new[k][:, :2]
+    
+    return hs_new

@@ -165,18 +165,44 @@ if __name__ == '__main__':
     hs = GetInterfaceHS(hs_sub, hs_coat)
     hs_all = GetInterfaceHS(hs_sub_all, hs_coat_all)
     
-    hs = ApplyPbcToHS(hetero, hs)
-    hs_all = ApplyPbcToHS(hetero, hs_all)
+    hs1 = ApplyPbcToHS(hetero, hs)
+    hs1_all = ApplyPbcToHS(hetero, hs_all)
     
     # Remove the z-coordinates 
-    hs_sub = RemoveZCoords(hs_sub)
-    hs_sub_all = RemoveZCoords(hs_sub_all)
-    hs_coat = RemoveZCoords(hs_coat)
-    hs_coat_all = RemoveZCoords(hs_coat_all)
-    hs = RemoveZCoords(hs)
-    hs_all = RemoveZCoords(hs_all)
+    #hs_sub = RemoveZCoords(hs_sub)
+    #hs_sub_all = RemoveZCoords(hs_sub_all)
+    #hs_coat = RemoveZCoords(hs_coat)
+    #hs_coat_all = RemoveZCoords(hs_coat_all)
+    #hs = RemoveZCoords(hs)
+    #hs_all = RemoveZCoords(hs_all)
     
     # Plot the HS points
-    Plot_SlabHS(substrate,  hs_sub,  to_fig=None)
-    Plot_SlabHS(  coating,  hs_coat, to_fig=None)
+    #Plot_SlabHS(substrate,  hs_sub,  to_fig=None)
+    #Plot_SlabHS(  coating,  hs_coat, to_fig=None)
+    #Plot_SlabHS(substrate,       hs, to_fig=None)
+    
+    
+        
+    ######
+    # Try to shifts the HS points in the unit cell in a different way
+    
+    # USING ASE        
+    
+    hs2 = PBCPoints(hs, hetero.lattice.matrix)
+    hs2_all = PBCPoints(hs_all, hetero.lattice.matrix)
+    
+    
     Plot_SlabHS(substrate,       hs, to_fig=None)
+    Plot_SlabHS(substrate,      hs1, to_fig=None)
+    Plot_SlabHS(substrate,      hs2, to_fig=None)
+    
+    
+    
+    # Shifts done using translate_sites. Not possible to use them because
+    # the method requires o insert the index of the atoms you want to shift
+        
+    # hs_list = ToList(hs)
+    # hs_all_list = ToList(hs_all)
+    
+    # hs_2 = hetero.translate_sites(hs_list, [0,0,0], to_unit_cell=True)
+    # hs_all_2 = hetero.translate_sites(hs_all_list, [0,0,0], to_unit_cell=True)
