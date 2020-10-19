@@ -302,7 +302,7 @@ def ToList(hs, key):
     return my_list
     
     
-def PBCPoints(hs, cell, z_red=True):
+def PBCPoints(hs, cell, to_array=False, z_red=True):
     """
     Create a "fake" molecule structure from the HS points calculated for
     the tribological interface, in order to apply PBC to the sites.
@@ -313,12 +313,18 @@ def PBCPoints(hs, cell, z_red=True):
     
     hs_new = {}
     for k in hs.keys():
-        sites = ToList(hs, k)
+        
+        if not isinstance(hs[k], list):
+            sites = []
+            for row in hs[k]:
+                sites.append(list(row))
+                
         atoms_fake = Atoms(positions=sites, cell=cell, pbc=[1,1,1])
-        hs_new[k] = atoms_fake.get_positions( wrap=True, pbc=True)
+        hs_new[k] = atoms_fake.get_positions( wrap=True, pbc=True )
     
-    if z_red:
-        for k in hs_new.keys():
+        if z_red:
             hs_new[k] = hs_new[k][:, :2]
+        if not to_array:
+            hs_new[k] = hs_new[k].tolist()
     
     return hs_new
