@@ -415,10 +415,10 @@ class FT_MakeHeteroStructure(FiretaskBase):
 # ============================================================================
 # ============================================================================
                 #hetero_interfaces = generate_all_configs(top_aligned,
-                hetero_interfaces = get_interface(top_aligned,
-                                                     bottom_aligned,
-                                                     nlayers_2d = 1,
-                                                     nlayers_substrate = 1,
+                hetero_interfaces = get_interface(bottom_aligned,
+                                                  top_aligned,
+                                                  nlayers_2d = 1,
+                                                  nlayers_substrate = 1,
                             separation = inter_params['interface_distance'])
         
                 #inter_slab = hetero_interfaces[0]
