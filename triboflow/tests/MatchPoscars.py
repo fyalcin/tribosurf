@@ -26,8 +26,8 @@ def MatchTheInterface(slab_1, slab_2, inter_params={}):
                                         max_angle_diff = max_angle_diff,
                                         r1r2_tol = r1r2_tol)
     if bottom_aligned:
-        hetero_interfaces = get_interface(top_aligned,
-                                      bottom_aligned,
+        hetero_interfaces = get_interface(bottom_aligned,
+                                      top_aligned,
                                       nlayers_2d = 1,
                                       nlayers_substrate = 1,
                                       separation = separation)
