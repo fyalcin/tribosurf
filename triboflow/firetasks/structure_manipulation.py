@@ -289,6 +289,7 @@ class FT_MakeSlabInDB(FiretaskBase):
                            center_slab = True,
                            primitive = True,
                            lll_reduce = True,
+                           max_normal_search=max([abs(l) for l in miller]),
                            min_slab_size = min_thickness,
                            min_vacuum_size = min_vacuum)
         
