@@ -188,8 +188,8 @@ if __name__ == '__main__':
     
     # USING ASE        
     
-    hs2 = PBCPoints(hs, hetero.lattice.matrix)
-    hs2_all = PBCPoints(hs_all, hetero.lattice.matrix)
+    hs2 = PBCPoints(hs, hetero.lattice.matrix, to_array=True)
+    hs2_all = PBCPoints(hs_all, hetero.lattice.matrix, to_array=True)
     
     
     Plot_SlabHS(substrate,       hs, to_fig=None)
