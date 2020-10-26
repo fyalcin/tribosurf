@@ -17,7 +17,7 @@ from utility_functions import *
 # =============================================================================
 
 
-def StaticTribo(interface, hs, E):  
+def StaticTribo(hs_E, cell):  
     """
     Main function to calculate the PES, MEP, and shear strength of an interface
 
@@ -46,18 +46,17 @@ def StaticTribo(interface, hs, E):
         Relevant information about Shear Strength
     """
     
-    lattice = interface.lattice.matrix
     
     # Get the PES
-    rbf, pes_dict, pes_data = GetPES(lattice, hs, E)
-    data_ortho, lattice_ortho = Orthorombize(lattice, pes_data)
+    rbf, pes_dict, pes_data = GetPES(cell, hs, E)
+    data_ortho, cell_ortho = Orthorombize(cell, pes_data)
     
     # Get the MEP on the potential energy surface starting from a guess
-    bsmep, ss_bsmep, theta = GetBSMEP(lattice_ortho, rbf)
-    mep, mep_convergency = GetMEP(lattice_ortho, rbf, theta)
+    bsmep, ss_bsmep, theta = GetBSMEP(cell_ortho, rbf)
+    mep, mep_convergency = GetMEP(cell_ortho, rbf, theta)
     
     # Calculate the MEP along the x, y, and MEP directions
-    data_ss_xy, ss_xy = GetShearStrength_xy(lattice_ortho, rbf)
+    data_ss_xy, ss_xy = GetShearStrength_xy(cell_ortho, rbf)
     data_ss_mep, ss_mep  = GetShearStrength(mep, rbf)
     
     pes_info = [pes_dict, pes_data, rbf]

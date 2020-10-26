@@ -156,14 +156,15 @@ if __name__ == '__main__':
     ##########################  Get the HS points  ############################
     ###########################################################################
     
+    cell = hetero.lattice.matrix
     
     # Extract the HS points for the slabs
-    hs_sub, hs_sub_all = GetSlabHS(substrate)
-    hs_coat, hs_coat_all = GetSlabHS(coating)
+    hs_sub, hs_sub_all = GetSlabHS(substrate, to_array=False)
+    hs_coat, hs_coat_all = GetSlabHS(coating, to_array=True)
     
     # Calculate the HS points for the hetero interface
-    hs = GetInterfaceHS(hs_sub, hs_coat, hetero.lattice.matrix)
-    hs_all = GetInterfaceHS(hs_sub_all, hs_coat_all, hetero.lattice.matrix)
+    hs = GetInterfaceHS(hs_sub, hs_coat, cell, to_array=False)
+    hs_all = GetInterfaceHS(hs_sub_all, hs_coat_all, cell, to_array=True)
     
     Plot_SlabHS(hs, substrate, to_fig=None)
     
