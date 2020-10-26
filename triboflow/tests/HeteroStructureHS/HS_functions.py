@@ -16,7 +16,7 @@ from utility_functions import *
 # CALCULATE THE HS POINTS FOR A SLAB
 # =============================================================================
 
-def GetSlabHS(slab, allowed_sites=['ontop', 'bridge', 'hollow'], to_array=True): 
+def GetSlabHS(slab, allowed_sites=['ontop', 'bridge', 'hollow'], to_array=False): 
     """
     Calculate the High Simmetry (HS) points for a material provided as input,
     which need to be a pymatgen object (Slab or Structure).
@@ -37,7 +37,7 @@ def GetSlabHS(slab, allowed_sites=['ontop', 'bridge', 'hollow'], to_array=True):
         of your interest later. The default is ['ontop', 'bridge', 'hollow'].
         
     to_array : bool, optional
-        If you want to return arrays or lists. The default is True.
+        If you want to return arrays or lists. The default is False.
 
     Returns
     -------
@@ -138,7 +138,7 @@ def NormalizeHSDict(hs, to_array=True):
 # CALCULATE HS POINTS FOR AN INTERFACE
 # =============================================================================
 
-def GetInterfaceHS(hs_1, hs_2):
+def GetInterfaceHS(hs_1, hs_2, cell, to_array=False, z_red=True):
     """
     Calculate the HS sites for a hetero interface by combining the HS sites of
     the bottom slab (hs_1) with the upper slab (hs_2) 
@@ -149,15 +149,29 @@ def GetInterfaceHS(hs_1, hs_2):
         High Symmetry points of the bottom slab
     hs_2 : dict
         High Symmetry points of the upper slab
+    to_array : bool, optional
+        If set to True return an HS dictionary containing arrays, else lists.
+        The default is False.
+    z_red : bool, optional
+        Remove the z-coordinates from the translations. The default is True.
 
     Returns
     -------
     hs : dict
-        High Symmetry points of the hetero interface
+        High Symmetry points of the hetero interface.
 
     """
     
     hs = {}
+    
+    typ_1 = list( set(type(k) for k in hs_1.values()) )[0]
+    if typ_1 == list:
+        hs_1 = HS_DictConverter(hs_1, to_array=True)
+        
+    typ_2 = list( set(type(k) for k in hs_1.values()) )[0]
+    if typ_2 == list:
+        hs_2 = HS_DictConverter(hs_2, to_array=True)
+        
     
     # Calculate the shift between each HS point of the first material with each
     # HS point of the second material
@@ -171,5 +185,8 @@ def GetInterfaceHS(hs_1, hs_2):
                 shifts_stack.append( d2 - el_d1 )
                 
             hs[k1+'-'+k2] = np.concatenate(shifts_stack, axis=0)
+    
+    hs = PBCPoints(hs, cell, to_array=to_array, z_red=True)
+        
             
     return hs

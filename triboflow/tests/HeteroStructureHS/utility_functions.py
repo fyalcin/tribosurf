@@ -35,9 +35,9 @@ def RemoveZCoords(hs):
 # =============================================================================
 
 
-def Plot_SlabHS(slab, hs, to_fig=None):
+def Plot_SlabHS(hs, slab, to_fig=None):
     """
-    Plot the slab slab, displaying the atoms and the HS sites of the surface
+    Plot the slab, displaying the atoms and the HS sites of the surface
     
     Parameters
     ----------
@@ -61,6 +61,11 @@ def Plot_SlabHS(slab, hs, to_fig=None):
  
     import matplotlib.pyplot as plt  
     from pymatgen.analysis.adsorption import plot_slab
+    
+    # Check the type of the hs points
+    typ = list( set(type(k) for k in hs.values()) )[0]
+    if typ == list:
+        hs = HS_DictConverter(hs, to_array=True)
     
     # Extract the lattice vector of the basal plane
     a = slab.lattice.matrix[0, :]
@@ -144,9 +149,10 @@ def Plot_UniformGrid(lattice, grid, n_a, n_b):
 # =============================================================================
 
 
-def ApplyPbcToHS(slab, hs):
+def ApplyPbcToHS(slab, hs): # OBSOLETE
     """
-    Apply pbc to the HS points of a slab/structure object in the axb plane
+    Apply pbc to the HS points of a slab/structure object in the axb plane.
+    WARNING: OBSOLETE FUNCTION. It requires nnp and pytorch to work.
     
     """
     
@@ -159,8 +165,8 @@ def ApplyPbcToHS(slab, hs):
     
     for k in hs.keys():
         element_new = pbc.map2central( lattice_t, 
-                                       Tensor(hs[k]),
-                                       pbc_t )
+                                        Tensor(hs[k]),
+                                        pbc_t )
         hs_new[k] = np.array(element_new)
             
     return hs_new
@@ -289,17 +295,58 @@ def ClosestPoint(S, q):
     
     return S[np.argmin(distance), :]
 
-def ToList(hs, key):
+def HS_DictConverter(hs, to_array=True):
     """
-    Take a dictionary as input and key. Convert the element of the 
-    dictionary from a (n, 3) array into a list of lists.
+    Modify the type of the elements of the HS dictionary to list or np.ndarray.
+
+    Parameters
+    ----------
+    hs : dict
+        Dictionary containing the High Symmetry points.
+    to_array : bool, optional
+        If set to True convert to array, otherwise convert to list. 
+        The default is True.
+
+    Raises
+    ------
+    ValueError
+        Raised if the dictionary values are of different types.
+        Print to stdout: "Your dictionary is weird, values have mixed types"
+
+    Returns
+    -------
+    hs_new : dict
+        New HS dictionary converted to the desired type.
 
     """
     
-    my_list = []
-    for row in hs[key]:
-        my_list.append(list(row))
-    return my_list
+    hs_new = {}
+    dict_types = list( set(type(k) for k in hs.values()) )
+    
+    try: 
+        assert(len(dict_types) == 1)
+        
+        typ = dict_types[0]
+        if to_array:
+            if typ == list:
+                for k in hs.keys():
+                    hs_new[k] = np.array(hs[k])    
+            else:
+                return hs
+            
+        else:
+            if typ == np.ndarray:
+                for k in hs.keys():
+                    hs_new[k] = hs[k].tolist() 
+            else:
+                return hs
+            
+        return hs_new
+            
+    except:
+        raise ValueError('Your dictionary is weird, values have mixed types')
+
+    
     
     
 def PBCPoints(hs, cell, to_array=False, z_red=True):
@@ -310,6 +357,10 @@ def PBCPoints(hs, cell, to_array=False, z_red=True):
     z-coordinates from the translations.
 
     """
+    
+    typ = list( set(type(k) for k in hs.values()) )[0]
+    if typ == list:
+        hs = HS_DictConverter(hs, to_array=True)
     
     hs_new = {}
     for k in hs.keys():

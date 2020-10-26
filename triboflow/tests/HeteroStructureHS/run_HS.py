@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-""" Test the modules written for HS points and PES/shear strength
+""" Test the modules written for HS points
 Created on Mon Oct  5 11:27:30 2020
 
 @author: gl
@@ -162,11 +162,14 @@ if __name__ == '__main__':
     hs_coat, hs_coat_all = GetSlabHS(coating)
     
     # Calculate the HS points for the hetero interface
-    hs = GetInterfaceHS(hs_sub, hs_coat)
-    hs_all = GetInterfaceHS(hs_sub_all, hs_coat_all)
+    hs = GetInterfaceHS(hs_sub, hs_coat, hetero.lattice.matrix)
+    hs_all = GetInterfaceHS(hs_sub_all, hs_coat_all, hetero.lattice.matrix)
     
-    hs1 = ApplyPbcToHS(hetero, hs)
-    hs1_all = ApplyPbcToHS(hetero, hs_all)
+    Plot_SlabHS(hs, substrate, to_fig=None)
+    
+    # OBSOLETE - TRY WITH NNP
+    #hs1 = ApplyPbcToHS(hetero, hs)
+    #hs1_all = ApplyPbcToHS(hetero, hs_all)
     
     # Remove the z-coordinates 
     #hs_sub = RemoveZCoords(hs_sub)
@@ -187,17 +190,12 @@ if __name__ == '__main__':
     # Try to shifts the HS points in the unit cell in a different way
     
     # USING ASE        
-    
-    hs2 = PBCPoints(hs, hetero.lattice.matrix, to_array=True)
-    hs2_all = PBCPoints(hs_all, hetero.lattice.matrix, to_array=True)
-    
-    
-    Plot_SlabHS(substrate,       hs, to_fig=None)
-    Plot_SlabHS(substrate,      hs1, to_fig=None)
-    Plot_SlabHS(substrate,      hs2, to_fig=None)
+    #hs2 = PBCPoints(hs, hetero.lattice.matrix, to_array=True)
+    #hs2_all = PBCPoints(hs_all, hetero.lattice.matrix, to_array=True)
+    #Plot_SlabHS(substrate,      hs2, to_fig=None)
     
     
-    
+    # NOT WORKING : 
     # Shifts done using translate_sites. Not possible to use them because
     # the method requires o insert the index of the atoms you want to shift
         
