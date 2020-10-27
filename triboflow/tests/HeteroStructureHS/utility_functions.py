@@ -386,7 +386,7 @@ def PBC_HSPoints(hs, cell, to_array=False, z_red=True):
     return hs_new
 
 
-def PBC_Coordinates(data, cell, to_array=True):
+def PBC_Coordinates(data, cell, to_array=True, scaled_positions=False):
     """
     Apply Periodic Boundary Conditions to a set of atoms (data) in a given 
     lattice cell (cell). PBC are applied by creating a "fake" molecule.
@@ -398,7 +398,7 @@ def PBC_Coordinates(data, cell, to_array=True):
     if not ( (isinstance(data, list)) or (isinstance(data, np.ndarray)) ):
             raise TypeError("data must be a numpy array or a list")
     
-    if not ( (isinstance(data, list)) or (isinstance(data, np.ndarray)) ):
+    if not ( (isinstance(cell, list)) or (isinstance(cell, np.ndarray)) ):
             raise TypeError("cell must be a numpy array or a list")
     
     # Convert input parameters to numpy arrays
@@ -406,7 +406,11 @@ def PBC_Coordinates(data, cell, to_array=True):
         data = data.tolist()
     
     # Create a fake atomic structures and apply PBC
-    atoms_fake = Atoms( positions=data, cell=cell, pbc=[1,1,1] )
+    if scaled_positions:
+        atoms_fake = Atoms( scaled_positions=data, cell=cell, pbc=[1,1,1] )
+    else:
+        atoms_fake = Atoms( positions=data, cell=cell, pbc=[1,1,1] )
+        
     data_new = atoms_fake.get_positions( wrap=True, pbc=True )
     
     if not to_array:
