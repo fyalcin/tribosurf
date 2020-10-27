@@ -401,17 +401,25 @@ def PBC_Coordinates(data, cell, to_array=True, scaled_positions=False):
     if not ( (isinstance(cell, list)) or (isinstance(cell, np.ndarray)) ):
             raise TypeError("cell must be a numpy array or a list")
     
-    # Convert input parameters to numpy arrays
-    if not isinstance(data, list):
-        data = data.tolist()
+    # Manage the situation where you provide only x, y coordinates
+    data = np.array(data)
+    two_col = False
+    pbc = [1, 1, 1]
+    if data.shape[1] == 2:
+        two_col = True
+        pbc = [1, 1, 0]
+        data = np.column_stack( [data, np.zeros(len(data))] )
     
     # Create a fake atomic structures and apply PBC
     if scaled_positions:
-        atoms_fake = Atoms( scaled_positions=data, cell=cell, pbc=[1,1,1] )
+        atoms_fake = Atoms( scaled_positions=data, cell=cell, pbc=pbc )
     else:
-        atoms_fake = Atoms( positions=data, cell=cell, pbc=[1,1,1] )
+        atoms_fake = Atoms( positions=data, cell=cell, pbc=pbc )
         
+    # Get the coordinates
     data_new = atoms_fake.get_positions( wrap=True, pbc=True )
+    if two_col:
+        data_new = data_new[:, :2]
     
     if not to_array:
         data_new = data_new.tolist()  
