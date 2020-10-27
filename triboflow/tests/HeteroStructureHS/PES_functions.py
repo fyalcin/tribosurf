@@ -17,22 +17,20 @@ from utility_functions import *
 # =============================================================================
 
 
-def StaticTribo(hs_E, cell):  
+def StaticTribo(hs, E, cell):  
     """
     Main function to calculate the PES, MEP, and shear strength of an interface
 
     Parameters
-    ----------
-    interface : pymatgen.core.surface.Slab (pymatgen.core.structure.Structure)
-        The interface object of which you want to calculate the PES. It is 
-        needed to extract the lattice parameter used to unfold the energies.
-        type(slab) could be either a Slab object or a Structure object.
-        
+    ----------        
     hs : dict
         Unfolded HS points of the interface, covering all the surface.        
 
     E : dict
         Contains the energy calculated for each unique surfacial HS site.
+        
+    cell : numpy.ndarray
+        Lattice parameter of the interface you want to study
 
     Returns
     -------
@@ -48,8 +46,8 @@ def StaticTribo(hs_E, cell):
     
     
     # Get the PES
-    rbf, pes_dict, pes_data = GetPES(cell, hs, E)
-    data_ortho, cell_ortho = Orthorombize(cell, pes_data)
+    rbf, pes_dict, pes_data = GetPES(hs, E, cell)
+    data_ortho, cell_ortho = Orthorombize(pes_data, cell)
     
     # Get the MEP on the potential energy surface starting from a guess
     bsmep, ss_bsmep, theta = GetBSMEP(cell_ortho, rbf)
@@ -71,21 +69,21 @@ def StaticTribo(hs_E, cell):
 # =============================================================================
 
 
-def GetPES(lattice, hs_all, E, to_fig=None):
+def GetPES(hs_all, E, cell, to_fig=None):
     """
     Main function to get the Potential Energy Surface (PES) for an interface. 
     The points are replicated to span a 3x3 lattice cell and are interpolated
     by using Radial Basis Functions (cubic function).
     
-    ----------
-    lattice : numpy.ndarray
-        Vectors of the lattice cell
-        
+    ----------        
     hs : dict
         Unfolded HS points of the interface, covering all the surface.
         
     E : dict
         Contains the energy calculated for each unique surfacial HS site.
+    
+    cell : numpy.ndarray
+        Vectors of the lattice cell of the interface.
         
     to_fig : string, optional
         Name of the image that you want to save, it will be: 'name_fig'+'.pdf' 
@@ -122,12 +120,12 @@ def GetPES(lattice, hs_all, E, to_fig=None):
     data, pes_dict = UnfoldPES(E, hs_all)   
     
     # Interpolate the data with Radial Basis Function
-    data_rep = ReplicatePESPoints(lattice, data, replicate_of=(3, 3) )
+    data_rep = ReplicatePESPoints(data, cell, replicate_of=(3, 3) )
     rbf = Rbf(data_rep[:, 0], data_rep[:, 1], data_rep[:, 2], function='cubic')
     
     # Calculate the PES on a very dense and uniform grid. Useful for further 
     # analysis (MEP, shear strength) and to plot the PES
-    coordinates = GenerateGridForPES(lattice, density=10)
+    coordinates = GenerateGridForPES(cell, density=10)
     E_new = rbf(coordinates[:, :2])
     pes_data = np.column_stack([coordinates[:, :2], E_new])
     
@@ -192,7 +190,7 @@ def UnfoldPES(E, hs_all):
     return pes_data, pes_dict
 
 
-def ReplicatePESPoints(lattice, pes_data, replicate_of=(1, 1)):
+def ReplicatePESPoints(pes_data, cell, replicate_of=(1, 1)):
     """ 
     Replicate the PES points to cover a (n,m)-size lattice cell
     
@@ -209,8 +207,8 @@ def ReplicatePESPoints(lattice, pes_data, replicate_of=(1, 1)):
         return pes_data
     
     else:        
-        a = lattice[0, :]
-        b = lattice[1, :]
+        a = cell[0, :]
+        b = cell[1, :]
         
         x = pes_data[:, 0]
         y = pes_data[:, 1]
@@ -228,8 +226,8 @@ def ReplicatePESPoints(lattice, pes_data, replicate_of=(1, 1)):
                     y_add = y + a[1]*i + b[1]*j
                     
                     # Collect coordinates and energies
-                    x_new = np.append(x_new, [x_new, x_add])
-                    y_new = np.append(y_new, [y_new, y_add])
+                    x_new = np.append(x_new, x_add)
+                    y_new = np.append(y_new, y_add)
                     E_new = np.append(E_new, E)
         
         coordinates_new = np.column_stack([x_new, y_new, E_new])
@@ -237,7 +235,7 @@ def ReplicatePESPoints(lattice, pes_data, replicate_of=(1, 1)):
         return coordinates_new
 
 
-def GenerateGridForPES(lattice, density=1, pts_a=None, to_plot=False):
+def GenerateGridForPES(cell, density=1, pts_a=None, to_plot=False):
     """
     Generate a 2D-uniform grid of points of density=density on a lattice plane
     given by lattice[0,:]Xlattice[1,:]
@@ -276,8 +274,8 @@ def GenerateGridForPES(lattice, density=1, pts_a=None, to_plot=False):
 
     """
         
-    a = lattice[0, :]
-    b = lattice[1, :]
+    a = cell[0, :]
+    b = cell[1, :]
     a_mod = np.sqrt(a[0]**2. + a[1]**2. + a[2]**2.)
     b_mod = np.sqrt(b[0]**2. + b[1]**2. + b[2]**2.)
     ratio = b_mod/a_mod
@@ -309,20 +307,20 @@ def GenerateGridForPES(lattice, density=1, pts_a=None, to_plot=False):
             matrix[k, 2] = i*dist_a_z + j*dist_b_z
             k += 1
     if to_plot:
-        Plot_UniformGrid(lattice, matrix, n_a, n_b)
+        Plot_UniformGrid(matrix, cell, n_a, n_b)
 
     return matrix
 
 
-def Orthorombize(lattice, pes_data):
+def Orthorombize(pes_data, cell):
     """
     Take the replicated points of the pes and cut them in a squared shape.
     TODO : Improve the code and VECTORIZE
 
     """
     
-    a = lattice[0, :]
-    b = lattice[0, :]
+    a = cell[0, :]
+    b = cell[1, :]
     
     if np.sign(a[0]) == np.sign(b[0]):
         if a[0] > 0:

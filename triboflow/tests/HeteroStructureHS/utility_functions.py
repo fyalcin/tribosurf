@@ -98,7 +98,7 @@ def Plot_SlabHS(hs, slab, to_fig=None):
     plt.show()
     
     
-def Plot_UniformGrid(lattice, grid, n_a, n_b):
+def Plot_UniformGrid(grid, cell, n_a, n_b):
     """
     Plot an uniform grid of n_aXn_b points on the planar base of a lattice 
     
@@ -107,8 +107,8 @@ def Plot_UniformGrid(lattice, grid, n_a, n_b):
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d import Axes3D
     
-    a = lattice[0, :]
-    b = lattice[1, :]
+    a = cell[0, :]
+    b = cell[1, :]
     v = np.cross(a, b)
     
     mod_a = np.sqrt(a[0]**2. + a[1]**2. + a[2]**2.)
