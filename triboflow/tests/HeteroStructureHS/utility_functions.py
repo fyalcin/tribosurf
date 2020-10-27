@@ -295,6 +295,7 @@ def ClosestPoint(S, q):
     
     return S[np.argmin(distance), :]
 
+
 def HS_DictConverter(hs, to_array=True):
     """
     Modify the type of the elements of the HS dictionary to list or np.ndarray.
@@ -346,10 +347,8 @@ def HS_DictConverter(hs, to_array=True):
     except:
         raise ValueError('Your dictionary is weird, values have mixed types')
 
-    
-    
-    
-def PBCPoints(hs, cell, to_array=False, z_red=True):
+
+def PBC_HSPoints(hs, cell, to_array=False, z_red=True):
     """
     Create a "fake" molecule structure from the HS points calculated for
     the tribological interface, in order to apply PBC to the sites.
@@ -358,24 +357,66 @@ def PBCPoints(hs, cell, to_array=False, z_red=True):
 
     """
     
-    typ = list( set(type(k) for k in hs.values()) )[0]
-    if typ == list:
-        hs = HS_DictConverter(hs, to_array=True)
+    # Type check and error handling
+    if not isinstance(hs, dict):
+            raise TypeError("hs must be a dictionary")
     
+    # Convert the hs elements to lists if necessary
+    typ = list( set(type(k) for k in hs.values()) )
+    if len(typ) > 1:
+        raise ValueError('Your dictionary is weird, values have mixed types')
+    elif typ[0] != list:
+        hs = HS_DictConverter(hs, to_array=False)
+    
+    # Run over dictionary values and apply PBC
     hs_new = {}
     for k in hs.keys():
+        sites = hs[k]
         
-        if not isinstance(hs[k], list):
-            sites = []
-            for row in hs[k]:
-                sites.append(list(row))
-                
-        atoms_fake = Atoms(positions=sites, cell=cell, pbc=[1,1,1])
+        # Create a fake atomic structures and apply PBC
+        atoms_fake = Atoms( positions=sites, cell=cell, pbc=[1,1,1] )
         hs_new[k] = atoms_fake.get_positions( wrap=True, pbc=True )
-    
+        
+        # Remove z coordinates
         if z_red:
             hs_new[k] = hs_new[k][:, :2]
-        if not to_array:
-            hs_new[k] = hs_new[k].tolist()
+            
+    hs_new = HS_DictConverter(hs_new, to_array=to_array)
     
     return hs_new
+
+
+def PBC_Coordinates(data, cell, to_array=True):
+    """
+    Apply Periodic Boundary Conditions to a set of atoms (data) in a given 
+    lattice cell (cell). PBC are applied by creating a "fake" molecule.
+    Return a numpy array containing the atomic sites within cell.
+
+    """    
+    
+    # Check the types of the input parameters
+    if not ( (isinstance(data, list)) or (isinstance(data, np.ndarray)) ):
+            raise TypeError("data must be a numpy array or a list")
+    
+    if not ( (isinstance(data, list)) or (isinstance(data, np.ndarray)) ):
+            raise TypeError("cell must be a numpy array or a list")
+    
+    # Convert input parameters to numpy arrays
+    if not isinstance(data, list):
+        data = data.tolist()
+    
+    # Create a fake atomic structures and apply PBC
+    atoms_fake = Atoms( positions=data, cell=cell, pbc=[1,1,1] )
+    data_new = atoms_fake.get_positions( wrap=True, pbc=True )
+    
+    if not to_array:
+        data_new = data_new.tolist()  
+
+    return data_new      
+            
+            
+            
+            
+            
+    
+    

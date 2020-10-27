@@ -168,6 +168,8 @@ if __name__ == '__main__':
     
     Plot_SlabHS(hs, substrate, to_fig=None)
     
+    
+    
     # OBSOLETE - TRY WITH NNP
     #hs1 = ApplyPbcToHS(hetero, hs)
     #hs1_all = ApplyPbcToHS(hetero, hs_all)

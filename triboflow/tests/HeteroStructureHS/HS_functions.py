@@ -186,7 +186,7 @@ def GetInterfaceHS(hs_1, hs_2, cell, to_array=False, z_red=True):
                 
             hs[k1+'-'+k2] = np.concatenate(shifts_stack, axis=0)
     
-    hs = PBCPoints(hs, cell, to_array=to_array, z_red=z_red)
+    hs = PBC_HSPoints(hs, cell, to_array=to_array, z_red=z_red)
         
             
     return hs
