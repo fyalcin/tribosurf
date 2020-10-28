@@ -9,7 +9,6 @@ Calculate the High Simmetry (HS) points for slab and interface
 """
 
 import numpy as np
-from utility_functions import HS_DictConverter, PBC_HSPoints
 
 
 # =============================================================================
@@ -107,32 +106,56 @@ def GetSlabHS(slab, allowed_sites=['ontop', 'bridge', 'hollow'], to_array=False)
     return hs, hs_all
 
 
-def NormalizeHSDict(hs, to_array=True):
+def HS_DictConverter(hs, to_array=True):
     """
-    Convert the hs elements returned by GetSlabHS to proper np.array or lists 
-    Important to use with unfolded HS points, which are lists of arrays
-    
+    Modify the type of the elements of the HS dictionary to list or np.ndarray.
+
+    Parameters
+    ----------
+    hs : dict
+        Dictionary containing the High Symmetry points.
+    to_array : bool, optional
+        If set to True convert to array, otherwise convert to list. 
+        The default is True.
+
+    Raises
+    ------
+    ValueError
+        Raised if the dictionary values are of different types.
+        Print to stdout: "Your dictionary is weird, values have mixed types"
+
+    Returns
+    -------
+    hs_new : dict
+        New HS dictionary converted to the desired type.
+
     """
     
     hs_new = {}
+    dict_types = list( set(type(k) for k in hs.values()) )
     
-    for k in hs.keys():
-        data = hs[k]
+    try: 
+        assert(len(dict_types) == 1)
         
-        # Default: convert everything in a list
-        if isinstance(data, list):
-            elements_list = []
-            for element in data:
-                elements_list.append(list(element))
-            hs_new[k] = elements_list
+        typ = dict_types[0]
+        if to_array:
+            if typ == list:
+                for k in hs.keys():
+                    hs_new[k] = np.array(hs[k])    
+            else:
+                return hs
+            
         else:
-            hs_new[k] = [list(data)]
-        
-        # Convert to array, default and smart choice
-        if to_array == True:
-            hs_new[k] = np.array(hs_new[k])
-    
-    return hs_new
+            if typ == np.ndarray:
+                for k in hs.keys():
+                    hs_new[k] = hs[k].tolist() 
+            else:
+                return hs
+            
+        return hs_new
+            
+    except:
+        raise ValueError('Your dictionary is weird, values have mixed types')
 
 
 # =============================================================================
@@ -190,5 +213,79 @@ def GetInterfaceHS(hs_1, hs_2, cell, to_array=False, z_red=True):
     
     hs = PBC_HSPoints(hs, cell, to_array=to_array, z_red=z_red)
         
-            
     return hs
+
+
+# =============================================================================
+# TOOLS FOR HS DICTIONARIES
+# =============================================================================
+
+
+def NormalizeHSDict(hs, to_array=True):
+    """
+    Convert the hs elements returned by GetSlabHS to proper np.array or lists 
+    Important to use with unfolded HS points, which are lists of arrays
+    
+    """
+    
+    hs_new = {}
+    
+    for k in hs.keys():
+        data = hs[k]
+        
+        # Default: convert everything in a list
+        if isinstance(data, list):
+            elements_list = []
+            for element in data:
+                elements_list.append(list(element))
+            hs_new[k] = elements_list
+        else:
+            hs_new[k] = [list(data)]
+        
+        # Convert to array, default and smart choice
+        if to_array == True:
+            hs_new[k] = np.array(hs_new[k])
+    
+    return hs_new
+
+
+def PBC_HSPoints(hs, cell, to_array=False, z_red=True):
+    """
+    Create a "fake" molecule structure from the HS points calculated for
+    the tribological interface, in order to apply PBC to the sites.
+    Return a dictionary with the sites within cell. z_red remove the 
+    z-coordinates from the translations.
+
+    """
+    
+    from ase import Atoms
+    
+    # Type check and error handling
+    if not isinstance(hs, dict):
+            raise TypeError("hs must be a dictionary")
+    
+    # Convert the hs elements to lists if necessary
+    typ = list( set(type(k) for k in hs.values()) )
+    if len(typ) > 1:
+        raise ValueError('Your dictionary is weird, values have mixed types')
+    elif typ[0] != list:
+        hs = HS_DictConverter(hs, to_array=False)
+    
+    # Run over dictionary values and apply PBC
+    hs_new = {}
+    for k in hs.keys():
+        sites = hs[k]
+        
+        # Create a fake atomic structures and apply PBC
+        atoms_fake = Atoms( positions=sites, cell=cell, pbc=[1,1,1] )
+        hs_new[k] = atoms_fake.get_positions( wrap=True, pbc=True )
+        
+        # Remove z coordinates
+        if z_red:
+            hs_new[k] = hs_new[k][:, :2]
+            
+    hs_new = HS_DictConverter(hs_new, to_array=to_array)
+    
+    return hs_new    
+
+

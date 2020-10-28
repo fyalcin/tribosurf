@@ -7,24 +7,30 @@ Created on Mon Oct  26 11:20:07 2020
 """
 
 import numpy as np
-from PES_functions import ReplicatePESPoints
-from utility_functions import PBC_Coordinates
+from scipy.interpolate import Rbf
+from utility_functions import PBC_Coordinates, ReplicatePoints, \
+                              GenerateUniformGrid, Orthorombize
 
 
 # Define input file containing the data, and the lattice cell vectors
 input_file = 'pes_clean.dat'
 cell = np.array([[  1.23817 ,   2.1466  ,   0.065971],
                  [  2.478096,   0.      ,   0.065971],
-                 [  0.      ,   0.      , -46.575684]])
+                 [  0.      ,   0.      ,  46.575684]])
 
 # Clean the pes data
-pes_data = np.genfromtxt('pes_clean.dat')
-pes_data = np.unique(pes_data, axis=0)
-pbc = PBC_Coordinates(pes_data[:, :2], cell, to_array=True)
-pes_data[:, :2] = pbc.copy()
+pes_array = np.genfromtxt('pes_clean.dat')
+pes_array = np.unique(pes_array, axis=0)
+pbc = PBC_Coordinates(pes_array[:, :2], cell, to_array=True)
+pes_array[:, :2] = pbc.copy()
 
-data_rep = ReplicatePESPoints(pes_data, cell, replicate_of=(3, 3))
+data_rep = ReplicatePoints(pes_array, cell, replicate_of=(3, 3))
+rbf = Rbf(data_rep[:, 0], data_rep[:, 1], data_rep[:, 2], function='cubic')
+coordinates = GenerateUniformGrid(cell, density=10)
+E_new = rbf(coordinates[:, 0], coordinates[:, 1])
+pes_data = np.column_stack([coordinates[:, :2], E_new])
 
+data, cell_ortho = Orthorombize(pes_data, cell)
 
 
 

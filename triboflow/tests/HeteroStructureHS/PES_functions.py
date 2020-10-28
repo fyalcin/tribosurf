@@ -9,7 +9,7 @@ Python functions to get the Potential Energy Surface (PES) of an interface
 """
 
 import numpy as np
-from utility_functions import Plot_UniformGrid
+from utility_functions import ReplicatePoints, GenerateUniformGrid, Orthorombize
 
 
 # =============================================================================
@@ -68,13 +68,13 @@ def GetPES(hs_all, E, cell, to_fig=None):
     data, pes_dict = UnfoldPES(E, hs_all) 
     
     # Interpolate the data with Radial Basis Function
-    data_rep = ReplicatePESPoints(data, cell, replicate_of=(3, 3) )
+    data_rep = ReplicatePoints(data, cell, replicate_of=(3, 3) )
     rbf = Rbf(data_rep[:, 0], data_rep[:, 1], data_rep[:, 2], function='cubic')
     
     # Calculate the PES on a very dense and uniform grid. Useful for further 
     # analysis (MEP, shear strength) and to plot the PES
-    coordinates = GenerateGridForPES(cell, density=10)
-    E_new = rbf(coordinates[:, :2])
+    coordinates = GenerateUniformGrid(cell, density=10)
+    E_new = rbf(coordinates[:, 0], coordinates[:, 1])
     pes_data = np.column_stack([coordinates[:, :2], E_new])
     
     return rbf, pes_dict, pes_data
@@ -155,173 +155,51 @@ def UnfoldPES(hs_all, E_unique):
     return E_list, E_array
 
 
-def ReplicatePESPoints(pes_data, cell, replicate_of=(1, 1)):
-    """ 
-    Replicate the PES points to cover a (n,m)-size lattice cell
-    
+# =============================================================================
+# PLOTTING TOOLS
+# =============================================================================
+
+
+def plot_pes(data, E, lattice, to_fig=None):
     """
-    
-    n = int(replicate_of[0])
-    m = int(replicate_of[1])
-    
-    # Check wether the number inserted are correct
-    if n<=0: n=1
-    if m<=0: m=1
-    
-    if n == 1 and m == 1:
-        return pes_data
-    
-    else:        
-        a = cell[0, :]
-        b = cell[1, :]
-        
-        x = pes_data[:, 0]
-        y = pes_data[:, 1]
-        E = pes_data[:, 2]     
-        
-        x_new = np.array([])
-        y_new = np.array([])
-        E_new = np.array([])    
-        
-        for i in range(n):
-                for j in range(m):
-                    
-                    # Replicate the x- and y- coordinates
-                    x_add = x + a[0]*i + b[0]*j
-                    y_add = y + a[1]*i + b[1]*j
-                    
-                    # Collect coordinates and energies
-                    x_new = np.append(x_new, x_add)
-                    y_new = np.append(y_new, y_add)
-                    E_new = np.append(E_new, E)
-        
-        coordinates_new = np.column_stack([x_new, y_new, E_new])
-    
-        return coordinates_new
-
-
-def GenerateGridForPES(cell, density=1, pts_a=None, to_plot=False):
-    """
-    Generate a 2D-uniform grid of points of density=density on a lattice plane
-    given by lattice[0,:]Xlattice[1,:]
-
-    Parameters
-    ----------
-    lattice : numpy.ndarray
-        Vectors of the lattice cell. A uniform grid of points is generated on
-        the surface spanned by the first and second vector, i.e. axb.
-        lattice shape is (2, 3) or (3, 3), the third vector is not necessary.
-        lattice is in Angstrom units.
-
-    density : int, optional
-        Density of the grid of points that will cover the planar surface of 
-        the lattice cell. Units: number of points per unit Angstrom^2
-        
-    pts_a : int, optional
-        If this value is provided, the grid will contain pts_a points along 
-        the first vector and (b/a)*pts_a along the second vector. 
-        a,b : lengths of the planar lattice vectors. The default is None.
-                
-    to_plot : bool, optional
-        Wether to display the grid of points inside the lattice cell. 
-        Plot is redirected to standard output. The default is False.
-
-    Returns
-    -------
-    matrix : numpy.ndarray
-        Grid of points spanning the entire lattice plane.
-        Format:
-            x[0]  y[0]  z[0]
-            y[1]  y[1]  z[1]
-             .     .     .
-             .     .     .
-             .     .     .
-
-    """
-        
-    a = cell[0, :]
-    b = cell[1, :]
-    a_mod = np.sqrt(a[0]**2. + a[1]**2. + a[2]**2.)
-    b_mod = np.sqrt(b[0]**2. + b[1]**2. + b[2]**2.)
-    ratio = b_mod/a_mod
-    
-    # Calculate the number of points for each lattice vector
-    if pts_a == None:
-        N_tot = round(density * a_mod * b_mod)
-        n_a = int(round( np.sqrt( N_tot/ratio )))
-        n_b = int(round( ratio*n_a ))
-    else:
-        n_a = pts_a
-        n_b = int(round( ratio*n_a ))
-    
-    # Obtain the displacements along a and b
-    dist_a_x = a[0]/n_a 
-    dist_a_y = a[1]/n_a
-    dist_a_z = a[2]/n_a
-    dist_b_x = b[0]/n_b
-    dist_b_y = b[1]/n_b
-    dist_b_z = b[2]/n_b
-    
-    # Create the grid
-    matrix = np.zeros((n_a*n_b, 3))
-    k = 0
-    for i in range(0, n_a):
-        for j in range(0, n_b):
-            matrix[k, 0] = i*dist_a_x + j*dist_b_x
-            matrix[k, 1] = i*dist_a_y + j*dist_b_y
-            matrix[k, 2] = i*dist_a_z + j*dist_b_z
-            k += 1
-    if to_plot:
-        Plot_UniformGrid(matrix, cell, n_a, n_b)
-
-    return matrix
-
-
-def Orthorombize(pes_data, cell):
-    """
-    Take the replicated points of the pes and cut them in a squared shape.
-    TODO : Improve the code and VECTORIZE
+    Plot the PES and eventually save it
 
     """
     
-    a = cell[0, :]
-    b = cell[1, :]
+    import matplotlib.pyplot as plt
     
-    if np.sign(a[0]) == np.sign(b[0]):
-        if a[0] > 0:
-            x_up = a[0] + b [0]
-            x_dw = 0
-        else:
-            x_up = 0
-            x_dw = a[0] + b [0]           
-    else:
-        x_up =  max(abs(a[0]), abs(b[0]))
-        x_dw =  min(abs(a[0]), abs(b[0]))
+    alat_x = lattice[0]
+    alat_y = lattice[1]
+    x = data[:, 0]
+    y = data[:, 1]
     
-    if np.sign(a[1]) == np.sign(b[1]):
-        if a[1] > 0:
-            y_up = a[1] + b[1]
-            y_dw = 0
-        else:
-            y_up = 0
-            y_dw = a[1] 
-    else:
-        y_up =  max(abs(a[1]), abs(b[1]))
-        y_dw =  min(abs(a[1]), abs(b[1]))
-        
-    index_x = pes_data[:, 0] <= 2*x_up and pes_data[:, 0] >= 2*x_dw
-    index_y = pes_data[:, 1] <= 2*y_up and pes_data[:, 1] >= 2*y_dw 
-    index = index_x * index_y
+    fact=1.
+    level= 43
+    fig = plt.figure(figsize=(7, 7), dpi=100)
+    ax = fig.add_subplot(111)
+    ax.set_aspect('equal')
+    anglerot='vertical'
+    shrin=1.
+    zt1=plt.contourf(x, y, E, level, extent=(-fact*alat_x,fact*alat_x,-fact*alat_y,fact*alat_y), cmap=plt.cm.RdYlBu_r)
+    cbar1=plt.colorbar(zt1,ax=ax,orientation=anglerot,shrink=shrin)
+    cbar1.set_label(r'$E_{adh} (J/m^2)$', rotation=270, labelpad=20,fontsize=15,family='serif')
     
-    orthorombic =  []
-    for i, row in enumerate(pes_data):
-        if index[i] == True:
-            orthorombic.append(row)
+    ax.quiver(0. , 0., 1., 0.,scale=1.,scale_units='inches',width=0.01,color='white')
+    ax.quiver(0. , 0., 0., 1.,scale=1.,scale_units='inches',width=0.01,color='white')
+    ax.plot(0.,0.,'w.',ms=7)
+    ax.text(0.5,-0.5,'[1 0 1]',rotation='horizontal',color='white', fontsize=14)
+    ax.text(-0.5,1.,'[1 2 1]',rotation='vertical',color='white', fontsize=14)
+    ax.axis([-fact*alat_x,fact*alat_x,-fact*alat_y,fact*alat_y])
+    plt.xlabel(r"distance ($\AA$)",fontsize=12,family='serif')
+    plt.ylabel(r"distance ($\AA$)",fontsize=12,family='serif')
+
+    for zt1 in zt1.collections:
+       zt1.set_edgecolor("face")
+       zt1.set_linewidth(0.000000000001)
     
-    orthorombic = np.column_stack(orthorombic)
-    cell = np.array([[x_up, y_dw], [x_dw, y_up]])
-    
-    return orthorombic, cell
+    if to_fig != None:
+        plt.title("PES for " + str(to_fig), fontsize=18, family='serif')
+        plt.savefig('PES_' + str(to_fig) + '.pdf', dpi=300)
 
 
 # =============================================================================
@@ -332,4 +210,4 @@ def Orthorombize(pes_data, cell):
 if __name__ == '__main__':
     print('Testing the creation of a uniform grid for the PES\n')
     vectors = np.array([[3, 0, 0], [0.8, 4, 0.3]])
-    a= GenerateGridForPES(vectors, density=1, pts_a=5, to_plot=True)
+    a = GenerateUniformGrid(vectors, density=1, pts_a=5, to_plot=True)
