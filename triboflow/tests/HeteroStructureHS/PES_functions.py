@@ -9,7 +9,7 @@ Calculate PES, MEP, shear strength
 """
 
 import numpy as np
-from utility_functions import *
+from utility_functions import Plot_UniformGrid
 
 
 # =============================================================================

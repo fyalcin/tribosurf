@@ -9,7 +9,6 @@ Utility tools to calculate the High Simmetry (HS) points for slab and interface
 """
 
 import numpy as np
-from HS_functions import *
 from ase import Atoms
 
 
@@ -237,6 +236,7 @@ def PointIsInsideLattice(lattice, q):
             isinside=False
         else:
             isinside=True
+            
     return not (np.dot(r, normal) >= 0), p, vector
 
 

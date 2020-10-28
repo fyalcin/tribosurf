@@ -9,7 +9,7 @@ Calculate the High Simmetry (HS) points for slab and interface
 """
 
 import numpy as np
-from utility_functions import *
+from utility_functions import HS_DictConverter, PBC_HSPoints
 
 
 # =============================================================================

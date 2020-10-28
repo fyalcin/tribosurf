@@ -7,8 +7,8 @@ Created on Mon Oct  26 11:20:07 2020
 """
 
 import numpy as np
-from PES_functions import *
-from utility_functions import *
+from PES_functions import ReplicatePESPoints
+from utility_functions import PBC_Coordinates
 
 
 # Define input file containing the data, and the lattice cell vectors
@@ -23,7 +23,7 @@ pes_data = np.unique(pes_data, axis=0)
 pbc = PBC_Coordinates(pes_data[:, :2], cell, to_array=True)
 pes_data[:, :2] = pbc.copy()
 
-data_rep = ReplicatePESPoints(pes_data, cell, replicate_of=(3, 3) )
+data_rep = ReplicatePESPoints(pes_data, cell, replicate_of=(3, 3))
 
 
 

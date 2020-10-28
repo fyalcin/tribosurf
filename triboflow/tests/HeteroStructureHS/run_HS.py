@@ -13,8 +13,8 @@ from pymatgen.io.vasp.inputs import Poscar
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.core.surface import SlabGenerator, Slab
 from mpinterfaces.transformations import get_aligned_lattices, get_interface
-from HS_functions import *
-from utility_functions import *
+from HS_functions import GetSlabHS, GetInterfaceHS
+from utility_functions import Plot_SlabHS
 
 
 # =============================================================================
