@@ -16,6 +16,7 @@ from utility_functions import HS_DictConverter, PBC_HSPoints
 # CALCULATE THE HS POINTS FOR A SLAB
 # =============================================================================
 
+
 def GetSlabHS(slab, allowed_sites=['ontop', 'bridge', 'hollow'], to_array=False): 
     """
     Calculate the High Simmetry (HS) points for a material provided as input,
@@ -137,6 +138,7 @@ def NormalizeHSDict(hs, to_array=True):
 # =============================================================================
 # CALCULATE HS POINTS FOR AN INTERFACE
 # =============================================================================
+
 
 def GetInterfaceHS(hs_1, hs_2, cell, to_array=False, z_red=True):
     """
