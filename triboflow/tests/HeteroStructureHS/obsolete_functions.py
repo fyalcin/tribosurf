@@ -197,7 +197,7 @@ def UnfoldPES_FromDict(E, hs_all):
     """
     Unfold the energies calculated for the unique HS points of an interface,
     associating them to the replicated HS points covering the whole surface
-    cell. It uses a dictionary 
+    cell. It uses a dictionary for both E and hs_all
 
     Parameters
     ----------

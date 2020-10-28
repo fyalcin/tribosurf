@@ -13,7 +13,7 @@ from utility_functions import Plot_UniformGrid
 
 
 # =============================================================================
-# EVALUATION OF THE PES
+# EVALUATION OF THE PES - MAIN
 # =============================================================================
 
 
@@ -65,7 +65,7 @@ def GetPES(hs_all, E, cell, to_fig=None):
     from scipy.interpolate import Rbf
     
     # Unfold the PES points
-    data, pes_dict = UnfoldPES(E, hs_all)   
+    data, pes_dict = UnfoldPES(E, hs_all) 
     
     # Interpolate the data with Radial Basis Function
     data_rep = ReplicatePESPoints(data, cell, replicate_of=(3, 3) )
@@ -85,57 +85,74 @@ def GetPES(hs_all, E, cell, to_fig=None):
 # =============================================================================
 
 
-def UnfoldPES(E, hs_all):
+def UnfoldPES(hs_all, E_unique):
     """
     Unfold the energies calculated for the unique HS points of an interface,
     associating them to the replicated HS points covering the whole surface
-    cell. It uses a dictionary 
+    cell. hs_all is a dictionary, E_unique a list.
 
     Parameters
     ----------
-    E : dict
-        Contains the energy calculated for each Hs site of the interface.
-        Ex. E may contains the key 'ontop_1 + bridge_1', corresponding to a 
-        certain shift between lower and upper slab. The value of the dictionary
-        is the ab initio, equilibrium energy obtained for that configuration.
         
     hs_all : dict
         Surfacial HS sites that has been unfolded (replicated) across the whole
         lattice cell of slab. 
         Ex. To the key 'ontop_1 + bridge_1' will correspond n points, spanning
         the entire plane axb of the lattice cell. Data is a (n, 3) numpy array.
+    
+    E : list
+        Contains the energy calculated for each unique interfacial HS site.
+        The energy are calculated by means of ab initio simulations (VASP).
+        E must have the following structure:
+            
+            [ [label_1, x_1, y_1, E_1], 
+              [label_2, x_2, y_2, E_2], 
+              ...                      ]
+        
+        Ex. label should corresponds to the keys in hs_all, associated to a 
+        certain shit between the lower and upper slab, e.g. 'ontop_1+bridge_1'.
         
     Returns
     -------
-    pes_data : np.ndarray
-        Numpy matrix containing the coordinates and the energy useful to 
-        interpolate the PES. The structure of the matrix is:
+    E_list : list
+        It's basically the same as E_unique but contains all the HS points 
+        replicated on the whole interface. The structure of the list is:
             
-            x[0]  y[0]  E[0]
-            x[1]  y[1]  E[1]
-             .     .     .
-             .     .     .
-             .     .     .
+            [ [label_1, x_1, y_1, E_1], 
+              [label_2, x_2, y_2, E_2], 
+              ...                      ]
         
-    pes_dict : dict
-        Dictionary containing the coordinates and the corresponding energies
-        associated to each HS point of the interface.
+    E_array : np.ndarray
+        Numpy matrix containing the coordinates and the energy useful to 
+        interpolate the PES. It's E_list without labels and with array type. 
+        The structure of the matrix is:
+            
+            np.array([ [x_1, y_1, E_1], 
+                       [x_2, y_2, E_2], 
+                       ...             ])
 
     """
+
+    # Initialize lists for the result
+    E_list = []
+    E_array = []
     
-    pes_dict = {}
-    pes_data = []
+    # Extract the element
+    for element in E_unique:
+       label  = element[0]
+       energy = element[3]
+       
+       # Associate each Energy to all the corresponding HS values
+       for row in hs_all[label]:
+          x_shift = row[0]
+          y_shift = row[1]
+          
+          E_list.append([label, x_shift, y_shift, energy])
+          E_array.append([x_shift, y_shift, energy])
+          
+    E_array = np.array(E_array)      
     
-    # WARNING: The elements of hs_all should not have the z coordinates.
-    # Call RemoveZCoords() before using this function
-    for k in hs_all.keys():
-        data = np.column_stack((hs_all[k], np.full(hs_all[k], E[k])))
-        pes_dict[k] = data
-        pes_data.append(data)
-    
-    pes_data = np.concatenate(pes_data)
-    
-    return pes_data, pes_dict
+    return E_list, E_array
 
 
 def ReplicatePESPoints(pes_data, cell, replicate_of=(1, 1)):
