@@ -8,6 +8,7 @@ Created on Mon Oct  26 11:20:07 2020
 
 import numpy as np
 from scipy.interpolate import Rbf
+from PES_functions import plot_pes
 from utility_functions import PBC_Coordinates, ReplicatePoints, \
                               GenerateUniformGrid, Orthorombize
 
@@ -31,6 +32,8 @@ E_new = rbf(coordinates[:, 0], coordinates[:, 1])
 pes_data = np.column_stack([coordinates[:, :2], E_new])
 
 data, cell_ortho = Orthorombize(pes_data, cell)
+
+plot_pes(data, cell_ortho, to_fig=None)
 
 
 
