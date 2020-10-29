@@ -6,8 +6,11 @@ Created on Tue Oct 13 14:52:57 2020
 @author: wolloch
 """
 import monty
+import numpy as np
 from operator import itemgetter
+from scipy.interpolate import Rbf
 from pymatgen.core.structure import Structure
+from pymatgen.core.surface import Slab
 from pymatgen.core.operations import SymmOp
 from fireworks import FWAction, FiretaskBase, Workflow
 from fireworks.utilities.fw_utilities import explicit_serialize
@@ -15,12 +18,80 @@ from atomate.utils.utils import env_chk
 from atomate.vasp.fireworks.core import OptimizeFW, ScanOptimizeFW
 from atomate.vasp.powerups import add_modify_incar
 from triboflow.PES_functions.HS_functions import GetSlabHS, GetInterfaceHS
-from triboflow.PES_functions.utility_functions import ApplyPbcToHS
+from triboflow.PES_functions.utility_functions import ApplyPbcToHS, \
+    RemoveZCoords
+from triboflow.PES_functions.PES_functions import ReplicatePESPoints
 from triboflow.helper_functions import GetInterfaceFromDB, \
-    GetCustomVaspRelaxSettings, GetDB, GetHighLevelDB, CleanUpSitePorperties
+    GetCustomVaspRelaxSettings, GetDB, GetHighLevelDB, CleanUpSitePorperties, \
+    SlabFromStructure
+
+
+@explicit_serialize
+class FT_MakePESInterpolation(FiretaskBase):
+    required_params = ['interface_name', 'functional']
+    optional_params = ['db_file']
+    def run_task(self, fw_spec):
+        name = self.get('interface_name')
+        functional = self.get('functional')
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
+        
+        
+        inter_dict = GetInterfaceFromDB(name, db_file, functional)
+        struct = Structure.from_dict(inter_dict['relaxed_structure@min'])
+        
+        #Copy the energies for the unique points to all points
+        E_list = inter_dict['PES']['high_symmetry_points']['energy_list']
+        all_hs = inter_dict['PES']['high_symmetry_points']['combined_all']
+        E_list_all = []
+        E_array = []
+        for i in E_list:
+            label = i[0]
+            energy = i[-1]
+            for l in all_hs[label]:
+                x_shift = l[0]
+                y_shift = l[1]
+                E_list_all.append([label, x_shift, y_shift, energy])
+                E_array.append([x_shift, y_shift, energy])
+        
+        lattice = struct.lattice.matrix
+        data_rep = ReplicatePESPoints(lattice,
+                                      np.array(E_array),
+                                      replicate_of=(3, 3))
+        rbf = Rbf(data_rep[:, 0],
+                  data_rep[:, 1],
+                  data_rep[:, 2],
+                  function='cubic')
+        
 
 @explicit_serialize
 class FT_RetrievePESEnergies(FiretaskBase):
+    """Retrieve the energies from the PES relaxations and update the db.
+    
+    Uses a tag together with the labels of the high-symmetry points saved
+    in the high level database to retrieve the correct energies for each
+    lateral shift of the interface. Sort the shifts by energies and save both
+    the configuration with the lowest and the highest energy in the high level
+    database. Also save the list of shifts and energies with corresponding
+    labels there.
+
+    Parameters
+    ----------
+    interface_name : str
+        Name of the interface in the high-level database.
+    functional : str
+        Which functional to use; has to be 'PBE' or 'SCAN'.
+    tag : str
+        Unique tag to identify the calculations.
+    db_file : str, optional
+        Full path to the db.json file that should be used. Defaults to
+        '>>db_file<<', to use env_chk.
+        
+    Returns
+    -------
+    FWActions that produce a detour workflow with relaxations for the PES.
+    """
     required_params = ['interface_name', 'functional', 'tag']
     optional_params = ['db_file']
     def run_task(self, fw_spec):
@@ -56,14 +127,46 @@ class FT_RetrievePESEnergies(FiretaskBase):
         tribo_db = GetHighLevelDB(db_file)
         coll = tribo_db[functional+'.interface_data']
         coll.update_one({'name': name},
-                        {'$set': {'relaxed_structrue@min': struct_min,
-                                  'relaxed_structrue@max': struct_max,
+                        {'$set': {'relaxed_structure@min': struct_min,
+                                  'relaxed_structure@max': struct_max,
                                   'PES.high_symmetry_points.energy_list': 
                                          sorted_energy_list}})
+        
         
 
 @explicit_serialize
 class FT_FindHighSymmPoints(FiretaskBase):
+    """Compute high symmetry points for the top and bottom slab and the interface.
+    
+    Finds the high symmetry points of the top side of the bottom slab and the
+    bottom side of the top slab. This is done twice, once omitting duplicates,
+    and once allowing them. It is made sure that the results are cartesian
+    coordinates that lie inside the unit cell. The lists are combined so that
+    every combination of unique points for the interface is present. The PES
+    section of the high level database is updated with the results and the
+    fw_spec is updated with the lateral shifts needed for the PES relaxations
+    as well.
+    
+    Parameters
+    ----------
+    interface_name : str
+        Name of the interface in the high-level database.
+    functional : str
+        Which functional to use; has to be 'PBE' or 'SCAN'.
+    db_file : str, optional
+        Full path to the db.json file that should be used. Defaults to
+        '>>db_file<<', to use env_chk.
+    top_name : str, optional
+        Name of the structure in the interface entry to the high-level database
+        which constitutes the upper slab. The default is 'top_aligned'.
+    bottom_name : str, optional
+        Name of the structure in the interface entry to the high-level database
+        which constitutes the lower slab. The default is 'bottom_aligned'.
+        
+    Returns
+    -------
+    FWActions that updates the fw_spec with lateral shifts.
+    """
     required_params = ['interface_name', 'functional']
     optional_params = ['db_file', 'top_name', 'bottom_name']
     def run_task(self, fw_spec):
@@ -77,8 +180,8 @@ class FT_FindHighSymmPoints(FiretaskBase):
         
         interface_dict = GetInterfaceFromDB(name, db_file, functional)           
                 
-        top_aligned = Structure.from_dict(interface_dict[top_name])
-        bottom_aligned = Structure.from_dict(interface_dict[bottom_name])
+        top_aligned = Slab.from_dict(interface_dict[top_name])
+        bottom_aligned = Slab.from_dict(interface_dict[bottom_name])
         
         #top slab needs to be mirrored to find the high symmetry points at the
         #interface.
@@ -100,12 +203,12 @@ class FT_FindHighSymmPoints(FiretaskBase):
         hsp_unique = ApplyPbcToHS(bottom_aligned, hsp_unique)
         hsp_all = ApplyPbcToHS(bottom_aligned, hsp_all)
         
-        b_hsp_u =  monty.json.jsanitize(bottom_hsp_unique)
-        b_hsp_a =  monty.json.jsanitize(bottom_hsp_all)
-        t_hsp_u =  monty.json.jsanitize(top_hsp_unique)        
-        t_hsp_a =  monty.json.jsanitize(top_hsp_all)
-        c_hsp_u =  monty.json.jsanitize(hsp_unique)        
-        c_hsp_a =  monty.json.jsanitize(hsp_all)
+        b_hsp_u =  monty.json.jsanitize(RemoveZCoords(bottom_hsp_unique))
+        b_hsp_a =  monty.json.jsanitize(RemoveZCoords(bottom_hsp_all))
+        t_hsp_u =  monty.json.jsanitize(RemoveZCoords(top_hsp_unique))
+        t_hsp_a =  monty.json.jsanitize(RemoveZCoords(top_hsp_all))
+        c_hsp_u =  monty.json.jsanitize(RemoveZCoords(hsp_unique))
+        c_hsp_a =  monty.json.jsanitize(RemoveZCoords(hsp_all))
         
         tribo_db = GetHighLevelDB(db_file)
         coll = tribo_db[functional+'.interface_data']
@@ -130,7 +233,7 @@ class FT_StartPESCalcs(FiretaskBase):
     
     Take a list of lateral shifts from the fw_spec and start relaxations
     for each one of them as parallel detours.
-    
+    Heterogeneous_WF
     Parameters
     ----------
     interface_name : str
@@ -139,7 +242,7 @@ class FT_StartPESCalcs(FiretaskBase):
         Which functional to use; has to be 'PBE' or 'SCAN'.
     tag : str
         Unique tag to identify the calculations.
-    db_file : str
+    db_file : str, optional
         Full path to the db.json file that should be used. Defaults to
         '>>db_file<<', to use env_chk.
     structure_name : str, optional
