@@ -160,7 +160,7 @@ def UnfoldPES(hs_all, E_unique):
 # =============================================================================
 
 
-def plot_pes(data, E, lattice, to_fig=None):
+def plot_pes(data, lattice, to_fig=None):
     """
     Plot the PES and eventually save it
 
@@ -168,10 +168,11 @@ def plot_pes(data, E, lattice, to_fig=None):
     
     import matplotlib.pyplot as plt
     
-    alat_x = lattice[0]
-    alat_y = lattice[1]
+    a = lattice[0]
+    b = lattice[1]
     x = data[:, 0]
     y = data[:, 1]
+    E = data[:, 2]
     
     fact=1.
     level= 43
@@ -180,7 +181,7 @@ def plot_pes(data, E, lattice, to_fig=None):
     ax.set_aspect('equal')
     anglerot='vertical'
     shrin=1.
-    zt1=plt.contourf(x, y, E, level, extent=(-fact*alat_x,fact*alat_x,-fact*alat_y,fact*alat_y), cmap=plt.cm.RdYlBu_r)
+    zt1=plt.contourf(x, y, E, level, extent=(-fact*a, fact*a, -fact*b, fact*b), cmap=plt.cm.RdYlBu_r)
     cbar1=plt.colorbar(zt1,ax=ax,orientation=anglerot,shrink=shrin)
     cbar1.set_label(r'$E_{adh} (J/m^2)$', rotation=270, labelpad=20,fontsize=15,family='serif')
     
@@ -189,7 +190,7 @@ def plot_pes(data, E, lattice, to_fig=None):
     ax.plot(0.,0.,'w.',ms=7)
     ax.text(0.5,-0.5,'[1 0 1]',rotation='horizontal',color='white', fontsize=14)
     ax.text(-0.5,1.,'[1 2 1]',rotation='vertical',color='white', fontsize=14)
-    ax.axis([-fact*alat_x,fact*alat_x,-fact*alat_y,fact*alat_y])
+    ax.axis([-fact*a, fact*a, -fact*b, fact*b])
     plt.xlabel(r"distance ($\AA$)",fontsize=12,family='serif')
     plt.ylabel(r"distance ($\AA$)",fontsize=12,family='serif')
 

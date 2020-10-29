@@ -206,11 +206,11 @@ def Orthorombize(data, cell):
     
     if np.sign(a[0]) == np.sign(b[0]):
         if a[0] > 0:
-            x_up = a[0] + b [0]
+            x_up = a[0] + b[0]
             x_dw = 0
         else:
             x_up = 0
-            x_dw = a[0] + b [0]           
+            x_dw = a[0] + b[0]           
     else:
         x_up =  max(abs(a[0]), abs(b[0]))
         x_dw =  min(abs(a[0]), abs(b[0]))
@@ -226,16 +226,17 @@ def Orthorombize(data, cell):
         y_up =  max(abs(a[1]), abs(b[1]))
         y_dw =  min(abs(a[1]), abs(b[1]))
         
-    index_x = data[:, 0] <= 2*x_up and data[:, 0] >= 2*x_dw
-    index_y = data[:, 1] <= 2*y_up and data[:, 1] >= 2*y_dw 
+    index_x = (data[:, 0] <= 2*x_up) * (data[:, 0] >= 2*x_dw)
+    index_y = (data[:, 1] <= 2*y_up) * (data[:, 1] >= 2*y_dw) 
     index = index_x * index_y
     
     orthorombic =  []
     for i, row in enumerate(data):
         if index[i] == True:
-            orthorombic.append(row)
-    
-    orthorombic = np.column_stack(orthorombic)
+            orthorombic.append(list(row))
+            
+    #orthorombic = np.column_stack(orthorombic)
+    orthorombic = np.array(orthorombic)
     cell = np.array([[x_up, y_dw], [x_dw, y_up]])
     
     return orthorombic, cell
