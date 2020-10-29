@@ -289,6 +289,7 @@ class FT_MakeSlabInDB(FiretaskBase):
                            center_slab = True,
                            primitive = True,
                            lll_reduce = True,
+                           max_normal_search=max([abs(l) for l in miller]),
                            min_slab_size = min_thickness,
                            min_vacuum_size = min_vacuum)
         
@@ -415,10 +416,10 @@ class FT_MakeHeteroStructure(FiretaskBase):
 # ============================================================================
 # ============================================================================
                 #hetero_interfaces = generate_all_configs(top_aligned,
-                hetero_interfaces = get_interface(top_aligned,
-                                                     bottom_aligned,
-                                                     nlayers_2d = 1,
-                                                     nlayers_substrate = 1,
+                hetero_interfaces = get_interface(bottom_aligned,
+                                                  top_aligned,
+                                                  nlayers_2d = 1,
+                                                  nlayers_substrate = 1,
                             separation = inter_params['interface_distance'])
         
                 #inter_slab = hetero_interfaces[0]

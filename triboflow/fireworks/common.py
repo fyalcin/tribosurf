@@ -2,6 +2,7 @@
 
 
 from fireworks import Firework
+from triboflow.firetasks.PES import FT_FindHighSymmPoints, FT_StartPESCalcs
 from triboflow.firetasks.check_inputs import FT_CheckCompParamDict, \
     FT_CheckInterfaceParamDict, FT_CheckMaterialInputDict, FT_MakeBulkInDB, \
     FT_MakeSlabInDB, FT_MakeInterfaceInDB
@@ -16,6 +17,20 @@ __date__ = 'March 11th, 2020'
 # =============================================================================
 # Custom FireWorks
 # =============================================================================
+
+def RunPESCalcsFW(interface_name, functional, tag, FW_name):
+    
+    FT_1 = FT_FindHighSymmPoints(interface_name=interface_name,
+                                 functional=functional)
+    
+    FT_2 = FT_StartPESCalcs(interface_name=interface_name,
+                            functional=functional,
+                            tag=tag)
+    
+    FW = Firework([FT_1, FT_2], name=FW_name)
+    
+    return FW
+
 
 def CheckInputsFW(mat1_params, mat2_params, compparams,
                   interface_params, FW_name):

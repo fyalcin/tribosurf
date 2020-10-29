@@ -3,12 +3,77 @@
 import os, glob
 import subprocess
 import pymongo
+import io
+import numpy as np
+from PIL import Image
 from pymatgen import MPRester
+from pymatgen.core.surface import Slab
 from pymatgen.core.sites import PeriodicSite
 from pymatgen.io.vasp.inputs import Kpoints, Poscar
 from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet, MPStaticSet
 from atomate.vasp.database import VaspCalcDb
 
+
+def SlabFromStructure(miller, structure):
+    """Returns a pymatgen.core.surface.Slab from a pymatgen structure.
+
+    Parameters
+    ----------
+    miller : list of int
+        Miller indices given as a list of integers
+    structure : pymatgen.core.structure.Structure
+        Structure to be converted into a Slab
+
+    Returns
+    -------
+    pymatgen.core.surface.Slab
+        The input structure converted to a Slab
+
+    """
+    return Slab(lattice = structure.lattice,
+                species = structure.species_and_occu,
+                coords = structure.frac_coords,
+                miller_index = miller,
+                oriented_unit_cell = structure,
+                shift = 0,
+                scale_factor = np.eye(3, dtype=np.int),
+                site_properties = structure.site_properties)
+
+def ConvertBytesToImage(bytes_object):
+    """Convert an image saved as bytes for storing in MongoDB to an PIL image.
+
+    Parameters
+    ----------
+    bytes_object : bytes
+        Image converted to bytes for storage in a MongoDB database.
+
+    Returns
+    -------
+    pil_img : PIL.PngImagePlugin.PngImageFile
+        Image in python image library format ready to be viewed or saved.
+
+    """
+    pil_img = Image.open(io.BytesIO(bytes_object))
+    return pil_img
+
+def ConvertFigToBytes(path_to_fig):
+    """Convert an image to bytes for starage in MongoDB database.
+
+    Parameters
+    ----------
+    path_to_fig : Str
+        Path to the input figure.
+
+    Returns
+    -------
+    bytes
+        image encoded in bytes ready for storage in MongoDB.
+
+    """
+    im = Image.open(path_to_fig)
+    image_bytes = io.BytesIO()
+    im.save(image_bytes, format='png')
+    return image_bytes.getvalue()
 
 def CleanUpSitePorperties(structure):
     """

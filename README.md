@@ -12,7 +12,8 @@ The project is a collaboration between [Michael Wolloch](https://www.researchgat
 	  4. [Configuring FireWorks](#configurefw)
 	  5. [Configuring pymatgen](#configurepymatgen)
  2. [Testing your installation of FireWorks](#testing)
- 3. [Using TriboFlow](#using)
+ 3. ["Fixing" some issues in atomate](#fixingatomate) 
+ 4. [Using TriboFlow](#using)
 	 1. [Running a workflow](#runningawf)
 	 2. [Looking at the results](#results)
 
@@ -82,11 +83,19 @@ Now we will create an adminUser and a readOnlyUser by typing:
 Now exit the mongo shell: 
 `exit`
 
+5. Stop the mongo daemon by executing `mongod --shutdown --dbpath <YoutMongoPath>/data/db` and activate authorization in the `mongod.conf` file by changing the last line to `authorization: enabled`. Now, your database is password protected and you have to the username and password you created before in the mongo shell. To do that, while in the mongo shell, switch to the admin database by executing `use admin` and then authenticate with `db.auth(<RootUser>, <RootPassword>)`. Then exit the mongo shell again.
+
+6. It might be a good idea to define some aliases in your `.bashrc` or `.myaliases` files to start and stop the mongod daemon, so you can do it quickly if needed. E.g.:
+```
+alias mongo_start="mongod -f <YourMongoPath>/mongod.conf"
+alias mongo_stop="mongod --shutdown --dbpath <YourMongoPath>/data/db"
+```
+
 [Back to top](#toc)
 ### Create a folder structure, download and install TriboFlow<a name="triboflowinstall"></a>
 1. Select a location where you want to have your TriboFlow files located. We will assume this is `<YourPath>`. Now create two subfolders: `<YourPath>/config` for your configuration files and `<YourPath>/pps` for your pseudopotentials.
-2. In the same folder we will now download the TriboFlow files from gitlab by typing `git clone https://gitlab.com/triboteam/TriboFlow.git`. This will (for now) only work if your gitlab account has authorisation!
-3. You should now see a folder `<YourPath>/TriboFlow`. `cd` into it and run `pip install .` to install TriboFlow and all the other packages that are required to run it into your active conda environment. 
+2. In the same folder we will now download the TriboFlow files from gitlab (using ssh to facilitate automatic login with ssh-keys) by typing `git clone git@gitlab.com:triboteam/TriboFlow.git`. This will (for now) only work if your gitlab account has authorisation!
+3. You should now see a folder `<YourPath>/TriboFlow`. `cd` into it and run `pip install -e .` to install TriboFlow and all the other packages that are required to run it into your active conda environment. 
 3a. If there is an error that the directory is not installable, there might not yet be a setup.py file in the master branch. Checkout a development branch by typing `git checkout development` or `git checkout mwo_dev` to switch branches and run `pip install .` again.
 
 [Back to top](#toc)
@@ -199,6 +208,17 @@ pps
  - It would probably be a good idea to continue with the [tutorial of Atomate](https://atomate.org/running_workflows.html) if you are not familiar with it already, but you can also jump straight into TriboFlow in the next section.
 
 [Back to top](#toc)
+
+## "Fixing" some issues in atomate<a name="fixingatomate"></a>
+Atomate supplies a buch of Fireworks and workflows that are used in TriboFlow. However, there are some bugs or maybe incomplete features, as it is quite commong for scientific software. We recommend to check the [corresponding issue on the Triboflow github](https://gitlab.com/triboteam/TriboFlow/-/issues/14) for current "fixes" to atomate. At the time of writing, the only thing to change is to slightly change the `OptimizeFW` and `StaticFW` Fireworks in `atomate.vasp.fireworks.core` to automatically copy the vdw_kernel.bindat of VASP to the execution directory if the vdw parameter in the [vasp input set](https://pymatgen.org/pymatgen.io.vasp.sets.html) passed to the Firework is not `None`. For that you have to add `vdw_kernel_dir=VDW_KERNEL_DIR,` in `def __init__` before `**kwargs` and copy the following lines before `t.append(RunVaspCustodian(...`, in the same manner that it is already done for `ScanOptimizeFW`:
+```
+# Copy the pre-compiled VdW kernel for VASP, if required
+if vasp_input_set.vdw is not None:
+    t.append(CopyFiles(from_dir=vdw_kernel_dir))
+```
+
+[Back to top](#toc)
+
 ## Using TriboFlow<a name="using"></a>
 This section is not really a complete user manual and more of a quickstart guide. More documentation is going to follow once the package is getting ready to be released.
 ### Running a workflow<a name="runningawf"></a>

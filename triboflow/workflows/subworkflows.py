@@ -7,6 +7,8 @@ Created on Wed Jun 17 15:47:39 2020
 from uuid import uuid4
 import numpy as np
 from fireworks import Workflow, Firework
+from triboflow.fireworks.common import RunPESCalcsFW
+from triboflow.firetasks.PES import FT_RetrievePESEnergies
 from triboflow.firetasks.encut_convergence import FT_EnergyCutoffConvo
 from triboflow.firetasks.kpoint_convergence import FT_KpointsConvo
 from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \
@@ -15,7 +17,23 @@ from triboflow.firetasks.PPES import FT_DoPPESCalcs, FT_FitPPES
 from triboflow.helper_functions import GetPropertyFromMP, GetEmin, \
     GetCustomVaspStaticSettings
 
-
+def CalcPES_SWF(interface_name, functional):
+    tag = interface_name+'_'+str(uuid4())
+    
+    FW_1 = RunPESCalcsFW(interface_name=interface_name,
+                         functional=functional,
+                         tag=tag,
+                         FW_name='Start PES calcs for '+interface_name)
+    
+    FW_2 = Firework(FT_RetrievePESEnergies(interface_name=interface_name,
+                         functional=functional,
+                         tag=tag),
+                    name='Parse PES calcs for '+interface_name)
+    
+    SWF = Workflow([FW_1, FW_2], {FW_1: [FW_2]},
+                   name = 'Calc PES for '+interface_name+' SWF')
+    return SWF
+    
 def CalcPPES_SWF(interface_name, functional, distance_list = [-0.5, -0.25, 0.0,
                                 0.25, 0.5, 2.5, 3.0, 4.0, 5.0, 7.5],
              out_name = 'PPES@minimum', structure_name = 'minimum_relaxed',

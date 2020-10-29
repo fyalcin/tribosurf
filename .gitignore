@@ -1,1 +1,6 @@
 launcher*
+*.pyc
+.spyproject*
+.spyproject/config/backups/workspace.ini.bak
+.spyproject/config/workspace.ini
+triboflow.egg-info
