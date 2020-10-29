@@ -70,8 +70,8 @@ def Plot_SlabHS(slab, hs, to_fig=None):
     
     plot_slab(slab, ax, scale=0.8, repeat=3, window=1.25, 
               draw_unit_cell=True, decay=0.2, adsorption_sites=False)
-    ax.set(xlim = ( -0.1*(a[0] + b[0]), 1.1*(a[0] + b[0]) ), 
-           ylim = ( -0.1*(a[1] + b[1]), 1.1*(a[1] + b[1]) ))
+    #ax.set(xlim = ( -0.1*(a[0] + b[0]), +1.1*(a[0] + b[0]) ), 
+    #       ylim = ( -0.1*(a[1] + b[1]), +1.1*(a[1] + b[1]) ))
     
     # Add the HS sites with the proper labels
     for k in hs.keys():
