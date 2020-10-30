@@ -13,6 +13,9 @@ from pymatgen.io.vasp.inputs import Kpoints, Poscar
 from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet, MPStaticSet
 from atomate.vasp.database import VaspCalcDb
 
+current_dir = os.path.dirname(__file__)
+db_file = os.path.join(current_dir, '../../config/db.json')
+
 
 def SlabFromStructure(miller, structure):
     """Returns a pymatgen.core.surface.Slab from a pymatgen structure.
@@ -342,6 +345,27 @@ def GetHighLevelDB(db_file):
     return tribo_db
     
 def AddBulkToDB(structure, mp_id, db_file, functional):
+    """Insert a bulk structure to the high level database.
+
+    This will save the input structure in the database alongside some metadata
+    if it is not already found there. Otherwise it will print a warning.
+
+    Parameters
+    ----------
+    structure : pymatgen.core.structure.Structure
+        Structure that should be serialized and saved in the DB.
+    mp_id : str
+        Materials project ID number of the structure.
+    db_file : str
+        path to the db.json file that is used to connect to the database.
+    functional : str
+        Functional (PBE or SCAN) to select the correct database collection.
+
+    Returns
+    -------
+    None.
+
+    """
     db = GetDB(db_file)
     tribo_db = db.client.triboflow
     col_name=functional+'.bulk_data'
@@ -360,6 +384,30 @@ def AddBulkToDB(structure, mp_id, db_file, functional):
     return
 
 def GetBulkFromDB(mp_id, db_file, functional):
+    """Retrueve a bulk structure from the high-level database.
+
+    Parameters
+    ----------
+    mp_id : str
+        Materials project ID number of the structure to fetch.
+    db_file : str
+        path to the db.json file that is used to connect to the database.
+    functional : str
+        Functional (PBE or SCAN) to select the correct database collection.
+
+    Raises
+    ------
+    IOError
+        If there is no entry in the high-level db for the mp_id given, an error
+        is thrown.
+
+    Returns
+    -------
+    out_dict : TYPE
+        DESCRIPTION.
+
+    """
+
     db = GetDB(db_file)
     tribo_db = db.client.triboflow
     col_name=functional+'.bulk_data'
@@ -424,7 +472,7 @@ def GetLastBMDatafromDB(formula, db_file='/home/mwo/FireWorks/config/db.json'):
         'created_at', pymongo.DESCENDING)
     return cursor[0]
 
-def GetDB(db_file='/home/mwo/FireWorks/config/db.json'):
+def GetDB(db_file=db_file):
     """Connect to the MongoDB database specified in the db_file.
     
     Parameters
