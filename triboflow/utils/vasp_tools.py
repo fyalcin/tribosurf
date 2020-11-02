@@ -1,7 +1,7 @@
 import os
 import subprocess
 
-from operations_on_file import OperationsOnFiles
+from operations_on_file import RemoveMatchingFiles
 
 from pymatgen.io.vasp.inputs import Kpoints
 from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet, MPStaticSet
@@ -82,7 +82,7 @@ def GetGeneralizedKmesh(structure, k_dist, RemoveSymm=False):
     get_kpoints_file = subprocess.Popen('getKPoints')
     get_kpoints_file.communicate()
     KPTS = Kpoints().from_file('KPOINTS')
-    OperationsOnFiles.RemoveMatchingFiles(['KPOINTS*', 'POSCAR*', 'INCAR', 'PRECALC'])
+    RemoveMatchingFiles(['KPOINTS*', 'POSCAR*', 'INCAR', 'PRECALC'])
     return KPTS
 
 def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
