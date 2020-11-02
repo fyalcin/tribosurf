@@ -14,8 +14,8 @@ from triboflow.firetasks.kpoint_convergence import FT_KpointsConvo
 from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \
     FT_StartSlabRelax, FT_GetRelaxedSlab
 from triboflow.firetasks.PPES import FT_DoPPESCalcs, FT_FitPPES
-from triboflow.helper_functions import GetPropertyFromMP, GetEmin, \
-    GetCustomVaspStaticSettings
+from triboflow.utils.database import GetPropertyFromMP
+from triboflow.utils.vasp_tools import GetEmin, GetCustomVaspStaticSettings
 
 def CalcPES_SWF(interface_name, functional):
     tag = interface_name+'_'+str(uuid4())

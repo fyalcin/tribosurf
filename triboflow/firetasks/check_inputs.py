@@ -7,8 +7,9 @@ Created on Mon Jun 22 12:29:28 2020
 from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
-from triboflow.helper_functions import GetLowEnergyStructure, GetHighLevelDB, \
-    InterfaceName, GetPropertyFromMP, GetBulkFromDB
+from triboflow.utils.database import GetLowEnergyStructure, GetHighLevelDB, \
+    GetPropertyFromMP, GetBulkFromDB
+from triboflow.utils.structure_manipulation import InterfaceName
 
 
 @explicit_serialize

@@ -21,8 +21,9 @@ from triboflow.PES_functions.HS_functions import GetSlabHS, GetInterfaceHS
 from triboflow.PES_functions.utility_functions import ApplyPbcToHS, \
     RemoveZCoords
 from triboflow.PES_functions.PES_functions import ReplicatePESPoints
-from triboflow.helper_functions import GetInterfaceFromDB, \
-    GetCustomVaspRelaxSettings, GetDB, GetHighLevelDB, CleanUpSitePorperties, \
+from triboflow.utils.database import GetInterfaceFromDB, GetDB, GetHighLevelDB
+from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
+from triboflow.utils.structure_manipulation import CleanUpSiteProperties, \
     SlabFromStructure
 
 

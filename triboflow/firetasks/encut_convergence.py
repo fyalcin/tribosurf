@@ -12,9 +12,11 @@ from atomate.utils.utils import env_chk
 from atomate.vasp.config import VASP_CMD, DB_FILE
 from atomate.vasp.powerups import add_modify_incar
 from atomate.vasp.workflows.base.bulk_modulus import get_wf_bulk_modulus
-from triboflow.helper_functions import GetLastBMDatafromDB, \
-    GetCustomVaspStaticSettings, GetDB, IsListConverged, GetBulkFromDB, \
-    GetHighLevelDB, GetEmin
+from triboflow.utils.database import GetLastBMDatafromDB, GetDB, GetBulkFromDB, \
+    GetHighLevelDB
+from triboflow.utils.vasp_tools import GetCustomVaspStaticSettings, GetEmin
+from triboflow.utils.check_convergence import IsListConverged
+
 
 
 @explicit_serialize

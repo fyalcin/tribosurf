@@ -14,8 +14,10 @@ from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 from atomate.vasp.fireworks.core import StaticFW
 from atomate.vasp.powerups import add_modify_incar
-from triboflow.helper_functions import GetInterfaceFromDB, \
-    GetCustomVaspStaticSettings, GetDB, GetHighLevelDB, CleanUpSitePorperties
+from triboflow.utils.database import GetInterfaceFromDB, GetDB, \
+    GetHighLevelDB
+from triboflow.utils.vasp_tools import GetCustomVaspStaticSettings
+from triboflow.utils.structure_manipulation import CleanUpSiteProperties
 
 
 @explicit_serialize

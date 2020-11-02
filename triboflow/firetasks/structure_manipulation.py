@@ -16,8 +16,10 @@ from atomate.vasp.powerups import add_modify_incar
 from atomate.vasp.fireworks.core import OptimizeFW
 from mpinterfaces.transformations import get_aligned_lattices, \
     get_interface#generate_all_configs
-from triboflow.helper_functions import GetBulkFromDB, GetSlabFromDB,\
-    GetHighLevelDB, GetCustomVaspRelaxSettings, GetDB, InterfaceName
+from triboflow.utils.database import GetBulkFromDB, GetSlabFromDB, \
+    GetHighLevelDB, GetDB
+from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
+from triboflow.utils.structure_manipulation import InterfaceName
 
 
 @explicit_serialize

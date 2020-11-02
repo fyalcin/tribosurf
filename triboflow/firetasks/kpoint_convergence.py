@@ -12,8 +12,9 @@ from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 from atomate.vasp.fireworks.core import StaticFW
 from atomate.vasp.powerups import add_modify_incar
-from triboflow.helper_functions import  GetCustomVaspStaticSettings, GetDB, \
-    IsListConverged, GetBulkFromDB, GetHighLevelDB, GetGeneralizedKmesh
+from triboflow.utils.database import GetDB, GetBulkFromDB, GetHighLevelDB
+from triboflow.utils.check_convergence import IsListConverged
+from triboflow.utils.vasp_tools import GetGeneralizedKmesh, GetCustomVaspStaticSettings
 
 
 @explicit_serialize

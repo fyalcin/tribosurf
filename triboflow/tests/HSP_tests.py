@@ -12,7 +12,7 @@ from pymatgen.core.surface import SlabGenerator
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.analysis.adsorption import AdsorbateSiteFinder
 from mpinterfaces.transformations import get_aligned_lattices
-from triboflow.helper_functions import GetHighLevelDB
+from triboflow.utils.database import GetHighLevelDB
 
 
 db_file = '/fs/home/wolloch/git_test/config/db.json'

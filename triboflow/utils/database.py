@@ -44,7 +44,7 @@ def ConvertBytesToImage(bytes_object):
     pil_img = Image.open(io.BytesIO(bytes_object))
     return pil_img
 
-def ConvertFigToBytes(path_to_fig): #! To rename this function in ConvertImageToBytes
+def ConvertImageToBytes(path_to_fig):
     """Convert an image to bytes for starage in MongoDB database.
 
     Parameters
