@@ -8,8 +8,8 @@ Created on Mon Oct  26 11:20:07 2020
 
 import numpy as np
 from scipy.interpolate import Rbf
-from PES_functions import plot_pes
-from utility_functions import PBC_Coordinates, ReplicatePoints, \
+from triboflow.PES_functions.PES_functions import plot_pes
+from triboflow.PES_functions.utility_functions import PBC_Coordinates, ReplicatePoints, \
                               GenerateUniformGrid, Orthorombize
 
 
