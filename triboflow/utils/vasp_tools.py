@@ -1,7 +1,7 @@
 import os
 import subprocess
 
-from operations_on_file import RemoveMatchingFiles
+from file_manipulation import RemoveMatchingFiles
 
 from pymatgen.io.vasp.inputs import Kpoints
 from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet, MPStaticSet
