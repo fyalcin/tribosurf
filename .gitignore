@@ -4,3 +4,6 @@ launcher*
 .spyproject/config/backups/workspace.ini.bak
 .spyproject/config/workspace.ini
 triboflow.egg-info
+triboflow/__pycache__
+triboflow/phys/__pycache__
+triboflow/utils/__pycache__

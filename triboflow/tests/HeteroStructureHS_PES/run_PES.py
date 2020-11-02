@@ -8,8 +8,8 @@ Created on Mon Oct  26 11:20:07 2020
 
 import numpy as np
 from scipy.interpolate import Rbf
-from triboflow.PES_functions.PES_functions import plot_pes
-from triboflow.PES_functions.utility_functions import PBC_Coordinates, ReplicatePoints, \
+from triboflow.utils.plot_tools import Plot_PES
+from triboflow.utils.phys_tools import PBC_Coordinates, ReplicatePoints, \
                               GenerateUniformGrid, Orthorombize
 
 
@@ -33,7 +33,7 @@ pes_data = np.column_stack([coordinates[:, :2], E_new])
 
 data, cell_ortho = Orthorombize(pes_data, cell)
 
-plot_pes(data, cell_ortho, to_fig=None)
+Plot_PES(data, cell_ortho, to_fig=None)
 
 
 
@@ -71,9 +71,9 @@ def StaticTribo(hs, E, cell):
         Relevant information about Shear Strength
     """
     
-    from PES_functions import GetPES, Orthorombize
-    from MEP_functions import GetBSMEP, GetMEP
-    from SS_functions import GetShearStrength_xy, GetShearStrength
+    from triboflow.utils.PES import GetPES, Orthorombize
+    from triboflow.utils.MEP import GetBSMEP, GetMEP
+    from triboflow.utils.SS import GetShearStrength_xy, GetShearStrength
     
     # Get the PES
     rbf, pes_dict, pes_data = GetPES(hs, E, cell)
