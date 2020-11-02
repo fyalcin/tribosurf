@@ -1,10 +1,10 @@
 import os
 import subprocess
 
-from file_manipulation import RemoveMatchingFiles
-
 from pymatgen.io.vasp.inputs import Kpoints
 from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet, MPStaticSet
+
+from triboflow.utils.file_manipulation import RemoveMatchingFiles
 
 def GetEmin(potcar):
     """
@@ -352,7 +352,7 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
                             user_kpoints_settings = uks,
                             user_potcar_functional = 'PBE_54')
     else:
-    vis = MPRelaxSet(structure, user_incar_settings = uis, vdw = vdw,
+        vis = MPRelaxSet(structure, user_incar_settings = uis, vdw = vdw,
                         user_kpoints_settings = uks,
                         user_potcar_functional = 'PBE_54')
         

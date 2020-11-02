@@ -9,7 +9,7 @@ Python functions to get the Potential Energy Surface (PES) of an interface
 """
 
 import numpy as np
-from utility_functions import ReplicatePoints, GenerateUniformGrid, Orthorombize
+from triboflow.PES_functions.utility_functions import ReplicatePoints, GenerateUniformGrid, Orthorombize
 
 
 # =============================================================================

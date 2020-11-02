@@ -2,7 +2,7 @@ import numpy as np
 from pymatgen.core.surface import Slab
 from pymatgen.core.sites import PeriodicSite
 
-from database import Database
+from triboflow.utils.database import GetPropertyFromMP
 
 def SlabFromStructure(miller, structure):
     """Returns a pymatgen.core.surface.Slab from a pymatgen structure.
@@ -166,8 +166,8 @@ def InterfaceName(mp_id_1, miller_1, mp_id_2, miller_2):
         Unique name for the interface of two slabs.
 
     """
-    f1 = Database.GetPropertyFromMP(mp_id_1, 'pretty_formula')
-    f2 = Database.GetPropertyFromMP(mp_id_2, 'pretty_formula')
+    f1 = GetPropertyFromMP(mp_id_1, 'pretty_formula')
+    f2 = GetPropertyFromMP(mp_id_2, 'pretty_formula')
     if type(miller_1) is list:
         m1 = ''.join(str(s) for s in miller_1)
     else:

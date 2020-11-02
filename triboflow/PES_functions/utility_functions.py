@@ -9,7 +9,7 @@ Utility tools to calculate the High Simmetry (HS) points for slab and interface
 """
 
 import numpy as np
-from HS_functions import HS_DictConverter
+from triboflow.PES_functions.HS_functions import HS_DictConverter
 
 
 # =============================================================================

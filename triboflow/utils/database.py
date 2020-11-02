@@ -1,6 +1,8 @@
 import io
+import os
 import pymongo
 from PIL import Image
+from pymatgen.ext.matproj import MPRester
 from atomate.vasp.database import VaspCalcDb
 
 # Global variables with the local path for the database configurations 

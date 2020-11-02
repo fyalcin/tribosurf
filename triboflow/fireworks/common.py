@@ -2,7 +2,7 @@
 
 
 from fireworks import Firework
-from triboflow.firetasks.PES import FT_FindHighSymmPoints, FT_StartPESCalcs
+#from triboflow.firetasks.PES import FT_FindHighSymmPoints, FT_StartPESCalcs
 from triboflow.firetasks.check_inputs import FT_CheckCompParamDict, \
     FT_CheckInterfaceParamDict, FT_CheckMaterialInputDict, FT_MakeBulkInDB, \
     FT_MakeSlabInDB, FT_MakeInterfaceInDB
