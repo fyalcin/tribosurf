@@ -392,9 +392,13 @@ class FT_MakeHeteroStructure(FiretaskBase):
 # LinAlgError("Singular matrix") error in forming the matched slabs?
 # The following lines ensures that max_angle_diff > 1.5. This is not a great
 # solution obviously. I also changed the default in FT_CheckInterfaceParamDict
+#
+# Ran into this problem again only more severe in November 2020. For Ag111 and
+# Pt111 matching the error appears for max_angle_diff > ~0.4!
+# Please see issue #25 on gitlab.
 # =============================================================================
-            if inter_params['max_angle_diff'] > 1.5:
-                inter_params['max_angle_diff'] = 1.5
+            if inter_params['max_angle_diff'] > 0.4:
+                inter_params['max_angle_diff'] = 0.4
         
             bottom_aligned, top_aligned = get_aligned_lattices(
                 slab_1,
