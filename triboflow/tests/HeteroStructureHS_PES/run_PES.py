@@ -27,11 +27,18 @@ pes_array[:, :2] = pbc.copy()
 
 data_rep = ReplicatePoints(pes_array, cell, replicate_of=(3, 3))
 rbf = Rbf(data_rep[:, 0], data_rep[:, 1], data_rep[:, 2], function='cubic')
-coordinates = GenerateUniformGrid(cell, density=10)
-E_new = rbf(coordinates[:, 0], coordinates[:, 1])
-pes_data = np.column_stack([coordinates[:, :2], E_new])
+coordinates = GenerateUniformGrid(cell, density=30)
+x = coordinates[:, 0]
+y = coordinates[:, 1]
+E_new = rbf(x, y)
+E_new.reshape(len(x), len(y))
+#pes_data = np.column_stack([coordinates[:, :2], E_new])
 
-data, cell_ortho = Orthorombize(pes_data, cell)
+coords, cell_ortho = Orthorombize(coordinates[:, :2], cell)
+x=coords[:, 0].reshape(49,4)
+y=coords[:, 0].reshape(49,4)
+E=rbf(x, y).reshape(len(x), len(y))
+data =  np.array(np.column_stack([x, y, E]))
 
 Plot_PES(data, cell_ortho, to_fig=None)
 

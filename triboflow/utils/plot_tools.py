@@ -89,9 +89,9 @@ def Plot_PES(data, lattice, to_fig=None):
 
     a = lattice[0]
     b = lattice[1]
-    x = data[:, 0]
-    y = data[:, 1]
-    E = data[:, 2]
+    x = data[0]
+    y = data[1]
+    E = data[2]
 
     fact=1.
     level= 43
