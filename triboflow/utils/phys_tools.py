@@ -9,7 +9,9 @@ Utility tools to calculate the High Simmetry (HS) points for slab and interface
 """
 
 import numpy as np
+from ase import Atoms
 from triboflow.phys.high_symmetry import HS_DictConverter
+from triboflow.utils.plot_tools import Plot_UniformGrid
 
 
 # =============================================================================
@@ -25,7 +27,7 @@ def PBC_Coordinates(data, cell, to_array=True, scaled_positions=False):
 
     """
     
-    from ase import Atoms
+    
     
     # Check the types of the input parameters
     if not ( (isinstance(data, list)) or (isinstance(data, np.ndarray)) ):

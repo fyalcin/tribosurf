@@ -9,6 +9,9 @@ Utility tools to calculate the High Simmetry (HS) points for slab and interface
 """
 
 import numpy as np
+import matplotlib.pyplot as plt  
+from mpl_toolkits.mplot3d import Axes3D
+from pymatgen.analysis.adsorption import plot_slab
 from triboflow.phys.high_symmetry import HS_DictConverter
 
 
@@ -39,9 +42,6 @@ def Plot_SlabHS(hs, slab, to_fig=None):
     None.
 
     """
- 
-    import matplotlib.pyplot as plt  
-    from pymatgen.analysis.adsorption import plot_slab
     
     # Check the type of the hs points
     typ = list( set(type(k) for k in hs.values()) )[0]
@@ -85,8 +85,6 @@ def Plot_PES(data, lattice, to_fig=None):
 
     """
 
-    import matplotlib.pyplot as plt
-
     a = lattice[0]
     b = lattice[1]
     x = data[0]
@@ -127,9 +125,6 @@ def Plot_UniformGrid(grid, cell, n_a, n_b):
     Plot an uniform grid of n_aXn_b points on the planar base of a lattice 
     
     """
-    
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D
     
     a = cell[0, :]
     b = cell[1, :]
