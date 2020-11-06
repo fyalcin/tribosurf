@@ -9,8 +9,7 @@ Python functions to get the Minimum Energy Path (MEP) of a PES of an interface
 """
 
 import numpy as np
-from triboflow.PES_functions.SS_functions import TakeDerivative, GetShearStrength_xy
-
+from triboflow.phys.shear_strength import TakeDerivative, GetShearStrength_xy
 
 # =============================================================================
 # EVALUATION OF THE MEP

@@ -9,7 +9,7 @@ Python functions to get the Potential Energy Surface (PES) of an interface
 """
 
 import numpy as np
-from triboflow.PES_functions.utility_functions import ReplicatePoints, GenerateUniformGrid, Orthorombize
+from triboflow.utils.phys_tools import ReplicatePoints, GenerateUniformGrid, Orthorombize
 
 
 # =============================================================================
@@ -153,11 +153,6 @@ def UnfoldPES(hs_all, E_unique):
     E_array = np.array(E_array)      
     
     return E_list, E_array
-
-
-# =============================================================================
-# PLOTTING TOOLS
-# =============================================================================
 
 
 def plot_pes(data, lattice, to_fig=None):

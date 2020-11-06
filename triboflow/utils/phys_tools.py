@@ -9,7 +9,9 @@ Utility tools to calculate the High Simmetry (HS) points for slab and interface
 """
 
 import numpy as np
-from triboflow.PES_functions.HS_functions import HS_DictConverter
+from ase import Atoms
+from triboflow.phys.high_symmetry import HS_DictConverter
+from triboflow.utils.plot_tools import Plot_UniformGrid
 
 
 # =============================================================================
@@ -25,7 +27,7 @@ def PBC_Coordinates(data, cell, to_array=True, scaled_positions=False):
 
     """
     
-    from ase import Atoms
+    
     
     # Check the types of the input parameters
     if not ( (isinstance(data, list)) or (isinstance(data, np.ndarray)) ):
@@ -94,8 +96,8 @@ def ReplicatePoints(data, cell, replicate_of=(1, 1)):
         y_new = np.array([])
         E_new = np.array([])    
         
-        for i in range(n):
-                for j in range(m):
+        for i in range(-n,n):
+                for j in range(-m,m):
                     
                     # Replicate the x- and y- coordinates
                     x_add = x + a[0]*i + b[0]*j
@@ -113,7 +115,7 @@ def ReplicatePoints(data, cell, replicate_of=(1, 1)):
 
 def GenerateUniformGrid(cell, density=1, pts_a=None, to_plot=False):
     """
-    Generate a 2D-uniform grid of points of points with a given density on the
+    Generate a 2D-uniform grid of points with a given density on the
     basal lattice plane of a cell (a X b), i.e. lattice[0,:] X lattice[1,:].
     You can set a uniform density or provide the points along a.
 
@@ -194,7 +196,7 @@ def GenerateUniformGrid(cell, density=1, pts_a=None, to_plot=False):
 # =============================================================================
 
 
-def Orthorombize(data, cell):
+def Orthorombize(data, cell, return_3x3=True):
     """
     Take the replicated points of the pes and cut them in a squared shape.
     TODO : Improve the code and VECTORIZE
@@ -226,6 +228,7 @@ def Orthorombize(data, cell):
         y_up =  max(abs(a[1]), abs(b[1]))
         y_dw =  min(abs(a[1]), abs(b[1]))
         
+        
     index_x = (data[:, 0] <= 2*x_up) * (data[:, 0] >= 2*x_dw)
     index_y = (data[:, 1] <= 2*y_up) * (data[:, 1] >= 2*y_dw) 
     index = index_x * index_y
@@ -239,117 +242,8 @@ def Orthorombize(data, cell):
     orthorombic = np.array(orthorombic)
     cell = np.array([[x_up, y_dw], [x_dw, y_up]])
     
+    if return_3x3:
+        cell = np.array([[x_up, y_dw, 0], [x_dw, y_up, 0], [0, 0, 1]])
+    
     return orthorombic, cell
 
-
-# =============================================================================
-# PLOTTING TOOLS
-# =============================================================================
-
-
-def Plot_SlabHS(hs, slab, to_fig=None):
-    """
-    Plot the slab, displaying the atoms and the HS sites of the surface
-    
-    Parameters
-    ----------
-    slab : pymatgen.core.surface.Slab 
-        The slab to be displayed
-        
-    hs : dict
-        HS sites of the slab.
-        
-    name_fig : string, optional
-        Name of the image that you want to save, it will be: 'name_fig'+'.pdf' 
-        Suggested name: 'Name of the material' + 'Miller index'.
-        The default is None and no image is saved.     
-        
-    Returns
-    -------
-    None.
-
-    """
- 
-    import matplotlib.pyplot as plt  
-    from pymatgen.analysis.adsorption import plot_slab
-    
-    # Check the type of the hs points
-    typ = list( set(type(k) for k in hs.values()) )[0]
-    if typ == list:
-        hs = HS_DictConverter(hs, to_array=True)
-    
-    # Extract the lattice vector of the basal plane
-    a = slab.lattice.matrix[0, :]
-    b = slab.lattice.matrix[1, :]
-    
-    # plot the atoms and the lattice cell
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    
-    plot_slab(slab, ax, scale=0.8, repeat=3, window=1.25, 
-              draw_unit_cell=True, decay=0.2, adsorption_sites=False)
-    ax.set(xlim = ( -0.1*(a[0] + b[0]), 1.1*(a[0] + b[0]) ), 
-           ylim = ( -0.1*(a[1] + b[1]), 1.1*(a[1] + b[1]) ))
-    
-    # Add the HS sites with the proper labels
-    for k in hs.keys():
-        data = hs[k]
-        if len(data.shape) == 1:
-            plt.plot(data[0], data[1], marker='x', markersize=10, mew=3, 
-                     linestyle='', zorder=10000, label=k)     
-        else:
-            plt.plot(data[:,0], data[:,1], marker='x', markersize=7.5, mew=3, 
-                     linestyle='', zorder=10000, label=k)
- 
-    plt.legend(bbox_to_anchor=(1.025, 1), loc='upper left')
-    
-    if to_fig != None:
-        plt.savefig(to_fig+'.pdf', dpi=300)
-    
-    plt.show()
-    
-    
-def Plot_UniformGrid(grid, cell, n_a, n_b):
-    """
-    Plot an uniform grid of n_aXn_b points on the planar base of a lattice 
-    
-    """
-    
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D
-    
-    a = cell[0, :]
-    b = cell[1, :]
-    v = np.cross(a, b)
-    
-    mod_a = np.sqrt(a[0]**2. + a[1]**2. + a[2]**2.)
-    mod_b = np.sqrt(b[0]**2. + b[1]**2. + b[2]**2.)
-    A = np.sqrt(v[0]**2. + v[1]**2. + v[2]**2.)
-    
-    N = n_a * n_b
-    density = N / A
-    
-    # Print information
-    print("1st vector:  {:} -> norm: {:.3f}".format(a, mod_a))
-    print("2nd vector:  {:} -> norm: {:.3f}".format(b, mod_b))
-    print("N pts: {:}   Area: {:.3f}   Density: {:.3f}".format(N, A, density))
-    print("\nUniform {0}x{1} grid\n".format(n_a, n_b))
-    print(grid)      
-    
-    # Projection on the plane, top view
-    plt.title("Projection on xy plane")
-    plt.plot(grid[:, 0], grid[:, 1], 'o')
-    
-    # 3D plot
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(grid[:,0], grid[:,1], grid[:,2], 
-               c='r', marker='o', label="3D grid")
-    
-    # Plot the lattice edge of the plane
-    x = [0, a[0], a[0]+b[0], b[0],0]
-    y = [0, a[1], a[1]+b[1], b[1],0]
-    z = [0, a[2], a[2]+b[2], b[2],0]
-    
-    ax.plot(x, y, z)
-    plt.show()
