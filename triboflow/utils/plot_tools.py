@@ -107,7 +107,7 @@ def Plot_PES(data, lattice, to_fig=None):
     ax.plot(0.,0.,'w.',ms=7)
     ax.text(0.5,-0.5,'[1 0 1]',rotation='horizontal',color='white', fontsize=14)
     ax.text(-0.5,1.,'[1 2 1]',rotation='vertical',color='white', fontsize=14)
-    ax.axis([-fact*a, fact*a, -fact*b, fact*b])
+    ax.axis([-fact*min(a), fact*max(a), -fact*min(b), fact*max(b)])
     plt.xlabel(r"distance ($\AA$)",fontsize=12,family='serif')
     plt.ylabel(r"distance ($\AA$)",fontsize=12,family='serif')
 
