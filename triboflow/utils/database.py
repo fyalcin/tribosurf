@@ -125,7 +125,7 @@ def AddBulkToDB(structure, mp_id, db_file, functional):
     return
 
 def GetBulkFromDB(mp_id, db_file, functional):
-    """Retrueve a bulk structure from the high-level database.
+    """Retrieve information about a bulk from the high-level database.
 
     Parameters
     ----------
@@ -145,7 +145,8 @@ def GetBulkFromDB(mp_id, db_file, functional):
     Returns
     -------
     out_dict : TYPE
-        DESCRIPTION.
+       Dictionary that contains all the information stored for the bulk in the
+       high level database.
 
     """
 
@@ -161,6 +162,32 @@ def GetBulkFromDB(mp_id, db_file, functional):
                     '{}.bulk_data collection.'.format(mp_id, functional))
 
 def GetSlabFromDB(mp_id, db_file, miller, functional):
+    """Retrieve information about a slab from the high-level database.
+
+    Parameters
+    ----------
+    mp_id : str
+        Materials project ID number of the structure to fetch.
+    db_file : str
+        path to the db.json file that is used to connect to the database.
+    miller : list of int
+        Miller indices for the slab as a list of three integers.
+    functional : str
+        Functional (PBE or SCAN) to select the correct database collection.
+
+    Raises
+    ------
+    IOError
+        If there is no entry in the high-level db for the mp_id-miller pair
+        given, an error is thrown.
+
+    Returns
+    -------
+    out_dict : TYPE
+       Dictionary that contains all the information stored for the slab in the
+       high level database.
+
+    """
     db = GetDB(db_file)
     tribo_db = db.client.triboflow
     col_name=functional+'.slab_data'
@@ -174,6 +201,31 @@ def GetSlabFromDB(mp_id, db_file, miller, functional):
                     .format(mp_id, miller, functional))
 
 def GetInterfaceFromDB(name, db_file, functional):
+    """Retrieve information about a slab from the high-level database.
+
+    Parameters
+    ----------
+    name : str
+        Unique name of the interface as determined from mp_ids and miller
+        inidices by triboflow.utils.structure_manipulation.InterfaceName
+    db_file : str
+        path to the db.json file that is used to connect to the database.
+    functional : str
+        Functional (PBE or SCAN) to select the correct database collection.
+
+    Raises
+    ------
+    IOError
+        If there is no entry in the high-level db for the name
+        given, an error is thrown.
+
+    Returns
+    -------
+    out_dict : TYPE
+       Dictionary that contains all the information stored for the interface
+       in the high level database.
+
+    """
     db = GetDB(db_file)
     tribo_db = db.client.triboflow
     col_name=functional+'.interface_data'
