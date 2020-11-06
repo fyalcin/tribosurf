@@ -96,8 +96,8 @@ def ReplicatePoints(data, cell, replicate_of=(1, 1)):
         y_new = np.array([])
         E_new = np.array([])    
         
-        for i in range(n):
-                for j in range(m):
+        for i in range(-n,n):
+                for j in range(-m,m):
                     
                     # Replicate the x- and y- coordinates
                     x_add = x + a[0]*i + b[0]*j
@@ -115,7 +115,7 @@ def ReplicatePoints(data, cell, replicate_of=(1, 1)):
 
 def GenerateUniformGrid(cell, density=1, pts_a=None, to_plot=False):
     """
-    Generate a 2D-uniform grid of points of points with a given density on the
+    Generate a 2D-uniform grid of points with a given density on the
     basal lattice plane of a cell (a X b), i.e. lattice[0,:] X lattice[1,:].
     You can set a uniform density or provide the points along a.
 
@@ -196,7 +196,7 @@ def GenerateUniformGrid(cell, density=1, pts_a=None, to_plot=False):
 # =============================================================================
 
 
-def Orthorombize(data, cell):
+def Orthorombize(data, cell, return_3x3=True):
     """
     Take the replicated points of the pes and cut them in a squared shape.
     TODO : Improve the code and VECTORIZE
@@ -228,6 +228,7 @@ def Orthorombize(data, cell):
         y_up =  max(abs(a[1]), abs(b[1]))
         y_dw =  min(abs(a[1]), abs(b[1]))
         
+        
     index_x = (data[:, 0] <= 2*x_up) * (data[:, 0] >= 2*x_dw)
     index_y = (data[:, 1] <= 2*y_up) * (data[:, 1] >= 2*y_dw) 
     index = index_x * index_y
@@ -240,6 +241,9 @@ def Orthorombize(data, cell):
     #orthorombic = np.column_stack(orthorombic)
     orthorombic = np.array(orthorombic)
     cell = np.array([[x_up, y_dw], [x_dw, y_up]])
+    
+    if return_3x3:
+        cell = np.array([[x_up, y_dw, 0], [x_dw, y_up, 0], [0, 0, 1]])
     
     return orthorombic, cell
 
