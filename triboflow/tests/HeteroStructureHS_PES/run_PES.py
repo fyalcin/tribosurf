@@ -7,6 +7,7 @@ Created on Mon Oct  26 11:20:07 2020
 """
 
 import numpy as np
+import matplotlib.pyplot as plt
 from scipy.interpolate import Rbf
 from triboflow.utils.plot_tools import Plot_PES
 from triboflow.utils.phys_tools import PBC_Coordinates, ReplicatePoints, \
@@ -25,24 +26,42 @@ pes_array = np.unique(pes_array, axis=0)
 pbc = PBC_Coordinates(pes_array[:, :2], cell, to_array=True)
 pes_array[:, :2] = pbc.copy()
 
-data_rep = ReplicatePoints(pes_array, cell, replicate_of=(3, 3))
+pes_array[:,2] = pes_array[:,2]-min(pes_array[:,2])
+
+data_rep = ReplicatePoints(pes_array, cell, replicate_of=(4, 4))
 rbf = Rbf(data_rep[:, 0], data_rep[:, 1], data_rep[:, 2], function='cubic')
 coordinates = GenerateUniformGrid(cell, density=30)
 x = coordinates[:, 0]
 y = coordinates[:, 1]
-E_new = rbf(x, y)
-E_new.reshape(len(x), len(y))
+#E_new = rbf(x, y)
+#E_new.reshape(len(x), len(y))
+
 #pes_data = np.column_stack([coordinates[:, :2], E_new])
 
 coords, cell_ortho = Orthorombize(coordinates[:, :2], cell)
-x=coords[:, 0].reshape(49,4)
-y=coords[:, 0].reshape(49,4)
-E=rbf(x, y).reshape(len(x), len(y))
-data =  np.array(np.column_stack([x, y, E]))
+#x=coords[:, 0].reshape(49,4)
+#y=coords[:, 0].reshape(49,4)
+#E=rbf(x, y)#.reshape(len(x), len(y))
+#data =  np.array(np.column_stack([x, y, E]))
 
-Plot_PES(data, cell_ortho, to_fig=None)
+#Plot_PES(data, cell_ortho, to_fig=None)
 
 
+orth_coords, cell_ortho = Orthorombize(data_rep, cell)
+# ortho_cell_3d = np.zeros((3,3))
+# ortho_cell_3d[0,0] = cell_ortho[0,0]
+# ortho_cell_3d[1,1] = cell_ortho[1,1]
+coordinates = GenerateUniformGrid(cell_ortho, density=30)
+
+#plt.plot(coordinates[:,0], coordinates[:,1], 'ro')
+plt.arrow(0,0, cell_ortho[0,0], cell_ortho[0,1])
+plt.arrow(0,0, cell_ortho[1,0], cell_ortho[1,1])
+
+X, Y = np.meshgrid(coordinates[:,0], coordinates[:,1])
+
+E = rbf(X, Y)
+
+Plot_PES([X, Y, E], cell_ortho)
 
 
 
