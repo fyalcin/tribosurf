@@ -5,10 +5,33 @@ from PIL import Image
 from pymatgen.ext.matproj import MPRester
 from atomate.vasp.database import VaspCalcDb
 
-# Global variables with the local path for the database configurations 
-current_dir = os.path.dirname(__file__)
-db_file = os.path.join(current_dir, '../../config/db.json')
+def GetDBJSON():
+    """Return the full path to the db.json file to connect to the database.
+    
+    Uses the environment variable that should be set during the configuration
+    of the virtual python environment for triboflow to find the config
+    directory which should contain the db.json file.
 
+    Raises
+    ------
+    SystemError
+        If the environment variable is not set, an error will be raised.
+
+    Returns
+    -------
+    db_file : str
+        Full path to the db.json file that us used to access the database.
+
+    """
+    if 'FW_CONFIG_FILE' in os.environ:
+        conf_file = os.environ['FW_CONFIG_FILE']
+        conf_path = conf_file.rstrip('FW_config.yaml')
+        db_file = conf_path + 'db.json'
+        return db_file
+    else:
+        raise SystemError('Could not find "FW_CONFIG_FILE" environment '
+                          'variable.\nPlease make sure that your python'
+                          'environment is configured correctly.')
 
 def GetDB(db_file=db_file):
     """Connect to the MongoDB database specified in the db_file.
@@ -334,3 +357,6 @@ def GetLowEnergyStructure(chem_formula, MP_ID=None, PrintInfo=False):
                 MP_ID = id_list[0]['material_id']
                 struct = mpr.get_structure_by_material_id(MP_ID)
                 return struct, MP_ID
+            
+# Global variable with the local path for the database configurations 
+db_file = GetDBJSON()
