@@ -9,7 +9,8 @@ Calculate the High Simmetry (HS) points for slab and interface
 """
 
 import numpy as np
-
+from ase import Atoms
+from pymatgen.analysis.adsorption import AdsorbateSiteFinder
 
 # =============================================================================
 # CALCULATE THE HS POINTS FOR A SLAB
@@ -59,8 +60,6 @@ def GetSlabHS(slab, allowed_sites=['ontop', 'bridge', 'hollow'], to_array=False)
 
     """
 
-    from pymatgen.analysis.adsorption import AdsorbateSiteFinder
-    
     adsf = AdsorbateSiteFinder(slab)
     
     # Extract the unique HS points for the given surface in the unit cell
@@ -257,8 +256,6 @@ def PBC_HSPoints(hs, cell, to_array=False, z_red=True):
     z-coordinates from the translations.
 
     """
-    
-    from ase import Atoms
     
     # Type check and error handling
     if not isinstance(hs, dict):

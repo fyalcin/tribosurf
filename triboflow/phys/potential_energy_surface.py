@@ -9,7 +9,9 @@ Python functions to get the Potential Energy Surface (PES) of an interface
 """
 
 import numpy as np
-from triboflow.utils.phys_tools import ReplicatePoints, GenerateUniformGrid, Orthorombize
+from scipy.interpolate import Rbf
+from triboflow.utils.phys_tools import ReplicatePoints, GenerateUniformGrid, \
+    Orthorombize, PBC_Coordinates
 
 
 # =============================================================================
@@ -18,10 +20,14 @@ from triboflow.utils.phys_tools import ReplicatePoints, GenerateUniformGrid, Ort
 
 
 def GetPES(hs_all, E, cell, to_fig=None):
-    """
+    """Interpolate the PES using a list of high symetry points and energies.
+    
     Main function to get the Potential Energy Surface (PES) for an interface. 
     The points are replicated to span a 3x3 lattice cell and are interpolated
     by using Radial Basis Functions (cubic function).
+    In the output data the energy is normalized so that the absolute minimum
+    is 0. Furthermore it is made sure that the lateral point are inside the
+    unit cell before they are replicated.
     
     ----------        
     hs : dict
@@ -33,10 +39,10 @@ def GetPES(hs_all, E, cell, to_fig=None):
     cell : numpy.ndarray
         Vectors of the lattice cell of the interface.
         
-    to_fig : string, optional
-        Name of the image that you want to save, it will be: 'name_fig'+'.pdf' 
-        Suggested name: name = 'PES_' + 'Name of the interface'.
-        The default is None and no image is saved.
+    #to_fig : string, optional CURRENTLY NOT IMPLEMENTED
+    #    Name of the image that you want to save, it will be: 'name_fig'+'.pdf' 
+    #    Suggested name: name = 'PES_' + 'Name of the interface'.
+    #    The default is None and no image is saved.
 
     Returns
     -------
@@ -62,10 +68,20 @@ def GetPES(hs_all, E, cell, to_fig=None):
              
     """
     
-    from scipy.interpolate import Rbf
-    
     # Unfold the PES points
-    data, pes_dict = UnfoldPES(E, hs_all) 
+    E_list, data = UnfoldPES(hs_all, E)
+    
+    #making sure points are not represented twice by ensuring rows in data are unique
+    data = np.unique(data, axis=0)
+    
+    #make sure that the x and y coordinates are inside the unit cell.
+    x_y_insideCell = PBC_Coordinates(data[:, :2],
+                                     cell,
+                                     to_array=True)
+    data[:, :2] = x_y_insideCell
+        
+    # Normalize the minimum to 0
+    data[:,2] = data[:,2]-min(data[:,2])
     
     # Interpolate the data with Radial Basis Function
     data_rep = ReplicatePoints(data, cell, replicate_of=(3, 3) )
@@ -77,7 +93,7 @@ def GetPES(hs_all, E, cell, to_fig=None):
     E_new = rbf(coordinates[:, 0], coordinates[:, 1])
     pes_data = np.column_stack([coordinates[:, :2], E_new])
     
-    return rbf, pes_dict, pes_data
+    return rbf, E_list, pes_data
 
 
 # =============================================================================

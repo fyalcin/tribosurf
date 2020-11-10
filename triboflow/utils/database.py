@@ -33,7 +33,7 @@ def GetDBJSON():
                           'variable.\nPlease make sure that your python'
                           'environment is configured correctly.')
 
-def GetDB(db_file=db_file):
+def GetDB(db_file):
     """Connect to the MongoDB database specified in the db_file.
     
     Parameters
@@ -41,7 +41,6 @@ def GetDB(db_file=db_file):
     db_file : str, optional
         Full path to the db.json file which holds the location and access
         credentials to the database.
-        The default is '/home/mwo/FireWorks/config/db.json'.
 
     Returns
     -------
@@ -172,7 +171,6 @@ def GetBulkFromDB(mp_id, db_file, functional):
        high level database.
 
     """
-
     db = GetDB(db_file)
     tribo_db = db.client.triboflow
     col_name=functional+'.bulk_data'
@@ -321,11 +319,14 @@ def GetPropertyFromMP(MP_ID, prop):
             return query[0][prop]
 
 def GetLowEnergyStructure(chem_formula, MP_ID=None, PrintInfo=False):
-    """
+    """Search MaterialsProjects for structure.
+    
     A function that searches the MaterialsProject Database
     for structures that match the given chemical formula
     and selcts the one with the lowest formation energy
-    per atom. If several 
+    per atom. If MP_ID is givem, the structure with that mp-id will
+    be returned.
+    
     Inputs: 
     chem_formula (str): Required input of a chemical formula
                         e.g.: NaCl, Fe2O3, SiO, FeCW
@@ -340,7 +341,6 @@ def GetLowEnergyStructure(chem_formula, MP_ID=None, PrintInfo=False):
                         
     Returns: pymatgen Structure object and associated MP_ID
     """
-
     # load structure from MaterialsProjct Website
     with MPRester() as mpr:
         if MP_ID:
@@ -357,6 +357,3 @@ def GetLowEnergyStructure(chem_formula, MP_ID=None, PrintInfo=False):
                 MP_ID = id_list[0]['material_id']
                 struct = mpr.get_structure_by_material_id(MP_ID)
                 return struct, MP_ID
-            
-# Global variable with the local path for the database configurations 
-db_file = GetDBJSON()

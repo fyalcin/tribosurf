@@ -17,10 +17,9 @@ from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 from atomate.vasp.fireworks.core import OptimizeFW, ScanOptimizeFW
 from atomate.vasp.powerups import add_modify_incar
-from triboflow.PES_functions.HS_functions import GetSlabHS, GetInterfaceHS
-from triboflow.PES_functions.utility_functions import ApplyPbcToHS, \
-    RemoveZCoords
-from triboflow.PES_functions.PES_functions import ReplicatePESPoints
+from triboflow.phys.high_symmetry import GetSlabHS, GetInterfaceHS, \
+    PBC_HSPoints
+from triboflow.phys.potential_energy_surface import GetPES
 from triboflow.utils.database import GetInterfaceFromDB, GetDB, GetHighLevelDB
 from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
 from triboflow.utils.structure_manipulation import CleanUpSiteProperties, \
@@ -28,7 +27,7 @@ from triboflow.utils.structure_manipulation import CleanUpSiteProperties, \
 
 
 @explicit_serialize
-class FT_MakePESInterpolation(FiretaskBase):
+class PreparePesCompute_FT(FiretaskBase):
     required_params = ['interface_name', 'functional']
     optional_params = ['db_file']
     def run_task(self, fw_spec):
@@ -43,27 +42,17 @@ class FT_MakePESInterpolation(FiretaskBase):
         struct = Structure.from_dict(inter_dict['relaxed_structure@min'])
         
         #Copy the energies for the unique points to all points
-        E_list = inter_dict['PES']['high_symmetry_points']['energy_list']
+        E_unique = inter_dict['PES']['high_symmetry_points']['energy_list']
         all_hs = inter_dict['PES']['high_symmetry_points']['combined_all']
-        E_list_all = []
-        E_array = []
-        for i in E_list:
-            label = i[0]
-            energy = i[-1]
-            for l in all_hs[label]:
-                x_shift = l[0]
-                y_shift = l[1]
-                E_list_all.append([label, x_shift, y_shift, energy])
-                E_array.append([x_shift, y_shift, energy])
         
-        lattice = struct.lattice.matrix
-        data_rep = ReplicatePESPoints(lattice,
-                                      np.array(E_array),
-                                      replicate_of=(3, 3))
-        rbf = Rbf(data_rep[:, 0],
-                  data_rep[:, 1],
-                  data_rep[:, 2],
-                  function='cubic')
+        Interpolation, pes_dict, pes_data = GetPES(hs_all=all_hs,
+                                                   E=E_unique,
+                                                   cell=struct.lattice.matrix,
+                                                   to_fig=False)
+        
+        
+        
+        
         
 
 @explicit_serialize
@@ -196,20 +185,14 @@ class FT_FindHighSymmPoints(FiretaskBase):
         hsp_unique = GetInterfaceHS(bottom_hsp_unique, top_hsp_unique)
         hsp_all = GetInterfaceHS(bottom_hsp_all, top_hsp_all)
         
-# =============================================================================
-#       Project the high symmetry points which might be outside of the cell
-#       back into it. SHOULD DEFINATELY BE REVISED WITHOUT USING THE PYTORCH
-#       PACKAGE!
-# =============================================================================
-        hsp_unique = ApplyPbcToHS(bottom_aligned, hsp_unique)
-        hsp_all = ApplyPbcToHS(bottom_aligned, hsp_all)
+        cell = bottom_aligned.lattice.matrix
         
-        b_hsp_u =  monty.json.jsanitize(RemoveZCoords(bottom_hsp_unique))
-        b_hsp_a =  monty.json.jsanitize(RemoveZCoords(bottom_hsp_all))
-        t_hsp_u =  monty.json.jsanitize(RemoveZCoords(top_hsp_unique))
-        t_hsp_a =  monty.json.jsanitize(RemoveZCoords(top_hsp_all))
-        c_hsp_u =  monty.json.jsanitize(RemoveZCoords(hsp_unique))
-        c_hsp_a =  monty.json.jsanitize(RemoveZCoords(hsp_all))
+        hsp_unique = PBC_HSPoints(hsp_unique, cell)
+        hsp_all = PBC_HSPoints(hsp_all, cell)     
+        b_hsp_u =  PBC_HSPoints(bottom_hsp_unique, cell)
+        b_hsp_a =  PBC_HSPoints(bottom_hsp_all, cell)
+        t_hsp_u =  PBC_HSPoints(top_hsp_unique, cell)
+        t_hsp_a =  PBC_HSPoints(top_hsp_all, cell)
         
         tribo_db = GetHighLevelDB(db_file)
         coll = tribo_db[functional+'.interface_data']
@@ -221,10 +204,10 @@ class FT_FindHighSymmPoints(FiretaskBase):
                                           'bottom_all': b_hsp_a,
                                           'top_unique': t_hsp_u,
                                           'top_all': t_hsp_a,
-                                          'combined_unique': c_hsp_u,
-                                          'combined_all': c_hsp_a}}}})
+                                          'combined_unique': hsp_unique,
+                                          'combined_all': hsp_all}}}})
             
-        return FWAction(update_spec=({'lateral_shifts': c_hsp_u}))
+        return FWAction(update_spec=({'lateral_shifts': hsp_unique}))
         
         
 
