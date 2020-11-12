@@ -206,10 +206,10 @@ class FT_FindHighSymmPoints(FiretaskBase):
                                           'bottom_all': b_hsp_a,
                                           'top_unique': t_hsp_u,
                                           'top_all': t_hsp_a,
-                                          'combined_unique': hsp_unique,
-                                          'combined_all': hsp_all}}}})
+                                          'combined_unique': c_hsp_u,
+                                          'combined_all': c_hsp_a}}}})
             
-        return FWAction(update_spec=({'lateral_shifts': hsp_unique}))
+        return FWAction(update_spec=({'lateral_shifts': c_hsp_u}))
         
         
 
