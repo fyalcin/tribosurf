@@ -9,6 +9,7 @@ Calculate the High Simmetry (HS) points for slab and interface
 """
 
 import numpy as np
+from monty.json import jsanitize
 from ase import Atoms
 from pymatgen.analysis.adsorption import AdsorbateSiteFinder
 
@@ -219,6 +220,92 @@ def GetInterfaceHS(hs_1, hs_2, cell, to_array=False, z_red=True):
 # TOOLS FOR HS DICTIONARIES
 # =============================================================================
 
+def RoundPosInDict(high_symm_dict, decimals=5):
+    """Round coordinates for high-symmetry points in dict to selected precision.
+    
+    Convert the coordinate lists in a high-symmetry point dictionary as
+    produced by GetSlabHS and GetInterfaceHS to np.arrays and use np.round
+    to round the coordinates. Convert back to lists and return.
+
+    Parameters
+    ----------
+    high_symm_dict : dict
+        Dictionary of high-symmetry points for an interface. As computed
+        by GetInterfaceHS or GetSlabHS.
+    decimals : int, optional
+        Selects the number of decimal points the coordinates are rounded to.
+        The default is 5.
+
+    Returns
+    -------
+    dict
+        Just as the input dictionary, but with the coordinates rounded to the
+        desired precision.
+
+    """
+    hs = high_symm_dict.copy()
+    new_hs = {}
+    for key, value in hs.items():
+        pos = np.array(value)
+        rounded_array = np.round(np.array(pos), decimals=decimals)
+        new_hs[key] = rounded_array
+    
+    return jsanitize(new_hs)
+
+def RemoveDuplicatesFromHSDicts(hs_unique, hs_all, decimals=5):
+    """Remove the duplicates from dictionaries of high-symmetry points.
+    
+    Sometimes duplicate high-symmetry points with distinct labels are reported
+    by GetSlabHS and GetInterfaceHS. This function removes them, while
+    ensuring that the identification of high-symmetry points with their label
+    is kept correctly and no correct duplicate (points which have the same
+    symmetry but different xy-coordinates) are thrown away. The procedure
+    also involves rounding the coordinates to the chosen accuracy, so also
+    points that are not 'exactly' identical can be identified as equivalent.
+    
+
+    Parameters
+    ----------
+    hs_unique : dict
+        Dictionary of unique high-symmetry points for an interface. As computed
+        by GetInterfaceHS.
+    hs_all : dict
+        Dictionary of correctly replicated high-symmetry points for an
+        interface. As computed by GetInterfaceHS.
+    decimals : int, optional
+        Selects the number of decimal points the coordinates are rounded to.
+        The default is 5.
+
+    Returns
+    -------
+    u_hs : dict
+        Dictionary of unique high-symmetry points for an interface. Just as the
+        input dictionary 'hs_unique', but with wrong duplicates removed.
+    a_hs : TYPE
+        Dictionary of all high-symmetry points for an interface. Just as the
+        input dictionary 'hs_all', but with wrong duplicates removed.
+
+    """
+    u_hs = RoundPosInDict(hs_unique.copy(), decimals=decimals)
+    a_hs = RoundPosInDict(hs_all.copy(), decimals=decimals)
+    rev_dict = {}
+    for key, value in u_hs.items(): 
+        rev_dict.setdefault(str(value), list()).append(key)
+    
+    for value in rev_dict.values():
+        if len(value) > 1:
+            equivalent_points = np.array(a_hs[value[0]])
+            for i in value[1:]:
+                #remove the equivalent entries from the u_hs dictionary
+                u_hs.pop(i)
+                equivalent_points = np.vstack((equivalent_points,
+                                               np.array(a_hs[i])))
+                a_hs.pop(i)
+            equivalent_points = np.unique(equivalent_points, axis=0)
+            a_hs[value[0]] = jsanitize(equivalent_points)
+            
+    return u_hs, a_hs
+    
 
 def NormalizeHSDict(hs, to_array=True):
     """

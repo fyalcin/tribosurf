@@ -19,7 +19,7 @@ from triboflow.utils.phys_tools import ReplicatePoints, GenerateUniformGrid, \
 # =============================================================================
 
 
-def GetPES(hs_all, E, cell, to_fig=None):
+def GetPES(hs_all, E, cell, to_fig=None, point_density=20):
     """Interpolate the PES using a list of high symetry points and energies.
     
     Main function to get the Potential Energy Surface (PES) for an interface. 
@@ -72,16 +72,18 @@ def GetPES(hs_all, E, cell, to_fig=None):
     E_list, data = UnfoldPES(hs_all, E)
     
     #making sure points are not represented twice by ensuring rows in data are unique
-    data = np.unique(data, axis=0)
+    data = RemoveDuplicates(data)
+    print(len(data))
     
     #make sure that the x and y coordinates are inside the unit cell.
     x_y_insideCell = PBC_Coordinates(data[:, :2],
                                      cell,
                                      to_array=True)
     data[:, :2] = x_y_insideCell
+    print(len(data))
         
     # Normalize the minimum to 0
-    data[:,2] = data[:,2]-min(data[:,2])
+    data[:,2] = (data[:,2]-min(data[:,2]))*10000
     
     # Interpolate the data with Radial Basis Function
     data_rep = ReplicatePoints(data, cell, replicate_of=(3, 3) )
@@ -89,16 +91,36 @@ def GetPES(hs_all, E, cell, to_fig=None):
     
     # Calculate the PES on a very dense and uniform grid. Useful for further 
     # analysis (MEP, shear strength) and to plot the PES
-    coordinates = GenerateUniformGrid(cell, density=10)
+    coordinates = GenerateUniformGrid(cell, density=point_density)
     E_new = rbf(coordinates[:, 0], coordinates[:, 1])
     pes_data = np.column_stack([coordinates[:, :2], E_new])
     
-    return rbf, E_list, pes_data
+    return rbf, E_list, pes_data, data
 
 
 # =============================================================================
 # UTILITY FOR THE PES
 # =============================================================================
+
+def RemoveDuplicates(data, rounding_decimal=5):
+        
+    xy = np.round(data[:, :2], decimals=rounding_decimal)
+    E_dict = {}
+    for i in xy:
+        duplicates = np.where((xy == i).all(axis=1))[0]
+        E_list = []
+        for j in duplicates:
+            E_list.append(data[j,2])
+        E_dict[str(i)]=np.mean(E_list)
+    xy_unique = np.unique(xy, axis=0)
+    E=[]
+    for i in xy_unique:
+        E.append([E_dict[str(i)]])
+    
+    return np.hstack((xy_unique, np.array(E)))
+    
+    
+        
 
 
 def UnfoldPES(hs_all, E_unique):

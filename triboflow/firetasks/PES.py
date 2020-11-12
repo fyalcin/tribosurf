@@ -18,7 +18,7 @@ from atomate.utils.utils import env_chk
 from atomate.vasp.fireworks.core import OptimizeFW, ScanOptimizeFW
 from atomate.vasp.powerups import add_modify_incar
 from triboflow.phys.high_symmetry import GetSlabHS, GetInterfaceHS, \
-    PBC_HSPoints
+    PBC_HSPoints, RemoveDuplicatesFromHSDicts
 from triboflow.phys.potential_energy_surface import GetPES
 from triboflow.utils.database import GetInterfaceFromDB, GetDB, GetHighLevelDB
 from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
@@ -185,10 +185,12 @@ class FT_FindHighSymmPoints(FiretaskBase):
         hsp_unique = GetInterfaceHS(bottom_hsp_unique, top_hsp_unique)
         hsp_all = GetInterfaceHS(bottom_hsp_all, top_hsp_all)
         
-        cell = bottom_aligned.lattice.matrix
+        c_hsp_u, c_hsp_a = RemoveDuplicatesFromHSDicts(hsp_unique,
+                                                       hsp_all,
+                                                       decimals=5)
         
-        hsp_unique = PBC_HSPoints(hsp_unique, cell)
-        hsp_all = PBC_HSPoints(hsp_all, cell)     
+        cell = bottom_aligned.lattice.matrix
+           
         b_hsp_u =  PBC_HSPoints(bottom_hsp_unique, cell)
         b_hsp_a =  PBC_HSPoints(bottom_hsp_all, cell)
         t_hsp_u =  PBC_HSPoints(top_hsp_unique, cell)
@@ -272,7 +274,7 @@ class FT_StartPESCalcs(FiretaskBase):
             x_shift = lateral_shifts.get(s)[0][0]
             y_shift = lateral_shifts.get(s)[0][1]
             #Make sure that there are no NoneTypes in the site_properties!
-            struct_s = CleanUpSitePorperties(struct.copy())
+            struct_s = CleanUpSiteProperties(struct.copy())
             struct_s.translate_sites(indices=sites_to_shift,
                                      vector=[x_shift, y_shift, 0],
                                      frac_coords=False, to_unit_cell=False)
