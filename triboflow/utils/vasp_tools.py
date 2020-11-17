@@ -256,8 +256,8 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
     uis['LASPH'] = '.TRUE.'
     uis['LORBIT'] = 11
     uis['MAXMIX'] = 100
-    uis['NELMIN'] = 4
-    uis['EDIFF'] = 1.0E-5
+    uis['NELMIN'] = 5
+    uis['EDIFF'] = 0.5E-5
     uis['LAECHG'] = '.FALSE.'
     
     if structure.num_sites < 20:
@@ -267,6 +267,12 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
         uis['NELMDL'] = -15
         uis['EDIFFG'] = -0.02
         uis['NELM'] = 200
+        # Turn on linear mixing
+        # uis['AMIX'] = 0.2
+        # uis['BMIX'] = 0.0001
+        # uis['AMIX_MAG'] = 0.8
+        # uis['BMIX_MAG'] = 0.0001
+        
     else:
         uis['NELMDL'] = -6
         uis['EDIFFG'] = -0.01
