@@ -5,10 +5,7 @@ Created on Tue Oct 13 14:52:57 2020
 
 @author: wolloch
 """
-import monty
-import numpy as np
 from operator import itemgetter
-from scipy.interpolate import Rbf
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import Slab
 from pymatgen.core.operations import SymmOp
@@ -22,12 +19,37 @@ from triboflow.phys.high_symmetry import GetSlabHS, GetInterfaceHS, \
 from triboflow.phys.potential_energy_surface import GetPES
 from triboflow.utils.database import GetInterfaceFromDB, GetDB, GetHighLevelDB
 from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
-from triboflow.utils.structure_manipulation import CleanUpSiteProperties, \
-    SlabFromStructure
-
+from triboflow.utils.structure_manipulation import InterfaceName
 
 @explicit_serialize
-class PreparePesCompute_FT(FiretaskBase):
+class FT_StartPESCalcSubWF(FiretaskBase):
+    required_params = ['mp_id_1', 'mp_id_2', 'miller_1', 'miller_2',
+                       'functional']
+    optional_params = ['db_file']
+    def run_task(self, fw_spec):
+        from triboflow.workflows.subworkflows import CalcPES_SWF
+        mp_id_1 = self.get('mp_id_1')
+        mp_id_2 = self.get('mp_id_2')
+        miller_1 = self.get('miller_1')
+        miller_2 = self.get('miller_2')
+        functional = self.get('functional')
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
+        
+        name = InterfaceName(mp_id_1, miller_1, mp_id_2, miller_2)
+        
+        interface_dict = GetInterfaceFromDB(name, db_file, functional)
+        already_done = interface_dict.get('relaxed_structure@min')
+        
+        if not already_done:
+            SWF = CalcPES_SWF(name, functional)
+            return FWAction(detours=SWF, update_spec=fw_spec)
+        else:
+            return FWAction(update_spec=fw_spec)
+
+@explicit_serialize
+class FT_PreparePesCompute(FiretaskBase):
     required_params = ['interface_name', 'functional']
     optional_params = ['db_file']
     def run_task(self, fw_spec):
