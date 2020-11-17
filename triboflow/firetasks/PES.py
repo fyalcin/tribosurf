@@ -182,8 +182,10 @@ class FT_FindHighSymmPoints(FiretaskBase):
         
         bottom_hsp_unique, bottom_hsp_all = GetSlabHS(bottom_aligned)
         
-        hsp_unique = GetInterfaceHS(bottom_hsp_unique, top_hsp_unique)
-        hsp_all = GetInterfaceHS(bottom_hsp_all, top_hsp_all)
+        cell = bottom_aligned.lattice.matrix
+        
+        hsp_unique = GetInterfaceHS(bottom_hsp_unique, top_hsp_unique, cell)
+        hsp_all = GetInterfaceHS(bottom_hsp_all, top_hsp_all, cell)
         
         c_hsp_u, c_hsp_a = RemoveDuplicatesFromHSDicts(hsp_unique,
                                                        hsp_all,
