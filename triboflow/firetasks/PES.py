@@ -19,7 +19,8 @@ from triboflow.phys.high_symmetry import GetSlabHS, GetInterfaceHS, \
 from triboflow.phys.potential_energy_surface import GetPES
 from triboflow.utils.database import GetInterfaceFromDB, GetDB, GetHighLevelDB
 from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
-from triboflow.utils.structure_manipulation import InterfaceName
+from triboflow.utils.structure_manipulation import InterfaceName, \
+    CleanUpSiteProperties
 
 @explicit_serialize
 class FT_StartPESCalcSubWF(FiretaskBase):
