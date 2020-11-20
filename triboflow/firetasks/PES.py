@@ -20,7 +20,7 @@ from triboflow.phys.potential_energy_surface import GetPES
 from triboflow.utils.database import GetInterfaceFromDB, GetDB, GetHighLevelDB
 from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
 from triboflow.utils.structure_manipulation import InterfaceName, \
-    CleanUpSiteProperties
+    CleanUpSiteProperties, StackAlignedSlabs, ReCenterAlignedSlabs
 
 @explicit_serialize
 class FT_StartPESCalcSubWF(FiretaskBase):
@@ -266,7 +266,7 @@ class FT_StartPESCalcs(FiretaskBase):
     FWActions that produce a detour workflow with relaxations for the PES.
     """
     required_params = ['interface_name', 'functional', 'tag']
-    optional_params = ['db_file', 'structure_name']
+    optional_params = ['db_file', 'top_name', 'bottom_name']
     def run_task(self, fw_spec):
         name = self.get('interface_name')
         functional = self.get('functional')
@@ -274,7 +274,8 @@ class FT_StartPESCalcs(FiretaskBase):
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
-        structure_name = self.get('structure_name', 'unrelaxed_structure')
+        top_name = self.get('top_name', 'top_aligned')
+        bottom_name = self.get('bottom_name', 'bottom_aligned')
         
         lateral_shifts = fw_spec.get('lateral_shifts')
         if not lateral_shifts:
@@ -284,14 +285,18 @@ class FT_StartPESCalcs(FiretaskBase):
         interface_dict = GetInterfaceFromDB(name, db_file, functional)            
                 
         comp_params = interface_dict['comp_parameters']
-        struct = Structure.from_dict(interface_dict[structure_name])
+        top_dict = interface_dict[top_name]
+        bot_dict = Structure.from_dict(interface_dict[bottom_name])
         
-        # List all sites of interface that have positive c coordinates as they
-        # are in the upper slab.
-        sites_to_shift = []
-        for i, s in enumerate(struct.sites):
-            if s.c > 0:
-                sites_to_shift.append(i)
+        top_slab, bot_slab = ReCenterAlignedSlabs(Structure.from_dict(top_dict),
+                                                  Structure.from_dict(bot_dict))
+        
+        # # List all sites of interface that have positive c coordinates as they
+        # # are in the upper slab.
+        # sites_to_shift = []
+        # for i, s in enumerate(struct.sites):
+        #     if s.c > 0:
+        #         sites_to_shift.append(i)
         
         FW_list=[]
         for s in lateral_shifts.keys():
@@ -299,20 +304,20 @@ class FT_StartPESCalcs(FiretaskBase):
             x_shift = lateral_shifts.get(s)[0][0]
             y_shift = lateral_shifts.get(s)[0][1]
             #Make sure that there are no NoneTypes in the site_properties!
-            struct_s = CleanUpSiteProperties(struct.copy())
-            struct_s.translate_sites(indices=sites_to_shift,
-                                     vector=[x_shift, y_shift, 0],
-                                     frac_coords=False, to_unit_cell=False)
+            inter_struct = StackAlignedSlabs(bot_slab,
+                                             top_slab,
+                                             top_shift = [x_shift, y_shift, 0])
+            clean_struct = CleanUpSiteProperties(inter_struct)
             
-            vis = GetCustomVaspRelaxSettings(structure=struct_s,
+            vis = GetCustomVaspRelaxSettings(structure=clean_struct,
                                              comp_parameters=comp_params,
                                              relax_type='interface_z_relax')
             if functional == 'SCAN':
-                FW = ScanOptimizeFW(structure=struct_s,
+                FW = ScanOptimizeFW(structure=clean_struct,
                                     name=label,
                                     vasp_input_set = vis)
             else:
-                FW = OptimizeFW(structure=struct_s,
+                FW = OptimizeFW(structure=clean_struct,
                                 name=label,
                                 vasp_input_set = vis)
             FW_list.append(FW)
