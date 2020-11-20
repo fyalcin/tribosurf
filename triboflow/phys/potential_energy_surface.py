@@ -72,18 +72,17 @@ def GetPES(hs_all, E, cell, to_fig=None, point_density=20):
     E_list, data = UnfoldPES(hs_all, E)
     
     #making sure points are not represented twice by ensuring rows in data are unique
-    data = RemoveDuplicates(data)
-    print(len(data))
+    #data = RemoveDuplicates(data)
+    #print(len(data))
     
     #make sure that the x and y coordinates are inside the unit cell.
     x_y_insideCell = PBC_Coordinates(data[:, :2],
                                      cell,
                                      to_array=True)
     data[:, :2] = x_y_insideCell
-    print(len(data))
         
     # Normalize the minimum to 0
-    data[:,2] = (data[:,2]-min(data[:,2]))*10000
+    data[:,2] = (data[:,2]-min(data[:,2]))
     
     # Interpolate the data with Radial Basis Function
     data_rep = ReplicatePoints(data, cell, replicate_of=(3, 3) )
