@@ -286,7 +286,7 @@ class FT_StartPESCalcs(FiretaskBase):
                 
         comp_params = interface_dict['comp_parameters']
         top_dict = interface_dict[top_name]
-        bot_dict = Structure.from_dict(interface_dict[bottom_name])
+        bot_dict = interface_dict[bottom_name]
         
         top_slab, bot_slab = ReCenterAlignedSlabs(Structure.from_dict(top_dict),
                                                   Structure.from_dict(bot_dict))
