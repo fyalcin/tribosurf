@@ -72,7 +72,7 @@ def GetPES(hs_all, E, cell, to_fig=None, point_density=20):
     E_list, data = UnfoldPES(hs_all, E)
     
     #making sure points are not represented twice by ensuring rows in data are unique
-    #data = RemoveDuplicates(data)
+    data = RemoveDuplicates(data)
     #print(len(data))
     
     #make sure that the x and y coordinates are inside the unit cell.
