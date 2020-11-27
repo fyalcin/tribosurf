@@ -200,14 +200,11 @@ def GetInterfaceHS(hs_1, hs_2, cell, to_array=False, z_red=True):
     
     # Calculate the shift between each HS point of the first material with each
     # HS point of the second material
-    for k1 in hs_1.keys():
-        for k2 in hs_2.keys():          
+    for k1, v1 in hs_1.items():
+        for k2, v2 in hs_2.items():  
             shifts_stack = []
-            d1 = hs_1[k1]
-            d2 = hs_2[k2]
-            
-            for el_d1 in d1:
-                shifts_stack.append( d2 - el_d1 )
+            for el_d1 in v1:
+                shifts_stack.append( v2 - el_d1 )
                 
             hs[k1+'-'+k2] = np.concatenate(shifts_stack, axis=0)
     
@@ -289,20 +286,27 @@ def RemoveDuplicatesFromHSDicts(hs_unique, hs_all, decimals=5):
     u_hs = RoundPosInDict(hs_unique.copy(), decimals=decimals)
     a_hs = RoundPosInDict(hs_all.copy(), decimals=decimals)
     rev_dict = {}
-    for key, value in u_hs.items(): 
-        rev_dict.setdefault(str(value), list()).append(key)
-    
+    for key, value in u_hs.items():
+        #have to make sure that -0.0 is changed to 0.0 to ensure that 
+        #equivalent points are recognised...
+        value_clean = []
+        for i in value[0]:
+            if i == 0.0:
+                value_clean.append(abs(i))
+            else:
+                value_clean.append(i)               
+        rev_dict.setdefault(str([value_clean]), list()).append(key)
     for value in rev_dict.values():
         if len(value) > 1:
             equivalent_points = np.array(a_hs[value[0]])
             for i in value[1:]:
                 #remove the equivalent entries from the u_hs dictionary
                 u_hs.pop(i)
-                equivalent_points = np.vstack((equivalent_points,
-                                               np.array(a_hs[i])))
+                #equivalent_points = np.vstack((equivalent_points,
+                #                              np.array(a_hs[i])))
                 a_hs.pop(i)
-            equivalent_points = np.unique(equivalent_points, axis=0)
-            a_hs[value[0]] = jsanitize(equivalent_points)
+            #equivalent_points = np.unique(equivalent_points, axis=0)
+            #a_hs[value[0]] = jsanitize(equivalent_points)
             
     return u_hs, a_hs
     
