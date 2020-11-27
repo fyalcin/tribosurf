@@ -21,7 +21,7 @@ from triboflow.utils.structure_manipulation import CleanUpSiteProperties
 
 
 @explicit_serialize
-class FT_DoPPESCalcs(FiretaskBase):
+class FT_StartPPESWF(FiretaskBase):
     """
     Start a CalcPPES_SWF subworkflow that calculates a PPES.
     
