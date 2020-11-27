@@ -37,7 +37,7 @@ def GetEmin(potcar):
     return max(emin)
  
 def GetGeneralizedKmesh(structure, k_dist, RemoveSymm=False):
-    """Get a generalized Monkhorst pack mesh for a given structure.
+    """Get a generalized Monkhorst Pack mesh for a given structure.
     
     Prepares the necessary files (POSCAR, PRECALC, and, if the structure has
     a 'magmom' site property also INCAR) for the K-Point Grid Generator of the
