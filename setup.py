@@ -16,7 +16,8 @@ if __name__ == "__main__":
         author_email='michael.wolloch@univie.ac.at, gabriele.losi@unimore.it',
         license='Not public yet',
         install_requires=['atomate@git+https://github.com/hackingmaterials/atomate.git',
-                          'mpinterfaces@git+https://github.com/henniggroup/MPInterfaces.git'],
+                          'mpinterfaces@git+https://github.com/henniggroup/MPInterfaces.git',
+                          'maggma@git+https://github.com/materialsproject/maggma.git']
         classifiers=["Programming Language :: Python :: 3",
                      "Programming Language :: Python :: 3.6",
                      "Programming Language :: Python :: 3.7",
