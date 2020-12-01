@@ -8,17 +8,21 @@ Created on Thu Nov 26 09:50:38 2020
 
 import numpy as np
 import math as m
+from pprint import pprint
 from scipy.interpolate import Rbf
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
 from pymatgen.core.surface import Slab
 from pymatgen.core.operations import SymmOp
+from pymatgen.analysis.structure_matcher import StructureMatcher
 from triboflow.phys.high_symmetry import GetSlabHS, GetInterfaceHS, \
     PBC_HSPoints, RemoveDuplicatesFromHSDicts
 from triboflow.phys.potential_energy_surface import UnfoldPES
 from triboflow.utils.database import GetDBJSON, GetInterfaceFromDB
 from triboflow.utils.plot_tools import Plot_SlabHS
+from triboflow.utils.structure_manipulation import InterfaceName, \
+    CleanUpSiteProperties, StackAlignedSlabs, ReCenterAlignedSlabs
 
 def test_function(x,y):
     r = (x**2 + y**2)**0.5
@@ -89,13 +93,46 @@ c_hsp_u, c_hsp_a = RemoveDuplicatesFromHSDicts(hsp_unique,
                                                hsp_all,
                                                decimals=5)
 
-Plot_SlabHS(top_hsp_unique, top_aligned)
-Plot_SlabHS(top_hsp_all, top_aligned)
-Plot_SlabHS(bottom_hsp_unique, bottom_aligned)
-Plot_SlabHS(bottom_hsp_all, bottom_aligned)
-Plot_SlabHS(c_hsp_u, top_aligned)
-Plot_SlabHS(c_hsp_a, top_aligned)
+# Plot_SlabHS(top_hsp_unique, top_aligned)
+# Plot_SlabHS(top_hsp_all, top_aligned)
+# Plot_SlabHS(bottom_hsp_unique, bottom_aligned)
+# Plot_SlabHS(bottom_hsp_all, bottom_aligned)
+# Plot_SlabHS(c_hsp_u, top_aligned)
+# Plot_SlabHS(c_hsp_a, top_aligned)
 
+unique_structures = {}
+top_slab, bot_slab = ReCenterAlignedSlabs(top_aligned, bottom_aligned)
+for key, value in c_hsp_u.items():
+    x_shift = value[0][0]
+    y_shift = value[0][1]
+    inter_struct = StackAlignedSlabs(bot_slab,
+                                     top_slab,
+                                     top_shift = [x_shift, y_shift, 0])
+    #Make sure that there are no NoneTypes in the site_properties!
+    cleaned_struct = CleanUpSiteProperties(inter_struct)
+    unique_structures[key] = cleaned_struct
+
+struct_match = StructureMatcher(ltol=0.01, stol=0.01, angle_tol=0.01,
+                                primitive_cell=False, scale=False)
+equivalent_structs = {}
+doubles_found = []
+for name, struct in unique_structures.items():
+    for name_2, struct_2 in unique_structures.items():
+        if name != name_2:
+            if struct_match.fit(struct, struct_2) and name not in doubles_found:
+                equivalent_structs.setdefault(name, []).append(name_2)
+                doubles_found.append(name_2)
+pprint(equivalent_structs)
+
+c_hsp_u_cleaned = c_hsp_u.copy()
+c_hsp_a_cleaned = c_hsp_a.copy()
+for value in equivalent_structs.values():
+    for key in value:
+        c_hsp_u_cleaned.pop(key)
+        c_hsp_a_cleaned.pop(key)
+Plot_SlabHS(c_hsp_u_cleaned, top_aligned)
+Plot_SlabHS(c_hsp_a_cleaned, top_aligned)
+    
 
 double_keys = {}
 for key, value in c_hsp_a.items():
