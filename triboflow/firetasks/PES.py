@@ -15,7 +15,7 @@ from atomate.utils.utils import env_chk
 from atomate.vasp.fireworks.core import OptimizeFW, ScanOptimizeFW
 from atomate.vasp.powerups import add_modify_incar
 from triboflow.phys.high_symmetry import GetSlabHS, GetInterfaceHS, \
-    PBC_HSPoints, RemoveDuplicatesFromHSDicts
+    PBC_HSPoints, RemoveDuplicatesFromHSDicts, RemoveEquivalentShifts
 from triboflow.phys.potential_energy_surface import GetPES
 from triboflow.utils.database import GetInterfaceFromDB, GetDB, GetHighLevelDB
 from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
@@ -214,6 +214,11 @@ class FT_FindHighSymmPoints(FiretaskBase):
                                                        hsp_all,
                                                        decimals=5)
         
+        c_hsp_u_reduced, c_hsp_a_reduced = RemoveEquivalentShifts(c_hsp_u,
+                                                                  c_hsp_a,
+                                                                  top_aligned,
+                                                                  bottom_aligned)
+        
         cell = bottom_aligned.lattice.matrix
            
         b_hsp_u =  PBC_HSPoints(bottom_hsp_unique, cell)
@@ -231,10 +236,10 @@ class FT_FindHighSymmPoints(FiretaskBase):
                                           'bottom_all': b_hsp_a,
                                           'top_unique': t_hsp_u,
                                           'top_all': t_hsp_a,
-                                          'combined_unique': c_hsp_u,
-                                          'combined_all': c_hsp_a}}}})
+                                          'combined_unique': c_hsp_u_reduced,
+                                          'combined_all': c_hsp_a_reduced}}}})
             
-        return FWAction(update_spec=({'lateral_shifts': c_hsp_u}))
+        return FWAction(update_spec=({'lateral_shifts': c_hsp_u_reduced}))
         
         
 
