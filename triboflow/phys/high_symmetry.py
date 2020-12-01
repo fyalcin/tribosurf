@@ -12,6 +12,9 @@ import numpy as np
 from monty.json import jsanitize
 from ase import Atoms
 from pymatgen.analysis.adsorption import AdsorbateSiteFinder
+from pymatgen.analysis.structure_matcher import StructureMatcher
+from triboflow.utils.structure_manipulation import StackAlignedSlabs, \
+    CleanUpSiteProperties
 
 # =============================================================================
 # CALCULATE THE HS POINTS FOR A SLAB
@@ -216,6 +219,40 @@ def GetInterfaceHS(hs_1, hs_2, cell, to_array=False, z_red=True):
 # =============================================================================
 # TOOLS FOR HS DICTIONARIES
 # =============================================================================
+
+def RemoveEquivalentShifts(hs_unique, hs_all, top_slab, bot_slab,
+                           ltol=0.01, stol=0.01, angle_tol=0.01,
+                           primitive_cell=False, scale=False):
+    hs_u = hs_unique.copy()
+    hs_a = hs_all.copy()
+    top_slab, bot_slab = ReCenterAlignedSlabs(top_slab, bot_slab, d=4.5)
+    struct_match = StructureMatcher(ltol=ltol, stol=stol, angle_tol=angle_tol,
+                                primitive_cell=primitive_cell, scale=scale)
+    structure_list = {}
+    for key, value in hs_u.items():
+        x_shift = value[0][0]
+        y_shift = value[0][1]
+        inter_struct = StackAlignedSlabs(bot_slab,
+                                         top_slab,
+                                         top_shift = [x_shift, y_shift, 0])
+        clean_struct = CleanUpSiteProperties(inter_struct)
+        structure_list[key] = clean_struct
+        
+    equivalent_structs = {}
+    doubles_found = []
+    for name, struct in structure_list.items():
+        for name_2, struct_2 in structure_list.items():
+            if name != name_2:
+                if struct_match.fit(struct, struct_2) and name not in doubles_found:
+                    equivalent_structs.setdefault(name, []).append(name_2)
+                    doubles_found.append(name_2)
+                    
+    for value in equivalent_structs.values():
+        for key in value:
+            hs_u.pop(key)
+            hs_a.pop(key)
+    
+    return hs_u, hs_a
 
 def RoundPosInDict(high_symm_dict, decimals=5):
     """Round coordinates for high-symmetry points in dict to selected precision.
