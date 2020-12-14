@@ -96,8 +96,8 @@ def ReplicatePoints(data, cell, replicate_of=(1, 1)):
         y_new = np.array([])
         E_new = np.array([])    
         
-        for i in range(-n,n):
-                for j in range(-m,m):
+        for i in range(-n+1,n+1):
+                for j in range(-m+1,m+1):
                     
                     # Replicate the x- and y- coordinates
                     x_add = x + a[0]*i + b[0]*j
