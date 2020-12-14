@@ -14,7 +14,7 @@ from ase import Atoms
 from pymatgen.analysis.adsorption import AdsorbateSiteFinder
 from pymatgen.analysis.structure_matcher import StructureMatcher
 from triboflow.utils.structure_manipulation import StackAlignedSlabs, \
-    CleanUpSiteProperties
+    CleanUpSiteProperties, ReCenterAlignedSlabs
 
 # =============================================================================
 # CALCULATE THE HS POINTS FOR A SLAB
@@ -220,6 +220,60 @@ def GetInterfaceHS(hs_1, hs_2, cell, to_array=False, z_red=True):
 # TOOLS FOR HS DICTIONARIES
 # =============================================================================
 
+def CleanUpHSDicts(hs_unique, hs_all, top_aligned, bottom_aligned,
+                   decimals=4):
+    c_u = hs_unique.copy()
+    c_a = hs_all.copy()
+    c_hsp_u, c_hsp_a = RemoveDuplicatesFromHSDicts(c_u,
+                                                   c_a,
+                                                   decimals=decimals)
+    c_hsp_u_reduced, c_hsp_a_reduced = RemoveEquivalentShifts(c_hsp_u,
+                                                          c_hsp_a,
+                                                          top_aligned,
+                                                          bottom_aligned)
+    hs_a_out = AssigneAllPoints(c_hsp_u_reduced, 
+                                c_hsp_a_reduced,
+                                top_aligned,
+                                bottom_aligned)
+    hs_u_out = c_hsp_u_reduced
+    
+    return hs_u_out, hs_a_out
+
+def AssigneAllPoints(hs_unique, hs_all, top_aligned, bottom_aligned):
+
+    all_shifts = []
+    for key, value in hs_all.items():
+        if all_shifts == []:
+            all_shifts = value
+        else:
+            all_shifts = np.concatenate([all_shifts, value], axis=0).tolist()
+    all_shifts = np.unique(all_shifts, axis=0)
+
+    struct_match = StructureMatcher(ltol=0.01, stol=0.01, angle_tol=0.01,
+                                primitive_cell=False, scale=False)
+    top_slab, bot_slab = ReCenterAlignedSlabs(top_aligned,
+                                              bottom_aligned,
+                                              d=4.5)
+    new_hsp_dict_a = {}
+    for key, value in hs_unique.items():
+        unique_struct = StackAlignedSlabs(bot_slab,
+                                          top_slab,
+                                          top_shift = [value[0][0],
+                                                       value[0][1],
+                                                       0])
+        unique_struct = CleanUpSiteProperties(unique_struct)
+        for shift in all_shifts:
+            test_struct = StackAlignedSlabs(bot_slab,
+                                            top_slab,
+                                            top_shift = [shift[0],
+                                                         shift[1],
+                                                         0])
+            test_struct = CleanUpSiteProperties(test_struct)
+            if struct_match.fit(unique_struct, test_struct):
+                new_hsp_dict_a.setdefault(key, []).append(shift)
+    
+    return new_hsp_dict_a
+
 def RemoveEquivalentShifts(hs_unique, hs_all, top_slab, bot_slab,
                            ltol=0.01, stol=0.01, angle_tol=0.01,
                            primitive_cell=False, scale=False):
@@ -251,6 +305,8 @@ def RemoveEquivalentShifts(hs_unique, hs_all, top_slab, bot_slab,
         for key in value:
             hs_u.pop(key)
             hs_a.pop(key)
+            
+    
     
     return hs_u, hs_a
 
