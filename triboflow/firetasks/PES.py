@@ -15,7 +15,7 @@ from atomate.utils.utils import env_chk
 from atomate.vasp.fireworks.core import OptimizeFW, ScanOptimizeFW
 from atomate.vasp.powerups import add_modify_incar
 from triboflow.phys.high_symmetry import GetSlabHS, GetInterfaceHS, \
-    PBC_HSPoints, RemoveDuplicatesFromHSDicts, RemoveEquivalentShifts
+    PBC_HSPoints, CleanUpHSDicts
 from triboflow.phys.potential_energy_surface import GetPES
 from triboflow.utils.database import GetInterfaceFromDB, GetDB, GetHighLevelDB
 from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
@@ -120,13 +120,18 @@ class FT_RetrievePESEnergies(FiretaskBase):
         
         DB = GetDB(db_file)
         energy_list=[]
+        calc_output = {}
         for s in lateral_shifts.keys():
             label = tag + '_' + s
             x_shift = lateral_shifts.get(s)[0][0]
             y_shift = lateral_shifts.get(s)[0][1]
             vasp_calc = DB.tasks.find_one({'task_label': label})
             energy = vasp_calc['output']['energy']
+            struct = vasp_calc['output']['structure']
             energy_list.append([s, x_shift, y_shift, energy])
+            calc_output[s] = {'energy': energy,
+                              'relaxed_struct': struct,
+                              'task_id': vasp_calc['_id']}
             
         sorted_energy_list = sorted(energy_list, key=itemgetter(3))
         
@@ -142,6 +147,7 @@ class FT_RetrievePESEnergies(FiretaskBase):
         coll.update_one({'name': name},
                         {'$set': {'relaxed_structure@min': struct_min,
                                   'relaxed_structure@max': struct_max,
+                                  'PES.calculations': calc_output,
                                   'PES.high_symmetry_points.energy_list': 
                                          sorted_energy_list}})
         
@@ -210,14 +216,8 @@ class FT_FindHighSymmPoints(FiretaskBase):
         hsp_unique = GetInterfaceHS(bottom_hsp_unique, top_hsp_unique, cell)
         hsp_all = GetInterfaceHS(bottom_hsp_all, top_hsp_all, cell)
         
-        c_hsp_u, c_hsp_a = RemoveDuplicatesFromHSDicts(hsp_unique,
-                                                       hsp_all,
-                                                       decimals=5)
-        
-        c_hsp_u_reduced, c_hsp_a_reduced = RemoveEquivalentShifts(c_hsp_u,
-                                                                  c_hsp_a,
-                                                                  top_aligned,
-                                                                  bottom_aligned)
+        c_hsp_u, c_hsp_a = CleanUpHSDicts(hsp_unique, hsp_all,
+                                          top_aligned, bottom_aligned)
         
         cell = bottom_aligned.lattice.matrix
            
@@ -236,10 +236,10 @@ class FT_FindHighSymmPoints(FiretaskBase):
                                           'bottom_all': b_hsp_a,
                                           'top_unique': t_hsp_u,
                                           'top_all': t_hsp_a,
-                                          'combined_unique': c_hsp_u_reduced,
-                                          'combined_all': c_hsp_a_reduced}}}})
+                                          'combined_unique': c_hsp_u,
+                                          'combined_all': c_hsp_a}}}})
             
-        return FWAction(update_spec=({'lateral_shifts': c_hsp_u_reduced}))
+        return FWAction(update_spec=({'lateral_shifts': c_hsp_u}))
         
         
 
