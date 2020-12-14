@@ -76,10 +76,10 @@ def GetPES(hs_all, E, cell, to_fig=None, point_density=20):
     #print(len(data))
     
     #make sure that the x and y coordinates are inside the unit cell.
-    x_y_insideCell = PBC_Coordinates(data[:, :2],
-                                     cell,
-                                     to_array=True)
-    data[:, :2] = x_y_insideCell
+    # x_y_insideCell = PBC_Coordinates(data[:, :2],
+    #                                  cell,
+    #                                  to_array=True)
+    # data[:, :2] = x_y_insideCell
         
     # Normalize the minimum to 0
     data[:,2] = (data[:,2]-min(data[:,2]))
@@ -90,11 +90,26 @@ def GetPES(hs_all, E, cell, to_fig=None, point_density=20):
     
     # Calculate the PES on a very dense and uniform grid. Useful for further 
     # analysis (MEP, shear strength) and to plot the PES
-    coordinates = GenerateUniformGrid(cell, density=point_density)
+    coordinates = GenerateUniformGrid(cell*2, density=point_density)
     E_new = rbf(coordinates[:, 0], coordinates[:, 1])
     pes_data = np.column_stack([coordinates[:, :2], E_new])
     
-    return rbf, E_list, pes_data, data
+    min_x = min(coordinates[:,0])
+    max_x = max(coordinates[:,0])
+    len_x = max_x - min_x
+    dist_x = len_x/(point_density*10)
+    min_y = min(coordinates[:,1])
+    max_y = max(coordinates[:,1])
+    len_y = max_y - min_y
+    dist_y = len_y/(point_density*10)
+    grid_x = np.arange(min_x, max_x, dist_x)
+    grid_y = np.arange(min_y, max_y, dist_y)
+    X, Y = np.meshgrid(grid_x, grid_y)
+    Z = rbf(X, Y)
+    
+    to_plot = [X, Y, Z]
+    
+    return rbf, E_list, pes_data, data, to_plot
 
 
 # =============================================================================
