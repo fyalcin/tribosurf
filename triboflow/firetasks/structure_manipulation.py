@@ -19,7 +19,8 @@ from mpinterfaces.transformations import get_aligned_lattices, \
 from triboflow.utils.database import GetBulkFromDB, GetSlabFromDB, \
     GetHighLevelDB, GetDB
 from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
-from triboflow.utils.structure_manipulation import InterfaceName
+from triboflow.utils.structure_manipulation import InterfaceName, \
+    SlabFromStructure, ReCenterAlignedSlabs, StackAlignedSlabs
 
 
 @explicit_serialize
@@ -431,9 +432,19 @@ class FT_MakeHeteroStructure(FiretaskBase):
                 #inter_slab = hetero_interfaces[0]
                 inter_slab = hetero_interfaces
                 
-                inter_dict = inter_slab.as_dict()
-                bottom_dict = bottom_aligned.as_dict()
-                top_dict = top_aligned.as_dict()
+                bottom_aligned = SlabFromStructure(miller_1, bottom_aligned)
+                top_aligned = SlabFromStructure(miller_2, top_aligned)
+                
+                #Center the top and bottom slabs around 0 and combine them
+                #again to an interface:
+                top_align, bot_align = ReCenterAlignedSlabs(top_aligned,
+                                                            bottom_aligned,
+                                        d = inter_params['interface_distance'])
+                interface = StackAlignedSlabs(bot_align, top_align)
+                
+                inter_dict = interface.as_dict()
+                bottom_dict = bot_align.as_dict()
+                top_dict = top_align.as_dict()
                 inter_col.update_one({'name': interface_name},
                                  {'$set': {'unrelaxed_structure': inter_dict,
                                            'bottom_aligned': bottom_dict,

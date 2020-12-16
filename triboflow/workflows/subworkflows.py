@@ -8,7 +8,7 @@ from uuid import uuid4
 import numpy as np
 from fireworks import Workflow, Firework
 from triboflow.fireworks.common import RunPESCalcsFW
-#from triboflow.firetasks.PES import FT_RetrievePESEnergies
+from triboflow.firetasks.PES import FT_RetrievePESEnergies
 from triboflow.firetasks.encut_convergence import FT_EnergyCutoffConvo
 from triboflow.firetasks.kpoint_convergence import FT_KpointsConvo
 from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \

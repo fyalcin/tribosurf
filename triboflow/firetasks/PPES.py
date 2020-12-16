@@ -21,7 +21,7 @@ from triboflow.utils.structure_manipulation import CleanUpSiteProperties
 
 
 @explicit_serialize
-class FT_DoPPESCalcs(FiretaskBase):
+class FT_StartPPESWF(FiretaskBase):
     """
     Start a CalcPPES_SWF subworkflow that calculates a PPES.
     
@@ -149,7 +149,7 @@ class FT_DoPPESCalcs(FiretaskBase):
         for d in d_list:
             label = tag + '_PPES_' + str(d)
             #Make sure that there are no NoneTypes in the site_properties!
-            struct_d = CleanUpSitePorperties(struct.copy())
+            struct_d = CleanUpSiteProperties(struct.copy())
             struct_d.translate_sites(indices=sites_to_shift,
                                      vector=[0,0,d],
                                      frac_coords=False, to_unit_cell=False)

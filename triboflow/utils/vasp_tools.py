@@ -37,7 +37,7 @@ def GetEmin(potcar):
     return max(emin)
  
 def GetGeneralizedKmesh(structure, k_dist, RemoveSymm=False):
-    """Get a generalized Monkhorst pack mesh for a given structure.
+    """Get a generalized Monkhorst Pack mesh for a given structure.
     
     Prepares the necessary files (POSCAR, PRECALC, and, if the structure has
     a 'magmom' site property also INCAR) for the K-Point Grid Generator of the
@@ -136,6 +136,10 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
     
     if structure.num_sites < 20:
         uis['LREAL'] = '.FALSE.'
+        
+    #Adjust mixing for slabs that have a very large c axis:
+    if structure.lattice.matrix[-1,1] > 50.0:
+        uis['AMIN'] = 0.05
         
     if comp_parameters.get('functional') == 'SCAN':
         uis['ISMEAR'] = 0
@@ -256,17 +260,28 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
     uis['LASPH'] = '.TRUE.'
     uis['LORBIT'] = 11
     uis['MAXMIX'] = 100
-    uis['NELMIN'] = 4
-    uis['EDIFF'] = 1.0E-5
+    uis['NELMIN'] = 5
+    uis['EDIFF'] = 0.5E-5
     uis['LAECHG'] = '.FALSE.'
     
     if structure.num_sites < 20:
         uis['LREAL'] = '.FALSE.'
+        
+    #Adjust mixing for slabs that have a very large c axis:
+    if structure.lattice.matrix[-1,1] > 50.0:
+        uis['AMIN'] = 0.05
+        
     
     if relax_type.startswith('slab_') or relax_type.startswith('interface_'):
         uis['NELMDL'] = -15
         uis['EDIFFG'] = -0.02
         uis['NELM'] = 200
+        # Turn on linear mixing
+        # uis['AMIX'] = 0.2
+        # uis['BMIX'] = 0.0001
+        # uis['AMIX_MAG'] = 0.8
+        # uis['BMIX_MAG'] = 0.0001
+        
     else:
         uis['NELMDL'] = -6
         uis['EDIFFG'] = -0.01

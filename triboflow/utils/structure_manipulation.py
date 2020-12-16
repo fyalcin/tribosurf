@@ -73,9 +73,9 @@ def StackAlignedSlabs(bottom_slab, top_slab, top_shift=[0,0,0]):
 
     Parameters
     ----------
-    bottom_slab : pymatgen.core.structure.Structure
+    bottom_slab : pymatgen.core.structure.Structure or pymatgen.core.surface.Slab
         Bottom slab.
-    top_slab : pymatgen.core.structure.Structure
+    top_slab : pymatgen.core.structure.Structure or pymatgen.core.surface.Slab
         Top slab.
     top_shift : list of 3 floats, optional
         Vector of caresian coordinates with which to shift the top slab.
@@ -83,8 +83,10 @@ def StackAlignedSlabs(bottom_slab, top_slab, top_shift=[0,0,0]):
 
     Returns
     -------
-    interface : pymatgen.core.structure.Structure
-        DESCRIPTION.
+    interface : pymatgen.core.structure.Structure or pymatgen.core.surface.Slab
+                depending on type of bottom_slab
+        An interface structure of two slabs with an optional shift of the top
+        slab.
 
     """
     interface = bottom_slab.copy()

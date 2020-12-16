@@ -5,12 +5,35 @@ from PIL import Image
 from pymatgen.ext.matproj import MPRester
 from atomate.vasp.database import VaspCalcDb
 
-# Global variables with the local path for the database configurations 
-current_dir = os.path.dirname(__file__)
-db_file = os.path.join(current_dir, '../../config/db.json')
+def GetDBJSON():
+    """Return the full path to the db.json file to connect to the database.
+    
+    Uses the environment variable that should be set during the configuration
+    of the virtual python environment for triboflow to find the config
+    directory which should contain the db.json file.
 
+    Raises
+    ------
+    SystemError
+        If the environment variable is not set, an error will be raised.
 
-def GetDB(db_file=db_file):
+    Returns
+    -------
+    db_file : str
+        Full path to the db.json file that us used to access the database.
+
+    """
+    if 'FW_CONFIG_FILE' in os.environ:
+        conf_file = os.environ['FW_CONFIG_FILE']
+        conf_path = conf_file.rstrip('FW_config.yaml')
+        db_file = conf_path + 'db.json'
+        return db_file
+    else:
+        raise SystemError('Could not find "FW_CONFIG_FILE" environment '
+                          'variable.\nPlease make sure that your python'
+                          'environment is configured correctly.')
+
+def GetDB(db_file):
     """Connect to the MongoDB database specified in the db_file.
     
     Parameters
@@ -18,7 +41,6 @@ def GetDB(db_file=db_file):
     db_file : str, optional
         Full path to the db.json file which holds the location and access
         credentials to the database.
-        The default is '/home/mwo/FireWorks/config/db.json'.
 
     Returns
     -------
@@ -149,7 +171,6 @@ def GetBulkFromDB(mp_id, db_file, functional):
        high level database.
 
     """
-
     db = GetDB(db_file)
     tribo_db = db.client.triboflow
     col_name=functional+'.bulk_data'
@@ -298,11 +319,14 @@ def GetPropertyFromMP(MP_ID, prop):
             return query[0][prop]
 
 def GetLowEnergyStructure(chem_formula, MP_ID=None, PrintInfo=False):
-    """
+    """Search MaterialsProjects for structure.
+    
     A function that searches the MaterialsProject Database
     for structures that match the given chemical formula
     and selcts the one with the lowest formation energy
-    per atom. If several 
+    per atom. If MP_ID is givem, the structure with that mp-id will
+    be returned.
+    
     Inputs: 
     chem_formula (str): Required input of a chemical formula
                         e.g.: NaCl, Fe2O3, SiO, FeCW
@@ -317,7 +341,6 @@ def GetLowEnergyStructure(chem_formula, MP_ID=None, PrintInfo=False):
                         
     Returns: pymatgen Structure object and associated MP_ID
     """
-
     # load structure from MaterialsProjct Website
     with MPRester() as mpr:
         if MP_ID:

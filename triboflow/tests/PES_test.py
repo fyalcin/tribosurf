@@ -7,11 +7,9 @@ Created on Fri Jun 19 16:15:02 2020
 """
 from fireworks import LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
+from triboflow.utils.database import GetDBJSON
 from triboflow.workflows.subworkflows import CalcPES_SWF
 
-
-
-db_file = '/fs/home/wolloch/git_test/config/db.json'
 
 
 WF = CalcPES_SWF(interface_name='C001_Ni111_mp-23_mp-48',

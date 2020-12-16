@@ -102,8 +102,8 @@ def Plot_PES(data, lattice, to_fig=None):
     cbar1=plt.colorbar(zt1,ax=ax,orientation=anglerot,shrink=shrin)
     cbar1.set_label(r'$E_{adh} (J/m^2)$', rotation=270, labelpad=20,fontsize=15,family='serif')
 
-    ax.quiver(0. , 0., 1., 0.,scale=1.,scale_units='inches',width=0.01,color='white')
-    ax.quiver(0. , 0., 0., 1.,scale=1.,scale_units='inches',width=0.01,color='white')
+    #ax.quiver(0. , 0., 1., 0.,scale=1.,scale_units='inches',width=0.01,color='white')
+    #ax.quiver(0. , 0., 0., 1.,scale=1.,scale_units='inches',width=0.01,color='white')
     ax.plot(0.,0.,'w.',ms=7)
     ax.text(0.5,-0.5,'[1 0 1]',rotation='horizontal',color='white', fontsize=14)
     ax.text(-0.5,1.,'[1 2 1]',rotation='vertical',color='white', fontsize=14)
