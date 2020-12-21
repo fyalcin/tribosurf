@@ -7,28 +7,79 @@ Created on Wed Jun 17 15:47:39 2020
 from uuid import uuid4
 import numpy as np
 from fireworks import Workflow, Firework
-from triboflow.fireworks.common import RunPESCalcsFW
-from triboflow.firetasks.PES import FT_RetrievePESEnergies
+from triboflow.fireworks.common import RunPESCalcsFW, MakePESFW
 from triboflow.firetasks.encut_convergence import FT_EnergyCutoffConvo
 from triboflow.firetasks.kpoint_convergence import FT_KpointsConvo
-from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \
-    FT_StartSlabRelax, FT_GetRelaxedSlab
+#from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \
+#    FT_StartSlabRelax, FT_GetRelaxedSlab
 from triboflow.firetasks.PPES import FT_DoPPESCalcs, FT_FitPPES
 from triboflow.utils.database import GetPropertyFromMP
+from triboflow.utils.structure_manipulation import InterfaceName
 from triboflow.utils.vasp_tools import GetEmin, GetCustomVaspStaticSettings
 
-def CalcPES_SWF(interface_name, functional):
+def CalcPES_SWF(top_slab, bottom_slab,
+                top_mpid = None,
+                bottom_mpid = None,
+                functional = 'PBE',
+                comp_parameters = {},
+                file_output = False,
+                output_dir = None):
+    
+    try:
+        top_miller = list(top_slab.miller_index)
+    except:
+        raise AssertionError("You have used {} as an input for <top_slab>.\n"
+                             "Please use <class 'pymatgen.core.surface.Slab'>"
+                             " instead.".format(type(top_slab)))
+        
+    try:
+        bot_miller = list(bottom_slab.miller_index)
+    except:
+        raise AssertionError("You have used {} as an input for <bot_slab>.\n"
+                             "Please use <class 'pymatgen.core.surface.Slab'>"
+                             " instead.".format(type(bottom_slab)))
+        
+    if top_mpid and bottom_mpid:
+        interface_name = InterfaceName(top_mpid, top_miller,
+                                       bottom_mpid, bot_miller)
+    else:
+        mt = ''.join(str(s) for s in top_miller)
+        mb = ''.join(str(s) for s in bot_miller)
+        interface_name = (top_slab.formula+'('+mt+')_'+
+                         bottom_slab.formula+'('+mb+')_NO-MPIDs')
+        
+    
+    if comp_parameters == {}:
+        print('\nNo computational parameters have been defined!\n'
+              'Workflow will run with:\n'
+              '   ISPIN = 1\n'
+              '   ISMEAR = 0\n'
+              '   ENCUT = 520\n'
+              '   kpoint density kappa = 5000\n'
+              'We recommend to pass a comp_parameters dictionary'
+              ' of the form:\n'
+              '   {"use_vdw": <True/False>,\n'
+              '    "use_spin": <True/False>,\n'
+              '    "is_metal": <True/False>,\n'
+              '    "encut": <float>,\n'
+              '    "k_dens": <int>}\n')
+    
     tag = interface_name+'_'+str(uuid4())
     
-    FW_1 = RunPESCalcsFW(interface_name=interface_name,
+    FW_1 = RunPESCalcsFW(top_slab=top_slab, 
+                         bottom_slab=bottom_slab, 
+                         interface_name=interface_name,
                          functional=functional,
+                         comp_parameters=comp_parameters,
                          tag=tag,
                          FW_name='Start PES calcs for '+interface_name)
     
-    FW_2 = Firework(FT_RetrievePESEnergies(interface_name=interface_name,
-                         functional=functional,
-                         tag=tag),
-                    name='Parse PES calcs for '+interface_name)
+    FW_2 = MakePESFW(interface_name=interface_name,
+                     functional=functional,
+                     tag=tag,
+                     file_output=file_output,
+                     output_dir=output_dir,
+                     FW_name='Parse PES calcs for '+interface_name)
     
     SWF = Workflow([FW_1, FW_2], {FW_1: [FW_2]},
                    name = 'Calc PES for '+interface_name+' SWF')

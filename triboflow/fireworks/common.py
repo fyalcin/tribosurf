@@ -2,7 +2,9 @@
 
 
 from fireworks import Firework
-from triboflow.firetasks.PES import FT_FindHighSymmPoints, FT_StartPESCalcs
+from fireworks.user_objects.firetasks import FileTransferTask
+from triboflow.firetasks.PES import FT_FindHighSymmPoints, FT_StartPESCalcs, \
+    FT_RetrievePESEnergies, FT_ComputePES
 from triboflow.firetasks.check_inputs import FT_CheckCompParamDict, \
     FT_CheckInterfaceParamDict, FT_CheckMaterialInputDict, FT_MakeBulkInDB, \
     FT_MakeSlabInDB, FT_MakeInterfaceInDB
@@ -18,16 +20,47 @@ __date__ = 'March 11th, 2020'
 # Custom FireWorks
 # =============================================================================
 
-def RunPESCalcsFW(interface_name, functional, tag, FW_name):
+def RunPESCalcsFW(top_slab, bottom_slab, interface_name,
+                  functional, comp_parameters, tag, FW_name):
     
-    FT_1 = FT_FindHighSymmPoints(interface_name=interface_name,
+    FT_1 = FT_FindHighSymmPoints(top_slab=top_slab, bot_slab=bottom_slab,
+                                 interface_name=interface_name,
                                  functional=functional)
     
-    FT_2 = FT_StartPESCalcs(interface_name=interface_name,
+    FT_2 = FT_StartPESCalcs(top_slab=top_slab, bot_slab=bottom_slab,
+                            interface_name=interface_name,
                             functional=functional,
+                            comp_parameters=comp_parameters,
                             tag=tag)
     
     FW = Firework([FT_1, FT_2], name=FW_name)
+    
+    return FW
+
+def MakePESFW(interface_name, functional, tag, FW_name, file_output,
+              output_dir):
+    
+    FT_1 = FT_RetrievePESEnergies(interface_name=interface_name,
+                                  functional=functional,
+                                  tag=tag)
+    FT_2 = FT_ComputePES(interface_name=interface_name,
+                         functional=functional,
+                         file_output=file_output)
+    
+    if file_output: 
+        out_dir = output_dir
+        plot_name = 'PES_' + str(interface_name) + '.pdf'
+        FT_3 = FileTransferTask({'files':
+                                 [plot_name,
+                                  'Computet_PES_data_'+interface_name+'.dat',
+                                  'Interpolated_PES_data_'+interface_name+'.dat'],
+                                 'dest': out_dir,
+                                 'mode': 'copy'})
+            
+        FW = Firework([FT_1, FT_2, FT_3], name=FW_name)
+    else:
+        
+        FW = Firework([FT_1, FT_2], name=FW_name)
     
     return FW
 
