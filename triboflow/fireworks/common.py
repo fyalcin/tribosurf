@@ -2,7 +2,7 @@
 
 
 from fireworks import Firework
-from fireworks.user_objects.firetasks import FileTransferTask
+from fireworks.user_objects.firetasks.fileio_tasks import FileTransferTask
 from triboflow.firetasks.PES import FT_FindHighSymmPoints, FT_StartPESCalcs, \
     FT_RetrievePESEnergies, FT_ComputePES
 from triboflow.firetasks.check_inputs import FT_CheckCompParamDict, \
