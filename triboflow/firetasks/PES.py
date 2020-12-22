@@ -80,8 +80,7 @@ class FT_ComputePES(FiretaskBase):
         #Copy the energies for the unique points to all points
         E_unique = inter_dict['PES']['high_symmetry_points']['energy_list']
         all_hs = inter_dict['PES']['high_symmetry_points']['combined_all']
-        structure = Slab.from_dict(inter_dict['relaxed_structure@min'])
-        cell = structure.lattice.matrix
+        cell = struct.lattice.matrix
         
         Interpolation, E_list, pes_data, data, to_plot = GetPES(hs_all=all_hs,
                                                    E=E_unique,
@@ -93,7 +92,7 @@ class FT_ComputePES(FiretaskBase):
             pes_data.dump('Interpolated_PES_data_'+name+'.dat')
             
         Plot_PES(to_plot, cell*2, to_fig=name)
-        plot_name = 'PES_' + str(name) + '.pdf'
+        plot_name = 'PES_' + str(name) + '.png'
         pes_image_bytes = ConvertImageToBytes('./'+plot_name)
         
         tribo_db = GetHighLevelDB(db_file)
@@ -261,8 +260,8 @@ class FT_FindHighSymmPoints(FiretaskBase):
                                        'bottom_all': b_hsp_a,
                                        'top_unique': t_hsp_u,
                                        'top_all': t_hsp_a,
-                                       'combined_unique': c_hsp_u,
-                                       'combined_all': c_hsp_a}}}, 
+                                       'combined_unique': jsanitize(c_hsp_u),
+                                       'combined_all': jsanitize(c_hsp_a)}}}, 
                         upsert=True)
             
         return FWAction(update_spec=({'lateral_shifts': c_hsp_u}))
@@ -296,7 +295,7 @@ class FT_StartPESCalcs(FiretaskBase):
     -------
     FWActions that produce a detour workflow with relaxations for the PES.
     """
-    required_params = ['top_slab', 'bot_slab', 'functional', 'interface_name'
+    required_params = ['top_slab', 'bot_slab', 'functional', 'interface_name',
                        'comp_parameters', 'tag']
     optional_params = ['db_file']
     def run_task(self, fw_spec):
