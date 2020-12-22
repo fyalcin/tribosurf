@@ -117,7 +117,7 @@ def Plot_PES(data, lattice, to_fig=None):
        zt1.set_linewidth(0.000000000001)
 
     if to_fig != None:
-        plt.title("PES for " + str(to_fig), fontsize=18, family='serif')
+        plt.title("PES for " + str(to_fig), fontsize=15, family='serif')
         plt.savefig('PES_' + str(to_fig) + '.png', dpi=300)
 
     
