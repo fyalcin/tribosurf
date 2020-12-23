@@ -15,7 +15,7 @@ from atomate.utils.utils import env_chk
 from atomate.vasp.fireworks.core import OptimizeFW, ScanOptimizeFW
 from atomate.vasp.powerups import add_modify_incar
 from triboflow.phys.high_symmetry import GetSlabHS, GetInterfaceHS, \
-    PBC_HSPoints, CleanUpHSDicts
+    PBC_HSPoints, FixHSDicts
 from triboflow.phys.potential_energy_surface import GetPES
 from triboflow.utils.database import GetInterfaceFromDB, GetDB, GetHighLevelDB
 from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
@@ -216,8 +216,8 @@ class FT_FindHighSymmPoints(FiretaskBase):
         hsp_unique = GetInterfaceHS(bottom_hsp_unique, top_hsp_unique, cell)
         hsp_all = GetInterfaceHS(bottom_hsp_all, top_hsp_all, cell)
         
-        c_hsp_u, c_hsp_a = CleanUpHSDicts(hsp_unique, hsp_all,
-                                          top_aligned, bottom_aligned)
+        c_hsp_u, c_hsp_a = FixHSDicts(hsp_unique, hsp_all,
+                                      top_aligned, bottom_aligned)
         
         cell = bottom_aligned.lattice.matrix
            

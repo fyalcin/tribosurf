@@ -220,42 +220,114 @@ def GetInterfaceHS(hs_1, hs_2, cell, to_array=False, z_red=True):
 # TOOLS FOR HS DICTIONARIES
 # =============================================================================
 
-def CleanUpHSDicts(hs_unique, hs_all, top_aligned, bottom_aligned,
-                   decimals=4):
-    c_u = hs_unique.copy()
-    c_a = hs_all.copy()
-    c_hsp_u, c_hsp_a = RemoveDuplicatesFromHSDicts(c_u,
-                                                   c_a,
-                                                   decimals=decimals)
-    c_hsp_u_reduced, c_hsp_a_reduced = RemoveEquivalentShifts(c_hsp_u,
-                                                          c_hsp_a,
-                                                          top_aligned,
-                                                          bottom_aligned)
-    hs_a_out = AssigneAllPoints(c_hsp_u_reduced, 
-                                c_hsp_a_reduced,
-                                top_aligned,
-                                bottom_aligned)
-    hs_u_out = c_hsp_u_reduced
+
+def FixHSDicts(hs_unique, hs_all, top_aligned, bot_aligned,
+               ltol=0.01, stol=0.01, angle_tol=0.01,
+               primitive_cell=False, scale=False):
+    """Remove duplicate shifts from the hs points and assigne the replicas correctly.
     
-    return hs_u_out, hs_a_out
+    A StructureMatcher is defined with the selected tolerances and options and
+    then used to remove equivalent shifts from the high-symmetry points
+    dictionaries and assign the replicated points correctly to their unique
+    counterparts using the <RemoveEquivalentShifts> and <AssignReplicatePoints>
+    functions.
+    
 
-def AssigneAllPoints(hs_unique, hs_all, top_aligned, bottom_aligned):
+    Parameters
+    ----------
+    hs_unique : dict
+        Unique high-symmetry points of the interface from <GetInterfaceHS>.
+    hs_all : dict
+        Replicated high-symmetry points of the interface from <GetInterfaceHS>.
+    top_aligned : pymatgen.core.surface.Slab or pymatgen.core.structure.Structure
+        The top slab of the interface
+    bot_aligned : pymatgen.core.surface.Slab or pymatgen.core.structure.Structure
+        The bottom slab of the interfaces
+    ltol : float, optional
+       Fractional length tolerance. The default is 0.01.
+    stol : float, optional
+        Site tolerance. The default is 0.01.
+    angle_tol : float, optional
+        Angle tolerance in degrees. The default is 0.01.
+    primitive_cell : bool, optional
+        If true: input structures will be reduced to primitive cells prior to
+        matching. The default is False.
+    scale : bool, optional
+        Input structures are scaled to equivalent volume if true; For exact
+        matching, set to False. The default is False.
 
+    Returns
+    -------
+    c_u : TYPE
+        DESCRIPTION.
+    c_all : TYPE
+        DESCRIPTION.
+
+    """
+    top_slab, bot_slab = ReCenterAlignedSlabs(top_aligned,
+                                              bot_aligned,
+                                              d=4.5)
+    
+    struct_match = StructureMatcher(ltol=ltol, stol=stol, angle_tol=angle_tol,
+                                primitive_cell=primitive_cell, scale=scale)
+    
+    #Use the structure matcher to find shifts leading to equivalent interfaces
+    #and pop these entries out of the dictionaries.
+    c_u, c_a = RemoveEquivalentShifts(hs_u=hs_unique.copy(),
+                                      hs_a=hs_all.copy(),
+                                      top_slab=top_slab,
+                                      bot_slab=bot_slab,
+                                      structure_matcher=struct_match)
+    
+    c_all = AssignReplicatePoints(hs_u=c_u,
+                                   hs_a=c_a,
+                                   top_slab=top_slab,
+                                   bot_slab=bot_slab,
+                                   structure_matcher=struct_match)
+    
+    return c_u, c_all
+    
+
+def AssignReplicatePoints(hs_u, hs_a, top_slab, bot_slab, structure_matcher):
+    """Assign the replicated high-symmetry points to the correct unique ones.
+    
+    Although most of the high-symmetry points should be assigned to the correct
+    lable, there is the occasional shift that is equivalent for two lables.
+    This function imploys the StructureMatcher to match the replicated points
+    to their unique counterparts, so the energy can later be transfered
+    correctly.
+    
+
+    Parameters
+    ----------
+    hs_u : dict
+        Unique high-symmetry points of the interface.
+    hs_a : dict
+        All high-symmetry points of the interface.
+    top_slab : pymatgen.core.surface.Slab or pymatgen.core.structure.Structure
+        The top slab of the interface
+    bot_slab : pymatgen.core.surface.Slab or pymatgen.core.structure.Structure
+        The bottom slab of the interfaces
+    structure_matcher : pymatgen.analysis.structure_matcher.StructureMatcher
+        Class to find equivalent structures (mirrors, rotations, etc...)
+
+    Returns
+    -------
+    new_hsp_dict_a : dict
+        All high Symmetry points of the interface without duplicated entries.
+
+    """
     all_shifts = []
-    for key, value in hs_all.items():
+    for key, value in hs_a.items():
         if all_shifts == []:
             all_shifts = value
         else:
             all_shifts = np.concatenate([all_shifts, value], axis=0).tolist()
     all_shifts = np.unique(all_shifts, axis=0)
 
-    struct_match = StructureMatcher(ltol=0.01, stol=0.01, angle_tol=0.01,
-                                primitive_cell=False, scale=False)
-    top_slab, bot_slab = ReCenterAlignedSlabs(top_aligned,
-                                              bottom_aligned,
-                                              d=4.5)
+    
     new_hsp_dict_a = {}
-    for key, value in hs_unique.items():
+    for key, value in hs_u.items():
         unique_struct = StackAlignedSlabs(bot_slab,
                                           top_slab,
                                           top_shift = [value[0][0],
@@ -269,19 +341,42 @@ def AssigneAllPoints(hs_unique, hs_all, top_aligned, bottom_aligned):
                                                          shift[1],
                                                          0])
             test_struct = CleanUpSiteProperties(test_struct)
-            if struct_match.fit(unique_struct, test_struct):
+            if structure_matcher.fit(unique_struct, test_struct):
                 new_hsp_dict_a.setdefault(key, []).append(shift)
     
     return new_hsp_dict_a
 
-def RemoveEquivalentShifts(hs_unique, hs_all, top_slab, bot_slab,
-                           ltol=0.01, stol=0.01, angle_tol=0.01,
-                           primitive_cell=False, scale=False):
-    hs_u = hs_unique.copy()
-    hs_a = hs_all.copy()
-    top_slab, bot_slab = ReCenterAlignedSlabs(top_slab, bot_slab, d=4.5)
-    struct_match = StructureMatcher(ltol=ltol, stol=stol, angle_tol=angle_tol,
-                                primitive_cell=primitive_cell, scale=scale)
+def RemoveEquivalentShifts(hs_u, hs_a, top_slab, bot_slab, structure_matcher):
+    """Remove equivalent shifts from an interface high-symmetry point dict.
+    
+    When the high-symmetry points of two slabs are combined by finding all the
+    combinations (e.g. ontop_1-hollow_2, ontop_1-bridge_1, ...) by a 
+    GetInterfaceHS a lot of duplicates might be created. Here we use a
+    pymatgen.analysis.structure_matcher.StructureMatcher to get rid of these
+    duplicates both in the unique and the replicated high symmetry points.
+    
+
+    Parameters
+    ----------
+    hs_u : dict
+        Unique high-symmetry points of the interface.
+    hs_a : dict
+        All high-symmetry points of the interface.
+    top_slab : pymatgen.core.surface.Slab or pymatgen.core.structure.Structure
+        The top slab of the interface
+    bot_slab : pymatgen.core.surface.Slab or pymatgen.core.structure.Structure
+        The bottom slab of the interfaces
+    structure_matcher : pymatgen.analysis.structure_matcher.StructureMatcher
+        Class to find equivalent structures (mirrors, rotations, etc...)
+
+    Returns
+    -------
+    hs_u : dict
+        Unique high Symmetry points of the interface without equivalent entries.
+    hs_a : dict
+        All high Symmetry points of the interface without equivalent entries.
+
+    """
     structure_list = {}
     for key, value in hs_u.items():
         x_shift = value[0][0]
@@ -297,7 +392,7 @@ def RemoveEquivalentShifts(hs_unique, hs_all, top_slab, bot_slab,
     for name, struct in structure_list.items():
         for name_2, struct_2 in structure_list.items():
             if name != name_2:
-                if struct_match.fit(struct, struct_2) and name not in doubles_found:
+                if structure_matcher.fit(struct, struct_2) and name not in doubles_found:
                     equivalent_structs.setdefault(name, []).append(name_2)
                     doubles_found.append(name_2)
                     
@@ -306,102 +401,7 @@ def RemoveEquivalentShifts(hs_unique, hs_all, top_slab, bot_slab,
             hs_u.pop(key)
             hs_a.pop(key)
             
-    
-    
     return hs_u, hs_a
-
-def RoundPosInDict(high_symm_dict, decimals=5):
-    """Round coordinates for high-symmetry points in dict to selected precision.
-    
-    Convert the coordinate lists in a high-symmetry point dictionary as
-    produced by GetSlabHS and GetInterfaceHS to np.arrays and use np.round
-    to round the coordinates. Convert back to lists and return.
-
-    Parameters
-    ----------
-    high_symm_dict : dict
-        Dictionary of high-symmetry points for an interface. As computed
-        by GetInterfaceHS or GetSlabHS.
-    decimals : int, optional
-        Selects the number of decimal points the coordinates are rounded to.
-        The default is 5.
-
-    Returns
-    -------
-    dict
-        Just as the input dictionary, but with the coordinates rounded to the
-        desired precision.
-
-    """
-    hs = high_symm_dict.copy()
-    new_hs = {}
-    for key, value in hs.items():
-        pos = np.array(value)
-        rounded_array = np.round(np.array(pos), decimals=decimals)
-        new_hs[key] = rounded_array
-    
-    return jsanitize(new_hs)
-
-def RemoveDuplicatesFromHSDicts(hs_unique, hs_all, decimals=5):
-    """Remove the duplicates from dictionaries of high-symmetry points.
-    
-    Sometimes duplicate high-symmetry points with distinct labels are reported
-    by GetSlabHS and GetInterfaceHS. This function removes them, while
-    ensuring that the identification of high-symmetry points with their label
-    is kept correctly and no correct duplicate (points which have the same
-    symmetry but different xy-coordinates) are thrown away. The procedure
-    also involves rounding the coordinates to the chosen accuracy, so also
-    points that are not 'exactly' identical can be identified as equivalent.
-    
-
-    Parameters
-    ----------
-    hs_unique : dict
-        Dictionary of unique high-symmetry points for an interface. As computed
-        by GetInterfaceHS.
-    hs_all : dict
-        Dictionary of correctly replicated high-symmetry points for an
-        interface. As computed by GetInterfaceHS.
-    decimals : int, optional
-        Selects the number of decimal points the coordinates are rounded to.
-        The default is 5.
-
-    Returns
-    -------
-    u_hs : dict
-        Dictionary of unique high-symmetry points for an interface. Just as the
-        input dictionary 'hs_unique', but with wrong duplicates removed.
-    a_hs : TYPE
-        Dictionary of all high-symmetry points for an interface. Just as the
-        input dictionary 'hs_all', but with wrong duplicates removed.
-
-    """
-    u_hs = RoundPosInDict(hs_unique.copy(), decimals=decimals)
-    a_hs = RoundPosInDict(hs_all.copy(), decimals=decimals)
-    rev_dict = {}
-    for key, value in u_hs.items():
-        #have to make sure that -0.0 is changed to 0.0 to ensure that 
-        #equivalent points are recognised...
-        value_clean = []
-        for i in value[0]:
-            if i == 0.0:
-                value_clean.append(abs(i))
-            else:
-                value_clean.append(i)               
-        rev_dict.setdefault(str([value_clean]), list()).append(key)
-    for value in rev_dict.values():
-        if len(value) > 1:
-            equivalent_points = np.array(a_hs[value[0]])
-            for i in value[1:]:
-                #remove the equivalent entries from the u_hs dictionary
-                u_hs.pop(i)
-                #equivalent_points = np.vstack((equivalent_points,
-                #                              np.array(a_hs[i])))
-                a_hs.pop(i)
-            #equivalent_points = np.unique(equivalent_points, axis=0)
-            #a_hs[value[0]] = jsanitize(equivalent_points)
-            
-    return u_hs, a_hs
     
 
 def NormalizeHSDict(hs, to_array=True):
