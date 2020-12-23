@@ -24,6 +24,37 @@ def CalcPES_SWF(top_slab, bottom_slab,
                 comp_parameters = {},
                 file_output = False,
                 output_dir = None):
+    """Create a subworkflow to compute the PES for an interface of two slabs.
+
+    
+    Parameters
+    ----------
+    top_slab : pymatgen.core.surface.Slab
+        Top slab of the interface.
+    bottom_slab : pymatgen.core.surface.Slab
+        Bottom slab of the interface.
+    top_mpid : str, optional
+        ID of the bulk material of the top slab in the MP database.
+        The default is None.
+    bottom_mpid : str, optional
+        ID of the bulk material of the top slab in the MP database.
+        The default is None.
+    functional : str, optional
+        Which functional to use; has to be 'PBE' or 'SCAN'. The default is 'PBE'
+    comp_parameters : dict, optional
+        Computational parameters to be passed to the vasp input file generation.
+        The default is {}.
+    file_output : bool, optional
+        Toggles file output. The default is False.
+    output_dir : str, optional
+        Defines a directory the output is to be copied to. The default is None.
+
+    Returns
+    -------
+    SWF : fireworks.core.firework.Workflow
+        A subworkflow intended to compute the PES of a certain structure.
+
+    """
     
     try:
         top_miller = list(top_slab.miller_index)
@@ -45,8 +76,8 @@ def CalcPES_SWF(top_slab, bottom_slab,
     else:
         mt = ''.join(str(s) for s in top_miller)
         mb = ''.join(str(s) for s in bot_miller)
-        interface_name = (top_slab.formula+'('+mt+')_'+
-                         bottom_slab.formula+'('+mb+')_NO-MPIDs')
+        interface_name = (top_slab.formula+'_'+mt+'_'+
+                         bottom_slab.formula+'_'+mb+'_NO-MPIDs')
         
     
     if comp_parameters == {}:
