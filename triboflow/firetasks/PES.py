@@ -27,6 +27,32 @@ from triboflow.utils.structure_manipulation import InterfaceName, \
 
 @explicit_serialize
 class FT_StartPESCalcSubWF(FiretaskBase):
+    """ Start a PES subworkflow.
+    
+    Starts a PES subworkflow using data from the high-level database.
+    This is intended to be used to start a PES subworkflow from a main
+    workflow.
+    
+    Parameters
+    ----------
+    mp_id_1 : str
+        Materials Project database ID for the first material of the interface.
+    mp_id_2 : str
+        Materials Project database ID for the second material of the interface.
+    miller_1 : list of int or str
+        Miller index of the first material.
+    miller_2 : list of int or str
+        Miller index of the second material.
+    functional : str
+        Which functional to use; has to be 'PBE' or 'SCAN'.
+    db_file : str, optional
+        Full path to the db.json file that should be used. Defaults to
+        '>>db_file<<', to use env_chk.
+        
+    Returns
+    -------
+    FWAction that produces a detour PES subworkflow.    
+    """
     required_params = ['mp_id_1', 'mp_id_2', 'miller_1', 'miller_2',
                        'functional']
     optional_params = ['db_file']
@@ -63,6 +89,27 @@ class FT_StartPESCalcSubWF(FiretaskBase):
 
 @explicit_serialize
 class FT_ComputePES(FiretaskBase):
+    """ Compute the PES for a given interface, plot and save it.
+    
+    Uses the perviously computed energies for the unique high-symmetry points
+    and copies them to all the correct replica points. Replicates the points
+    and fits the PES using radial basis functions. Output is saved in the
+    database and if wanted also to files.
+    
+    Parameters
+    ----------
+    interface_name : str
+        Name of the interface in the high-level database.
+    functional : str
+        Which functional to use; has to be 'PBE' or 'SCAN'.
+    file_output : bool
+        Determines if results are written to disc.
+    db_file : str, optional
+        Full path to the db.json file that should be used. Defaults to
+        '>>db_file<<', to use env_chk.
+
+    """
+    
     required_params = ['interface_name', 'functional', 'file_output']
     optional_params = ['db_file']
     def run_task(self, fw_spec):
@@ -198,19 +245,17 @@ class FT_FindHighSymmPoints(FiretaskBase):
     
     Parameters
     ----------
-    interface_name : str
-        Name of the interface in the high-level database.
+    top_slab : pymatgen.core.surface.Slab
+        Top slab of the interface.
+    bottom_slab : pymatgen.core.surface.Slab
+        Bottom slab of the interface.
     functional : str
         Which functional to use; has to be 'PBE' or 'SCAN'.
+    interface_name : str
+        Name of the interface in the high-level database.
     db_file : str, optional
         Full path to the db.json file that should be used. Defaults to
         '>>db_file<<', to use env_chk.
-    top_name : str, optional
-        Name of the structure in the interface entry to the high-level database
-        which constitutes the upper slab. The default is 'top_aligned'.
-    bottom_name : str, optional
-        Name of the structure in the interface entry to the high-level database
-        which constitutes the lower slab. The default is 'bottom_aligned'.
         
     Returns
     -------
@@ -277,19 +322,21 @@ class FT_StartPESCalcs(FiretaskBase):
     Heterogeneous_WF
     Parameters
     ----------
-    interface_name : str
-        Name of the interface in the high-level database.
+    top_slab : pymatgen.core.surface.Slab
+        Top slab of the interface.
+    bottom_slab : pymatgen.core.surface.Slab
+        Bottom slab of the interface.
     functional : str
         Which functional to use; has to be 'PBE' or 'SCAN'.
+    interface_name : str
+        Name of the interface in the high-level database.
+    comp_parameters : dict
+        Computational parameters to be passed to the vasp input file generation.
     tag : str
         Unique tag to identify the calculations.
     db_file : str, optional
         Full path to the db.json file that should be used. Defaults to
         '>>db_file<<', to use env_chk.
-    structure_name : str, optional
-        Name of the structure in the interface entry to the high-level database
-        for which the PPES should be calculated. The default is
-        'unrelaxed_structure'.
         
     Returns
     -------
