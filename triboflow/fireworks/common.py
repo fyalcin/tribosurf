@@ -22,7 +22,38 @@ __date__ = 'March 11th, 2020'
 
 def RunPESCalcsFW(top_slab, bottom_slab, interface_name,
                   functional, comp_parameters, tag, FW_name):
+    """Compute high-symmetry points for an interface and start PES calculations.
     
+    Combines two Fireworks that find the high-symmetry points for the interface
+    and start the VASP calculations for the unique high-symmetry points
+    respectivly
+    
+
+    Parameters
+    ----------
+    top_slab : pymatgen.core.surface.Slab
+        Top slab of the interface.
+    bottom_slab : pymatgen.core.surface.Slab
+        Bottom slab of the interface.
+    interface_name : str
+        Unique name for the interface that is used in the output and the
+        database.
+    functional : str
+        Functional to be used. 'PBE' or 'SCAN' will work.
+    comp_parameters : dict
+        Dictionary containing computational options. E.g. encut, k_dens, vdw,...
+    tag : str
+        combination of the interface_name and a uuid. To uniquely identify the
+        computations in the database.
+    FW_name : str
+        Name of the Firework.
+
+    Returns
+    -------
+    FW : fireworks.core.firework.Firework
+        First Firework of a PES subworkflow.
+
+    """
     FT_1 = FT_FindHighSymmPoints(top_slab=top_slab, bot_slab=bottom_slab,
                                  interface_name=interface_name,
                                  functional=functional)
@@ -39,6 +70,37 @@ def RunPESCalcsFW(top_slab, bottom_slab, interface_name,
 
 def MakePESFW(interface_name, functional, tag, FW_name, file_output,
               output_dir):
+    """Retrieve PES calculations from the database and compute the PES.
+    
+    Retriev the computed energies of the unique high-symmetry points and match
+    them to the replicate points. Duplicates the points, interpolates with
+    radial basis functions and saves the results. Plots the results as well.
+    Optionally write file output and copy it to a output directory.
+    
+
+    Parameters
+    ----------
+    interface_name : str
+        Unique name for the interface that is used in the output and the
+        database.
+    functional : str
+        Functional to be used. 'PBE' or 'SCAN' will work.
+    tag : str
+        combination of the interface_name and a uuid. To uniquely identify the
+        computations in the database.
+    FW_name : str
+        Name of the Firework.
+    file_output : bool
+        Determines if files are written to disk.
+    output_dir : str
+        Location the output files are copied to if file_output is selected.
+
+    Returns
+    -------
+    FW : fireworks.core.firework.Firework
+        Final Firework of a PES subworkflow.
+
+    """
     
     FT_1 = FT_RetrievePESEnergies(interface_name=interface_name,
                                   functional=functional,
@@ -49,7 +111,7 @@ def MakePESFW(interface_name, functional, tag, FW_name, file_output,
     
     if file_output: 
         out_dir = output_dir
-        plot_name = 'PES_' + str(interface_name) + '.pdf'
+        plot_name = 'PES_' + str(interface_name) + '.png'
         FT_3 = FileTransferTask({'files':
                                  [plot_name,
                                   'Computet_PES_data_'+interface_name+'.dat',
