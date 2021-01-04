@@ -2,7 +2,9 @@
 
 
 from fireworks import Firework
-from triboflow.firetasks.PES import FT_FindHighSymmPoints, FT_StartPESCalcs
+from fireworks.user_objects.firetasks.fileio_tasks import FileTransferTask
+from triboflow.firetasks.PES import FT_FindHighSymmPoints, FT_StartPESCalcs, \
+    FT_RetrievePESEnergies, FT_ComputePES
 from triboflow.firetasks.check_inputs import FT_CheckCompParamDict, \
     FT_CheckInterfaceParamDict, FT_CheckMaterialInputDict, FT_MakeBulkInDB, \
     FT_MakeSlabInDB, FT_MakeInterfaceInDB
@@ -18,16 +20,109 @@ __date__ = 'March 11th, 2020'
 # Custom FireWorks
 # =============================================================================
 
-def RunPESCalcsFW(interface_name, functional, tag, FW_name):
+def RunPESCalcsFW(top_slab, bottom_slab, interface_name,
+                  functional, comp_parameters, tag, FW_name):
+    """Compute high-symmetry points for an interface and start PES calculations.
     
-    FT_1 = FT_FindHighSymmPoints(interface_name=interface_name,
+    Combines two Fireworks that find the high-symmetry points for the interface
+    and start the VASP calculations for the unique high-symmetry points
+    respectivly
+    
+
+    Parameters
+    ----------
+    top_slab : pymatgen.core.surface.Slab
+        Top slab of the interface.
+    bottom_slab : pymatgen.core.surface.Slab
+        Bottom slab of the interface.
+    interface_name : str
+        Unique name for the interface that is used in the output and the
+        database.
+    functional : str
+        Functional to be used. 'PBE' or 'SCAN' will work.
+    comp_parameters : dict
+        Dictionary containing computational options. E.g. encut, k_dens, vdw,...
+    tag : str
+        combination of the interface_name and a uuid. To uniquely identify the
+        computations in the database.
+    FW_name : str
+        Name of the Firework.
+
+    Returns
+    -------
+    FW : fireworks.core.firework.Firework
+        First Firework of a PES subworkflow.
+
+    """
+    FT_1 = FT_FindHighSymmPoints(top_slab=top_slab, bot_slab=bottom_slab,
+                                 interface_name=interface_name,
                                  functional=functional)
     
-    FT_2 = FT_StartPESCalcs(interface_name=interface_name,
+    FT_2 = FT_StartPESCalcs(top_slab=top_slab, bot_slab=bottom_slab,
+                            interface_name=interface_name,
                             functional=functional,
+                            comp_parameters=comp_parameters,
                             tag=tag)
     
     FW = Firework([FT_1, FT_2], name=FW_name)
+    
+    return FW
+
+def MakePESFW(interface_name, functional, tag, FW_name, file_output,
+              output_dir):
+    """Retrieve PES calculations from the database and compute the PES.
+    
+    Retriev the computed energies of the unique high-symmetry points and match
+    them to the replicate points. Duplicates the points, interpolates with
+    radial basis functions and saves the results. Plots the results as well.
+    Optionally write file output and copy it to a output directory.
+    
+
+    Parameters
+    ----------
+    interface_name : str
+        Unique name for the interface that is used in the output and the
+        database.
+    functional : str
+        Functional to be used. 'PBE' or 'SCAN' will work.
+    tag : str
+        combination of the interface_name and a uuid. To uniquely identify the
+        computations in the database.
+    FW_name : str
+        Name of the Firework.
+    file_output : bool
+        Determines if files are written to disk.
+    output_dir : str
+        Location the output files are copied to if file_output is selected.
+
+    Returns
+    -------
+    FW : fireworks.core.firework.Firework
+        Final Firework of a PES subworkflow.
+
+    """
+    
+    FT_1 = FT_RetrievePESEnergies(interface_name=interface_name,
+                                  functional=functional,
+                                  tag=tag)
+    FT_2 = FT_ComputePES(interface_name=interface_name,
+                         functional=functional,
+                         file_output=file_output)
+    
+    if file_output: 
+        out_dir = output_dir
+        plot_name = 'PES_' + str(interface_name) + '.png'
+        FT_3 = FileTransferTask({'files':
+                                 [plot_name,
+                                  'Computet_PES_data_'+interface_name+'.dat',
+                                  'Interpolated_PES_data_'+interface_name+'.dat'],
+                                 'dest': out_dir,
+                                 'mode': 'copy'})
+            
+        FW = Firework([FT_1, FT_2, FT_3], name=FW_name)
+    else:
+        
+        FW = Firework([FT_1, FT_2], name=FW_name)
     
     return FW
 

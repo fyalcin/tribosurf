@@ -98,16 +98,17 @@ def Plot_PES(data, lattice, to_fig=None):
     ax.set_aspect('equal')
     anglerot='vertical'
     shrin=1.
-    zt1=plt.contourf(x, y, E, level, extent=(-fact*a, fact*a, -fact*b, fact*b), cmap=plt.cm.RdYlBu_r)
+    #zt1=plt.contourf(x, y, E, level, extent=(-fact*a, fact*a, -fact*b, fact*b), cmap=plt.cm.RdYlBu_r)
+    zt1=plt.contourf(x, y, E, level, cmap=plt.cm.RdYlBu_r)
     cbar1=plt.colorbar(zt1,ax=ax,orientation=anglerot,shrink=shrin)
     cbar1.set_label(r'$E_{adh} (J/m^2)$', rotation=270, labelpad=20,fontsize=15,family='serif')
 
     #ax.quiver(0. , 0., 1., 0.,scale=1.,scale_units='inches',width=0.01,color='white')
     #ax.quiver(0. , 0., 0., 1.,scale=1.,scale_units='inches',width=0.01,color='white')
     ax.plot(0.,0.,'w.',ms=7)
-    ax.text(0.5,-0.5,'[1 0 1]',rotation='horizontal',color='white', fontsize=14)
-    ax.text(-0.5,1.,'[1 2 1]',rotation='vertical',color='white', fontsize=14)
-    ax.axis([-fact*min(a), fact*max(a), -fact*min(b), fact*max(b)])
+    #ax.text(0.5,-0.5,'[1 0 1]',rotation='horizontal',color='white', fontsize=14)
+    #ax.text(-0.5,1.,'[1 2 1]',rotation='vertical',color='white', fontsize=14)
+    #ax.axis([-fact*min(a), fact*max(a), -fact*min(b), fact*max(b)])
     plt.xlabel(r"distance ($\AA$)",fontsize=12,family='serif')
     plt.ylabel(r"distance ($\AA$)",fontsize=12,family='serif')
 
@@ -116,8 +117,8 @@ def Plot_PES(data, lattice, to_fig=None):
        zt1.set_linewidth(0.000000000001)
 
     if to_fig != None:
-        plt.title("PES for " + str(to_fig), fontsize=18, family='serif')
-        plt.savefig('PES_' + str(to_fig) + '.pdf', dpi=300)
+        plt.title("PES for " + str(to_fig), fontsize=15, family='serif')
+        plt.savefig('PES_' + str(to_fig) + '.png', dpi=300)
 
     
 def Plot_UniformGrid(grid, cell, n_a, n_b):

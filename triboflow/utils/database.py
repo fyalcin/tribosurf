@@ -84,7 +84,7 @@ def ConvertImageToBytes(path_to_fig):
     """
     im = Image.open(path_to_fig)
     image_bytes = io.BytesIO()
-    im.save(image_bytes, format='png')
+    im.save(image_bytes, format="png")
     return image_bytes.getvalue()
 
 def GetHighLevelDB(db_file):
