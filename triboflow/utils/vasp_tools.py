@@ -359,6 +359,7 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
                 if not comp_parameters['is_metal']:
                     uis['SIGMA'] = 0.1
                     uis['ISMEAR'] = 0
+            uis['METAGGA'] = 'SCAN'
             vis = MPScanRelaxSet(structure, user_incar_settings = uis,
                                 vdw = vdw, user_kpoints_settings = uks,
                                 user_potcar_functional = 'PBE_54')
