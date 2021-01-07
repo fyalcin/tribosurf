@@ -1,8 +1,7 @@
 #! /.fs/data/wolloch/atomate_test/atomate_env/bin/python
 
 
-from fireworks import Firework
-from fireworks.user_objects.firetasks.fileio_tasks import FileTransferTask
+from fireworks import Firework, FileTransferTask, ScriptTask
 from triboflow.firetasks.PES import FT_FindHighSymmPoints, FT_StartPESCalcs, \
     FT_RetrievePESEnergies, FT_ComputePES
 from triboflow.firetasks.check_inputs import FT_CheckCompParamDict, \
@@ -69,7 +68,7 @@ def RunPESCalcsFW(top_slab, bottom_slab, interface_name,
     return FW
 
 def MakePESFW(interface_name, functional, tag, FW_name, file_output,
-              output_dir):
+              output_dir, remote_copy=False, server=None, user=None, port=None):
     """Retrieve PES calculations from the database and compute the PES.
     
     Retriev the computed energies of the unique high-symmetry points and match
@@ -94,14 +93,25 @@ def MakePESFW(interface_name, functional, tag, FW_name, file_output,
         Determines if files are written to disk.
     output_dir : str
         Location the output files are copied to if file_output is selected.
-
+    remote_copy : bool, optional
+        If true, scp will be used to copy the results to a remote server. Be
+        advised that ssh-key certification must be set up between the two
+        machines. The default is False.
+    server : str, optional
+        Fully qualified domain name of the server the output should be copied
+        to. The default is None.
+    user : str, optional
+        The user name on the remote server.
+    port : int, optional
+        On some machines ssh-key certification is only supported for certain
+        ports. A port may be selected here. The default is None.
+        
     Returns
     -------
     FW : fireworks.core.firework.Firework
         Final Firework of a PES subworkflow.
 
-    """
-    
+    """    
     FT_1 = FT_RetrievePESEnergies(interface_name=interface_name,
                                   functional=functional,
                                   tag=tag)
@@ -112,12 +122,32 @@ def MakePESFW(interface_name, functional, tag, FW_name, file_output,
     if file_output: 
         out_dir = output_dir
         plot_name = 'PES_' + str(interface_name) + '.png'
-        FT_3 = FileTransferTask({'files':
-                                 [plot_name,
-                                  'Computet_PES_data_'+interface_name+'.dat',
-                                  'Interpolated_PES_data_'+interface_name+'.dat'],
-                                 'dest': out_dir,
-                                 'mode': 'copy'})
+        if remote_copy:
+            if server and user:
+                to_copy = ('Computet_PES_data_'+interface_name+'.dat ' +
+                           'Interpolated_PES_data_'+interface_name+'.dat ' + 
+                           plot_name)
+                scp_str = 'scp {} {}@{}:{}/.'.format(to_copy, user, server,
+                                                     output_dir)
+                if port:
+                    scp_str = 'scp -P {} {} {}@{}:{}/.'.format(port, to_copy,
+                                                               user, server,
+                                                               output_dir)
+                FT_3 = ScriptTask.from_str(scp_str)
+            else:
+                out_str = ("You have requested remote_copy but "
+                           "did not specify a remote server "
+                           "and/or username!\n"
+                           "No copy will be performed!\n")
+                FT_3 = ScriptTask.from_str('echo "{}"'.format(out_str))
+                    
+        else:
+            FT_3 = FileTransferTask({'files':
+                                     [plot_name,
+                                     'Computet_PES_data_'+interface_name+'.dat',
+                                     'Interpolated_PES_data_'+interface_name+'.dat'],
+                                     'dest': out_dir,
+                                     'mode': 'copy'})
             
         FW = Firework([FT_1, FT_2, FT_3], name=FW_name)
     else:

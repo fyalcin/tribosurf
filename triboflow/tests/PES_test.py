@@ -15,7 +15,7 @@ from triboflow.utils.database import GetDBJSON, GetSlabFromDB, \
     GetLowEnergyStructure
 
 db_file = GetDBJSON()
-functional = "PBE"
+functional = "SCAN"
 
 #Test Ag111Ag111 interface
 # mpid = "mp-124"
@@ -32,10 +32,13 @@ comp_params = {'functional': functional,
                'use_spin': True,
                'encut': 500,
                'is_metal': True,
-               'k_dens': 2000}
+               'k_dens': 2000
+               }
 
 WF = CalcPES_SWF(top_slab=slab, bottom_slab=slab, comp_parameters=comp_params,
-                 file_output=True, output_dir='/home/mwo/FireWorks/test_dir')
+                 file_output=True, output_dir = '/home/fs71332/mwo4',
+                 remote_copy = True, server = 'vsc4.vsc.ac.at',  user = 'mwo4', 
+                 port = 27)
 
 lpad = LaunchPad.auto_load()
 lpad.add_wf(WF)

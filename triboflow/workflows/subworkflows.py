@@ -10,8 +10,8 @@ from fireworks import Workflow, Firework
 from triboflow.fireworks.common import RunPESCalcsFW, MakePESFW
 from triboflow.firetasks.encut_convergence import FT_EnergyCutoffConvo
 from triboflow.firetasks.kpoint_convergence import FT_KpointsConvo
-#from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \
-#    FT_StartSlabRelax, FT_GetRelaxedSlab
+from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \
+    FT_StartSlabRelax, FT_GetRelaxedSlab
 from triboflow.firetasks.PPES import FT_DoPPESCalcs, FT_FitPPES
 from triboflow.utils.database import GetPropertyFromMP
 from triboflow.utils.structure_manipulation import InterfaceName
@@ -23,8 +23,20 @@ def CalcPES_SWF(top_slab, bottom_slab,
                 functional = 'PBE',
                 comp_parameters = {},
                 file_output = False,
-                output_dir = None):
+                output_dir = None,
+                remote_copy = False,
+                server = None, 
+                user = None, 
+                port = None):
     """Create a subworkflow to compute the PES for an interface of two slabs.
+    
+    This workflow takes two matched slabs (their cells must be identical) as
+    input and computes the potential energy surface (PES) for the interface.
+    Output are saved in a high-level database, but may also be also written
+    as files and copied to a chosen location. Note that this copy operation
+    is generally dependent on which machine the calculations are executed,
+    and not on the machine where the workflow is submitted. Also ssh-keys need
+    to be set up for remote_copy to work!
 
     
     Parameters
@@ -47,12 +59,26 @@ def CalcPES_SWF(top_slab, bottom_slab,
     file_output : bool, optional
         Toggles file output. The default is False.
     output_dir : str, optional
-        Defines a directory the output is to be copied to. The default is None.
+        Defines a directory the output is to be copied to. (Do not use a
+        trailing / and/or relative location symbols like ~/.)
+        The default is None.
+    remote_copy : bool, optional
+        If true, scp will be used to copy the results to a remote server. Be
+        advised that ssh-key certification must be set up between the two
+        machines. The default is False.
+    server : str, optional
+        Fully qualified domain name of the server the output should be copied
+        to. The default is None.
+    user : str, optional
+        The user name on the remote server.
+    port : int, optional
+        On some machines ssh-key certification is only supported for certain
+        ports. A port may be selected here. The default is None.
 
     Returns
     -------
     SWF : fireworks.core.firework.Workflow
-        A subworkflow intended to compute the PES of a certain structure.
+        A subworkflow intended to compute the PES of a certain interface.
 
     """
     
@@ -110,6 +136,10 @@ def CalcPES_SWF(top_slab, bottom_slab,
                      tag=tag,
                      file_output=file_output,
                      output_dir=output_dir,
+                     remote_copy = remote_copy,
+                     server = server, 
+                     user = user, 
+                     port = port,
                      FW_name='Parse PES calcs for '+interface_name)
     
     SWF = Workflow([FW_1, FW_2], {FW_1: [FW_2]},
