@@ -279,22 +279,39 @@ def MakeAndRelaxSlab_SWF(mp_id, miller, functional,
     return SWF
 
 
-def ConvergeKpoints_SWF(structure, comp_parameters, spec, mp_id, functional,
-                      k_dens_start=500, k_dens_incr=50,
-                      n_converge=3, db_file=None):
-    """Subworkflows that converges the the kmesh density via total energy.
+def ConvergeKpoints_SWF(structure,
+                        flag,
+                        comp_parameters = {},
+                        spec = {},
+                        functional = 'PBE',
+                        k_dens_start=500,
+                        k_dens_incr=50,
+                        n_converge=3,
+                        db_file=None,
+                        file_output = False,
+                        output_dir = None,
+                        remote_copy = False,
+                        server = None, 
+                        user = None, 
+                        port = None,
+                        print_help = True):
+    """Subworkflows that converges the the k-mesh density via total energy.
     
     Takes a given structure, computational parameters (which includes the
     convergence criterion in eV/atom) and runs static vasp calculations with
     a denser and denser mesh (larger k_dens parameter) until convergence in the
     total energy is achieved. Output is printed to the screen and saved in the
-    high-level triboflow database where it can be queried using the mp_id
-    of the material.
+    high-level triboflow database where it can be queried using the flag set.
 
     Parameters
     ----------
     structure : pymatgen.core.structure.Structure
         The structure for which to converge the K-pint grids.
+    flag : str
+        An identifyer to find the results in the database. It is strongly
+        suggested to use the proper Materials-ID from the MaterialsProject
+        if it is known for the specific input structure. Otherwise use something
+        unique which you can find again.
     comp_parameters : dict
         Dictionary of computational parameters for the VASP calculations.
         Convergence criterion in eV/atom can be given here under the key:
@@ -314,6 +331,27 @@ def ConvergeKpoints_SWF(structure, comp_parameters, spec, mp_id, functional,
     db_file : str
         Full path to the db.json file that should be used. Defaults to
         None, in which case env_chk will be used in the FT.
+    file_output : bool, optional
+        Toggles file output. The default is False.
+    output_dir : str, optional
+        Defines a directory the output is to be copied to. (Do not use a
+        trailing / and/or relative location symbols like ~/.)
+        The default is None.
+    remote_copy : bool, optional
+        If true, scp will be used to copy the results to a remote server. Be
+        advised that ssh-key certification must be set up between the two
+        machines. The default is False.
+    server : str, optional
+        Fully qualified domain name of the server the output should be copied
+        to. The default is None.
+    user : str, optional
+        The user name on the remote server.
+    port : int, optional
+        On some machines ssh-key certification is only supported for certain
+        ports. A port may be selected here. The default is None.
+    print_help : bool, optional
+        Prints a few lines of code that shows how to retrieve the results from
+        the database. The default is True.
 
     Returns
     -------
@@ -325,17 +363,55 @@ def ConvergeKpoints_SWF(structure, comp_parameters, spec, mp_id, functional,
     formula = structure.composition.reduced_formula
     name = 'Kpoint Convergence SWF of '+formula
     
+    if flag.startswith('mp-') and flag[3:].isdigit():
+        formula_from_struct = structure.composition.reduced_formula
+        formula_from_flag = GetPropertyFromMP(flag, 'pretty_formula')
+        if not formula_from_flag == formula_from_struct:
+            raise SystemExit('The chemical formula of your structure ({}) '
+                             'does not match the chemical formula of the flag '
+                             '(mp-id) you have chosen which corresponds '
+                             'to {}.\n'.format(
+                                 formula_from_struct, formula_from_flag))
+    
+    if comp_parameters == {}:
+        print('\nNo computational parameters have been defined!\n'
+              'Workflow will run with:\n'
+              '   ISPIN = 1\n'
+              '   ISMEAR = 0\n'
+              '   ENCUT = 520\n'
+              'We recommend to pass a comp_parameters dictionary'
+              ' of the form:\n'
+              '   {"use_vdw": <True/False>,\n'
+              '    "use_spin": <True/False>,\n'
+              '    "is_metal": <True/False>,\n'
+              '    "encut": <int>}\n')
+    
+    if print_help:
+        db_file = GetDBJSON()
+        print('Once you workflow has finished you can access the '
+              'results from the database using this code:\n\n'
+              'import pprint\n'
+              'from triboflow.utils.database import GetPropertyFromMP\n'
+              'results = GetBulkFromDB("{}", "{}", "{}")\n'
+              'pprint.pprint(results)\n'.format(flag, db_file, functional))
+    
     tag = "Kpoints group for {} - {}".format(formula, str(uuid4()))
         
     FT_KptsConvo = FT_KpointsConvo(structure = structure,
                                    comp_params = comp_parameters,
                                    tag = tag,
-                                   mp_id = mp_id,
+                                   flag = flag,
                                    functional = functional,
                                    db_file = db_file,
                                    k_dens_incr = k_dens_incr,
                                    k_dens_start = k_dens_start,
-                                   n_converge = n_converge)
+                                   n_converge = n_converge,
+                                   file_output = file_output,
+                                   output_dir = output_dir,
+                                   remote_copy = remote_copy,
+                                   server = server,
+                                   user = user,
+                                   port = port)
     
     FW_CE = Firework(FT_KptsConvo, spec=spec,
                      name='Kpoint Convergence')
