@@ -205,72 +205,155 @@ def CalcPPES_SWF(interface_name, functional, distance_list = [-0.5, -0.25, 0.0,
                    name = 'Calc PPES for '+interface_name+' SWF')
     return SWF
 
-def MakeAndRelaxSlab_SWF(mp_id, miller, functional,
-                       relax_type = 'slab_pos_relax',
-                       bulk_struct_name = 'structure_equiVol',
-                       slab_struct_name = 'unrelaxed_slab',
-                       out_struct_name = 'relaxed_slab',
-                       spec = {}):
+def MakeAndRelaxSlab_SWF(bulk_structure,
+                         miller_index,
+                         flag,
+                         comp_parameters = {},
+                         functional = 'PBE',
+                         min_thickness = 10.0,
+                         min_vacuum = 25.0,
+                         relax_type = 'slab_pos_relax',
+                         slab_struct_name = 'unrelaxed_slab',
+                         out_struct_name = 'relaxed_slab',
+                         spec = {},
+                         file_output = False,
+                         output_dir = None,
+                         remote_copy = False,
+                         server = None, 
+                         user = None, 
+                         port = None,
+                         print_help = True):
     """
     Make and relax a slab.
 
     Parameters
     ----------
-    mp_id : str
-        Materials project ID tag to identify the bulk and slab entries in the
-        high-level database.
-    miller : list of int or str
+    bulk_structure : pymatgen.core.structure.Structure
+        Bulk structure that is used to construct the slab out of.
+    miller_index : list of int or str
         Miller indices of the slab to make.
-    functional : str
-        Which functional to use; has to be 'PBE' or 'SCAN'.
+    flag : str
+        An identifyer to find the results in the database. It is strongly
+        suggested to use the proper Materials-ID from the MaterialsProject
+        if it is known for the specific input structure. Otherwise use something
+        unique which you can find again.
+    comp_parameters : dict, optional
+        Computational parameters to be passed to the vasp input file generation.
+        The default is {}.
+    functional : str, optional
+        Which functional to use; has to be 'PBE' or 'SCAN'. The default is 'PBE'.
+    min_thickness : float, optional
+        Minimal thickness of the unrelaxed slab in Angstrom. The default is 10.0.
+    min_vacuum : float, optional
+        Minimal thickness of the vacuum layer in Angstrom. The default is 25.0.
     relax_type : str, optional
-        Which type of relaxation to run. See helper function:
-        GetCustomVaspRelaxSettings. The default is 'slab_pos_relax'.
-    bulk_struct_name : str, optional
-        Name of the bulk to use as the basis for the slab generation in the 
-        high-level database. The default is 'structure_equiVol'.
+        Which type of relaxation to run. See GetCustomVaspRelaxSettings from
+        triboflow.utils.vasp_tools. The default is 'slab_pos_relax'.
     slab_struct_name : str, optional
         Name of the unrelaxed slab in the high-level database.
         The default is 'unrelaxed_slab'.
     out_struct_name : TYPE, optional
         DESCRIPTION. The default is 'relaxed_slab'.
-    spec : TYPE, optional
+    spec : dict, optional
         DESCRIPTION. The default is {}.
+    file_output : bool, optional
+        Toggles file output. The default is False.
+    output_dir : str, optional
+        Defines a directory the output is to be copied to. (Do not use a
+        trailing / and/or relative location symbols like ~/.)
+        The default is None.
+    remote_copy : bool, optional
+        If true, scp will be used to copy the results to a remote server. Be
+        advised that ssh-key certification must be set up between the two
+        machines. The default is False.
+    server : str, optional
+        Fully qualified domain name of the server the output should be copied
+        to. The default is None.
+    user : str, optional
+        The user name on the remote server.
+    port : int, optional
+        On some machines ssh-key certification is only supported for certain
+        ports. A port may be selected here. The default is None.
 
     Returns
     -------
-    SWF : TYPE
-        DESCRIPTION.
+    SWF : fireworks.core.firework.Workflow
+        A subworkflow intended to make and relax a slab from a bulk structure.
 
     """
-    if type(miller) == str:
-        miller_str = miller
-        miller = [int(k) for k in list(miller)]
+    if type(miller_index) == str:
+        miller_str = miller_index
+        miller = [int(k) for k in list(miller_index)]
     else:
-        miller = miller
-        miller_str = ''.join(str(s) for s in miller)
+        miller = miller_index
+        miller_str = ''.join(str(s) for s in miller_index)
         
-    formula = GetPropertyFromMP(mp_id, 'pretty_formula')
+    formula = bulk_structure.composition.reduced_formula
+    
+    if flag.startswith('mp-') and flag[3:].isdigit():
+        formula_from_flag = GetPropertyFromMP(flag, 'pretty_formula')
+        if not formula_from_flag == formula:
+            raise SystemExit('The chemical formula of your structure ({}) '
+                             'does not match the chemical formula of the flag '
+                             '(mp-id) you have chosen which corresponds '
+                             'to {}.\n'.format(
+                                 formula, formula_from_flag))
+    
+    if comp_parameters == {}:
+        print('\nNo computational parameters have been defined!\n'
+              'Workflow will run with:\n'
+              '   ISPIN = 1\n'
+              '   ISMEAR = 0\n'
+              '   ENCUT = 520\n'
+              '   kpoint density kappa = 5000\n'
+              'We recommend to pass a comp_parameters dictionary'
+              ' of the form:\n'
+              '   {"use_vdw": <True/False>,\n'
+              '    "use_spin": <True/False>,\n'
+              '    "is_metal": <True/False>,\n'
+              '    "encut": <int>,\n'
+              '    "k_dens": <int>}\n')
+    
+    if print_help:
+        db_file = GetDBJSON()
+        print('Once you workflow has finished you can access the '
+              'results from the database using this code:\n\n'
+              'import pprint\n'
+              'from triboflow.utils.database import GetSlabFromDB\n'
+              'results = GetBulkFromDB("{}", "{}", "{}", "{}")\n'
+              'pprint.pprint(results)\n'.format(flag, db_file, miller, functional))
     
     tag = formula+miller_str+'_'+str(uuid4())
             
     FTs = []
     
-    FTs.append(FT_MakeSlabInDB(mp_id = mp_id, miller = miller,
+    FTs.append(FT_MakeSlabInDB(bulk_structure = bulk_structure,
+                               miller = miller,
+                               flag = flag,
                                functional = functional,
-                               bulk_struct_name = bulk_struct_name))
+                               min_thickness = min_thickness,
+                               min_vacuum = min_vacuum))
     
-    FTs.append(FT_StartSlabRelax(mp_id = mp_id, miller = miller,
+    FTs.append(FT_StartSlabRelax(flag = flag, miller = miller,
                                  functional = functional, tag = tag,
+                                 comp_parameters = comp_parameters,
                                  slab_struct_name = slab_struct_name,
                                  relax_type = relax_type))
     
     FW = Firework(FTs, spec = spec,
                   name = 'Make and relax '+formula+miller_str+' slab')
     
-    FW2 = Firework(FT_GetRelaxedSlab(mp_id = mp_id, miller = miller,
-                                 functional = functional, tag = tag,
-                                 struct_out_name = out_struct_name),
+    FW2 = Firework(FT_GetRelaxedSlab(flag = flag,
+                                     miller = miller,
+                                     functional = functional,
+                                     tag = tag,
+                                     struct_out_name = out_struct_name,
+                                     file_output = file_output,
+                                     output_dir = output_dir,
+                                     remote_copy = remote_copy,
+                                     server = server, 
+                                     user = user, 
+                                     port = port),
                    spec = spec,
                    name = 'Put relaxed '+formula+miller_str+' slab in DB')
     
@@ -391,7 +474,7 @@ def ConvergeKpoints_SWF(structure,
         print('Once you workflow has finished you can access the '
               'results from the database using this code:\n\n'
               'import pprint\n'
-              'from triboflow.utils.database import GetPropertyFromMP\n'
+              'from triboflow.utils.database import GetBulkFromDB\n'
               'results = GetBulkFromDB("{}", "{}", "{}")\n'
               'pprint.pprint(results)\n'.format(flag, db_file, functional))
     
@@ -543,7 +626,7 @@ def ConvergeEncut_SWF(structure,
         print('Once you workflow has finished you can access the '
               'results from the database using this code:\n\n'
               'import pprint\n'
-              'from triboflow.utils.database import GetPropertyFromMP\n'
+              'from triboflow.utils.database import GetBulkFromDB\n'
               'results = GetBulkFromDB("{}", "{}", "{}")\n'
               'pprint.pprint(results)\n'.format(flag, db_file, functional))
     
