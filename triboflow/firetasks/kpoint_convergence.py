@@ -268,9 +268,8 @@ class FT_KpointsConvo(FiretaskBase):
                                               user = server,
                                               port = port)
                     FW = Firework([write_FT, copy_FT],
-                                  name = 'Copy Encut SWF results')
-                    WF = Workflow.from_Firework(FW,
-                                                name = 'Copy Encut SWF results')
+                                  name = 'Copy KpointsConvo SWF results')
+                    WF = Workflow.from_Firework(FW, name = 'Copy KpointsConve SWF results')
                     return FWAction(update_spec = fw_spec, detours = WF)
                 else:  
                     return FWAction(update_spec = fw_spec)
