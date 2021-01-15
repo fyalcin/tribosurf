@@ -42,7 +42,7 @@ class FT_StartEncutConvo(FiretaskBase):
             structure = Structure.from_dict(data.get('structure_fromMP'))
             comp_params = data.get('comp_parameters', {})
             SWF = ConvergeEncut_SWF(structure = structure, flag = mp_id,
-                                    comp_params = comp_params,
+                                    comp_parameters = comp_params,
                                     functional = functional,
                                     print_help = False)
             return FWAction(detours=SWF, update_spec=fw_spec)

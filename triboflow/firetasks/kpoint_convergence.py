@@ -42,12 +42,15 @@ class FT_StartKPointConvo(FiretaskBase):
         if not stop_convergence:
             structure = Structure.from_dict(data.get('structure_equiVol'))
             comp_params = data.get('comp_parameters', {})
-            SWF = ConvergeKpoints_SWF(structure, comp_params,
-                                    mp_id = mp_id, functional = functional,
-                                    spec=fw_spec, 
-                                    k_dens_start=k_dens_start,
-                                    k_dens_incr=k_dens_incr, 
-                                    n_converge=n_converge, db_file=db_file)
+            SWF = ConvergeKpoints_SWF(structure = structure,
+                                      flag = mp_id,
+                                      comp_parameters = comp_params,
+                                      functional = functional,
+                                      spec = fw_spec, 
+                                      k_dens_start = k_dens_start,
+                                      k_dens_incr = k_dens_incr, 
+                                      n_converge = n_converge,
+                                      db_file = db_file)
             return FWAction(detours=SWF, update_spec=fw_spec)
         else:
             return FWAction(update_spec=fw_spec)
