@@ -258,7 +258,7 @@ def GetInterfaceFromDB(name, db_file, functional):
         raise IOError('No interface with name {} was found in the '
                     '{}.interface_data collection.'.format(name, functional))
     
-def GetLastBMDatafromDB(formula, db_file='/home/mwo/FireWorks/config/db.json'):
+def GetLastBMDatafromDB(formula, db_file):
     """Query the FireWorks database for the last bulk modulus data for formula.
     
     A query is made to the eos collection in the Fireworks database for a

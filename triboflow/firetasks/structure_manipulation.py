@@ -4,23 +4,26 @@ Created on Wed Jun 17 15:59:59 2020
 @author: mwo
 """
 import monty
+from pprint import pprint, pformat
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import Slab
 from pymatgen.core.surface import SlabGenerator
 from pymatgen.io.vasp.inputs import Poscar
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
-from fireworks import FWAction, FiretaskBase, Firework, Workflow
+from fireworks import FWAction, FiretaskBase, Firework, Workflow, FileWriteTask
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 from atomate.vasp.powerups import add_modify_incar
-from atomate.vasp.fireworks.core import OptimizeFW
+from atomate.vasp.fireworks.core import OptimizeFW, ScanOptimizeFW
 from mpinterfaces.transformations import get_aligned_lattices, \
     get_interface#generate_all_configs
-from triboflow.utils.database import GetBulkFromDB, GetSlabFromDB, \
-    GetHighLevelDB, GetDB
+from triboflow.utils.database import GetSlabFromDB, GetHighLevelDB, GetDB, \
+    GetBulkFromDB
 from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
 from triboflow.utils.structure_manipulation import InterfaceName, \
     SlabFromStructure, ReCenterAlignedSlabs, StackAlignedSlabs
+from triboflow.utils.file_manipulation import CopyOutputFiles
+
 
 
 @explicit_serialize
@@ -36,8 +39,6 @@ class FT_StartSlabRelaxSWF(FiretaskBase):
         or a list of int e.g. [1, 1, 1]
     functional : str
         functional that is used for the calculation.
-    tag : str
-        Unique identifier for the Optimize FW.
     db_file : str, optional
         Full path to the db.json file which holds the location and access
         credentials to the database. If not given uses env_chk.
@@ -80,12 +81,26 @@ class FT_StartSlabRelaxSWF(FiretaskBase):
         bulk_name = self.get('bulk_struct_name', 'structure_equiVol')
         slab_out_name = self.get('slab_out_name', 'relaxed_slab')
         
-        WF = MakeAndRelaxSlab_SWF(mp_id, miller, functional,
+        data = GetBulkFromDB(mp_id, db_file, functional)
+        bulk_struct = Structure.from_dict(data[bulk_name])
+        
+        slab_data = GetSlabFromDB(mp_id, db_file, miller, functional)
+        comp_params = slab_data.get('comp_parameters')
+        min_thickness = slab_data.get('min_thickness', 10)
+        min_vacuum = slab_data.get('min_vacuum', 25)
+        
+        WF = MakeAndRelaxSlab_SWF(bulk_structure = bulk_struct,
+                                  miller_index = miller,
+                                  flag = mp_id,
+                                  comp_parameters = comp_params,
+                                  functional = functional,
+                                  min_thickness = min_thickness,
+                                  min_vacuum = min_vacuum,
                                   relax_type = relax_type,
-                                  bulk_struct_name = bulk_name,
                                   slab_struct_name = slab_name,
                                   out_struct_name = slab_out_name,
-                                  spec = fw_spec)
+                                  print_help = False)
+        
         return FWAction(detours = WF)
     
 @explicit_serialize
@@ -94,8 +109,11 @@ class FT_GetRelaxedSlab(FiretaskBase):
 
     Parameters
     ----------
-    mp_id : str
-        ID number for structures in the material project.
+    flag : str
+        An identifyer to find the results in the database. It is strongly
+        suggested to use the proper Materials-ID from the MaterialsProject
+        if it is known for the specific input structure. Otherwise use something
+        unique which you can find again.
     miller : list of int or str
         Miller indices for the slab generation. Either single str e.g. '111',
         or a list of int e.g. [1, 1, 1]
@@ -109,16 +127,35 @@ class FT_GetRelaxedSlab(FiretaskBase):
     struct_out_name : str, optional
         Name of the slab to be put in the DB (identified by mp_id and miller).
         Defaults to 'relaxed_slab'.
+    file_output : bool, optional
+        Toggles file output. The default is False.
+    output_dir : str, optional
+        Defines a directory the output is to be copied to. (Do not use a
+        trailing / and/or relative location symbols like ~/.)
+        The default is None.
+    remote_copy : bool, optional
+        If true, scp will be used to copy the results to a remote server. Be
+        advised that ssh-key certification must be set up between the two
+        machines. The default is False.
+    server : str, optional
+        Fully qualified domain name of the server the output should be copied
+        to. The default is None.
+    user : str, optional
+        The user name on the remote server.
+    port : int, optional
+        On some machines ssh-key certification is only supported for certain
+        ports. A port may be selected here. The default is None.
     
     Returns
     -------
         Pymatgen Slab into the high-level DB.
     """
     
-    required_params = ['mp_id', 'miller', 'functional', 'tag']
-    optional_params = ['db_file', 'struct_out_name']
+    required_params = ['flag', 'miller', 'functional', 'tag']
+    optional_params = ['db_file', 'struct_out_name', 'file_output',
+                       'output_dir', 'remote_copy', 'server', 'user', 'port']
     def run_task(self, fw_spec):
-        mp_id = self.get('mp_id')
+        flag = self.get('flag')
         if type(self['miller']) == str:
             miller = [int(k) for k in list(self['miller'])]
             miller_str = self['miller']
@@ -130,24 +167,21 @@ class FT_GetRelaxedSlab(FiretaskBase):
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
         out_name = self.get('struct_out_name', 'relaxed_slab')
+        file_output = self.get('file_output', False)
+        output_dir = self.get('output_dir', None)
+        remote_copy = self.get('remote_copy', False)
+        server = self.get('server', None)
+        user = self.get('user', None)
+        port = self.get('port', None)
         
         # Check if a relaxed slab is already in the DB entry
-        slab_data = GetSlabFromDB(mp_id, db_file, miller, functional)
+        slab_data = GetSlabFromDB(flag, db_file, miller, functional)
+        
         if out_name not in slab_data:
-            
             #Get results from OptimizeFW
             DB = GetDB(db_file)
             vasp_calc = DB.tasks.find_one({'task_label': self['tag']})
             relaxed_slab = Structure.from_dict(vasp_calc['output']['structure'])
-        
-            HL_DB = GetHighLevelDB(db_file)
-            coll = HL_DB[functional+'.slab_data']
-            
-            slab_data = coll.find_one({'mpid': mp_id, 'miller': miller})
-        
-            #The following should be enough to transform the structure that
-            #is coming out of the relaxation (relaxed_slab) into a Slab object.
-                
             slab = Slab(relaxed_slab.lattice,
                         relaxed_slab.species_and_occu,
                         relaxed_slab.frac_coords,
@@ -156,11 +190,62 @@ class FT_GetRelaxedSlab(FiretaskBase):
                         shift=0,
                         scale_factor=[[1,0,0], [0,1,0], [0,0,1]],
                         site_properties=relaxed_slab.site_properties)
-        
-            coll.update_one({'mpid': mp_id, 'miller': miller},
+            db = GetHighLevelDB(db_file)
+            coll = db[functional+'.slab_data']
+            coll.update_one({'mpid': flag, 'miller': miller},
                             {'$set': {out_name: slab.as_dict()}})
+        else:
+            DB = GetDB(db_file)
+            vasp_calc = DB.tasks.find_one({'task_label': self['tag']})
+            if  vasp_calc:
+                relaxed_slab = Structure.from_dict(vasp_calc['output']['structure'])
+                slab = Slab(relaxed_slab.lattice,
+                        relaxed_slab.species_and_occu,
+                        relaxed_slab.frac_coords,
+                        miller,
+                        Structure.from_sites(relaxed_slab, to_unit_cell=True),
+                        shift=0,
+                        scale_factor=[[1,0,0], [0,1,0], [0,0,1]],
+                        site_properties=relaxed_slab.site_properties)
+                print('')
+                print(' A slab with the selected output name already exists in the DB.'
+                      ' It will not be overwritten with the new relaxed slab.\n'
+                      ' If needed you can update the data manually.')
+                print('')
+            else:
+                slab = Slab.from_dict(slab_data[out_name])
+                print('')
+                print(' A slab with the selected output name already exists in the DB.'
+                      ' No new slab has been relaxed.\n')
+
+        # screen output:
+        print('')
+        print('Relaxed output structure as pymatgen.surface.Slab dictionary:')
+        pprint(slab.as_dict())
+        print('')
         
-        return
+        # handle file output:
+        if file_output:
+            poscar_str = Poscar(slab).get_string()
+            poscar_name = flag+'_Relaxed_slab_POSCAR.vasp'
+            slab_name = flag+'_Relaxed_slab_dict.txt'
+            write_FT = FileWriteTask(files_to_write=
+                                     [{'filename': poscar_name,
+                                       'contents': poscar_str},
+                                      {'filename': slab_name,
+                                       'contents': pformat(slab.as_dict())}])
+            copy_FT = CopyOutputFiles(file_list = [poscar_name, slab_name],
+                                      output_dir = output_dir,
+                                      remote_copy = remote_copy,
+                                      server = server,
+                                      user = server,
+                                      port = port)
+            FW = Firework([write_FT, copy_FT],
+                          name = 'Copy SlabRelax SWF results')
+            WF = Workflow.from_Firework(FW, name = 'Copy SlabRelax SWF results')
+            return FWAction(update_spec = fw_spec, detours = WF)
+        else:  
+            return FWAction(update_spec = fw_spec)
 
             
 @explicit_serialize
@@ -169,8 +254,11 @@ class FT_StartSlabRelax(FiretaskBase):
 
     Parameters
     ----------
-    mp_id : str
-        ID number for structures in the material project.
+    flag : str
+        An identifyer to find the results in the database. It is strongly
+        suggested to use the proper Materials-ID from the MaterialsProject
+        if it is known for the specific input structure. Otherwise use something
+        unique which you can find again.
     miller : list of int or str
         Miller indices for the slab generation. Either single str e.g. '111',
         or a list of int e.g. [1, 1, 1]
@@ -181,6 +269,9 @@ class FT_StartSlabRelax(FiretaskBase):
     db_file : str, optional
         Full path to the db.json file which holds the location and access
         credentials to the database. If not given uses env_chk.
+    comp_parameters : dict, optional
+        Computational parameters to be passed to the vasp input file generation.
+        The default is {}.
     slab_struct_name : str, optional
         Name of the slab to be put in the DB (identified by mp_id and miller).
         Defaults to 'unrelaxed_slab'.
@@ -192,10 +283,11 @@ class FT_StartSlabRelax(FiretaskBase):
         Pymatgen Slab into the high-level DB.
     """
     
-    required_params = ['mp_id', 'miller', 'functional', 'tag']
-    optional_params = ['db_file', 'slab_struct_name', 'relax_type']
+    required_params = ['flag', 'miller', 'functional', 'tag']
+    optional_params = ['db_file', 'comp_parameters', 'slab_struct_name',
+                       'relax_type']
     def run_task(self, fw_spec):
-        mp_id = self.get('mp_id')
+        flag = self.get('flag')
         if type(self['miller']) == str:
             miller = [int(k) for k in list(self['miller'])]
             miller_str = self['miller']
@@ -206,27 +298,32 @@ class FT_StartSlabRelax(FiretaskBase):
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
+        comp_params = self.get('comp_parameters', {})
         slab_name = self.get('slab_struct_name', 'unrelaxed_slab')
         tag = self.get('tag')
         relax_type = self.get('relax_type', 'slab_pos_relax')
         
-        slab_data = GetSlabFromDB(mp_id, db_file, miller, functional)
-        comp_params = slab_data.get('comp_parameters')
+        slab_data = GetSlabFromDB(flag, db_file, miller, functional)
+        
         slab_to_relax = Slab.from_dict(slab_data.get(slab_name))
+        formula = slab_to_relax.composition.reduced_formula
         
         # Check if a relaxed slab is already in the DB entry
         if 'relaxed_slab' not in slab_data:
             vis = GetCustomVaspRelaxSettings(slab_to_relax, comp_params,
                                              relax_type)
-        
-            Optimize_FW = OptimizeFW(slab_to_relax, name=tag,
+            if functional == 'SCAN':
+                FW = ScanOptimizeFW(structure=slab_to_relax,
+                                    name=tag,
+                                    vasp_input_set = vis)
+            else:
+                FW = OptimizeFW(slab_to_relax, name=tag,
                                      vasp_input_set = vis,
                                      half_kpts_first_relax = True)
-            wf_name = slab_data['formula']+miller_str+'_'+relax_type
+            wf_name = formula+miller_str+'_'+relax_type
             #Use add_modify_incar powerup to add KPAR and NCORE settings
             #based on env_chk in my_fworker.yaml
-            Optimize_WF = add_modify_incar(Workflow([Optimize_FW],
-                                                    name = wf_name))
+            Optimize_WF = add_modify_incar(Workflow([FW], name = wf_name))
             return FWAction(detours=Optimize_WF)
 
 @explicit_serialize
@@ -237,23 +334,27 @@ class FT_MakeSlabInDB(FiretaskBase):
 
     Parameters
     ----------
-    mp_id : str
-        ID number for structures in the material project.
+    bulk_structure : pymatgen.core.structure.Structure
+        Bulk structure that is used to construct the slab out of.
     miller : list of int or str
-        Miller indices for the slab generation. Either single str e.g. '111',
-        or a list of int e.g. [1, 1, 1]
+        Miller indices of the slab to make.
+    flag : str
+        An identifyer to find the results in the database. It is strongly
+        suggested to use the proper Materials-ID from the MaterialsProject
+        if it is known for the specific input structure. Otherwise use something
+        unique which you can find again.
     functional : str
         functional that is used for the calculation.
     db_file : str, optional
         Full path to the db.json file which holds the location and access
         credentials to the database. If not given uses env_chk.
-    bulk_struct_name : str, optional
-        Name of the bulk structure in the bulk database (material is
-        identified by mp_id, but there might be differnt structures of the
-        same material.) Defaults to 'structure_equiVol'.
     slab_struct_name : str, optional
         Name of the slab to be put in the DB (identified by mp_id and miller).
         Defaults to 'unrelaxed_slab'.
+    min_thickness : float, optional
+        Minimal thickness of the unrelaxed slab in Angstrom. The default is 10.0.
+    min_vacuum : float, optional
+        Minimal thickness of the vacuum layer in Angstrom. The default is 25.0.
     
     Returns
     -------
@@ -261,31 +362,29 @@ class FT_MakeSlabInDB(FiretaskBase):
     """
     
     _fw_name = 'Make slab from bulk structure'
-    required_params = ['mp_id', 'miller', 'functional']
-    optional_params = ['db_file', 'bulk_struct_name', 'slab_struct_name']
+    required_params = ['bulk_structure', 'miller', 'flag', 'functional']
+    optional_params = ['db_file', 'slab_struct_name', 'min_thickness',
+                       'min_vacuum']
     
     def run_task(self, fw_spec):
         
-        mp_id = self.get('mp_id')
+        bulk_prim = self.get('bulk_structure')
         if type(self['miller']) == str:
             miller = [int(k) for k in list(self['miller'])]
         else:
             miller = self['miller']
+        flag = self.get('flag')
         functional = self.get('functional')
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
-        bulk_name = self.get('bulk_struct_name', 'structure_equiVol')
         slab_name = self.get('slab_struct_name', 'unrelaxed_slab')
+        min_thickness = self.get('min_thickness', 10)
+        min_vacuum = self.get('min_vacuum', 25)
         
-        bulk_data = GetBulkFromDB(mp_id, db_file, functional)
-        slab_data = GetSlabFromDB(mp_id, db_file, miller, functional)
+        #slab_data = GetSlabFromDB(flag, db_file, miller, functional)
         
-        bulk_prim = Structure.from_dict(bulk_data[bulk_name])
         bulk_conv = SpacegroupAnalyzer(bulk_prim).get_conventional_standard_structure()
-        
-        min_thickness = slab_data.get('min_thickness', 10)
-        min_vacuum = slab_data.get('min_min_vacuum', 25)
         
         SG = SlabGenerator(initial_structure = bulk_conv,
                            miller_index = miller,
@@ -310,8 +409,9 @@ class FT_MakeSlabInDB(FiretaskBase):
         
         slab_dict = monty.json.jsanitize(slab.as_dict(), allow_bson=True)
         
-        coll.update_one({'mpid': mp_id, 'miller': miller},
-                        {'$set': {'unrelaxed_slab': slab_dict}})
+        coll.update_one({'mpid': flag, 'miller': miller},
+                        {'$set': {'unrelaxed_slab': slab_dict}},
+                        upsert=True)
         
         
         return 

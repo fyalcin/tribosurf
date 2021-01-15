@@ -7,6 +7,7 @@ from triboflow.firetasks.PES import FT_FindHighSymmPoints, FT_StartPESCalcs, \
 from triboflow.firetasks.check_inputs import FT_CheckCompParamDict, \
     FT_CheckInterfaceParamDict, FT_CheckMaterialInputDict, FT_MakeBulkInDB, \
     FT_MakeSlabInDB, FT_MakeInterfaceInDB
+from triboflow.utils.file_manipulation import CopyOutputFiles
 
 __author__ = 'Michael Wolloch'
 __copyright__ = 'Copyright 2020, Michael Wolloch'
@@ -120,34 +121,15 @@ def MakePESFW(interface_name, functional, tag, FW_name, file_output,
                          file_output=file_output)
     
     if file_output: 
-        out_dir = output_dir
-        plot_name = 'PES_' + str(interface_name) + '.png'
-        if remote_copy:
-            if server and user:
-                to_copy = ('Computet_PES_data_'+interface_name+'.dat ' +
-                           'Interpolated_PES_data_'+interface_name+'.dat ' + 
-                           plot_name)
-                scp_str = 'scp {} {}@{}:{}/.'.format(to_copy, user, server,
-                                                     output_dir)
-                if port:
-                    scp_str = 'scp -P {} {} {}@{}:{}/.'.format(port, to_copy,
-                                                               user, server,
-                                                               output_dir)
-                FT_3 = ScriptTask.from_str(scp_str)
-            else:
-                out_str = ("You have requested remote_copy but "
-                           "did not specify a remote server "
-                           "and/or username!\n"
-                           "No copy will be performed!\n")
-                FT_3 = ScriptTask.from_str('echo "{}"'.format(out_str))
-                    
-        else:
-            FT_3 = FileTransferTask({'files':
-                                     [plot_name,
-                                     'Computet_PES_data_'+interface_name+'.dat',
-                                     'Interpolated_PES_data_'+interface_name+'.dat'],
-                                     'dest': out_dir,
-                                     'mode': 'copy'})
+        output_files = ['Computet_PES_data_'+interface_name+'.dat',
+                        'Interpolated_PES_data_'+interface_name+'.dat',
+                        'PES_' + str(interface_name) + '.png']
+        FT_3 = CopyOutputFiles(file_list = output_files,
+                               output_dir = output_dir,
+                               remote_copy = remote_copy,
+                               server = server,
+                               user = server,
+                               port = port)
             
         FW = Firework([FT_1, FT_2, FT_3], name=FW_name)
     else:
