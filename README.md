@@ -25,13 +25,13 @@ Here we assume that you install Triboflow within a virtual python environment. W
  1. Make sure that you have conda installed or download and install miniconda from [here](https://docs.conda.io/en/latest/miniconda.html).
  2. Update conda and then create a new python 3 environment named "TriboFlow" (or whatever you decide) by typing `conda update conda` followed by `conda create --name TriboFlow python=3`
  3. Switch to your new environment: `conda activate TriboFlow`
- 4. Now install some fundamental packages with conda: `conda install numpy scipy matplotlib ipython vtk dnspython`
+ 4. Now install some fundamental packages with conda: `conda install numpy scipy matplotlib ipython vtk dnspython maggma -c conda-forge`
 
 
 [Back to top](#toc)
 ### Install and configure MonogoDB locally if you want your database to run also in conda<a name="mongodb"></a>
 This is **optional** and you should skip these steps if you **already have a database running** somewhere that you want to use and can access from the machine you are using. See also [this section](https://atomate.org/installation.html#mongodb) of the atomate installation instructions.
- 1. Install the conda package (which is unfortunately a bit out of date) of MongoDB by simply running `conda install -c anaconda mongodb` while the TriboFlow environment is active.
+ 1. Install the conda package (use conda-forge for a newer version; 4.2.10 instead of 4.0.3) of MongoDB by simply running `conda install -c anaconda mongodb=4.2.10 -c conda-forge` while the TriboFlow environment is active.
  2. You should now have access to the mongo shell via the `mongo`  command and the daemon via the `mongod` command. Before we create the database and set up the daemon, we have to prepare a configuration file and decide where the database should be located. The location will be referred to as `<YourMongoPath>`, and you put the configuration file `mongod.conf` there. It should look somewhat similar to the yaml file below, but you can also tune it according to the options given [here](https://docs.mongodb.com/v4.0/reference/configuration-options/). Importand settings are `storage.dbPath` (where your database will be located), `processManagement.fork` (If true, the process will run in the background and not block your shell), `net.port` (use the standard port for MongoDB: 27017), and `security.authorization` (should be disabled in the beginning to set up the users). Note that you must use spaces and not tabs in YAML!
 
 Example mongod.conf file:<a name="mongodconf"></a>
@@ -96,7 +96,7 @@ alias mongo_stop="mongod --shutdown --dbpath <YourMongoPath>/data/db"
 1. Select a location where you want to have your TriboFlow files located. We will assume this is `<YourPath>`. Now create two subfolders: `<YourPath>/config` for your configuration files and `<YourPath>/pps` for your pseudopotentials.
 2. In the same folder we will now download the TriboFlow files from gitlab (using ssh to facilitate automatic login with ssh-keys) by typing `git clone git@gitlab.com:triboteam/TriboFlow.git`. This will (for now) only work if your gitlab account has authorisation!
 3. You should now see a folder `<YourPath>/TriboFlow`. `cd` into it and run `pip install -e .` to install TriboFlow and all the other packages that are required to run it into your active conda environment. 
-3a. If there is an error that the directory is not installable, there might not yet be a setup.py file in the master branch. Checkout a development branch by typing `git checkout development` or `git checkout mwo_dev` to switch branches and run `pip install -e .` again.
+4. If there is an error that the directory is not installable, there might not yet be a setup.py file in the master branch. Checkout a development branch by typing `git checkout development` to switch the branch and run `pip install -e .` again.
 
 [Back to top](#toc)
 ### Configuring FireWorks<a name="configurefw"></a>
