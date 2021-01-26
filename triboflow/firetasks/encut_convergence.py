@@ -5,23 +5,27 @@ Created on Wed Jun 17 15:59:59 2020
 """
 import numpy as np
 from datetime import datetime
+from pprint import pprint, pformat
 from pymatgen.core.structure import Structure
-from fireworks import FWAction, FiretaskBase, Firework, Workflow
+from fireworks import FWAction, FiretaskBase, Firework, Workflow, FileWriteTask
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 from atomate.vasp.config import VASP_CMD, DB_FILE
+from atomate.vasp.powerups import add_modify_incar
 from atomate.vasp.workflows.base.bulk_modulus import get_wf_bulk_modulus
-from triboflow.helper_functions import GetLastBMDatafromDB, \
-    GetCustomVaspStaticSettings, GetDB, IsListConverged, GetBulkFromDB, \
+from triboflow.utils.database import GetLastBMDatafromDB, GetDB, GetBulkFromDB, \
     GetHighLevelDB
+from triboflow.utils.vasp_tools import GetCustomVaspStaticSettings, GetEmin
+from triboflow.utils.check_convergence import IsListConverged
+from triboflow.utils.file_manipulation import CopyOutputFiles
+
 
 
 @explicit_serialize
 class FT_StartEncutConvo(FiretaskBase):
     _fw_name = 'Start Encut Convergence'
     required_params = ['mp_id', 'functional']
-    optional_params = ['db_file', 'deformations', 'encut_start', 'encut_incr',
-                       'n_converge']
+    optional_params = ['db_file']
     def run_task(self, fw_spec):
         from triboflow.workflows.subworkflows import ConvergeEncut_SWF
         mp_id = self.get('mp_id')
@@ -29,10 +33,6 @@ class FT_StartEncutConvo(FiretaskBase):
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
-        deformations = self.get('deformations')
-        encut_start = self.get('encut_start', 200)
-        encut_incr = self.get('encut_incr', 25)
-        n_converge = self.get('n_converge', 3)
         
         data = GetBulkFromDB(mp_id, db_file, functional)
         
@@ -41,13 +41,10 @@ class FT_StartEncutConvo(FiretaskBase):
         if not stop_convergence:
             structure = Structure.from_dict(data.get('structure_fromMP'))
             comp_params = data.get('comp_parameters', {})
-            SWF = ConvergeEncut_SWF(structure, comp_params,
-                                    mp_id = mp_id, functional = functional,
-                                    spec=fw_spec, 
-                                    deformations=deformations,
-                                    encut_start=encut_start,
-                                    encut_incr=encut_incr, 
-                                    n_converge=n_converge, db_file=db_file)
+            SWF = ConvergeEncut_SWF(structure = structure, flag = mp_id,
+                                    comp_params = comp_params,
+                                    functional = functional,
+                                    print_help = False)
             return FWAction(detours=SWF, update_spec=fw_spec)
         else:
             return FWAction(update_spec=fw_spec)
@@ -105,7 +102,7 @@ class FT_EnergyCutoffConvo(FiretaskBase):
     """Converge the encut for a material via fits to an EOS, raising encut.
     
     Uses the get_bulk_modulus workflow of atomate to fit Birch-Murnaghen EOS
-    for increasing values of the energy cutoff. Once bulk modulus and
+    for increasing values of the d = mmdb.collection.find_one({"task_label": {"$regex": "{} bulk_modulus*".format(tag)}})energy cutoff. Once bulk modulus and
     equilibrium volume are converged, the subsequent detours are stopped and
     the convergence data is passed on.
     
@@ -122,7 +119,8 @@ class FT_EnergyCutoffConvo(FiretaskBase):
         List of deformation matrices for the fit to the EOS. Defaults to None,
         which results in 5 volumes from 90% to 110% of the initial volume.
     encut_start : float, optional
-        Starting encut value for the first run. Defaults to 200.
+        Starting encut value for the first run. Defaults to the largest EMIN
+        in the POTCAR.
     encut_incr : float, optional
         Increment for the encut during the convergence. Defaults to 25.
     n_converge : int, optional
@@ -138,22 +136,31 @@ class FT_EnergyCutoffConvo(FiretaskBase):
     """
     
     _fw_name = 'Energy Cutoff Convergence'
-    required_params = ['structure', 'comp_params', 'tag', 'mp_id',
+    required_params = ['structure', 'comp_params', 'tag', 'flag',
                        'functional']
     optional_params = ['deformations', 'n_converge', 'encut_start',
-                       'encut_incr', 'db_file']
+                       'encut_incr', 'db_file', 'file_output', 'output_dir',
+                       'remote_copy', 'server', 'user', 'port']
     def run_task(self, fw_spec):
         deforms = []
         for i in np.arange(0.9, 1.1, 0.05):
             dm=np.eye(3)*i
             deforms.append(dm)  
         n_converge = self.get('n_converge', 3)
-        encut_start = self.get('encut_start', 200)
+        encut_start = self.get('encut_start', None)
         encut_incr = self.get('encut_incr', 25)
-        deformations = self.get('deformations', deforms)
+        deformations = self.get('deformations')
+        file_output = self.get('file_output', False)
+        output_dir = self.get('output_dir', None)
+        remote_copy = self.get('remote_copy', False)
+        server = self.get('server', None)
+        user = self.get('user', None)
+        port = self.get('port', None)
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
+        if not deformations:
+            deformations = deforms
             
         struct = self['structure']
         comp_params = self['comp_params']
@@ -161,7 +168,7 @@ class FT_EnergyCutoffConvo(FiretaskBase):
         
         V0_tolerance = comp_params.get('volume_tolerence', 0.001)
         BM_tolerance = comp_params.get('BM_tolerence', 0.01)
-        uks = {'reciprocal_density': 1000}
+        #uks = {'reciprocal_density': 1000}
         
         
         #get the data arrays from the database (returns None when not there)
@@ -178,32 +185,45 @@ class FT_EnergyCutoffConvo(FiretaskBase):
             Encut_list = None
         
         if BM_list is None:
-            vis, uis, vdw = GetCustomVaspStaticSettings(struct, comp_params,
-                                                        'bulk_from_scratch')
-            uis['ENCUT'] = encut_start
+            vis = GetCustomVaspStaticSettings(struct, comp_params,
+                                              'bulk_from_scratch')            
+            if not encut_start:
+                #Get the largest EMIN value of the potcar and round up to the
+                #next whole 25.
+                emin = GetEmin(vis.potcar)
+                encut_start = int(25 * np.ceil(emin/25))
+            
+            vis.user_incar_settings.update({'ENCUT': encut_start})
             Encut_list = [encut_start]
 
             BM_WF = get_wf_bulk_modulus(struct, deformations,
-                                        vasp_input_set=None,
+                                        vasp_input_set=vis,
                                         vasp_cmd=VASP_CMD, db_file=db_file,
-                                        user_kpoints_settings=uks,
-                                        eos='birch_murnaghan', tag=tag,
-                                        user_incar_settings=uis)
+                                        #user_kpoints_settings=uks,
+                                        eos='birch_murnaghan', tag=tag)
             
             formula=struct.composition.reduced_formula
             UAL_FW = Firework([FT_UpdateBMLists(formula=formula, tag=tag),
                                FT_EnergyCutoffConvo(structure = struct,
                                          comp_params = comp_params,
                                          tag = tag,
-                                         mp_id = self['mp_id'],
+                                         flag = self['flag'],
                                          functional = self['functional'],
                                          db_file = db_file,
                                          encut_incr = encut_incr,
-                                         encut_start = encut_start)],
+                                         encut_start = encut_start,
+                                         file_output = file_output,
+                                         output_dir = output_dir,
+                                         remote_copy = remote_copy,
+                                         server = server,
+                                         user = user,
+                                         port = port)],
                               name='Update BM Lists and Loop')
             
             BM_WF.append_wf(Workflow.from_Firework(UAL_FW), BM_WF.leaf_fw_ids)
-            
+            #Use add_modify_incar powerup to add KPAR and NCORE settings
+            #based on env_chk in my_fworker.yaml
+            BM_WF = add_modify_incar(BM_WF)
             #set up the entry for the data arrays in the database
             set_data = {'tag': tag,
                         'chem_formula': formula,
@@ -223,39 +243,42 @@ class FT_EnergyCutoffConvo(FiretaskBase):
                 final_encut = Encut_list[-n_converge]
                 final_BM = BM_list[-n_converge]
                 final_V0 = V0_list[-n_converge]
-                print('')
-                print(' Convergence reached for BM and cell volume.')
-                print(' Final encut = {}eV; Final BM = {}GPa; Final Volume = {}'
-                      .format(final_encut, final_BM, final_V0))
-                print('')
-                print('')
-                mp_id = self.get('mp_id')
+                flag = self.get('flag')
                 functional = self.get('functional')
         
                 scaled_structure = struct.copy()
                 scaled_structure.scale_lattice(final_V0)
                 struct_dict = scaled_structure.as_dict()
-                struct_name = 'structure_equiVol'
+                
+                print('')
+                print(' Convergence reached for BM and cell volume.')
+                print(' Final encut = {} eV; Final BM = {} GPa; Final Volume = {} Angstrom³'
+                      .format(final_encut, final_BM, final_V0))
+                print('')
+                print(' The scaled output structure is:\n')
+                pprint(struct_dict)
         
+        
+                output_dict = {'encut_info': {'final_encut': final_encut,
+                                              'final_BM': final_BM,
+                                              'final_volume': final_V0,
+                                              'BM_list': BM_list,
+                                              'V0_list': V0_list,
+                                              'Encut_list': Encut_list,
+                                              'BM_tol_abs': BM_tol,
+                                              'BM_tol_rel': BM_tolerance,
+                                              'V0_tol_abs': V0_tol,
+                                              'V0_tol_rel': V0_tolerance},
+                               'equilibrium_volume': final_V0,
+                               'bulk_moduls': final_BM,
+                               'comp_parameters.encut': final_encut,
+                               'structure_equiVol': struct_dict}
                 tribo_db = GetHighLevelDB(db_file)
         
                 coll = tribo_db[functional+'.bulk_data']
-                coll.update_one({'mpid': mp_id},
-                                {'$set': {'encut_info': 
-                                              {'final_encut': final_encut,
-                                               'final_BM': final_BM,
-                                               'final_volume': final_V0,
-                                               'BM_list': BM_list,
-                                               'V0_list': V0_list,
-                                               'Encut_list': Encut_list,
-                                               'BM_tol_abs': BM_tol,
-                                               'BM_tol_rel': BM_tolerance,
-                                               'V0_tol_abs': V0_tol,
-                                               'V0_tol_rel': V0_tolerance},
-                                        'equilibrium_volume': final_V0,
-                                        'bulk_moduls': final_BM,
-                                        'comp_parameters.encut': final_encut,
-                                        struct_name: struct_dict}})
+                coll.update_one({'mpid': flag},
+                                {'$set': output_dict},
+                                upsert=True)
                 
                 DB.coll.update_one({'tag': tag},
                                {'$set': {'final_encut': final_encut,
@@ -266,37 +289,60 @@ class FT_EnergyCutoffConvo(FiretaskBase):
                                          'V0_tol_abs': V0_tol,
                                          'V0_tol_rel': V0_tolerance}})
                 
-                return FWAction(update_spec = fw_spec)
+                # handle file output:
+                if file_output:                 
+                    write_FT = FileWriteTask(files_to_write=
+                                             [{'filename': flag+'_output_dict.txt',
+                                               'contents': pformat(output_dict)}])
+                    copy_FT = CopyOutputFiles(file_list = [flag+'_output_dict.txt'],
+                                              output_dir = output_dir,
+                                              remote_copy = remote_copy,
+                                              server = server,
+                                              user = server,
+                                              port = port)
+                    FW = Firework([write_FT, copy_FT],
+                                  name = 'Copy Encut SWF results')
+                    WF = Workflow.from_Firework(FW,
+                                                name = 'Copy Encut SWF results')
+                    return FWAction(update_spec = fw_spec, detours = WF)
+                else:  
+                    return FWAction(update_spec = fw_spec)
             
-            else:
-                vis, uis, vdw = GetCustomVaspStaticSettings(struct, comp_params,
-                                                        'bulk_from_scratch')
+            vis = GetCustomVaspStaticSettings(struct, comp_params,
+                                              'bulk_from_scratch')
             encut = Encut_list[-1]+encut_incr
-            uis['ENCUT'] = encut
+            vis.user_incar_settings.update({'ENCUT': encut})
             
             BM_WF = get_wf_bulk_modulus(struct, deformations,
-                                        vasp_input_set=None,
+                                        vasp_input_set=vis,
                                         vasp_cmd=VASP_CMD, db_file=DB_FILE,
-                                        user_kpoints_settings=uks,
-                                        eos='birch_murnaghan', tag=tag,
-                                        user_incar_settings=uis)
+                                        #user_kpoints_settings=uks,
+                                        eos='birch_murnaghan', tag=tag)
             
             formula=struct.composition.reduced_formula
             UAL_FW = Firework([FT_UpdateBMLists(formula=formula, tag=tag),
                                FT_EnergyCutoffConvo(structure = struct,
                                          comp_params = comp_params,
                                          tag = tag,
-                                         mp_id = self['mp_id'],
+                                         flag = self['flag'],
                                          functional = self['functional'],
                                          db_file = db_file,
                                          encut_incr = encut_incr,
-                                         encut_start = encut_start)],
+                                         encut_start = encut_start,
+                                         file_output = file_output,
+                                         output_dir = output_dir,
+                                         remote_copy = remote_copy,
+                                         server = server,
+                                         user = user,
+                                         port = port)],
                               name='Update BM Lists and Loop')
             
             BM_WF.append_wf(Workflow.from_Firework(UAL_FW), BM_WF.leaf_fw_ids)
+            #Use add_modify_incar powerup to add KPAR and NCORE settings
+            #based on env_chk in my_fworker.yaml
+            BM_WF = add_modify_incar(BM_WF)
             
             #Update Database entry for Encut list
-            DB.coll.update_one({'tag': tag},
-                               {'$push': {'Encut_list': encut}})
+            DB.coll.update_one({'tag': tag}, {'$push': {'Encut_list': encut}})
             return FWAction(detours=BM_WF)
 

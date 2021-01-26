@@ -10,8 +10,10 @@ from triboflow.firetasks.encut_convergence import FT_StartEncutConvo
 from triboflow.firetasks.kpoint_convergence import FT_StartKPointConvo
 from triboflow.firetasks.structure_manipulation import FT_StartSlabRelaxSWF, \
     FT_MakeHeteroStructure
+from triboflow.firetasks.PES import FT_StartPESCalcSubWF
 from triboflow.firetasks.check_inputs import FT_UpdateCompParams
-from triboflow.helper_functions import GetLowEnergyStructure
+from triboflow.utils.database import GetLowEnergyStructure
+from triboflow.utils.structure_manipulation import InterfaceName
 
 def Heterogeneous_WF(inputs):
     """Return main workflow for heterogeneous interfaces within Triboflow.
@@ -109,6 +111,14 @@ def Heterogeneous_WF(inputs):
                              name = 'Match the interface')
     WF.append(MakeInterface)
     
+    CalcPESPoints = Firework(FT_StartPESCalcSubWF(mp_id_1 = mp_id_1,
+                                                mp_id_2 = mp_id_2,
+                                                miller_1 = mat_1.get('miller'),
+                                                miller_2 = mat_2.get('miller'),
+                                                functional = functional),
+                             name = 'Compute PES high-symmetry points')
+    WF.append(CalcPESPoints)
+    
     #Define dependencies:
     Dependencies = {Initialize: [ConvergeEncut_M1, ConvergeEncut_M2],
                     ConvergeEncut_M1: [ConvergeKpoints_M1],
@@ -117,8 +127,12 @@ def Heterogeneous_WF(inputs):
                     ConvergeKpoints_M2: [Final_Params],
                     Final_Params: [MakeSlabs_M1, MakeSlabs_M2],
                     MakeSlabs_M1: [MakeInterface],
-                    MakeSlabs_M2: [MakeInterface]}
+                    MakeSlabs_M2: [MakeInterface],
+                    MakeInterface: [CalcPESPoints]}
 
-    WF = Workflow(WF, Dependencies, name='Heterogeneous TriboFlow')
+    WF_Name = 'TriboFlow '+InterfaceName(mp_id_1, mat_1.get('miller'),
+                            mp_id_2, mat_2.get('miller'))
+
+    WF = Workflow(WF, Dependencies, name=WF_Name)
     return WF
 

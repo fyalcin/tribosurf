@@ -4,16 +4,19 @@ Created on Wed Jun 17 15:59:59 2020
 @author: mwo
 """
 from datetime import datetime
+from pprint import pprint, pformat
 from pymatgen.core.structure import Structure
 from pymatgen.io.vasp.inputs import Kpoints
 from pymatgen.io.vasp.sets import MPStaticSet
-from fireworks import FWAction, FiretaskBase, Firework, Workflow
+from fireworks import FWAction, FiretaskBase, Firework, Workflow, FileWriteTask
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 from atomate.vasp.fireworks.core import StaticFW
 from atomate.vasp.powerups import add_modify_incar
-from triboflow.helper_functions import  GetCustomVaspStaticSettings, GetDB, \
-    IsListConverged, GetBulkFromDB, GetHighLevelDB, GetGeneralizedKmesh
+from triboflow.utils.database import GetDB, GetBulkFromDB, GetHighLevelDB
+from triboflow.utils.check_convergence import IsListConverged
+from triboflow.utils.vasp_tools import GetGeneralizedKmesh, GetCustomVaspStaticSettings
+from triboflow.utils.file_manipulation import CopyOutputFiles
 
 
 @explicit_serialize
@@ -126,14 +129,22 @@ class FT_KpointsConvo(FiretaskBase):
     """
     
     _fw_name = 'Kmesh density convergence'
-    required_params = ['structure', 'comp_params', 'tag', 'mp_id',
+    required_params = ['structure', 'comp_params', 'tag', 'flag',
                        'functional']
-    optional_params = ['db_file', 'k_dens_start', 'k_dens_incr', 'n_converge']
+    optional_params = ['db_file', 'k_dens_start', 'k_dens_incr', 'n_converge',
+                       'file_output', 'output_dir', 'remote_copy', 'server', 
+                        'user', 'port']
     def run_task(self, fw_spec):
         
         n_converge = self.get('n_converge', 3)
         k_dens_start = self.get('k_dens_start', 500)
         k_dens_incr = self.get('k_dens_incr', 50)
+        file_output = self.get('file_output', False)
+        output_dir = self.get('output_dir', None)
+        remote_copy = self.get('remote_copy', False)
+        server = self.get('server', None)
+        user = self.get('user', None)
+        port = self.get('port', None)
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
@@ -141,6 +152,8 @@ class FT_KpointsConvo(FiretaskBase):
         struct = self['structure']
         comp_params = self['comp_params']
         tag = self['tag']
+        flag = self['flag']
+        functional = self['functional']
         
         #get the relative energy tolerance (eV/atom) and the absolute tol.
         E_tolerance = comp_params.get('energy_tolerence', 0.001)
@@ -160,13 +173,12 @@ class FT_KpointsConvo(FiretaskBase):
         if E_list is None:
             
             label = tag+' calc 0'
-            vis, uis, vdw = GetCustomVaspStaticSettings(struct, comp_params,
+            comp_params['k_dens'] = k_dens_start
+            vis = GetCustomVaspStaticSettings(struct, comp_params,
                                                         'bulk_from_scratch')
             kpoints = Kpoints.automatic_gamma_density(struct, k_dens_start)
             #kpoints = GetGeneralizedKmesh(struct, k_dens_start)
             k_dens_list = [k_dens_start]
-            vis = MPStaticSet(struct, user_incar_settings=uis,
-                  user_kpoints_settings=kpoints)
                 
             RunVASP_FW = StaticFW(structure=struct, vasp_input_set=vis,
                                   name=label)
@@ -177,20 +189,25 @@ class FT_KpointsConvo(FiretaskBase):
                                           FT_KpointsConvo(structure = struct,
                                             comp_params = comp_params,
                                             tag = tag,
-                                            mp_id = self['mp_id'],
-                                            functional = self['functional'],
+                                            flag = flag,
+                                            functional = functional,
                                             db_file = db_file,
                                             k_dens_incr = k_dens_incr,
                                             k_dens_start = k_dens_start,
-                                            n_converge = n_converge)],
+                                            n_converge = n_converge,
+                                            file_output = file_output,
+                                            output_dir = output_dir,
+                                            remote_copy = remote_copy,
+                                            server = server,
+                                            user = user,
+                                            port = port)],
                                          name='Update Energy Lists and Loop')
             
             K_convo_WF = Workflow([RunVASP_FW, ParseAndUpdate_FW],
                                   {RunVASP_FW: [ParseAndUpdate_FW]},
                                   name = 'Kpoint Convergence Loop')
-            #Have to use this as a workaround as pymatgen forces ISMEAR=0
-            #on a custom generated Kgrid, even if tetrahedra are provided.
-            #K_convo_WF = add_modify_incar(K_convo_WF, {'incar_update': uis})
+            
+            K_convo_WF = add_modify_incar(K_convo_WF)
             
             #set up the entry for the data arrays in the database
             formula=struct.composition.reduced_formula
@@ -211,26 +228,26 @@ class FT_KpointsConvo(FiretaskBase):
                 final_E = E_list[-n_converge]
                 print('')
                 print(' Convergence reached for total energy per atom.')
-                print(' Final k_dens = {}; Final energy = {}eV;'
+                print(' Final k_dens = {}; Final energy = {} eV;'
                       .format(final_k_dens, final_E))
                 print('')
                 print('')
-                mp_id = self.get('mp_id')
-                functional = self.get('functional')
+        
+                out_dict = {'k_dens_info': 
+                                {'final_k_dens': final_k_dens,
+                                 'final_energy': final_E,
+                                 'energy_list': E_list,
+                                 'k_dens_list': k_dens_list,
+                                 'Energy_tol_abs': E_tol,
+                                 'Energy_tol_rel': E_tolerance},
+                            'total_energy@equiVol': final_E,
+                            'comp_parameters.k_dens': final_k_dens}
         
                 tribo_db = GetHighLevelDB(db_file)
-        
                 hl_coll = tribo_db[functional+'.bulk_data']
-                hl_coll.update_one({'mpid': mp_id},
-                                   {'$set': {'k_dens_info': 
-                                              {'final_k_dens': final_k_dens,
-                                               'final_energy': final_E,
-                                               'energy_list': E_list,
-                                               'k_dens_list': k_dens_list,
-                                               'Energy_tol_abs': E_tol,
-                                               'Energy_tol_rel': E_tolerance},
-                                    'total_energy@equiVol': final_E,
-                                    'comp_parameters.k_dens': final_k_dens}})
+                hl_coll.update_one({'mpid': flag},
+                                   {'$set': out_dict},
+                                   upsert=True)
                 
                 DB.coll.update_one({'tag': tag},
                                {'$set': {'final_k_dens': final_k_dens,
@@ -239,27 +256,40 @@ class FT_KpointsConvo(FiretaskBase):
                                          'k_dens_list': k_dens_list,
                                          'Energy_tol_abs': E_tol,
                                          'Energy_tol_rel': E_tolerance}})
-                
-                return FWAction(update_spec = fw_spec)
+                # handle file output:
+                if file_output:                 
+                    write_FT = FileWriteTask(files_to_write=
+                                             [{'filename': flag+'_kpts_out.txt',
+                                               'contents': pformat(out_dict)}])
+                    copy_FT = CopyOutputFiles(file_list = [flag+'_kpts_out.txt'],
+                                              output_dir = output_dir,
+                                              remote_copy = remote_copy,
+                                              server = server,
+                                              user = server,
+                                              port = port)
+                    FW = Firework([write_FT, copy_FT],
+                                  name = 'Copy KpointsConvo SWF results')
+                    WF = Workflow.from_Firework(FW, name = 'Copy KpointsConve SWF results')
+                    return FWAction(update_spec = fw_spec, detours = WF)
+                else:  
+                    return FWAction(update_spec = fw_spec)
             
             else:
                 calc_nr = len(E_list)
                 label = tag+' calc '+str(calc_nr)
-                vis, uis, vdw = GetCustomVaspStaticSettings(struct, comp_params,
-                                                        'bulk_from_scratch')
+                
                 last_mesh = data['last_mesh']
                 k_dens = k_dens_list[-1]+k_dens_incr
                 kpoints = Kpoints.automatic_gamma_density(struct, k_dens)
+                
                 #kpoints = GetGeneralizedKmesh(struct, k_dens)
                 while kpoints.kpts == last_mesh:
                     k_dens = k_dens + k_dens_incr
                     kpoints = Kpoints.automatic_gamma_density(struct, k_dens)
                     #kpoints = GetGeneralizedKmesh(struct, k_dens)
-                vis = MPStaticSet(struct, user_incar_settings=uis,
-                                  user_kpoints_settings=kpoints)
-                
-                print(comp_params)
-                print(vis.incar)
+                comp_params['k_dens'] = k_dens
+                vis = GetCustomVaspStaticSettings(struct, comp_params,
+                                                  'bulk_from_scratch')
 
                 RunVASP_FW = StaticFW(structure=struct, vasp_input_set=vis,
                                       name=label)
@@ -270,20 +300,25 @@ class FT_KpointsConvo(FiretaskBase):
                                           FT_KpointsConvo(structure = struct,
                                             comp_params = comp_params,
                                             tag = tag,
-                                            mp_id = self['mp_id'],
-                                            functional = self['functional'],
+                                            flag = flag,
+                                            functional = functional,
                                             db_file = db_file,
                                             k_dens_incr = k_dens_incr,
                                             k_dens_start = k_dens_start,
-                                            n_converge = n_converge)],
+                                            n_converge = n_converge,
+                                            file_output = file_output,
+                                            output_dir = output_dir,
+                                            remote_copy = remote_copy,
+                                            server = server,
+                                            user = user,
+                                            port = port)],
                                          name='Update Energy Lists and Loop')
             
                 K_convo_WF = Workflow([RunVASP_FW, ParseAndUpdate_FW],
                                       {RunVASP_FW: [ParseAndUpdate_FW]},
                                       name = 'Kpoint Convergence Loop')
-                #Have to use this as a workaround as pymatgen forces ISMEAR=0
-                #on a custom generated Kgrid, even if tetrahedra are provided.
-                #K_convo_WF = add_modify_incar(K_convo_WF, {'incar_update': uis})
+                
+                K_convo_WF = add_modify_incar(K_convo_WF)
                 
                 #Update Database entry for Encut list
                 DB.coll.update_one({'tag': tag},
