@@ -71,15 +71,14 @@ class FT_StartPESCalcSubWF(FiretaskBase):
         
         interface_dict = GetInterfaceFromDB(name, db_file, functional)
         comp_params = interface_dict['comp_parameters']
-        top_slab = interface_dict['top_aligned']
-        bot_slab = interface_dict['bottom_aligned']
+        top_slab = Slab.from_dict(interface_dict['top_aligned'])
+        bot_slab = Slab.from_dict(interface_dict['bottom_aligned'])
         already_done = interface_dict.get('relaxed_structure@min')
         
         if not already_done:
             SWF = CalcPES_SWF(top_slab = top_slab,
                               bottom_slab = bot_slab,
-                              top_mpid = mp_id_1,
-                              bottom_mpid = mp_id_2,
+                              interface_name = name,
                               functional = functional,
                               comp_parameters = comp_params,
                               output_dir = None)
