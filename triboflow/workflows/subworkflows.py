@@ -18,8 +18,7 @@ from triboflow.utils.structure_manipulation import InterfaceName
 from triboflow.utils.vasp_tools import GetEmin, GetCustomVaspStaticSettings
 
 def CalcPES_SWF(top_slab, bottom_slab,
-                top_mpid = None,
-                bottom_mpid = None,
+                interface_name = None,
                 functional = 'PBE',
                 comp_parameters = {},
                 file_output = False,
@@ -45,9 +44,10 @@ def CalcPES_SWF(top_slab, bottom_slab,
         Top slab of the interface.
     bottom_slab : pymatgen.core.surface.Slab
         Bottom slab of the interface.
-    top_mpid : str, optional
-        ID of the bulk material of the top slab in the MP database.
-        The default is None.
+    interface_name : str, optional
+        Unique name to find the interface in the databse with.
+        The default is None, which will lead to an automatic interface_name
+        generation which will be printed on screen.
     bottom_mpid : str, optional
         ID of the bulk material of the top slab in the MP database.
         The default is None.
@@ -96,14 +96,13 @@ def CalcPES_SWF(top_slab, bottom_slab,
                              "Please use <class 'pymatgen.core.surface.Slab'>"
                              " instead.".format(type(bottom_slab)))
         
-    if top_mpid and bottom_mpid:
-        interface_name = InterfaceName(top_mpid, top_miller,
-                                       bottom_mpid, bot_miller)
-    else:
+    if not interface_name:
         mt = ''.join(str(s) for s in top_miller)
         mb = ''.join(str(s) for s in bot_miller)
         interface_name = (top_slab.formula+'_'+mt+'_'+
-                         bottom_slab.formula+'_'+mb+'_NO-MPIDs')
+                          bottom_slab.formula+'_'+mb+'_AutoGen')
+        print('\nYour interface name has been automatically generated to be:'
+              '\n {}'.format(interface_name))
         
     
     if comp_parameters == {}:
