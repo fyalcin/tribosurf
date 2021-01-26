@@ -8,8 +8,8 @@ from pprint import pprint
 from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
-from triboflow.utils.database import GetBulkFromDB, GetHighLevelDB
-from triboflow.utils.structure_manipulation import InterfaceName
+from triboflow.helper_functions import GetBulkFromDB, GetBulkFromDB, \
+    InterfaceName, GetHighLevelDB
 
 
 @explicit_serialize

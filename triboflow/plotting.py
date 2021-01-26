@@ -8,7 +8,7 @@ Created on Wed Jun 24 17:10:39 2020
 import numpy as np
 import os
 from matplotlib import pyplot as plt
-from triboflow.utils.database import GetHighLevelDB
+from triboflow.helper_functions import GetHighLevelDB
 
 db_file='/home/mwo/FireWorks/config/db.json'
 

@@ -10,7 +10,7 @@ from pymatgen.core.structure import Structure
 from fireworks import LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
 from triboflow.workflows.subworkflows import ConvergeKpoints_SWF
-from triboflow.utils.database import GetBulkFromDB
+from triboflow.helper_functions import GetBulkFromDB
 
 
 db_file = '/home/mwo/FireWorks/config/db.json'

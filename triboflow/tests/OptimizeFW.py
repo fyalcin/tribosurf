@@ -13,8 +13,8 @@ from fireworks import LaunchPad, Firework, Workflow
 from fireworks.core.rocket_launcher import rapidfire#
 from atomate.vasp.fireworks.core import OptimizeFW
 from triboflow.fireworks.common import CheckInputsFW
-from triboflow.utils.database import GetBulkFromDB, GetLowEnergyStructure
-from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
+from triboflow.helper_functions import GetLowEnergyStructure
+from triboflow.helper_functions import GetCustomVaspRelaxSettings, GetBulkFromDB
 
 db_file='/home/mwo/FireWorks/config/db.json'
 

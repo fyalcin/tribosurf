@@ -7,9 +7,8 @@ Created on Mon Jun 22 12:29:28 2020
 from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
-from triboflow.utils.database import GetLowEnergyStructure, GetHighLevelDB, \
-    GetPropertyFromMP, GetBulkFromDB
-from triboflow.utils.structure_manipulation import InterfaceName
+from triboflow.helper_functions import GetLowEnergyStructure, GetHighLevelDB, \
+    InterfaceName, GetPropertyFromMP, GetBulkFromDB
 
 
 @explicit_serialize
@@ -341,7 +340,7 @@ class FT_CheckInterfaceParamDict(FiretaskBase):
         
         defaults = {'interface_distance': 2.0,
                     'max_mismatch': 0.01,
-                    'max_angle_diff': 1.5,
+                    'max_angle_diff': 2.0,
                     'r1r2_tol': 0.05}
         #####################################################################
          
@@ -360,7 +359,7 @@ class FT_CheckInterfaceParamDict(FiretaskBase):
             if key not in known_keys:
                 raise SystemExit('The input parameter <'+str(key)+
                               '> is not known. Please check your input file'
-                              'and use only the following parameters:\n{}'
+                              'and use only the following parameters:\n'
                               .format(known_keys))
             elif key == 'max_area':
                 out_dict['max_area'] = float(input_dict[key])
