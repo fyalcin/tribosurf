@@ -2,7 +2,8 @@ import os
 import subprocess
 
 from pymatgen.io.vasp.inputs import Kpoints
-from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet, MPStaticSet
+from pymatgen.io.vasp.sets import (MPRelaxSet, MPScanRelaxSet, MPStaticSet,
+                                   MPScanStaticSet)
 
 from triboflow.utils.file_manipulation import RemoveMatchingFiles
 
@@ -206,11 +207,15 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
                     kpts=[[kpoints.kpts[0][0], kpoints.kpts[0][1], 1]])
     else:
         uks = kpoints
-        
-    # Set vasp input set (currently none available for static SCAN!)
-    vis = MPStaticSet(structure, user_incar_settings = uis, vdw = vdw,
-                    user_kpoints_settings = uks,
-                    user_potcar_functional = 'PBE_54')
+    
+    if comp_parameters.get('functional') == 'SCAN':
+        vis = MPScanStaticSet(structure, user_incar_settings = uis, vdw = vdw,
+                              user_kpoints_settings = uks,
+                              user_potcar_functional = 'PBE_54')
+    else:
+        vis = MPStaticSet(structure, user_incar_settings = uis, vdw = vdw,
+                          user_kpoints_settings = uks,
+                          user_potcar_functional = 'PBE_54')
         
     return vis
       
