@@ -14,8 +14,8 @@ from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \
     FT_StartSlabRelax, FT_GetRelaxedSlab
 from triboflow.firetasks.PPES import FT_DoPPESCalcs, FT_FitPPES
 from triboflow.utils.database import GetPropertyFromMP, GetDBJSON
-from triboflow.utils.structure_manipulation import InterfaceName
 from triboflow.utils.vasp_tools import GetEmin, GetCustomVaspStaticSettings
+
 
 def CalcPES_SWF(top_slab, bottom_slab,
                 interface_name = None,
@@ -80,8 +80,7 @@ def CalcPES_SWF(top_slab, bottom_slab,
     SWF : fireworks.core.firework.Workflow
         A subworkflow intended to compute the PES of a certain interface.
 
-    """
-    
+    """  
     try:
         top_miller = list(top_slab.miller_index)
     except:
@@ -210,7 +209,7 @@ def MakeAndRelaxSlab_SWF(bulk_structure,
                          comp_parameters = {},
                          functional = 'PBE',
                          min_thickness = 10.0,
-                         min_vacuum = 25.0,
+                         min_vacuum = 15.0,
                          relax_type = 'slab_pos_relax',
                          slab_struct_name = 'unrelaxed_slab',
                          out_struct_name = 'relaxed_slab',
