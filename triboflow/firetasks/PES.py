@@ -15,6 +15,7 @@ from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 from atomate.vasp.fireworks.core import OptimizeFW, ScanOptimizeFW
 from atomate.vasp.powerups import add_modify_incar
+from triboflow.workflows.base import dynamic_relax_swf
 from triboflow.phys.high_symmetry import GetSlabHS, GetInterfaceHS, \
     PBC_HSPoints, FixHSDicts
 from triboflow.phys.potential_energy_surface import GetPES
@@ -371,7 +372,7 @@ class FT_StartPESCalcs(FiretaskBase):
         #     if s.c > 0:
         #         sites_to_shift.append(i)
         
-        FW_list=[]
+        inputs=[]
         for s in lateral_shifts.keys():
             label = tag + '_' + s
             x_shift = lateral_shifts.get(s)[0][0]
@@ -385,18 +386,9 @@ class FT_StartPESCalcs(FiretaskBase):
             vis = GetCustomVaspRelaxSettings(structure=clean_struct,
                                              comp_parameters=comp_params,
                                              relax_type='interface_z_relax')
-            if functional == 'SCAN':
-                FW = ScanOptimizeFW(structure=clean_struct,
-                                    name=label,
-                                    vasp_input_set = vis)
-            else:
-                FW = OptimizeFW(structure=clean_struct,
-                                name=label,
-                                vasp_input_set = vis)
-            FW_list.append(FW)
-            
+            inputs.append([clean_struct, vis, label])
+                        
+        wf_name = 'PES relaxations for: '+name
+        WF = dynamic_relax_swf(inputs_list = inputs, wf_name = wf_name)
         
-        WF = Workflow(FW_list, name='PES relaxations for: '+name)
-        PES_Calcs_WF = add_modify_incar(WF)
-        
-        return FWAction(detours = PES_Calcs_WF)
+        return FWAction(detours = WF)
