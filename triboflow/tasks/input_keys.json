@@ -1,0 +1,36 @@
+{
+    "computational": {
+        "additional_keys": [
+            "volume_tolerance",
+            "energy_tolerance",
+            "use_spin",
+            "BM_tolerance",
+            "functional"
+        ],
+        "essential_keys": [
+            "use_vdw"
+        ]
+    },
+    "interface": {
+        "additional_keys": [
+            "interface_distance",
+            "max_mismatch",
+            "max_angle_diff",
+            "r1r2_tol"
+        ],
+        "essential_keys": [
+            "max_area"
+        ]
+    },
+    "material": {
+        "additional_keys": [
+            "min_vacuum",
+            "mpid",
+            "min_thickness"
+        ],
+        "essential_keys": [
+            "formula",
+            "miller"
+        ]
+    }
+}
