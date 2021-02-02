@@ -6,7 +6,7 @@ from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet, MPStaticSet
 
 from triboflow.utils.file_manipulation import RemoveMatchingFiles
 
-def GetEmin(potcar):
+def get_emin(potcar):
     """
     Return the minimal recommended  energy cutoff for a given Potcar object.
     
@@ -85,7 +85,7 @@ def GetGeneralizedKmesh(structure, k_dist, RemoveSymm=False):
     RemoveMatchingFiles(['KPOINTS*', 'POSCAR*', 'INCAR', 'PRECALC'])
     return KPTS
 
-def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
+def get_custom_vasp_static_settings(structure, comp_parameters, static_type):
     """Make custom vasp settings for static calculations.
     
     Parameters

@@ -16,7 +16,7 @@ from atomate.vasp.fireworks.core import StaticFW
 from atomate.vasp.powerups import add_modify_incar
 from triboflow.utils.database import GetInterfaceFromDB, GetDB, \
     GetHighLevelDB
-from triboflow.utils.vasp_tools import GetCustomVaspStaticSettings
+from triboflow.utils.vasp_tools import get_custom_vasp_static_settings
 from triboflow.utils.structure_manipulation import CleanUpSiteProperties
 
 
@@ -154,7 +154,7 @@ class FT_DoPPESCalcs(FiretaskBase):
                                      vector=[0,0,d],
                                      frac_coords=False, to_unit_cell=False)
             
-            vis = GetCustomVaspStaticSettings(struct_d, comp_params,
+            vis = get_custom_vasp_static_settings(struct_d, comp_params,
                                               'slab_from_scratch')
                            
             FW = StaticFW(structure=struct_d, vasp_input_set=vis,

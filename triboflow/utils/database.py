@@ -75,10 +75,10 @@ class Navigator:
     __get_db(db_file)
         Create an instance of a VaspCalcDb database.
     
-    update_data(collection, filter, new_values)
+    update_data(collection, filter, new_values, )
         Update a single document matching the filter with the new value.
     
-    update_many_data(collection, filter, new_values)
+    update_many_data(collection, filter, new_values, upsert)
         Update many documents that match the filter with the new values.
     
     insert_data(collection, data, duplicates)
@@ -163,7 +163,7 @@ class Navigator:
         log.info('Successfully connected to: {}.'.format(db_file))
         return vasp_db.db, db_file
     
-    def update_data(self, collection, filter, new_values):
+    def update_data(self, collection, filter, new_values, upsert=False):
         """
         Update a single document matching the filter with the new value.
 
@@ -185,6 +185,10 @@ class Navigator:
             dictionary. Use '$inc' for integer.
             For more options check the PyMongo documentation.
         
+        upsert : bool
+            PyMongo parameter for the update_one function. If True update_one 
+            performs an insertion if no documents match the filter.
+        
         Return
         ------
         None.
@@ -202,9 +206,9 @@ class Navigator:
 
         log.info('Updating the collection {} withe the new data {}.'
                  ''.format(collection, new_values))
-        collection_obj.update_one(filter, new_values)
+        collection_obj.update_one(filter, new_values, upsert)
     
-    def update_many_data(self, collection, filter, new_values):
+    def update_many_data(self, collection, filter, new_values, upsert=False):
         """
         Update many documents that match the filter with the new values.
 
@@ -221,6 +225,10 @@ class Navigator:
         new_values : dict
             The new values to update in the document.
         
+        upsert : bool
+            PyMongo parameter for the update_one function. If True update_one 
+            performs an insertion if no documents match the filter.
+        
         Return
         ------
         None.
@@ -238,7 +246,7 @@ class Navigator:
 
         log.info('Updating the collection {} withe the new data {}.'
                  ''.format(collection, new_values))
-        collection_obj.update_many(filter, new_values)
+        collection_obj.update_many(filter, new_values, upsert)
 
     def insert_data(self, collection, data, duplicates=False):
         """
