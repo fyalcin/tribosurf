@@ -37,7 +37,7 @@ class FT_StartEncutConvo(FiretaskBase):
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
 
-        nav = Navigator(db_file)
+        nav = Navigator(db_file, high_level='triboflow')
         data = nav.find_data(functional+'.bulk_data', {'mpid': mp_id})
         
         stop_convergence = data.get('encut_info')

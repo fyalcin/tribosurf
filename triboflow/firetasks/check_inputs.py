@@ -9,6 +9,7 @@ from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 from triboflow.utils.database import GetLowEnergyStructure, GetHighLevelDB, \
     GetPropertyFromMP, GetBulkFromDB
+from triboflow.utils.database import Navigator, NavigatorMP
 from triboflow.utils.structure_manipulation import InterfaceName
 
 
@@ -37,6 +38,9 @@ class FT_UpdateCompParams(FiretaskBase):
         bulk_1 = GetBulkFromDB(mp_id_1, db_file, functional)
         bulk_2 = GetBulkFromDB(mp_id_2, db_file, functional)
         
+        nav = Navigator(db_file, high_level='triboflow')
+        
+
         encut_1 = bulk_1['comp_parameters']['encut']
         encut_2 = bulk_2['comp_parameters']['encut']
         encut_inter = max(encut_1, encut_2)
@@ -86,6 +90,8 @@ class FT_MakeInterfaceInDB(FiretaskBase):
         struct2, mp_id_2 = GetLowEnergyStructure(data2['formula'],
                                                  data2['mp_id'])
         
+        mp_database = Navigato
+
         db = GetHighLevelDB(db_file)
         col = db[functional+'.interface_data']
 

@@ -61,8 +61,8 @@ class Navigator:
     db_file : str
         Path to the database.
 
-    high_level : bool
-        If True the database will be a high level database.
+    high_level : str
+        High level database name.
 
     db : VaspCalcDb
         A VASP database type.
@@ -383,7 +383,7 @@ class Navigator:
 
         data = collection_obj.find_one(filter)
 
-        if not data == 0:
+        if not data:
             log.warning('There are no data for {}.'.format(filter))
 
         log.info('{} has been found in {}.'. format(filter, collection))
@@ -534,6 +534,203 @@ class Navigator:
                          'No entries in the database have been removed.')
 
 
+class HighLevelNavigator(Navigator):
+    """
+    Child class of Navigator in which are implemented all the methods that deals 
+    with writing and loading data from the database about bulk, slab, 
+    and interface.
+    
+    These functions are taken from the TriboFlow package, Michael Wolloch.
+
+    Attributes
+    ----------
+    high_level : str
+        High level database name.
+    
+    Methods
+    -------
+    add_bulk_to_db(structure, mp_id, functional)
+        Insert a bulk structure in the triboflow high level database.
+
+    get_bulk_from_db(mp_id, functional)
+        Get the data about bulk from the triboflow high level database.
+
+    get_slab_from_db(mp_id, functional, miller)
+        Get the data about slab from the triboflow high level database.
+    
+    get_interface_from_db(name, functional)
+        Get the data about intreface from the eos database.
+
+    get_last_bmd_data_from_db(formula)
+        Get the last bulkmodule from the FireWorks database.
+
+
+    """
+
+    def __init__(self, high_level):
+        super().__init__(db_file=self.db_file, high_level=high_level)
+
+    def add_bulk_to_db(self, structure, mp_id, functional):
+        """
+        Insert a bulk structure in the triboflow high level database.
+
+        Parameters
+        ----------
+        structure : pymatgen.core.structure.Structure
+            Structure of the bulk in the pymatgen Structure format.
+
+        mp_id : str
+            Materials Project id of the structure.
+        
+        functional : str
+            Functional. It could be PBE por SCAN.
+
+        Returns
+        -------
+        None.
+
+        """
+
+        formula = structure.composition.reduced_formula
+        self.insert_data(
+            functional+'.bulk_data', 
+            {'mpid': mp_id,
+             'formula': formula,
+             'structure_fromMP': structure.as_dict()})
+    
+    def get_bulk_from_db(self, mp_id, functional):
+        """
+        Get the data about bulk from the triboflow high level database.
+        
+        Parameters
+        ----------
+        mp_id : str
+            Materials Project id of the structure.
+        
+        functional : str
+            Functional. It could be PBE por SCAN.
+        
+        Raises
+        ------
+        IOError
+            If there is no result from the query.
+
+        Returns
+        -------
+        bulk : variable object
+            Database object which contains the data for the selected bulk.
+
+        """
+
+        bulk = self.find_data(
+            functional+'.bulk_data',
+            {'mpid': mp_id})
+        
+        if bulk:
+            return bulk
+        else:
+            raise IOError('No bulk material with MP-ID {} is found in the'
+                          '{}.bulk_data collection.'.format(mp_id, functional))
+
+
+    def get_slab_from_db(self, mp_id, functional, miller):
+        """
+        Get the data about slab from the triboflow high level database.
+
+        Parameters
+        ----------
+        mp_id : str
+            Materials Project id of the structure.
+        
+        functional : str
+            Functional. It could be PBE por SCAN.
+        
+        miller : str
+            Miller indices for the slab as a list of three integers.
+        
+        Raises
+        ------
+        IOError
+            If there is no result from the query.
+
+        Returns
+        -------
+        slab : variable object
+            Database object which contains the data for the selected slab.
+        
+        """
+
+        slab = self.find_data(
+            functional+'.slab_data',
+            {'mpid': mp_id, 'miller': miller})
+        
+        if slab:
+            return slab
+        else:
+            raise IOError('No slab with MP-ID {} and miller indices {} was found'
+                          ' in the {}.slab_data collection.'
+                          .format(mp_id, miller, functional))
+
+    def get_interface_from_db(self, name, functional):
+        """
+        Get the data about intreface from the eos database.
+
+        Parameters
+        ----------
+        name : str
+            Unique name of the interface as 
+        
+        functional : str
+            Functional. It could be PBE por SCAN.
+        
+        Raises
+        ------
+        IOError
+            If there is no result from the query.
+        
+        Returns
+        -------
+        interface : variable object
+            Database object which contains the data for the selected slab.
+    
+        """
+        
+        intareface = self.find_data(
+            functional+'.interface_data',
+            {'name': name})
+        
+        if interface:
+            return interface
+        else:
+            raise IOError(
+                'No interface with name {} was found in the '
+                '{}.interface_data collection.'.format(name, functional))
+
+    def get_last_bmd_data_from_db(self, formula)
+        """
+        Get the last bulkmodule from the FireWorks database.
+
+        A query is made to the eos collection in the Fireworks database for a
+        given chemical formula. The results are sorted ascending by creation 
+        date and than the last one is returned as a dictionary.
+
+        Parameters
+        ----------
+        formula : str
+            Chemical formula of the interface to query.
+
+        Returns
+        -------
+        interface : variable object
+            Interface generated by the get_wf_bulk_modulus workflow of atomate.
+
+        """
+
+        interface = self.db.eos.find(
+            {'formula_pretty': formula}).sort('created_at', pymongo.DESCENDING))
+        
+        return interface[0]
+    
 class NavigatorMP:
     """
     This class is a high level interface for connecting with the Materials
