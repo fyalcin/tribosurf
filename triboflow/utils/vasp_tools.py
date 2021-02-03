@@ -181,6 +181,7 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
     if comp_parameters.get('functional') == 'SCAN':
         uis['METAGGA'] = 'SCAN'
         uis['ALGO'] = 'All'
+        uis['LELF'] = False #otherwise KPAR >1 crashes
         
     if static_type.endswith('follow_up'):
         uis['ISTART'] = 1
@@ -365,6 +366,7 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
                     uis['SIGMA'] = 0.1
                     uis['ISMEAR'] = 0
             uis['METAGGA'] = 'SCAN'
+            uis['LELF'] = False #otherwise KPAR >1 crashes
             vis = MPScanRelaxSet(structure, user_incar_settings = uis,
                                 vdw = vdw, user_kpoints_settings = uks,
                                 user_potcar_functional = 'PBE_54')
