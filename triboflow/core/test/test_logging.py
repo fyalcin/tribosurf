@@ -58,7 +58,7 @@ log.critical('Test critical after...')
 phys_log_test = LoggingBase(
     name='phys_log_test',
     console_level=configurations['logging']['console_logging_level'], 
-    path=log_path+'/phys_log.log',
+    path=log_path+'/phys_log_test.log',
     file_level=configurations['logging']['file_logging_level'])
 
 phys_log_test.debug('Test debug phys phys_log_test')

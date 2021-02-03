@@ -12,7 +12,7 @@ __copyright__ = 'Prof. M.C. Righi, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'January 20th, 2021'
 
-from tribchem.workflows.REFACTORING.utils.database import NavigatorMP
+from triboflow.utils.database import NavigatorMP
 
 def interface_name(mp_id_1, miller_1, mp_id_2, miller_2):
     """

@@ -306,7 +306,7 @@ class LoggingBase:
         """
 
         project_folder = os.getcwd()
-        config_path = project_folder + '/tribchem/core/config.json' 
+        config_path = project_folder + '/triboflow/core/config.json' 
         with open(config_path, 'r') as config:
             config = json.load(config)
         
@@ -316,7 +316,7 @@ class LoggingBase:
     def logging_path():
         """
         Static method that gets the path where to save the logs file.
-        The path is one level up the tribchem folder (tribchem../log) and it 
+        The path is one level up the triboflow folder (triboflow../log) and it 
         should be named log. In case this folder does not exist a new one 
         is generated.
 
