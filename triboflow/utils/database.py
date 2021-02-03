@@ -534,7 +534,7 @@ class Navigator:
                          'No entries in the database have been removed.')
 
 
-class HighLevelNavigator(Navigator):
+class StructureNavigator(Navigator):
     """
     Child class of Navigator in which are implemented all the methods that deals 
     with writing and loading data from the database about bulk, slab, 
@@ -567,8 +567,8 @@ class HighLevelNavigator(Navigator):
 
     """
 
-    def __init__(self, high_level):
-        super().__init__(db_file=self.db_file, high_level=high_level)
+    def __init__(self, db_file, high_level):
+        super().__init__(db_file=db_file, high_level=high_level)
 
     def add_bulk_to_db(self, structure, mp_id, functional):
         """
@@ -695,7 +695,7 @@ class HighLevelNavigator(Navigator):
     
         """
         
-        intareface = self.find_data(
+        interface = self.find_data(
             functional+'.interface_data',
             {'name': name})
         
@@ -706,7 +706,7 @@ class HighLevelNavigator(Navigator):
                 'No interface with name {} was found in the '
                 '{}.interface_data collection.'.format(name, functional))
 
-    def get_last_bmd_data_from_db(self, formula)
+    def get_last_bmd_data_from_db(self, formula):
         """
         Get the last bulkmodule from the FireWorks database.
 
@@ -727,7 +727,7 @@ class HighLevelNavigator(Navigator):
         """
 
         interface = self.db.eos.find(
-            {'formula_pretty': formula}).sort('created_at', pymongo.DESCENDING))
+            {'formula_pretty': formula}).sort('created_at', pymongo.DESCENDING)
         
         return interface[0]
     
