@@ -37,7 +37,7 @@ class FT_SurfaceEnergy(FiretaskBase):
     optional_params = ['db_file']
     
     def run_task(self, fw_spec):
-        pass
+        
 
 
 # ============================================================================
