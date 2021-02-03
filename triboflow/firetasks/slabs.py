@@ -68,7 +68,7 @@ class FT_StartSlabThicknessConvo(FiretaskBase):
             comp_params = slab.get('comp_parameters', {})
 
             wf = select_thickness_convo(structure, flag, miller, comp_params, 
-                                        functional='SCAN', convo_kind='surfene')
+                                        functional, convo_kind)
         
             return FWAction(detours=wf, update_spec=fw_spec)
 
@@ -82,7 +82,7 @@ class FT_StartSlabThicknessConvo(FiretaskBase):
 # ============================================================================
 
 def select_thickness_convo(structure, mp_id, miller, comp_params, 
-                           functional='SCAN', convo_kind='surfene'):
+                           functional='PBE', convo_kind='surfene'):
     """
     Select the kind of thickness convergence
     """
@@ -95,7 +95,7 @@ def select_thickness_convo(structure, mp_id, miller, comp_params,
         raise SlabThicknessError("Wrong input argument for convo_kind. "
                                  "Allowed options: 'surfene', 'alat'.")
 
-    wf = generate_swf(structure = structure, flag = mp_id, 
-                      comp_parameters = comp_params, 
-                      functional = functional, print_help = False)
+    wf = generate_swf(structure = structure, flag = mp_id, miller = miller,
+                      comp_parameters = comp_params, functional = functional, 
+                      print_help = False)
     return wf

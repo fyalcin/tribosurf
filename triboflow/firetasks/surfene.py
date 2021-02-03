@@ -16,6 +16,7 @@ __date__ = 'February 2nd, 2021'
 from fireworks.utilities.fw_utilities import explicit_serialize
 from fireworks import FiretaskBase
 from atomate.utils.utils import env_chk
+from pymatgen.transformations.advanced_transformations import SlabTransformation
 
 from triboflow.utils.database import Navigator, NavigatorMP
 
@@ -32,7 +33,7 @@ class FT_SurfaceEnergy(FiretaskBase):
     """
     
     _fw_name = 'Surface Energy calculation'
-    required_params = ['mp_id', 'functional']
+    required_params = ['bulk', 'slab']
     optional_params = ['db_file']
     
     def run_task(self, fw_spec):
