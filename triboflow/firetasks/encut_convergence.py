@@ -8,6 +8,7 @@ from datetime import datetime
 from pprint import pprint, pformat
 
 import numpy as np
+import pymongo
 from pymatgen.core.structure import Structure
 from fireworks import FWAction, FiretaskBase, Firework, Workflow, FileWriteTask
 from fireworks.utilities.fw_utilities import explicit_serialize
