@@ -13,8 +13,11 @@ __copyright__ = 'Prof. M.C. Righi, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 2nd, 2021'
 
+# ============================================================================
+# Classes
+# ============================================================================
 
-class SlabSWFs:
+class SlabWFs:
     """
     Collection of static methods to manipulate slab structures.
     
@@ -33,3 +36,5 @@ class SlabSWFs:
         Method description
         """
         pass
+
+class SlabThicknessError(Exception): pass
