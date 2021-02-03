@@ -15,7 +15,7 @@ from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \
 from triboflow.firetasks.PPES import FT_DoPPESCalcs, FT_FitPPES
 from triboflow.utils.database import GetPropertyFromMP, GetDBJSON
 from triboflow.utils.structure_manipulation import InterfaceName
-from triboflow.utils.vasp_tools import GetEmin, GetCustomVaspStaticSettings
+from triboflow.utils.vasp_tools import get_emin, get_custom_vasp_static_settings
 
 def CalcPES_SWF(top_slab, bottom_slab,
                 interface_name = None,
@@ -602,9 +602,9 @@ def ConvergeEncut_SWF(structure,
     if not encut_start:
         #Get the largest EMIN value of the potcar and round up to the
         #next whole 25.
-        vis = GetCustomVaspStaticSettings(structure, comp_parameters,
-                                          'bulk_from_scratch')
-        emin = GetEmin(vis.potcar)
+        vis = get_custom_vasp_static_settings(structure, comp_parameters,
+                                              'bulk_from_scratch')
+        emin = get_emin(vis.potcar)
         encut_start = int(25 * np.ceil(emin/25))
         
     if comp_parameters == {}:

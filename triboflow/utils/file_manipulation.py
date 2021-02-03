@@ -13,12 +13,8 @@ def RemoveMatchingFiles(list_of_patterns):
             os.remove(file_to_remove)
         return
     
-def CopyOutputFiles(file_list,
-                    output_dir,
-                    remote_copy=False,
-                    server=None,
-                    user=None,
-                    port=None):
+def copy_output_files(file_list, output_dir, remote_copy=False,
+                      server=None, user=None, port=None):
     """Return a Firetask that copys output files locally or to remote server.
     
     Handles file copy from the work-folder to a chosen output directory which

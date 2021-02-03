@@ -1,0 +1,19 @@
+{
+    "computational": {
+        "BM_tolerance": 0.01,
+        "energy_tolerance": 0.001,
+        "functional": "SCAN",
+        "use_spin": true,
+        "volume_tolerance": 0.001
+    },
+    "interface": {
+        "interface_distance": 2.0,
+        "max_angle_diff": 1.5,
+        "max_mismatch": 0.01,
+        "r1r2_tol": 0.05
+    },
+    "material": {
+        "min_thickness": 10.0,
+        "min_vacuum": 25.0
+    }
+}

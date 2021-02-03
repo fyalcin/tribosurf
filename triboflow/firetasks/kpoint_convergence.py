@@ -14,9 +14,9 @@ from atomate.utils.utils import env_chk
 from atomate.vasp.fireworks.core import StaticFW
 from atomate.vasp.powerups import add_modify_incar
 from triboflow.utils.database import GetDB, GetBulkFromDB, GetHighLevelDB
-from triboflow.utils.check_convergence import IsListConverged
-from triboflow.utils.vasp_tools import GetGeneralizedKmesh, GetCustomVaspStaticSettings
-from triboflow.utils.file_manipulation import CopyOutputFiles
+from triboflow.utils.check_convergence import is_list_converged
+from triboflow.utils.vasp_tools import GetGeneralizedKmesh, get_custom_vasp_static_settings
+from triboflow.utils.file_manipulation import copy_output_files
 
 
 @explicit_serialize
@@ -177,7 +177,7 @@ class FT_KpointsConvo(FiretaskBase):
             
             label = tag+' calc 0'
             comp_params['k_dens'] = k_dens_start
-            vis = GetCustomVaspStaticSettings(struct, comp_params,
+            vis = get_custom_vasp_static_settings(struct, comp_params,
                                                         'bulk_from_scratch')
             kpoints = Kpoints.automatic_gamma_density(struct, k_dens_start)
             #kpoints = GetGeneralizedKmesh(struct, k_dens_start)
@@ -226,7 +226,7 @@ class FT_KpointsConvo(FiretaskBase):
             return FWAction(detours = K_convo_WF)
         
         else:
-            if IsListConverged(E_list, E_tol, n_converge):
+            if is_list_converged(E_list, E_tol, n_converge):
                 final_k_dens = k_dens_list[-n_converge]
                 final_E = E_list[-n_converge]
                 print('')
@@ -261,21 +261,24 @@ class FT_KpointsConvo(FiretaskBase):
                                          'Energy_tol_rel': E_tolerance}})
                 # handle file output:
                 if file_output:                 
-                    write_FT = FileWriteTask(files_to_write=
-                                             [{'filename': flag+'_kpts_out.txt',
-                                               'contents': pformat(out_dict)}])
-                    copy_FT = CopyOutputFiles(file_list = [flag+'_kpts_out.txt'],
-                                              output_dir = output_dir,
-                                              remote_copy = remote_copy,
-                                              server = server,
-                                              user = server,
-                                              port = port)
+                    write_FT = FileWriteTask(
+                        files_to_write=[{'filename': flag+'_kpts_out.txt',
+                                         'contents': pformat(out_dict)}])
+                    copy_FT = copy_output_files(
+                        file_list=[flag+'_kpts_out.txt'],
+                        output_dir=output_dir,
+                        remote_copy=remote_copy,
+                        server=server,
+                        user=server,
+                        port=port)
                     FW = Firework([write_FT, copy_FT],
-                                  name = 'Copy KpointsConvo SWF results')
-                    WF = Workflow.from_Firework(FW, name = 'Copy KpointsConve SWF results')
-                    return FWAction(update_spec = fw_spec, detours = WF)
+                                  name='Copy KpointsConvo SWF results')
+                    WF = Workflow.from_Firework(
+                        FW, 
+                        name='Copy KpointsConve SWF results')
+                    return FWAction(update_spec=fw_spec, detours=WF)
                 else:  
-                    return FWAction(update_spec = fw_spec)
+                    return FWAction(update_spec=fw_spec)
             
             else:
                 calc_nr = len(E_list)
@@ -291,7 +294,7 @@ class FT_KpointsConvo(FiretaskBase):
                     kpoints = Kpoints.automatic_gamma_density(struct, k_dens)
                     #kpoints = GetGeneralizedKmesh(struct, k_dens)
                 comp_params['k_dens'] = k_dens
-                vis = GetCustomVaspStaticSettings(struct, comp_params,
+                vis = get_custom_vasp_static_settings(struct, comp_params,
                                                   'bulk_from_scratch')
 
                 RunVASP_FW = StaticFW(structure=struct, vasp_input_set=vis,

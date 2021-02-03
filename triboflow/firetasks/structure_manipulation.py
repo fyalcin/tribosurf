@@ -22,7 +22,7 @@ from triboflow.utils.database import GetSlabFromDB, GetHighLevelDB, GetDB, \
 from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
 from triboflow.utils.structure_manipulation import InterfaceName, \
     SlabFromStructure, ReCenterAlignedSlabs, StackAlignedSlabs
-from triboflow.utils.file_manipulation import CopyOutputFiles
+from triboflow.utils.file_manipulation import copy_output_files
 
 
 
@@ -234,18 +234,18 @@ class FT_GetRelaxedSlab(FiretaskBase):
                                        'contents': poscar_str},
                                       {'filename': slab_name,
                                        'contents': pformat(slab.as_dict())}])
-            copy_FT = CopyOutputFiles(file_list = [poscar_name, slab_name],
-                                      output_dir = output_dir,
-                                      remote_copy = remote_copy,
-                                      server = server,
-                                      user = server,
-                                      port = port)
+            copy_FT = copy_output_files(file_list=[poscar_name, slab_name],
+                                        output_dir=output_dir,
+                                        remote_copy=remote_copy,
+                                        server=server,
+                                        user=server,
+                                        port=port)
             FW = Firework([write_FT, copy_FT],
-                          name = 'Copy SlabRelax SWF results')
-            WF = Workflow.from_Firework(FW, name = 'Copy SlabRelax SWF results')
-            return FWAction(update_spec = fw_spec, detours = WF)
+                          name='Copy SlabRelax SWF results')
+            WF = Workflow.from_Firework(FW, name='Copy SlabRelax SWF results')
+            return FWAction(update_spec=fw_spec, detours=WF)
         else:  
-            return FWAction(update_spec = fw_spec)
+            return FWAction(update_spec=fw_spec)
 
             
 @explicit_serialize

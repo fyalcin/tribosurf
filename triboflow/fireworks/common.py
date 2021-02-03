@@ -7,7 +7,7 @@ from triboflow.firetasks.PES import FT_FindHighSymmPoints, FT_StartPESCalcs, \
 from triboflow.firetasks.check_inputs import FT_CheckCompParamDict, \
     FT_CheckInterfaceParamDict, FT_CheckMaterialInputDict, FT_MakeBulkInDB, \
     FT_MakeSlabInDB, FT_MakeInterfaceInDB
-from triboflow.utils.file_manipulation import CopyOutputFiles
+from triboflow.utils.file_manipulation import copy_output_files
 
 __author__ = 'Michael Wolloch'
 __copyright__ = 'Copyright 2020, Michael Wolloch'
@@ -124,12 +124,12 @@ def MakePESFW(interface_name, functional, tag, FW_name, file_output,
         output_files = ['Computet_PES_data_'+interface_name+'.dat',
                         'Interpolated_PES_data_'+interface_name+'.dat',
                         'PES_' + str(interface_name) + '.png']
-        FT_3 = CopyOutputFiles(file_list = output_files,
-                               output_dir = output_dir,
-                               remote_copy = remote_copy,
-                               server = server,
-                               user = server,
-                               port = port)
+        FT_3 = copy_output_files(file_list=output_files,
+                                 output_dir=output_dir,
+                                 remote_copy=remote_copy,
+                                 server=server,
+                                 user=server,
+                                 port=port)
             
         FW = Firework([FT_1, FT_2, FT_3], name=FW_name)
     else:
