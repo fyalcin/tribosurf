@@ -17,7 +17,7 @@ from atomate.vasp.powerups import add_modify_incar
 from triboflow.utils.database import GetInterfaceFromDB, GetDB, \
     GetHighLevelDB
 from triboflow.utils.vasp_tools import get_custom_vasp_static_settings
-from triboflow.utils.structure_manipulation import CleanUpSiteProperties
+from triboflow.utils.structure_manipulation import clean_up_site_properties
 
 
 @explicit_serialize
@@ -149,7 +149,7 @@ class FT_DoPPESCalcs(FiretaskBase):
         for d in d_list:
             label = tag + '_PPES_' + str(d)
             #Make sure that there are no NoneTypes in the site_properties!
-            struct_d = CleanUpSiteProperties(struct.copy())
+            struct_d = clean_up_site_properties(struct.copy())
             struct_d.translate_sites(indices=sites_to_shift,
                                      vector=[0,0,d],
                                      frac_coords=False, to_unit_cell=False)

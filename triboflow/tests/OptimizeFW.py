@@ -14,7 +14,7 @@ from fireworks.core.rocket_launcher import rapidfire#
 from atomate.vasp.fireworks.core import OptimizeFW
 from triboflow.fireworks.common import CheckInputsFW
 from triboflow.utils.database import GetBulkFromDB, GetLowEnergyStructure
-from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
+from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
 
 db_file='/home/mwo/FireWorks/config/db.json'
 
@@ -36,7 +36,7 @@ SG = SlabGenerator(initial_structure = conv_bulk,
 slab = SG.get_slabs(bonds=None, ftol=0.1, tol=0.1, max_broken_bonds=0,
                     symmetrize=False, repair=False)[0]
 
-vis = GetCustomVaspRelaxSettings(slab, comp_params, 'slab_pos_relax')
+vis = get_custom_vasp_relax_settings(slab, comp_params, 'slab_pos_relax')
 
 Optimize_FW = OptimizeFW(slab, name='Test_relaxation',
                          vasp_input_set = vis,

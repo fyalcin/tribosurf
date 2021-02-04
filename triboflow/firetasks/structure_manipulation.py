@@ -19,9 +19,9 @@ from mpinterfaces.transformations import get_aligned_lattices, \
     get_interface#generate_all_configs
 from triboflow.utils.database import GetSlabFromDB, GetHighLevelDB, GetDB, \
     GetBulkFromDB
-from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
+from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
 from triboflow.utils.structure_manipulation import interface_name, \
-    SlabFromStructure, ReCenterAlignedSlabs, StackAlignedSlabs
+    slab_from_structure, recenter_aligned_slabs, stack_aligned_slabs
 from triboflow.utils.file_manipulation import copy_output_files
 
 
@@ -46,7 +46,7 @@ class FT_StartSlabRelaxSWF(FiretaskBase):
         Name of the slab to be put in the DB (identified by mp_id and miller).
         Defaults to 'unrelaxed_slab'.
     relax_type : str
-        Relaxation type for the GetCustomVaspRelaxSettings helper_function.
+        Relaxation type for the get_custom_vasp_relax_settings helper_function.
     bulk_struct_name : str, optional
         Name of the bulk structure in the bulk database (material is
         identified by mp_id, but there might be differnt structures of the
@@ -276,7 +276,7 @@ class FT_StartSlabRelax(FiretaskBase):
         Name of the slab to be put in the DB (identified by mp_id and miller).
         Defaults to 'unrelaxed_slab'.
     relax_type : str
-        Relaxation type for the GetCustomVaspRelaxSettings helper_function.
+        Relaxation type for the get_custom_vasp_relax_settings helper_function.
     
     Returns
     -------
@@ -310,7 +310,7 @@ class FT_StartSlabRelax(FiretaskBase):
         
         # Check if a relaxed slab is already in the DB entry
         if 'relaxed_slab' not in slab_data:
-            vis = GetCustomVaspRelaxSettings(slab_to_relax, comp_params,
+            vis = get_custom_vasp_relax_settings(slab_to_relax, comp_params,
                                              relax_type)
             if functional == 'SCAN':
                 FW = ScanOptimizeFW(structure=slab_to_relax,
@@ -415,7 +415,6 @@ class FT_MakeSlabInDB(FiretaskBase):
         
         
         return 
-
 
 
 @explicit_serialize
@@ -532,15 +531,16 @@ class FT_MakeHeteroStructure(FiretaskBase):
                 #inter_slab = hetero_interfaces[0]
                 inter_slab = hetero_interfaces
                 
-                bottom_aligned = SlabFromStructure(miller_1, bottom_aligned)
-                top_aligned = SlabFromStructure(miller_2, top_aligned)
+                bottom_aligned = slab_from_structure(miller_1, bottom_aligned)
+                top_aligned = slab_from_structure(miller_2, top_aligned)
                 
                 #Center the top and bottom slabs around 0 and combine them
                 #again to an interface:
-                top_align, bot_align = ReCenterAlignedSlabs(top_aligned,
-                                                            bottom_aligned,
-                                        d = inter_params['interface_distance'])
-                interface = StackAlignedSlabs(bot_align, top_align)
+                top_align, bot_align = recenter_aligned_slabs(
+                    top_aligned,
+                    bottom_aligned,
+                    d=inter_params['interface_distance'])
+                interface = stack_aligned_slabs(bot_align, top_align)
                 
                 inter_dict = interface.as_dict()
                 bottom_dict = bot_align.as_dict()

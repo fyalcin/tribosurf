@@ -20,7 +20,7 @@ from triboflow.phys.high_symmetry import HS_DictConverter
 # =============================================================================
 
 
-def Plot_SlabHS(hs, slab, to_fig=None):
+def plot_slab_hs(hs, slab, to_fig=None):
     """
     Plot the slab, displaying the atoms and the HS sites of the surface
     
@@ -79,7 +79,7 @@ def Plot_SlabHS(hs, slab, to_fig=None):
     plt.show()
 
 
-def Plot_PES(data, lattice, to_fig=None):
+def plot_pes(data, lattice, to_fig=None):
     """
     Plot the PES and eventually save it
 

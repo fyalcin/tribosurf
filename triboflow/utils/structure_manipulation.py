@@ -4,7 +4,7 @@ from pymatgen.core.sites import PeriodicSite
 
 from triboflow.utils.database import NavigatorMP
 
-def SlabFromStructure(miller, structure):
+def slab_from_structure(miller, structure):
     """Returns a pymatgen.core.surface.Slab from a pymatgen structure.
 
     Parameters
@@ -29,7 +29,7 @@ def SlabFromStructure(miller, structure):
                 scale_factor=np.eye(3, dtype=np.int),
                 site_properties=structure.site_properties)
 
-def CleanUpSiteProperties(structure):
+def clean_up_site_properties(structure):
     """
     Cleans up site_properties of structures that contain NoneTypes.
     
@@ -65,7 +65,7 @@ def CleanUpSiteProperties(structure):
             struct.remove_site_property(key)
     return struct
 
-def StackAlignedSlabs(bottom_slab, top_slab, top_shift=[0,0,0]):
+def stack_aligned_slabs(bottom_slab, top_slab, top_shift=[0,0,0]):
     """
     Combine slabs that are centered around 0 into a single structure.
     
@@ -105,7 +105,7 @@ def StackAlignedSlabs(bottom_slab, top_slab, top_shift=[0,0,0]):
     
     return interface
 
-def ReCenterAlignedSlabs(top_slab, bottom_slab, d=2.5):
+def recenter_aligned_slabs(top_slab, bottom_slab, d=2.5):
     """
     Center two slabs around z=0 and give them the distance d.
 

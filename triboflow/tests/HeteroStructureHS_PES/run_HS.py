@@ -13,8 +13,8 @@ from pymatgen.io.vasp.inputs import Poscar
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.core.surface import SlabGenerator, Slab
 from mpinterfaces.transformations import get_aligned_lattices, get_interface
-from triboflow.phys.high_symmetry import GetSlabHS, GetInterfaceHS
-from triboflow.utils.plot_tools import Plot_SlabHS
+from triboflow.phys.high_symmetry import get_slab_hs, get_interface_hs
+from triboflow.utils.plot_tools import plot_slab_hs
 
 
 # =============================================================================
@@ -159,14 +159,14 @@ if __name__ == '__main__':
     cell = hetero.lattice.matrix
     
     # Extract the HS points for the slabs
-    hs_sub, hs_sub_all = GetSlabHS(substrate, to_array=False)
-    hs_coat, hs_coat_all = GetSlabHS(coating, to_array=True)
+    hs_sub, hs_sub_all = get_slab_hs(substrate, to_array=False)
+    hs_coat, hs_coat_all = get_slab_hs(coating, to_array=True)
     
     # Calculate the HS points for the hetero interface
-    hs = GetInterfaceHS(hs_sub, hs_coat, cell, to_array=False)
-    hs_all = GetInterfaceHS(hs_sub_all, hs_coat_all, cell, to_array=True)
+    hs = get_interface_hs(hs_sub, hs_coat, cell, to_array=False)
+    hs_all = get_interface_hs(hs_sub_all, hs_coat_all, cell, to_array=True)
     
-    Plot_SlabHS(hs, substrate, to_fig=None)
+    plot_slab_hs(hs, substrate, to_fig=None)
     
     
     
@@ -183,9 +183,9 @@ if __name__ == '__main__':
     #hs_all = RemoveZCoords(hs_all)
     
     # Plot the HS points
-    #Plot_SlabHS(substrate,  hs_sub,  to_fig=None)
-    #Plot_SlabHS(  coating,  hs_coat, to_fig=None)
-    #Plot_SlabHS(substrate,       hs, to_fig=None)
+    #plot_slab_hs(substrate,  hs_sub,  to_fig=None)
+    #plot_slab_hs(  coating,  hs_coat, to_fig=None)
+    #plot_slab_hs(substrate,       hs, to_fig=None)
     
     
         
@@ -195,7 +195,7 @@ if __name__ == '__main__':
     # USING ASE        
     #hs2 = PBCPoints(hs, hetero.lattice.matrix, to_array=True)
     #hs2_all = PBCPoints(hs_all, hetero.lattice.matrix, to_array=True)
-    #Plot_SlabHS(substrate,      hs2, to_fig=None)
+    #plot_slab_hs(substrate,      hs2, to_fig=None)
     
     
     # NOT WORKING : 

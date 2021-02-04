@@ -19,7 +19,7 @@ from triboflow.utils.phys_tools import ReplicatePoints, GenerateUniformGrid, \
 # =============================================================================
 
 
-def GetPES(hs_all, E, cell, to_fig=None, point_density=20):
+def get_pes(hs_all, E, cell, to_fig=None, point_density=20):
     """Interpolate the PES using a list of high symetry points and energies.
     
     Main function to get the Potential Energy Surface (PES) for an interface. 
@@ -69,7 +69,7 @@ def GetPES(hs_all, E, cell, to_fig=None, point_density=20):
     """
     
     # Unfold the PES points
-    E_list, data = UnfoldPES(hs_all, E)
+    E_list, data = unfold_pes(hs_all, E)
     
     #making sure points are not represented twice by ensuring rows in data are unique
     data = RemoveDuplicates(data)
@@ -137,7 +137,7 @@ def RemoveDuplicates(data, rounding_decimal=5):
         
 
 
-def UnfoldPES(hs_all, E_unique):
+def unfold_pes(hs_all, E_unique):
     """
     Unfold the energies calculated for the unique HS points of an interface,
     associating them to the replicated HS points covering the whole surface

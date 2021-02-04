@@ -215,7 +215,7 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type):
         
     return vis
       
-def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
+def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
     """Make custom vasp settings for relaxations.
     
     Parameters

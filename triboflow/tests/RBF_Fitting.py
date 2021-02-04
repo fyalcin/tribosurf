@@ -16,14 +16,14 @@ from mpl_toolkits.mplot3d import Axes3D
 from pymatgen.core.surface import Slab
 from pymatgen.core.operations import SymmOp
 from pymatgen.analysis.structure_matcher import StructureMatcher
-from triboflow.phys.high_symmetry import GetSlabHS, GetInterfaceHS, \
-    PBC_HSPoints, RemoveDuplicatesFromHSDicts, RemoveEquivalentShifts, \
+from triboflow.phys.high_symmetry import get_slab_hs, get_interface_hs, \
+    pbc_hspoints, RemoveDuplicatesFromHSDicts, remove_equivalent_shifts, \
         RoundPosInDict, AssigneAllPoints, CleanUpHSDicts
-from triboflow.phys.potential_energy_surface import UnfoldPES, GetPES
+from triboflow.phys.potential_energy_surface import unfold_pes, get_pes
 from triboflow.utils.database import GetDBJSON, GetInterfaceFromDB
-from triboflow.utils.plot_tools import Plot_SlabHS, Plot_PES
+from triboflow.utils.plot_tools import plot_slab_hs, plot_pes
 from triboflow.utils.structure_manipulation import interface_name, \
-    CleanUpSiteProperties, StackAlignedSlabs, ReCenterAlignedSlabs
+    clean_up_site_properties, stack_aligned_slabs, recenter_aligned_slabs
 
 def test_function(x,y):
     r = (x**2 + y**2)**0.5
@@ -82,27 +82,27 @@ hs_u, hs_a = CleanUpHSDicts(c_u, c_a, top_aligned, bottom_aligned)
 
 #hs_a = AssigneAllPoints(c_u, c_a, top_aligned, bottom_aligned)
 
-rbf, E_list, pes_data, data, to_plot = GetPES(hs_a, E_l, cell)
+rbf, E_list, pes_data, data, to_plot = get_pes(hs_a, E_l, cell)
 
-Plot_PES(to_plot, cell*2)
-Plot_SlabHS(hs_u, top_aligned)
-Plot_SlabHS(hs_a, top_aligned)
+plot_pes(to_plot, cell*2)
+plot_slab_hs(hs_u, top_aligned)
+plot_slab_hs(hs_a, top_aligned)
 # #top slab needs to be mirrored to find the high symmetry points at the
 # #interface.
 # mirror = SymmOp.reflection(normal=[0,0,1], origin=[0, 0, 0])
 # flipped_top = top_aligned.copy()
 # flipped_top.apply_operation(mirror)
-# top_hsp_unique, top_hsp_all = GetSlabHS(flipped_top)
+# top_hsp_unique, top_hsp_all = get_slab_hs(flipped_top)
 
-# bottom_hsp_unique, bottom_hsp_all = GetSlabHS(bottom_aligned)
+# bottom_hsp_unique, bottom_hsp_all = get_slab_hs(bottom_aligned)
 
 # bot_h_a = RoundPosInDict(bottom_hsp_all)
 # top_h_a = RoundPosInDict(top_hsp_all)
 
 # cell = bottom_aligned.lattice.matrix
 
-# hsp_unique = GetInterfaceHS(bottom_hsp_unique, top_hsp_unique, cell)
-# hsp_all = GetInterfaceHS(bottom_hsp_all, top_hsp_all, cell)
+# hsp_unique = get_interface_hs(bottom_hsp_unique, top_hsp_unique, cell)
+# hsp_all = get_interface_hs(bottom_hsp_all, top_hsp_all, cell)
 
 
 
@@ -110,7 +110,7 @@ Plot_SlabHS(hs_a, top_aligned)
 #                                                c_a,
 #                                                decimals=4)
 
-# c_hsp_u_reduced, c_hsp_a_reduced = RemoveEquivalentShifts(c_hsp_u,
+# c_hsp_u_reduced, c_hsp_a_reduced = remove_equivalent_shifts(c_hsp_u,
 #                                                           c_hsp_a,
 #                                                           top_aligned,
 #                                                           bottom_aligned)
@@ -126,22 +126,22 @@ Plot_SlabHS(hs_a, top_aligned)
 
 # struct_match = StructureMatcher(ltol=0.01, stol=0.01, angle_tol=0.01,
 #                                 primitive_cell=False, scale=False)
-# top_slab, bot_slab = ReCenterAlignedSlabs(top_aligned, bottom_aligned, d=4.5)
+# top_slab, bot_slab = recenter_aligned_slabs(top_aligned, bottom_aligned, d=4.5)
 # new_hsp_dict_a = {}
 # for key, value in c_hsp_a_reduced.items():
-#     unique_struct = StackAlignedSlabs(bot_slab,
+#     unique_struct = stack_aligned_slabs(bot_slab,
 #                                       top_slab,
 #                                       top_shift = [value[0][0],value[0][1],0])
-#     unique_struct = CleanUpSiteProperties(unique_struct)
+#     unique_struct = clean_up_site_properties(unique_struct)
 #     for shift in all_shifts:
-#         test_struct = StackAlignedSlabs(bot_slab,
+#         test_struct = stack_aligned_slabs(bot_slab,
 #                                         top_slab,
 #                                         top_shift = [shift[0], shift[1], 0])
-#         test_struct = CleanUpSiteProperties(test_struct)
+#         test_struct = clean_up_site_properties(test_struct)
 #         if struct_match.fit(unique_struct, test_struct):
 #             new_hsp_dict_a.setdefault(key, []).append(shift)
 
-# Plot_SlabHS(new_hsp_dict_a, top_aligned)
+# plot_slab_hs(new_hsp_dict_a, top_aligned)
 # cell = bottom_aligned.lattice.matrix
 
 # #top slab needs to be mirrored to find the high symmetry points at the
@@ -149,36 +149,36 @@ Plot_SlabHS(hs_a, top_aligned)
 # mirror = SymmOp.reflection(normal=[0,0,1], origin=[0, 0, 0])
 # flipped_top = top_aligned.copy()
 # flipped_top.apply_operation(mirror)
-# top_hsp_unique, top_hsp_all = GetSlabHS(flipped_top)
+# top_hsp_unique, top_hsp_all = get_slab_hs(flipped_top)
         
-# bottom_hsp_unique, bottom_hsp_all = GetSlabHS(bottom_aligned)
+# bottom_hsp_unique, bottom_hsp_all = get_slab_hs(bottom_aligned)
         
 # cell = bottom_aligned.lattice.matrix
         
-# hsp_unique = GetInterfaceHS(bottom_hsp_unique, top_hsp_unique, cell)
-# hsp_all = GetInterfaceHS(bottom_hsp_all, top_hsp_all, cell)
+# hsp_unique = get_interface_hs(bottom_hsp_unique, top_hsp_unique, cell)
+# hsp_all = get_interface_hs(bottom_hsp_all, top_hsp_all, cell)
         
 # c_hsp_u, c_hsp_a = RemoveDuplicatesFromHSDicts(hsp_unique,
 #                                                hsp_all,
 #                                                decimals=5)
 
-# # Plot_SlabHS(top_hsp_unique, top_aligned)
-# # Plot_SlabHS(top_hsp_all, top_aligned)
-# # Plot_SlabHS(bottom_hsp_unique, bottom_aligned)
-# # Plot_SlabHS(bottom_hsp_all, bottom_aligned)
-# # Plot_SlabHS(c_hsp_u, top_aligned)
-# # Plot_SlabHS(c_hsp_a, top_aligned)
+# # plot_slab_hs(top_hsp_unique, top_aligned)
+# # plot_slab_hs(top_hsp_all, top_aligned)
+# # plot_slab_hs(bottom_hsp_unique, bottom_aligned)
+# # plot_slab_hs(bottom_hsp_all, bottom_aligned)
+# # plot_slab_hs(c_hsp_u, top_aligned)
+# # plot_slab_hs(c_hsp_a, top_aligned)
 
 # unique_structures = {}
-# top_slab, bot_slab = ReCenterAlignedSlabs(top_aligned, bottom_aligned)
+# top_slab, bot_slab = recenter_aligned_slabs(top_aligned, bottom_aligned)
 # for key, value in c_hsp_u.items():
 #     x_shift = value[0][0]
 #     y_shift = value[0][1]
-#     inter_struct = StackAlignedSlabs(bot_slab,
+#     inter_struct = stack_aligned_slabs(bot_slab,
 #                                      top_slab,
 #                                      top_shift = [x_shift, y_shift, 0])
 #     #Make sure that there are no NoneTypes in the site_properties!
-#     cleaned_struct = CleanUpSiteProperties(inter_struct)
+#     cleaned_struct = clean_up_site_properties(inter_struct)
 #     unique_structures[key] = cleaned_struct
 
 # struct_match = StructureMatcher(ltol=0.01, stol=0.01, angle_tol=0.01,
@@ -199,8 +199,8 @@ Plot_SlabHS(hs_a, top_aligned)
 #     for key in value:
 #         c_hsp_u_cleaned.pop(key)
 #         c_hsp_a_cleaned.pop(key)
-# Plot_SlabHS(c_hsp_u_cleaned, top_aligned)
-# Plot_SlabHS(c_hsp_a_cleaned, top_aligned)
+# plot_slab_hs(c_hsp_u_cleaned, top_aligned)
+# plot_slab_hs(c_hsp_a_cleaned, top_aligned)
     
 
 # double_keys = {}
@@ -221,4 +221,4 @@ Plot_SlabHS(hs_a, top_aligned)
 #      array = np.unique(np.array(value), axis=0)
 #      c_hsp_all_reduced[key] = array.tolist()
 
-# E_list, data = UnfoldPES(c_hsp_all_reduced, E_reduced)
+# E_list, data = unfold_pes(c_hsp_all_reduced, E_reduced)

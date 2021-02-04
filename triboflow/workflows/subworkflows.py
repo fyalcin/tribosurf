@@ -245,7 +245,7 @@ def MakeAndRelaxSlab_SWF(bulk_structure,
     min_vacuum : float, optional
         Minimal thickness of the vacuum layer in Angstrom. The default is 25.0.
     relax_type : str, optional
-        Which type of relaxation to run. See GetCustomVaspRelaxSettings from
+        Which type of relaxation to run. See get_custom_vasp_relax_settings from
         triboflow.utils.vasp_tools. The default is 'slab_pos_relax'.
     slab_struct_name : str, optional
         Name of the unrelaxed slab in the high-level database.

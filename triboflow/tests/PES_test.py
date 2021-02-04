@@ -10,7 +10,7 @@ from pymatgen.core.structure import Structure
 from pymatgen.core.surface import Slab
 from fireworks import LaunchPad
 from triboflow.workflows.subworkflows import CalcPES_SWF
-from triboflow.utils.structure_manipulation import SlabFromStructure
+from triboflow.utils.structure_manipulation import slab_from_structure
 from triboflow.utils.database import GetDBJSON, GetSlabFromDB, \
     GetLowEnergyStructure
 
@@ -26,7 +26,7 @@ functional = "SCAN"
 
 #Test GrapheneGraphene interface
 struct, mpid = GetLowEnergyStructure('C', 'mp-1040425')
-slab = SlabFromStructure([0,0,1], struct)
+slab = slab_from_structure([0,0,1], struct)
 comp_params = {'functional': functional,
                'use_vdw': True,
                'use_spin': True,

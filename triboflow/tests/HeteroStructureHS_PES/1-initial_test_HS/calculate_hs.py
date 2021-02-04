@@ -235,7 +235,7 @@ Poscar(hetero).write_file(filename='POSCAR')
 # CALCULATE HS POINTS
 # =============================================================================
 
-def GetSlabHS(material, near_reduce=0.01, allowed_sites=['ontop', 'bridge', 'hollow']): 
+def get_slab_hs(material, near_reduce=0.01, allowed_sites=['ontop', 'bridge', 'hollow']): 
     """
     Extract the High Simmetry (HS) points for a given slab. It returns the 
     unique HS points for the slab and the unfolded points inside the lattice
@@ -301,7 +301,7 @@ def GetSlabHS(material, near_reduce=0.01, allowed_sites=['ontop', 'bridge', 'hol
     return hs, hs_all
 
 
-def GetInterfaceHS(hs_bot, hs_top):
+def get_interface_hs(hs_bot, hs_top):
     
     # Extract the keys from the HS dictionaries
     kbot = list(hs_bot.keys())
@@ -326,10 +326,10 @@ def GetInterfaceHS(hs_bot, hs_top):
     return hs
 
 
-hs_sub, hs_sub_all = GetSlabHS(substrate, 0.01)
-hs_coat, hs_coat_all = GetSlabHS(coating, 0.01)
+hs_sub, hs_sub_all = get_slab_hs(substrate, 0.01)
+hs_coat, hs_coat_all = get_slab_hs(coating, 0.01)
 
-hs = GetInterfaceHS(hs_sub_all, hs_coat_all)
+hs = get_interface_hs(hs_sub_all, hs_coat_all)
 
 
 # =============================================================================

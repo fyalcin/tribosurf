@@ -13,15 +13,15 @@ from monty.json import jsanitize
 from ase import Atoms
 from pymatgen.analysis.adsorption import AdsorbateSiteFinder
 from pymatgen.analysis.structure_matcher import StructureMatcher
-from triboflow.utils.structure_manipulation import StackAlignedSlabs, \
-    CleanUpSiteProperties, ReCenterAlignedSlabs
+from triboflow.utils.structure_manipulation import stack_aligned_slabs, \
+    clean_up_site_properties, recenter_aligned_slabs
 
 # =============================================================================
 # CALCULATE THE HS POINTS FOR A SLAB
 # =============================================================================
 
 
-def GetSlabHS(slab, allowed_sites=['ontop', 'bridge', 'hollow'], to_array=False): 
+def get_slab_hs(slab, allowed_sites=['ontop', 'bridge', 'hollow'], to_array=False): 
     """
     Calculate the High Simmetry (HS) points for a material provided as input,
     which need to be a pymatgen object (Slab or Structure).
@@ -166,7 +166,7 @@ def HS_DictConverter(hs, to_array=True):
 # =============================================================================
 
 
-def GetInterfaceHS(hs_1, hs_2, cell, to_array=False, z_red=True):
+def get_interface_hs(hs_1, hs_2, cell, to_array=False, z_red=True):
     """
     Calculate the HS sites for a hetero interface by combining the HS sites of
     the bottom slab (hs_1) with the upper slab (hs_2) 
@@ -211,7 +211,7 @@ def GetInterfaceHS(hs_1, hs_2, cell, to_array=False, z_red=True):
                 
             hs[k1+'-'+k2] = np.concatenate(shifts_stack, axis=0)
     
-    hs = PBC_HSPoints(hs, cell, to_array=to_array, z_red=z_red)
+    hs = pbc_hspoints(hs, cell, to_array=to_array, z_red=z_red)
         
     return hs
 
@@ -221,9 +221,9 @@ def GetInterfaceHS(hs_1, hs_2, cell, to_array=False, z_red=True):
 # =============================================================================
 
 
-def FixHSDicts(hs_unique, hs_all, top_aligned, bot_aligned,
-               ltol=0.01, stol=0.01, angle_tol=0.01,
-               primitive_cell=False, scale=False):
+def fix_hs_dicts(hs_unique, hs_all, top_aligned, bot_aligned,
+                 ltol=0.01, stol=0.01, angle_tol=0.01,
+                 primitive_cell=False, scale=False):
     """Remove duplicate shifts from the hs points and assigne the replicas correctly.
     
     A StructureMatcher is defined with the selected tolerances and options and
@@ -236,9 +236,9 @@ def FixHSDicts(hs_unique, hs_all, top_aligned, bot_aligned,
     Parameters
     ----------
     hs_unique : dict
-        Unique high-symmetry points of the interface from <GetInterfaceHS>.
+        Unique high-symmetry points of the interface from <get_interface_hs>.
     hs_all : dict
-        Replicated high-symmetry points of the interface from <GetInterfaceHS>.
+        Replicated high-symmetry points of the interface from <get_interface_hs>.
     top_aligned : pymatgen.core.surface.Slab or pymatgen.core.structure.Structure
         The top slab of the interface
     bot_aligned : pymatgen.core.surface.Slab or pymatgen.core.structure.Structure
@@ -264,9 +264,9 @@ def FixHSDicts(hs_unique, hs_all, top_aligned, bot_aligned,
         DESCRIPTION.
 
     """
-    top_slab, bot_slab = ReCenterAlignedSlabs(top_aligned,
-                                              bot_aligned,
-                                              d=4.5)
+    top_slab, bot_slab = recenter_aligned_slabs(top_aligned,
+                                                bot_aligned,
+                                                d=4.5)
     
     struct_match = StructureMatcher(ltol=ltol, stol=stol, angle_tol=angle_tol,
                                 primitive_cell=primitive_cell, scale=scale)
@@ -328,19 +328,17 @@ def AssignReplicatePoints(hs_u, hs_a, top_slab, bot_slab, structure_matcher):
     
     new_hsp_dict_a = {}
     for key, value in hs_u.items():
-        unique_struct = StackAlignedSlabs(bot_slab,
-                                          top_slab,
-                                          top_shift = [value[0][0],
-                                                       value[0][1],
-                                                       0])
-        unique_struct = CleanUpSiteProperties(unique_struct)
+        unique_struct = stack_aligned_slabs(bot_slab, top_slab, 
+                                            [value[0][0], value[0][1], 0])
+        unique_struct = clean_up_site_properties(unique_struct)
+        
         for shift in all_shifts:
-            test_struct = StackAlignedSlabs(bot_slab,
+            test_struct = stack_aligned_slabs(bot_slab,
                                             top_slab,
                                             top_shift = [shift[0],
                                                          shift[1],
                                                          0])
-            test_struct = CleanUpSiteProperties(test_struct)
+            test_struct = clean_up_site_properties(test_struct)
             if structure_matcher.fit(unique_struct, test_struct):
                 new_hsp_dict_a.setdefault(key, []).append(shift)
     
@@ -351,7 +349,7 @@ def RemoveEquivalentShifts(hs_u, hs_a, top_slab, bot_slab, structure_matcher):
     
     When the high-symmetry points of two slabs are combined by finding all the
     combinations (e.g. ontop_1-hollow_2, ontop_1-bridge_1, ...) by a 
-    GetInterfaceHS a lot of duplicates might be created. Here we use a
+    get_interface_hs a lot of duplicates might be created. Here we use a
     pymatgen.analysis.structure_matcher.StructureMatcher to get rid of these
     duplicates both in the unique and the replicated high symmetry points.
     
@@ -381,10 +379,10 @@ def RemoveEquivalentShifts(hs_u, hs_a, top_slab, bot_slab, structure_matcher):
     for key, value in hs_u.items():
         x_shift = value[0][0]
         y_shift = value[0][1]
-        inter_struct = StackAlignedSlabs(bot_slab,
-                                         top_slab,
-                                         top_shift = [x_shift, y_shift, 0])
-        clean_struct = CleanUpSiteProperties(inter_struct)
+        inter_struct = stack_aligned_slabs(bot_slab,
+                                           top_slab,
+                                           top_shift = [x_shift, y_shift, 0])
+        clean_struct = clean_up_site_properties(inter_struct)
         structure_list[key] = clean_struct
         
     equivalent_structs = {}
@@ -406,7 +404,7 @@ def RemoveEquivalentShifts(hs_u, hs_a, top_slab, bot_slab, structure_matcher):
 
 def NormalizeHSDict(hs, to_array=True):
     """
-    Convert the hs elements returned by GetSlabHS to proper np.array or lists 
+    Convert the hs elements returned by get_slab_hs to proper np.array or lists 
     Important to use with unfolded HS points, which are lists of arrays
     
     """
@@ -432,7 +430,7 @@ def NormalizeHSDict(hs, to_array=True):
     return hs_new
 
 
-def PBC_HSPoints(hs, cell, to_array=False, z_red=True):
+def pbc_hspoints(hs, cell, to_array=False, z_red=True):
     """
     Create a "fake" molecule structure from the HS points calculated for
     the tribological interface, in order to apply PBC to the sites.

@@ -9,7 +9,7 @@ Created on Mon Oct  26 11:20:07 2020
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import Rbf
-from triboflow.utils.plot_tools import Plot_PES
+from triboflow.utils.plot_tools import plot_pes
 from triboflow.utils.phys_tools import PBC_Coordinates, ReplicatePoints, \
                               GenerateUniformGrid, Orthorombize
 
@@ -44,7 +44,7 @@ coords, cell_ortho = Orthorombize(coordinates[:, :2], cell)
 #E=rbf(x, y)#.reshape(len(x), len(y))
 #data =  np.array(np.column_stack([x, y, E]))
 
-#Plot_PES(data, cell_ortho, to_fig=None)
+#plot_pes(data, cell_ortho, to_fig=None)
 
 
 orth_coords, cell_ortho = Orthorombize(data_rep, cell)
@@ -61,7 +61,7 @@ X, Y = np.meshgrid(coordinates[:,0], coordinates[:,1])
 
 E = rbf(X, Y)
 
-Plot_PES([X, Y, E], cell_ortho)
+plot_pes([X, Y, E], cell_ortho)
 
 
 
@@ -97,12 +97,12 @@ def StaticTribo(hs, E, cell):
         Relevant information about Shear Strength
     """
     
-    from triboflow.utils.PES import GetPES, Orthorombize
+    from triboflow.utils.PES import get_pes, Orthorombize
     from triboflow.utils.MEP import GetBSMEP, GetMEP
     from triboflow.utils.SS import GetShearStrength_xy, GetShearStrength
     
     # Get the PES
-    rbf, pes_dict, pes_data = GetPES(hs, E, cell)
+    rbf, pes_dict, pes_data = get_pes(hs, E, cell)
     data_ortho, cell_ortho = Orthorombize(pes_data, cell)
     
     # Get the MEP on the potential energy surface starting from a guess
