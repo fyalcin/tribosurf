@@ -202,7 +202,7 @@ class FT_KpointsConvo(FiretaskBase):
             label = tag+' calc 0'
             comp_params['k_dens'] = k_dens_start
             vis = get_custom_vasp_static_settings(struct, comp_params,
-                                                        'bulk_from_scratch')
+                                                  'bulk_from_scratch')
             kpoints = Kpoints.automatic_gamma_density(struct, k_dens_start)
             #kpoints = get_generalized_kmesh(struct, k_dens_start)
             k_dens_list = [k_dens_start]
