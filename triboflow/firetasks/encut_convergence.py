@@ -145,7 +145,9 @@ class FT_EnergyCutoffConvo(FiretaskBase):
     optional_params = ['deformations', 'n_converge', 'encut_start',
                        'encut_incr', 'db_file', 'file_output', 'output_dir',
                        'remote_copy', 'server', 'user', 'port']
+
     def run_task(self, fw_spec):
+        
         deforms = []
         for i in np.arange(0.9, 1.1, 0.05):
             dm=np.eye(3)*i

@@ -22,7 +22,7 @@ from triboflow.phys.high_symmetry import GetSlabHS, GetInterfaceHS, \
 from triboflow.phys.potential_energy_surface import UnfoldPES, GetPES
 from triboflow.utils.database import GetDBJSON, GetInterfaceFromDB
 from triboflow.utils.plot_tools import Plot_SlabHS, Plot_PES
-from triboflow.utils.structure_manipulation import InterfaceName, \
+from triboflow.utils.structure_manipulation import interface_name, \
     CleanUpSiteProperties, StackAlignedSlabs, ReCenterAlignedSlabs
 
 def test_function(x,y):

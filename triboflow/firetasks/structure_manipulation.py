@@ -20,7 +20,7 @@ from mpinterfaces.transformations import get_aligned_lattices, \
 from triboflow.utils.database import GetSlabFromDB, GetHighLevelDB, GetDB, \
     GetBulkFromDB
 from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
-from triboflow.utils.structure_manipulation import InterfaceName, \
+from triboflow.utils.structure_manipulation import interface_name, \
     SlabFromStructure, ReCenterAlignedSlabs, StackAlignedSlabs
 from triboflow.utils.file_manipulation import copy_output_files
 
@@ -474,7 +474,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
         slab_col = db[functional+'.slab_data']
         inter_col = db[functional+'.interface_data']
         
-        interface_name = InterfaceName(mp_id_1, miller_1, mp_id_2, miller_2)
+        interface_name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
         
         inter_data = inter_col.find_one({'name': interface_name})
         inter_params = inter_data['interface_parameters']

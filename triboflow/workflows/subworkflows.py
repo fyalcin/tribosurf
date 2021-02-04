@@ -14,7 +14,6 @@ from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \
     FT_StartSlabRelax, FT_GetRelaxedSlab
 from triboflow.firetasks.PPES import FT_DoPPESCalcs, FT_FitPPES
 from triboflow.utils.database import GetPropertyFromMP, GetDBJSON
-from triboflow.utils.structure_manipulation import InterfaceName
 from triboflow.utils.vasp_tools import get_emin, get_custom_vasp_static_settings
 
 def CalcPES_SWF(top_slab, bottom_slab,

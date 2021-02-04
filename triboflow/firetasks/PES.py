@@ -22,7 +22,7 @@ from triboflow.utils.plot_tools import Plot_PES
 from triboflow.utils.database import GetInterfaceFromDB, GetDB, \
     GetHighLevelDB, ConvertImageToBytes
 from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
-from triboflow.utils.structure_manipulation import InterfaceName, \
+from triboflow.utils.structure_manipulation import interface_name, \
     CleanUpSiteProperties, StackAlignedSlabs, ReCenterAlignedSlabs
 
 @explicit_serialize
@@ -67,7 +67,7 @@ class FT_StartPESCalcSubWF(FiretaskBase):
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
         
-        name = InterfaceName(mp_id_1, miller_1, mp_id_2, miller_2)
+        name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
         
         interface_dict = GetInterfaceFromDB(name, db_file, functional)
         comp_params = interface_dict['comp_parameters']

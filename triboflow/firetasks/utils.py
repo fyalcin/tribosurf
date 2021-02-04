@@ -9,7 +9,7 @@ from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 from triboflow.utils.database import GetBulkFromDB, GetHighLevelDB
-from triboflow.utils.structure_manipulation import InterfaceName
+from triboflow.utils.structure_manipulation import interface_name
 
 
 @explicit_serialize
@@ -65,7 +65,7 @@ class FT_ChooseCompParams(FiretaskBase):
         encut = max(encut1, encut2)
         metal = any((metal_1, metal_2))
             
-        name = InterfaceName(mp_id_1, miller_1, mp_id_2, miller_2)
+        name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
         
         db = GetHighLevelDB(db_file)
         col = db[functional+'.interface_data']

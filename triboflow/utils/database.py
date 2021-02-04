@@ -81,7 +81,7 @@ class Navigator:
     update_many_data(collection, filter, new_values, upsert)
         Update many documents that match the filter with the new values.
     
-    insert_data(collection, data, duplicates)
+    insert_data(collection, data, duplicates, message)
         Insert a single document in the collection.
     
     insert_many_data(collection, data, duplicates)
@@ -248,7 +248,7 @@ class Navigator:
                  ''.format(collection, new_values))
         collection_obj.update_many(filter, new_values, upsert)
 
-    def insert_data(self, collection, data, duplicates=False):
+    def insert_data(self, collection, data, duplicates=False, message=None):
         """
         Insert a single document in the collection.
 
@@ -265,6 +265,9 @@ class Navigator:
         duplicates : bool, Optional
             If True the data are saved in the database even if they are 
             duplicates.
+        
+        message : str, Optional
+            Custom message to write in the console and/or in the log file.
 
         Return
         ------
@@ -283,9 +286,13 @@ class Navigator:
         
         if not duplicates:
             if self.find_data(collection, data):
-                log.warning('{} already exist in {} collection.'
-                            'Use the duplicates flag for saving multiple times '
-                            'the same document.'.format(data, collection))
+                if message:
+                    log.warning(message)
+                else:
+                    log.warning('{} already exist in {} collection.'
+                                'Use the duplicates flag for saving multiple '
+                                'times the same document.'
+                                ''.format(data, collection))
                 return
 
         log.info('Writing {} in the collection {}.'.format(data, collection))
@@ -385,6 +392,7 @@ class Navigator:
 
         if not data:
             log.warning('There are no data for {}.'.format(filter))
+            return data
 
         log.info('{} has been found in {}.'. format(filter, collection))
         return data
@@ -427,6 +435,7 @@ class Navigator:
 
         if not data:
             log.warning('There are no data for {}.'.format(filter))
+            return data
 
         log.info('{} has been found in {}.'. format(filter, collection))
         return data
@@ -536,8 +545,8 @@ class Navigator:
 
 class StructureNavigator(Navigator):
     """
-    Child class of Navigator in which are implemented all the methods that deals 
-    with writing and loading data from the database about bulk, slab, 
+    Child class of Navigator in which are implemented all the methods required 
+    for writing and loading data from the database about bulk, slab, 
     and interface.
     
     These functions are taken from the TriboFlow package, Michael Wolloch.
@@ -549,7 +558,7 @@ class StructureNavigator(Navigator):
     
     Methods
     -------
-    add_bulk_to_db(structure, mp_id, functional)
+    add_bulk_to_db(structure, mp_id, functional, message)
         Insert a bulk structure in the triboflow high level database.
 
     get_bulk_from_db(mp_id, functional)
@@ -570,7 +579,7 @@ class StructureNavigator(Navigator):
     def __init__(self, db_file, high_level):
         super().__init__(db_file=db_file, high_level=high_level)
 
-    def add_bulk_to_db(self, structure, mp_id, functional):
+    def add_bulk_to_db(self, structure, mp_id, functional, message=None):
         """
         Insert a bulk structure in the triboflow high level database.
 
@@ -584,6 +593,9 @@ class StructureNavigator(Navigator):
         
         functional : str
             Functional. It could be PBE por SCAN.
+        
+        message : str, Optional
+            Custom message to write in the console and/or in the log file.
 
         Returns
         -------
@@ -596,7 +608,8 @@ class StructureNavigator(Navigator):
             functional+'.bulk_data', 
             {'mpid': mp_id,
              'formula': formula,
-             'structure_fromMP': structure.as_dict()})
+             'structure_fromMP': structure.as_dict()}, 
+             message=message)
     
     def get_bulk_from_db(self, mp_id, functional):
         """
@@ -735,6 +748,8 @@ class NavigatorMP:
     """
     This class is a high level interface for connecting with the Materials
     Project database (https://materialsproject.org/).
+
+    These functions are taken from the TriboFlow package, Michael Wolloch.
 
     Attributes
     ----------

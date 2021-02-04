@@ -13,7 +13,7 @@ from triboflow.firetasks.structure_manipulation import FT_StartSlabRelaxSWF, \
 from triboflow.firetasks.PES import FT_StartPESCalcSubWF
 from triboflow.firetasks.check_inputs import FT_UpdateCompParams
 from triboflow.utils.database import GetLowEnergyStructure
-from triboflow.utils.structure_manipulation import InterfaceName
+from triboflow.utils.structure_manipulation import interface_name
 
 def Heterogeneous_WF(inputs):
     """Return main workflow for heterogeneous interfaces within Triboflow.
@@ -130,8 +130,8 @@ def Heterogeneous_WF(inputs):
                     MakeSlabs_M2: [MakeInterface],
                     MakeInterface: [CalcPESPoints]}
 
-    WF_Name = 'TriboFlow '+InterfaceName(mp_id_1, mat_1.get('miller'),
-                            mp_id_2, mat_2.get('miller'))
+    WF_Name = 'TriboFlow ' + interface_name(mp_id_1, mat_1.get('miller'),
+                                            mp_id_2, mat_2.get('miller'))
 
     WF = Workflow(WF, Dependencies, name=WF_Name)
     return WF

@@ -7,21 +7,24 @@ Created on Mon Jun 22 12:29:28 2020
 from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
-from triboflow.utils.database import GetLowEnergyStructure, GetHighLevelDB, \
-    GetPropertyFromMP, GetBulkFromDB
-from triboflow.utils.database import Navigator, NavigatorMP
-from triboflow.utils.structure_manipulation import InterfaceName
+
+from triboflow.utils.database import Navigator, StructureNavigator, NavigatorMP
+from triboflow.utils.structure_manipulation import interface_name
 
 
 @explicit_serialize
 class FT_UpdateCompParams(FiretaskBase):
+
     _fw_name = 'Update computational parameters in high level DB'
     required_params = ['mp_id_1', 'miller_1', 'mp_id_2', 'miller_2',
                        'functional']
     optional_params = ['db_file']
+
     def run_task(self, fw_spec):
+
         mp_id_1 = self.get('mp_id_1')
         mp_id_2 = self.get('mp_id_2')
+
         if type(self['miller_1']) == str:
             miller_1 = [int(k) for k in list(self['miller_1'])]
         else:
@@ -31,15 +34,21 @@ class FT_UpdateCompParams(FiretaskBase):
         else:
             miller_2 = self['miller_2']
         functional = self.get('functional')
+
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
         
-        bulk_1 = GetBulkFromDB(mp_id_1, db_file, functional)
-        bulk_2 = GetBulkFromDB(mp_id_2, db_file, functional)
-        
-        nav = Navigator(db_file, high_level='triboflow')
-        
+        nav_structure = StructureNavigator(
+            db_file=db_file, 
+            high_level='triboflow')
+        bulk_1 = nav_structure.get_bulk_from_db(
+            mp_id=mp_id_1, 
+            function=functional)
+        bulk_2 = nav_structure.get_bulk_from_db(
+            mp_id=mp_id_2,
+            functional=functional
+        )
 
         encut_1 = bulk_1['comp_parameters']['encut']
         encut_2 = bulk_2['comp_parameters']['encut']
@@ -50,138 +59,182 @@ class FT_UpdateCompParams(FiretaskBase):
         metal_1 = bulk_1['comp_parameters']['is_metal']
         metal_2 = bulk_2['comp_parameters']['is_metal']
         metal_inter = any((metal_1, metal_2))
-        
-        
-        db = GetHighLevelDB(db_file)
-        slab_col = db[functional+'.slab_data']
-        inter_col = db[functional+'.interface_data']
-        
-        slab_col.update_one({'mpid': mp_id_1, 'miller': miller_1},
-                            {'$set': {'comp_parameters.encut': encut_1,
-                                      'comp_parameters.k_dens': k_dens_1}})
-        slab_col.update_one({'mpid': mp_id_2, 'miller': miller_2},
-                            {'$set': {'comp_parameters.encut': encut_2,
-                                      'comp_parameters.k_dens': k_dens_2}})
-        
-        inter_name = InterfaceName(mp_id_1, miller_1, mp_id_2, miller_2)
-        inter_col.update_one({'name': inter_name},
-                             {'$set': {'comp_parameters.encut': encut_inter,
-                                       'comp_parameters.k_dens': k_dens_inter,
-                                       'comp_parameters.is_metal': metal_inter}})
+
+        nav_high = Navigator(db_file=db_file, high_level='triboflow')
+        nav_high.update_data(
+            collection=functional+'.slab_data',
+            filter={'mpid': mp_id_1, 'miller': miller_1},
+            new_values={'$set': {'comp_parameters.encut': encut_1,
+                                 'comp_parameters.k_dens': k_dens_1}})
+        nav_high.update_data(
+            collection=functional+'.slab_data',
+            filter={'mpid': mp_id_2, 'miller': miller_2},
+            new_values={'$set': {'comp_parameters.encut': encut_2,
+                                 'comp_parameters.k_dens': k_dens_2}})
+
+        inter_name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
+        nav_high.update_data(
+            collection=functional+'.interface_data',
+            filter={'name': inter_name},
+            new_values={'$set': {'comp_parameters.encut': encut_inter,
+                                 'comp_parameters.k_dens': k_dens_inter,
+                                 'comp_parameters.is_metal': metal_inter}})
 
 @explicit_serialize
 class FT_MakeInterfaceInDB(FiretaskBase):
+
     _fw_name = 'Make bulk entry into high level DB'
     required_params = ['mat1_data_loc', 'mat2_data_loc', 'comp_data_loc',
                        'interface_data_loc']
     optional_params = ['db_file']
+
     def run_task(self, fw_spec):
         data1 = fw_spec[self['mat1_data_loc']]
         data2 = fw_spec[self['mat2_data_loc']]
         comp_data = fw_spec[self['comp_data_loc']]
         interface_data = fw_spec[self['interface_data_loc']]
+
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
         
         functional = comp_data['functional']
-        struct1, mp_id_1 = GetLowEnergyStructure(data1['formula'],
-                                                 data1['mp_id'])
-        struct2, mp_id_2 = GetLowEnergyStructure(data2['formula'],
-                                                 data2['mp_id'])
-        
-        mp_database = Navigato
 
-        db = GetHighLevelDB(db_file)
-        col = db[functional+'.interface_data']
+        nav_mp = NavigatorMP()
+        struct1, mp_id_1 = nav_mp.get_low_energy_structure(
+            chem_formula=data1['formula'],
+            mp_id=data1['mp_id'])
+        struct2, mp_id_2 = nav_mp.get_low_energy_structure(
+            chem_formula=data2['formula'],
+            mp_id=data2['mp_id'])
 
-        name = InterfaceName(mp_id_1, data1['miller'],
-                             mp_id_2, data2['miller'])
-        
-        if col.find_one({'name': name}):
+        nav_high = Navigator(db_file=db_file, high_level='triboflow')
+
+        name = interface_name(mp_id_1, data1['miller'],
+                              mp_id_2, data2['miller'])
+
+        if nav_high.find_data(
+               collection=functional+'.interface_data', 
+               data={'name': name}):
+
             print('{} interface can not be added to {}.interface_data '
                   'collection because an interface with that name is already '
                   'present.'.format(name, functional))
             return
         else:
-             col.insert_one({'name': name,
-                             'comp_parameters': comp_data,
-                             'interface_parameters': interface_data})
-             return
+            nav_high.insert_data(
+                collection=functional+'.interface_data',
+                data={'name': name,
+                      'comp_parameters': comp_data,
+                      'interface_parameters': interface_data})
+            return
 
 @explicit_serialize
 class FT_MakeSlabInDB(FiretaskBase):
+
     _fw_name = 'Make bulk entry into high level DB'
     required_params = ['mat_data_loc', 'comp_data_loc']
     optional_params = ['db_file']
+
     def run_task(self, fw_spec):
+
         data = fw_spec[self['mat_data_loc']]
         comp_data = fw_spec[self['comp_data_loc']]
+
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
         
         functional = comp_data['functional']
-        struct, mp_id = GetLowEnergyStructure(data['formula'], data['mp_id'])
         
-        bandgap = GetPropertyFromMP(mp_id, 'band_gap')
+        nav_mp = NavigatorMP()
+        struct, mp_id = nav_mp.get_low_energy_structure(
+            chem_formula=data['formula'], 
+            mp_id=data['mp_id'])
+
+        bandgap = nav_mp.get_property_from_mp(
+            mp_id=mp_id, 
+            properties=['band_gap'])
+        bandgap = bandgap['bandgap']
+
         if bandgap > 0.5:
             comp_data['is_metal'] = False
         else:
             comp_data['is_metal'] = True
-        
-        db = GetHighLevelDB(db_file)
-        col = db[functional+'.slab_data']
-        
-        if col.find_one({'mpid': mp_id, 'miller': data['miller']}):
+
+        nav_high = Navigator(db_file=db_file, high_level='triboflow')
+
+        if nav_high.find_data(
+            collection=functional+'.slab_data',
+            filter={'mpid': mp_id, 'miller': data['miller']}):
+
             print('{}-{} slab can not be added to {}.slab_data collection'
                   'because a material with MP-ID {} is already present.'
                   .format(data['formula'], data['miller'], mp_id, functional))
             return
         else:
-             col.insert_one({'mpid': mp_id,
-                             'formula': data['formula'],
-                             'miller': data['miller'],
-                             'min_thickness': data['min_thickness'],
-                             'min_vacuum': data['min_vacuum'],
-                             'comp_parameters': comp_data})
-             return
+            nav_high.insert_data(
+                collection=functional+'.slab_data',
+                data={'mpid': mp_id,
+                      'formula': data['formula'],
+                      'miller': data['miller'],
+                      'min_thickness': data['min_thickness'],
+                      'min_vacuum': data['min_vacuum'],
+                      'comp_parameters': comp_data})
+            return
+
 
 @explicit_serialize
 class FT_MakeBulkInDB(FiretaskBase):
+
     _fw_name = 'Make bulk entry into high level DB'
     required_params = ['mat_data_loc', 'comp_data_loc']
     optional_params = ['db_file']
+
     def run_task(self, fw_spec):
+
         data = fw_spec[self['mat_data_loc']]
         comp_data = fw_spec[self['comp_data_loc']]
+
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
         
         functional = comp_data['functional']
-        struct, mp_id = GetLowEnergyStructure(data['formula'], data['mp_id'])
-        
-        bandgap = GetPropertyFromMP(mp_id, 'band_gap')
+
+        nav_mp = NavigatorMP()
+        struct, mp_id = nav_mp.get_low_energy_structure(
+            chem_formula=data['formula'], 
+            mp_id=data['mp_id'])
+
+        bandgap = nav_mp.get_property_from_mp(
+            mp_id=mp_id, 
+            properties=['band_gap'])
+        bandgap = bandgap['bandgap']
+
         if bandgap > 0.2:
             comp_data['is_metal'] = False
         else:
             comp_data['is_metal'] = True
         
-        db = GetHighLevelDB(db_file)
-        col = db[functional+'.bulk_data']
-        
-        if col.find_one({'mpid': mp_id}):
+        nav_high = Navigator(db_file=db_file, high_level='triboflow')
+
+        if nav_high.find_data(
+            collection=functional+'.bulk_data',
+            filter={'mpid': mp_id}):
+
             print('{} bulk can not be added to bulk_data collection because a'
-              'material with MP-ID {} is already present in the {} '
-              'collection!'.format(data['formula'], mp_id, functional))
+                  'material with MP-ID {} is already present in the {} '
+                  'collection!'.format(data['formula'], mp_id, functional))
             return
         else:
-             col.insert_one({'mpid': mp_id,
-                             'formula': data['formula'],
-                             'structure_fromMP': struct.as_dict(),
-                             'comp_parameters': comp_data})
-             return
+            nav_high.insert_data(
+                collection=functional+'.bulk_data',
+                data={{'mpid': mp_id,
+                        'formula': data['formula'],
+                        'structure_fromMP': struct.as_dict(),
+                        'comp_parameters': comp_data}})
+            return
         
     
 
@@ -237,18 +290,20 @@ class FT_CheckCompParamDict(FiretaskBase):
         input_dict = self['input_dict']
         output_dict_name = self.get('output_dict_name', 'comp_parameters')
 
-        #Define all known keys here
+        # Define all known keys here
         known_keys = essential_keys + additional_keys
-        #Create lists for input options condidered to be True:
+
+        # Create lists for input options considered to be True:
         true_list = ['true', 'True', 'TRUE', '.TRUE.', '.true.', True, 
                      'yes', 'Yes', 'YES', '.YES.', '.yes.']
-        #initialize checking dictionary for essential inputs and output dict
+
+        # Initialize checking dictionary for essential inputs and output dict
         out_dict = {}
         check_essential = {}
         for key in essential_keys:
             check_essential[key] = False
         for key in input_dict.keys():
-        #Check for unknown parameters:
+        # Check for unknown parameters:
             if key not in known_keys:
                 raise SystemExit('The input parameter <'+str(key)+
                               '> is not known. Please check your input file'
@@ -262,7 +317,7 @@ class FT_CheckCompParamDict(FiretaskBase):
                 check_essential[key] = True
         
         
-        #check if all essential keys are present and print out missing ones.
+        # Check if all essential keys are present and print out missing ones.
         missing_keys=[]
         for key in check_essential.keys():
             if check_essential[key] == False:
@@ -354,15 +409,16 @@ class FT_CheckInterfaceParamDict(FiretaskBase):
         input_dict = self['input_dict']
         output_dict_name = self.get('output_dict_name', 'interface_params')
 
-        #Define all known keys here
+        # Define all known keys here
         known_keys = essential_keys + additional_keys
-        #initialize checking dictionary for essential inputs and output dict
+
+        # Initialize checking dictionary for essential inputs and output dict
         out_dict = {}
         check_essential = {}
         for key in essential_keys:
             check_essential[key] = False
         for key in input_dict.keys():
-        #Check for unknown parameters:
+        # Check for unknown parameters:
             if key not in known_keys:
                 raise SystemExit('The input parameter <'+str(key)+
                               '> is not known. Please check your input file'
@@ -373,7 +429,7 @@ class FT_CheckInterfaceParamDict(FiretaskBase):
                 check_essential[key] = True
         
         
-        #check if all essential keys are present and print out missing ones.
+        # Check if all essential keys are present and print out missing ones.
         missing_keys=[]
         for key in check_essential.keys():
             if check_essential[key] == False:
@@ -402,7 +458,7 @@ class FT_CheckMaterialInputDict(FiretaskBase):
     Parameters
     ----------
     input_dict_name: list of str
-        List of keys that specifiy the location of the input parameters
+        List of keys that specify the location of the input parameters
         dictionary in the spec
     output_dict_name: list of str, optional
         Location of the output dictionary that is going to be put into the
@@ -429,23 +485,24 @@ class FT_CheckMaterialInputDict(FiretaskBase):
         
         min_thickness_default = 10.0
         min_vacuum_default = 25.0
-        #MPID of the minimum energy structure for this formula will be used
-        #as default.
+        # MPID of the minimum energy structure for this formula will be used
+        # as default.
         #####################################################################
         
         input_dict = self['input_dict']
         output_dict_name = self.get('output_dict_name', 'materials_params')
 
-        #Define all known keys here
+        # Define all known keys here
         known_keys = essential_keys + additional_keys
-        #initialize checking dictionary for essential inputs and output dict
+
+        # Initialize checking dictionary for essential inputs and output dict
         out_dict = {}
         check_essential = {}
         for key in essential_keys:
             check_essential[key] = False
             
         for key in input_dict.keys():
-        #Check for unknown parameters:
+        # Check for unknown parameters:
             if key not in known_keys:
                 with open('output.txt', 'a') as out:
                     out.write(' ')
@@ -462,7 +519,7 @@ class FT_CheckMaterialInputDict(FiretaskBase):
                 out_dict['miller'] = [int(k) for k in list(input_dict[key])]
                 check_essential[key] = True
         
-        #check if all essential keys are present and print out missing ones.
+        # Check if all essential keys are present and print out missing ones.
         for key in check_essential.keys():
             if check_essential[key] == False:
                 with open('output.txt', 'a') as out:
@@ -478,13 +535,17 @@ class FT_CheckMaterialInputDict(FiretaskBase):
                 if key in input_dict:
                     out_dict['mp_id'] = str(input_dict[key])
                 else:
-                    s, MPID = GetLowEnergyStructure(str(input_dict['formula']))
-                    out_dict['mp_id'] = MPID
+                    nav_mp = NavigatorMP()
+                    struct, mp_id = nav_mp.get_low_energy_structure(
+                        chem_formula=str(input_dict['formula']))
+                    out_dict['mp_id'] = mp_id
+            
             if key == 'min_thickness':
                 if key in input_dict:
                     out_dict['min_thickness'] = float(input_dict[key])
                 else:
                     out_dict['min_thickness'] = min_thickness_default
+            
             if key == 'min_vacuum':
                 if key in input_dict:
                     out_dict['min_vacuum'] = float(input_dict[key])

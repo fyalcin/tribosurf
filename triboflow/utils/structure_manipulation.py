@@ -2,7 +2,7 @@ import numpy as np
 from pymatgen.core.surface import Slab
 from pymatgen.core.sites import PeriodicSite
 
-from triboflow.utils.database import GetPropertyFromMP
+from triboflow.utils.database import NavigatorMP
 
 def SlabFromStructure(miller, structure):
     """Returns a pymatgen.core.surface.Slab from a pymatgen structure.
@@ -20,14 +20,14 @@ def SlabFromStructure(miller, structure):
         The input structure converted to a Slab
 
     """
-    return Slab(lattice = structure.lattice,
-                species = structure.species_and_occu,
-                coords = structure.frac_coords,
-                miller_index = miller,
-                oriented_unit_cell = structure,
-                shift = 0,
-                scale_factor = np.eye(3, dtype=np.int),
-                site_properties = structure.site_properties)
+    return Slab(lattice=structure.lattice,
+                species=structure.species_and_occu,
+                coords=structure.frac_coords,
+                miller_index=miller,
+                oriented_unit_cell=structure,
+                shift=0,
+                scale_factor=np.eye(3, dtype=np.int),
+                site_properties=structure.site_properties)
 
 def CleanUpSiteProperties(structure):
     """
@@ -93,8 +93,8 @@ def StackAlignedSlabs(bottom_slab, top_slab, top_shift=[0,0,0]):
     t_copy = top_slab.copy()
     
     t_copy.translate_sites(indices=range(len(t_copy.sites)),
-                        vector=top_shift,
-                        frac_coords=False, to_unit_cell=False)
+                           vector=top_shift,
+                           frac_coords=False, to_unit_cell=False)
     
     for s in t_copy.sites:
         new_site = PeriodicSite(lattice=interface.lattice,
@@ -139,14 +139,14 @@ def ReCenterAlignedSlabs(top_slab, bottom_slab, d=2.5):
     bot_shift = -max(bot_zs) - d/2
 
     t_copy.translate_sites(indices=range(len(t_copy.sites)),
-                        vector=[0,0,top_shift],
-                        frac_coords=False, to_unit_cell=False)
+                           vector=[0,0,top_shift],
+                           frac_coords=False, to_unit_cell=False)
     b_copy.translate_sites(indices=range(len(b_copy.sites)),
-                        vector=[0,0,bot_shift],
-                        frac_coords=False, to_unit_cell=False)
+                           vector=[0,0,bot_shift],
+                           frac_coords=False, to_unit_cell=False)
     return t_copy, b_copy
 
-def InterfaceName(mp_id_1, miller_1, mp_id_2, miller_2):
+def interface_name(mp_id_1, miller_1, mp_id_2, miller_2):
     """Return a name for an interface based on MP-IDs and miller indices.
 
     Parameters
@@ -168,8 +168,18 @@ def InterfaceName(mp_id_1, miller_1, mp_id_2, miller_2):
         Unique name for the interface of two slabs.
 
     """
-    f1 = GetPropertyFromMP(mp_id_1, 'pretty_formula')
-    f2 = GetPropertyFromMP(mp_id_2, 'pretty_formula')
+
+    nav_mp = NavigatorMP()
+    f1 = nav_mp.get_property_from_mp(
+        mp_id=mp_id_1,
+        properties=['pretty_formula'])
+    f1 = f1['pretty_formula']
+
+    f2 = nav_mp.get_property_from_mp(
+        mp_id=mp_id_2,
+        properties=['pretty_formula'])
+    f2 = f2['pretty_formula']
+
     if type(miller_1) is list:
         m1 = ''.join(str(s) for s in miller_1)
     else:
@@ -178,8 +188,10 @@ def InterfaceName(mp_id_1, miller_1, mp_id_2, miller_2):
         m2 = ''.join(str(s) for s in miller_2)
     else:
         m2 = miller_2
+
     n1 = min(f1+m1, f2+m2)
     n2 = max(f1+m1, f2+m2)
     ids = min(mp_id_1+'_'+mp_id_2, mp_id_2+'_'+mp_id_1)
     name = '_'.join((n1, n2, ids))
+
     return name
