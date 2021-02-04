@@ -130,6 +130,7 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
     uis['SIGMA'] = 0.05
     uis['ISMEAR'] = -5
     uis['EDIFF'] = 1.0e-6
+    uis['SYMPREC'] = 1e-06
     
     if static_type.endswith('from_scratch'):
         uis['ICHARG'] = 2
@@ -249,10 +250,9 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
     """
 
     allowed_types = ['bulk_full_relax', 'bulk_vol_relax', 'bulk_pos_relax',
-                        'bulk_shape_relax',
-                        'slab_shape_relax', 'slab_pos_relax',
-                        'interface_shape_relax', 'interface_pos_relax',
-                        'interface_z_relax']
+                     'bulk_shape_relax', 'slab_shape_relax', 'slab_pos_relax',
+                     'interface_shape_relax', 'interface_pos_relax',
+                     'interface_z_relax']
     
     if relax_type not in allowed_types:
         raise SystemExit('relax type is not known. Please select from: {}'
@@ -269,6 +269,7 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
     uis['NELMIN'] = 5
     uis['EDIFF'] = 0.5E-5
     uis['LAECHG'] = '.FALSE.'
+    uis['SYMPREC'] = 1e-06
     
     if structure.num_sites < 20:
         uis['LREAL'] = '.FALSE.'
