@@ -39,7 +39,7 @@ class FT_StartEncutConvo(FiretaskBase):
         stop_convergence = data.get('encut_info')
         
         if not stop_convergence:
-            structure = Structure.from_dict(data.get('structure_fromMP'))
+            structure = Structure.from_dict(data.get('primitive_structure'))
             comp_params = data.get('comp_parameters', {})
             SWF = ConvergeEncut_SWF(structure = structure, flag = mp_id,
                                     comp_parameters = comp_params,
