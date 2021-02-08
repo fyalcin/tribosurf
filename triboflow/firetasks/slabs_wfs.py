@@ -34,7 +34,7 @@ class SlabWFs:
     """
 
     @staticmethod
-    def converge_thickness_surfene(structure,
+    def conv_slabthick_surfene(structure,
                                    flag,
                                    miller,
                                    comp_parameters={},
@@ -125,7 +125,7 @@ class SlabWFs:
         return wf
 
     @staticmethod
-    def converge_thickness_alat():        
+    def conv_slabthick_alat():        
         """
         Method description
         """

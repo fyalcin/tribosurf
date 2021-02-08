@@ -32,16 +32,28 @@ currentdir = os.path.dirname(__file__)
 # ============================================================================
 
 @explicit_serialize
-class FT_StartSlabThicknessConvo(FiretaskBase):
+class FT_SlabOptThick(FiretaskBase):
     """
-    Firetask description...
-    
+    Start a subworkflow as a detour to calculate the optimal thickness generated
+    from a provided bulk structure and with a certain orientation.
+    The thickness can be converged either by evaluating how the surface energy
+    or the lattice parameters changes with the number of atomic planes.
+
+    bulk_name : str or None, optional
+        Name of the bulk structure in the bulk database (material is
+        identified by mp_id, but there might be different structures of the
+        same material.) The default is None.
+    slab_name : str or None, optional
+        Name of the slab to be put in the DB, otherwise identified by mp_id 
+        and miller index. The default is None.
+
     """
     
-    _fw_name = 'Slab Thickness convergence'
+    _fw_name = 'Converge the slab thickness'
 
     required_params = ['mp_id', 'miller', 'functional']
-    optional_params = ['db_file', 'high_level', 'relax_type', 'convo_kind'] #'bulk_struct_name', 'slab_out_name'
+    optional_params = ['db_file', 'high_level', 'relax_type', 'convo_kind', 
+                       'bulk_name', 'slab_name'] 
     
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -57,7 +69,13 @@ class FT_StartSlabThicknessConvo(FiretaskBase):
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
         high_level = self.get('high_level', None)
+        relax_type = self.get('relax_type', 'slab_pos_relax')
         convo_kind = self.get('convo_kind', 'surfene')
+
+        slab_name = self.get('slab_struct_name', 'unrelaxed_slab')
+        
+        bulk_name = self.get('bulk_struct_name', 'structure_equiVol')
+        slab_out_name = self.get('slab_out_name', 'relaxed_slab')
 
         defaults = read_json(currentdir + '/defaults.json')
         
@@ -97,7 +115,42 @@ class FT_OptimalThickness(FiretaskBase):
                        'output_dir', 'remote_copy', 'server', 'user', 'port']
 
     def run_task(self, fw_spec):
-        pass
+        
+        bulk lattice = Lattice.cubic(3.508)
+        bulk = Structure(lattice, ["Cu", "Cu", "Cu", "Cu"],
+                    [[0,0,0], [0,0.5,0.5], [0.5,0,0.5], [0.5,0.5,0]
+                    ])
+        miller = (1,1,0)
+        min_thickness = 6
+        min_vacuum = 0
+
+        Potcar()
+
+        slabgen = SlabGenerator(initial_structure = bulk,
+                                miller_index = miller,
+                                center_slab = True,
+                                primitive = False,
+                                lll_reduce = True,
+                                in_unit_planes = True,
+                                #max_normal_search=max([abs(l) for l in miller]),
+                                min_slab_size = min_thickness,
+                                min_vacuum_size = min_vacuum)
+
+        slabgen = SlabGenerator(initial_structure = bulk,
+                                miller_index = miller,
+                                center_slab=True,
+                                primitive=False,
+                                lll_reduce=True,
+                                in_unit_planes=True,
+                                #max_normal_search=max([abs(l) for l in miller]),
+                                min_slab_size=min_thickness,
+                                min_vacuum_size=min_vacuum)
+        bulk = slabgen.get_slab()
+
+        #bulk.to(fmt='poscar', filename='POSCAR')
+        slab.to(fmt='poscar', filename='POSCAR')
+
+
 
 # ============================================================================
 # Functions
@@ -121,3 +174,5 @@ def select_thickness_convo(structure, mp_id, miller, comp_params,
                       comp_parameters = comp_params, functional = functional, 
                       print_help = False)
     return wf
+
+def read_slaboptparams():
