@@ -8,7 +8,7 @@ Created on Fri Jun 19 16:15:02 2020
 
 from fireworks import LaunchPad, Firework, Workflow
 from fireworks.core.rocket_launcher import rapidfire
-from triboflow.workflows.main import Heterogeneous_WF
+from triboflow.workflows.main import heterogeneous_wf
 
 
 inputs = {'material_1': {'formula': 'MgO',
@@ -37,7 +37,7 @@ inputs = {'material_1': {'formula': 'MgO',
 
 
 
-WF = Heterogeneous_WF(inputs)
+WF = heterogeneous_wf(inputs)
 
 lpad = LaunchPad.auto_load()
 lpad.add_wf(WF)

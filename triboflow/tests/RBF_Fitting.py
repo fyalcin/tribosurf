@@ -5,10 +5,10 @@ Created on Thu Nov 26 09:50:38 2020
 
 @author: mwo
 """
-
-import numpy as np
 import math as m
 from pprint import pprint
+
+import numpy as np
 from scipy.interpolate import Rbf
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -16,11 +16,12 @@ from mpl_toolkits.mplot3d import Axes3D
 from pymatgen.core.surface import Slab
 from pymatgen.core.operations import SymmOp
 from pymatgen.analysis.structure_matcher import StructureMatcher
+
 from triboflow.phys.high_symmetry import get_slab_hs, get_interface_hs, \
-    pbc_hspoints, RemoveDuplicatesFromHSDicts, remove_equivalent_shifts, \
-        RoundPosInDict, AssigneAllPoints, CleanUpHSDicts
+    pbc_hspoints, remove_equivalent_shifts, \
+    RemoveDuplicatesFromHSDicts, RoundPosInDict, AssigneAllPoints, CleanUpHSDicts
 from triboflow.phys.potential_energy_surface import unfold_pes, get_pes
-from triboflow.utils.database import GetDBJSON, GetInterfaceFromDB
+from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.plot_tools import plot_slab_hs, plot_pes
 from triboflow.utils.structure_manipulation import interface_name, \
     clean_up_site_properties, stack_aligned_slabs, recenter_aligned_slabs
@@ -30,7 +31,8 @@ def test_function(x,y):
     z = np.cos(2*r) * np.exp(-0.5*abs(r))
     return z
 
-db_file = GetDBJSON()
+nav = Navigator()
+db_file = nav.path
 functional = 'PBE'
 name = 'FeRh001_MgO001_mp-1265_mp-1918'
 
@@ -68,7 +70,10 @@ name = 'FeRh001_MgO001_mp-1265_mp-1918'
 # =============================================================================
 
 
-interface_dict = GetInterfaceFromDB(name, db_file, functional)
+nav_structure = StructureNavigator(db_file=db_file, high_level='triboflow')
+interface_dict = nav_structure.get_interface_from_db(
+    name=name, 
+    functional=functional)
 c_u = interface_dict['PES']['high_symmetry_points']['combined_unique']
 c_a = interface_dict['PES']['high_symmetry_points']['combined_all']
 E_l = interface_dict['PES']['high_symmetry_points']['energy_list']
