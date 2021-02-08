@@ -61,8 +61,8 @@ class Navigator:
     db_file : str
         Path to the database.
 
-    high_level : bool
-        If True the database will be a high level database.
+    high_level : str
+        High level database name.
 
     db : VaspCalcDb
         A VASP database type.
@@ -74,6 +74,9 @@ class Navigator:
     -------
     __get_db(db_file)
         Create an instance of a VaspCalcDb database.
+
+    __initialize_obj_collection(collection)
+        Initialize a MongoDB object collection.
     
     update_data(collection, filter, new_values, )
         Update a single document matching the filter with the new value.
@@ -81,7 +84,7 @@ class Navigator:
     update_many_data(collection, filter, new_values, upsert)
         Update many documents that match the filter with the new values.
     
-    insert_data(collection, data, duplicates)
+    insert_data(collection, data, duplicates, message)
         Insert a single document in the collection.
     
     insert_many_data(collection, data, duplicates)
@@ -163,6 +166,32 @@ class Navigator:
         log.info('Successfully connected to: {}.'.format(db_file))
         return vasp_db.db, db_file
     
+    def __initialize_obj_collection(self, collection):
+        """
+        Initialize a MongoDB object collection.
+
+        Parameters
+        ----------
+        collection : str, VaspCalcDb
+            Name of the collection in the database o r in the VaspCalcDb object.
+        
+        Return
+        ------
+        collection_obj : VaspCalcDb
+            Database object containing the collection of the database.     
+        """
+
+        if isinstance(collection, str):
+            collection_obj = self.db.coll[collection]
+        elif isinstance(collection, VaspCalcDb):
+            collection_obj = collection
+        else:
+            raise ValueError('{} is not a valid data type. The collection '
+                             'must be a string or VaspCalcDb.'
+                             ' '.format(type(collection)))
+        
+        return collection_obj
+
     def update_data(self, collection, filter, new_values, upsert=False):
         """
         Update a single document matching the filter with the new value.
@@ -170,7 +199,7 @@ class Navigator:
         https://pymongo.readthedocs.io/en/stable/api/pymongo/collection.html#pymongo.collection.Collection.update_one
 
         Parameters
-        ---------
+        ----------
         collection : str, VaspCalcDb
             Name of the collection in the database or in the VaspCalcDb object.
 
@@ -195,14 +224,7 @@ class Navigator:
 
         """
 
-        if isinstance(collection, str):
-            collection_obj = self.db.coll[collection]
-        elif isinstance(collection, VaspCalcDb):
-            collection_obj = collection
-        else:
-            raise ValueError('{} is not a valid data type. The collection '
-                             'must be a string or VaspCalcDb.'
-                             ' '.format(type(collection)))
+        collection_obj = self.__initialize_obj_collection(collection)
 
         log.info('Updating the collection {} withe the new data {}.'
                  ''.format(collection, new_values))
@@ -215,7 +237,7 @@ class Navigator:
         https://pymongo.readthedocs.io/en/stable/api/pymongo/collection.html#pymongo.collection.Collection.update_many
 
         Parameters
-        ---------
+        ----------
         collection : str, VaspCalcDb
             Name of the collection in the database or in the VaspCalcDb object.
         
@@ -235,27 +257,20 @@ class Navigator:
 
         """
 
-        if isinstance(collection, str):
-            collection_obj = self.db.coll[collection]
-        elif isinstance(collection, VaspCalcDb):
-            collection_obj = collection
-        else:
-            raise ValueError('{} is not a valid data type. The collection '
-                             'must be a string or VaspCalcDb.'
-                             ' '.format(type(collection)))
+        collection_obj = self.__initialize_obj_collection(collection)
 
         log.info('Updating the collection {} withe the new data {}.'
                  ''.format(collection, new_values))
         collection_obj.update_many(filter, new_values, upsert)
 
-    def insert_data(self, collection, data, duplicates=False):
+    def insert_data(self, collection, data, duplicates=False, message=None):
         """
         Insert a single document in the collection.
 
         https://pymongo.readthedocs.io/en/stable/api/pymongo/collection.html#pymongo.collection.Collection.insert_one
 
         Parameters
-        ---------
+        ----------
         collection : str, VaspCalcDb
             Name of the collection in the database or a VaspCalcDb object.
 
@@ -265,6 +280,9 @@ class Navigator:
         duplicates : bool, Optional
             If True the data are saved in the database even if they are 
             duplicates.
+        
+        message : str, Optional
+            Custom message to write in the console and/or in the log file.
 
         Return
         ------
@@ -272,20 +290,17 @@ class Navigator:
 
         """
 
-        if isinstance(collection, str):
-            collection_obj = self.db.coll[collection]
-        elif isinstance(collection, VaspCalcDb):
-            collection_obj = collection
-        else:
-            raise ValueError('{} is not a valid data type. The collection '
-                             'must be a string or VaspCalcDb.'
-                             ' '.format(type(collection)))
+        collection_obj = self.__initialize_obj_collection(collection)
         
         if not duplicates:
             if self.find_data(collection, data):
-                log.warning('{} already exist in {} collection.'
-                            'Use the duplicates flag for saving multiple times '
-                            'the same document.'.format(data, collection))
+                if message:
+                    log.warning(message)
+                else:
+                    log.warning('{} already exist in {} collection.'
+                                'Use the duplicates flag for saving multiple '
+                                'times the same document.'
+                                ''.format(data, collection))
                 return
 
         log.info('Writing {} in the collection {}.'.format(data, collection))
@@ -298,7 +313,7 @@ class Navigator:
         https://pymongo.readthedocs.io/en/stable/api/pymongo/collection.html#pymongo.collection.Collection.insert_many
 
         Parameters
-        ---------
+        ----------
         collection : str, VaspCalcDb
             Name of the collection in the database or a VaspCalcDb object.
 
@@ -316,14 +331,8 @@ class Navigator:
 
         """
 
-        if isinstance(collection, str):
-            collection_obj = self.db.coll[collection]
-        elif isinstance(collection, VaspCalcDb):
-            collection_obj = collection
-        else:
-            raise ValueError('{} is not a valid data type. The collection '
-                             'must be a string or VaspCalcDb.'
-                             ' '.format(type(collection)))
+        collection_obj = self.__initialize_obj_collection(collection)
+
         if not duplicates:
             document_index = 0
             duplicates = []
@@ -371,19 +380,13 @@ class Navigator:
 
         """
 
-        if isinstance(collection, str):
-            collection_obj = self.db.coll[collection]
-        elif isinstance(collection, VaspCalcDb):
-            collection_obj = collection
-        else:
-            raise ValueError('{} is not a valid data type. The collection '
-                             'must be a string or VaspCalcDb.'
-                             ' '.format(type(collection)))
+        collection_obj = self.__initialize_obj_collection(collection)
 
         data = collection_obj.find_one(filter)
 
-        if not data == 0:
+        if not data:
             log.warning('There are no data for {}.'.format(filter))
+            return data
 
         log.info('{} has been found in {}.'. format(filter, collection))
         return data
@@ -412,19 +415,13 @@ class Navigator:
 
         """
 
-        if isinstance(collection, str):
-            collection_obj = self.db.coll[collection]
-        elif isinstance(collection, VaspCalcDb):
-            collection_obj = collection
-        else:
-            raise ValueError('{} is not a valid data type. The collection '
-                             'must be a string or VaspCalcDb.'
-                             ' '.format(type(collection)))
+        collection_obj = self.__initialize_obj_collection(collection)
 
         data = collection_obj.find(filter)
 
         if not data:
             log.warning('There are no data for {}.'.format(filter))
+            return data
 
         log.info('{} has been found in {}.'. format(filter, collection))
         return data
@@ -449,14 +446,7 @@ class Navigator:
 
         """
 
-        if isinstance(collection, str):
-            collection_obj = self.db.coll[collection]
-        elif isinstance(collection, VaspCalcDb):
-            collection_obj = collection
-        else:
-            raise ValueError('{} is not a valid data type. The collection '
-                             'must be a string or VaspCalcDb.'
-                             ' '.format(type(collection)))
+        collection_obj = self.__initialize_obj_collection(collection)
 
         log.info('Deleting {} from the collection {}.'
                  ''.format(filter, collection))
@@ -482,14 +472,7 @@ class Navigator:
 
         """
 
-        if isinstance(collection, str):
-            collection_obj = self.db.coll[collection]
-        elif isinstance(collection, VaspCalcDb):
-            collection_obj = collection
-        else:
-            raise ValueError('{} is not a valid data type. The collection '
-                             'must be a string or VaspCalcDb.'
-                             ' '.format(type(collection)))
+        collection_obj = self.__initialize_obj_collection(collection)
 
         collection_obj.delete_many(filter)
 
@@ -518,24 +501,220 @@ class Navigator:
         if user_date == current_date:
             log.critical('Removing {} from the database.'
                          ''.format(collection))
-            if isinstance(collection, str):
-                collection_obj = self.db.coll[collection]
-            elif isinstance(collection, VaspCalcDb):
-                collection_obj = collection
-            else:
-                raise ValueError('{} is not a valid data type. The collection '
-                                 'must be a string or VaspCalcDb.'
-                                 ' '.format(type(collection)))
+            collection_obj = self.__initialize_obj_collection(collection)
             self.db.collection_obj.drop()
         else:
             log.critical('The current date is wrong!!! '
                          'No entries in the database have been removed.')
 
 
+class StructureNavigator(Navigator):
+    """
+    Child class of Navigator in which are implemented all the methods required 
+    for writing and loading data from the database about bulk, slab, 
+    and interface.
+    
+    These functions are taken from the TriboFlow package, Michael Wolloch.
+
+    Attributes
+    ----------
+    high_level : str
+        High level database name.
+    
+    Methods
+    -------
+    add_bulk_to_db(structure, mp_id, functional, message)
+        Insert a bulk structure in the triboflow high level database.
+
+    get_bulk_from_db(mp_id, functional)
+        Get the data about bulk from the triboflow high level database.
+
+    get_slab_from_db(mp_id, functional, miller)
+        Get the data about slab from the triboflow high level database.
+    
+    get_interface_from_db(name, functional)
+        Get the data about intreface from the eos database.
+
+    get_last_bmd_data_from_db(formula)
+        Get the last bulkmodule from the FireWorks database.
+
+
+    """
+
+    def __init__(self, db_file, high_level):
+        super().__init__(db_file=db_file, high_level=high_level)
+
+    def add_bulk_to_db(self, structure, mp_id, functional, message=None):
+        """
+        Insert a bulk structure in the triboflow high level database.
+
+        Parameters
+        ----------
+        structure : pymatgen.core.structure.Structure
+            Structure of the bulk in the pymatgen Structure format.
+
+        mp_id : str
+            Materials Project id of the structure.
+        
+        functional : str
+            Functional. It could be PBE por SCAN.
+        
+        message : str, Optional
+            Custom message to write in the console and/or in the log file.
+
+        Returns
+        -------
+        None.
+
+        """
+
+        formula = structure.composition.reduced_formula
+        self.insert_data(
+            functional+'.bulk_data', 
+            {'mpid': mp_id,
+             'formula': formula,
+             'structure_fromMP': structure.as_dict()}, 
+             message=message)
+    
+    def get_bulk_from_db(self, mp_id, functional):
+        """
+        Get the data about bulk from the triboflow high level database.
+        
+        Parameters
+        ----------
+        mp_id : str
+            Materials Project id of the structure.
+        
+        functional : str
+            Functional. It could be PBE por SCAN.
+        
+        Raises
+        ------
+        IOError
+            If there is no result from the query.
+
+        Returns
+        -------
+        bulk : variable object
+            Database object which contains the data for the selected bulk.
+
+        """
+
+        bulk = self.find_data(
+            functional+'.bulk_data',
+            {'mpid': mp_id})
+        
+        if bulk:
+            return bulk
+        else:
+            raise IOError('No bulk material with MP-ID {} is found in the'
+                          '{}.bulk_data collection.'.format(mp_id, functional))
+
+
+    def get_slab_from_db(self, mp_id, functional, miller):
+        """
+        Get the data about slab from the triboflow high level database.
+
+        Parameters
+        ----------
+        mp_id : str
+            Materials Project id of the structure.
+        
+        functional : str
+            Functional. It could be PBE por SCAN.
+        
+        miller : str
+            Miller indices for the slab as a list of three integers.
+        
+        Raises
+        ------
+        IOError
+            If there is no result from the query.
+
+        Returns
+        -------
+        slab : variable object
+            Database object which contains the data for the selected slab.
+        
+        """
+
+        slab = self.find_data(
+            functional+'.slab_data',
+            {'mpid': mp_id, 'miller': miller})
+        
+        if slab:
+            return slab
+        else:
+            raise IOError('No slab with MP-ID {} and miller indices {} was found'
+                          ' in the {}.slab_data collection.'
+                          .format(mp_id, miller, functional))
+
+    def get_interface_from_db(self, name, functional):
+        """
+        Get the data about intreface from the eos database.
+
+        Parameters
+        ----------
+        name : str
+            Unique name of the interface as 
+        
+        functional : str
+            Functional. It could be PBE por SCAN.
+        
+        Raises
+        ------
+        IOError
+            If there is no result from the query.
+        
+        Returns
+        -------
+        interface : variable object
+            Database object which contains the data for the selected slab.
+    
+        """
+        
+        interface = self.find_data(
+            functional+'.interface_data',
+            {'name': name})
+        
+        if interface:
+            return interface
+        else:
+            raise IOError(
+                'No interface with name {} was found in the '
+                '{}.interface_data collection.'.format(name, functional))
+
+    def get_last_bmd_data_from_db(self, formula):
+        """
+        Get the last bulkmodule from the FireWorks database.
+
+        A query is made to the eos collection in the Fireworks database for a
+        given chemical formula. The results are sorted ascending by creation 
+        date and than the last one is returned as a dictionary.
+
+        Parameters
+        ----------
+        formula : str
+            Chemical formula of the interface to query.
+
+        Returns
+        -------
+        interface : variable object
+            Interface generated by the get_wf_bulk_modulus workflow of atomate.
+
+        """
+
+        interface = self.db.eos.find(
+            {'formula_pretty': formula}).sort('created_at', pymongo.DESCENDING)
+        
+        return interface[0]
+    
 class NavigatorMP:
     """
     This class is a high level interface for connecting with the Materials
     Project database (https://materialsproject.org/).
+
+    These functions are taken from the TriboFlow package, Michael Wolloch.
 
     Attributes
     ----------
@@ -767,3 +946,4 @@ def image_bytes_converter(data, to_image=True):
         data_conv = convert_image_to_bytes(data)
             
     return data_conv
+
