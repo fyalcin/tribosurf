@@ -53,7 +53,7 @@ class FT_SlabOptThick(FiretaskBase):
 
     """
     
-    _fw_name = 'Converge the slab thickness'
+    _fw_name = 'Start a swf to converge slab thickness'
 
     required_params = ['mp_id', 'miller', 'functional']
     optional_params = ['db_file', 'low_level', 'high_level', 'relax_type', 
@@ -99,49 +99,72 @@ class FT_SlabOptThick(FiretaskBase):
         else:
             return FWAction(update_spec=fw_spec)
 
-
-# @explicit_serialize
-# class FT_OptimalThickness(FiretaskBase):
-
-#     """
-#     Firetask description...
+@explicit_serialize
+class FT_StartThickConvo(FiretaskBase):
+    """
+    Firetask description...
     
-#     """
+    """
     
-#     _fw_name = 'Surface Energy calculation'
-#     required_params = ['flag', 'miller', 'functional', 'tag']
-#     optional_params = ['db_file', 'struct_out_name', 'file_output',
-#                        'output_dir', 'remote_copy', 'server', 'user', 'port']
+    _fw_name = 'Surface Energy calculation'
+    required_params = ['mp_id', 'miller', 'functional']
+    optional_params = ['db_file', 'low_level', 'high_level', 'relax_type', 
+                       'convo_kind', 'bulk_name', 'slab_name', ] 
 
-#     def run_task(self, fw_spec):
+    def run_task(self, fw_spec):
+        """ Run the Firetask.
+        """
         
-#         min_thickness = 6
-#         min_vacuum = 0
+        min_thickness = 6
+        min_vacuum = 0
 
-#         slabgen = SlabGenerator(initial_structure = bulk,
-#                                 miller_index = miller,
-#                                 center_slab = True,
-#                                 primitive = False,
-#                                 lll_reduce = True,
-#                                 in_unit_planes = True,
-#                                 #max_normal_search=max([abs(l) for l in miller]),
-#                                 min_slab_size = min_thickness,
-#                                 min_vacuum_size = min_vacuum)
+        slabgen = SlabGenerator(initial_structure = bulk,
+                                miller_index = miller,
+                                center_slab = True,
+                                primitive = False,
+                                lll_reduce = True,
+                                in_unit_planes = True,
+                                #max_normal_search=max([abs(l) for l in miller]),
+                                min_slab_size = min_thickness,
+                                min_vacuum_size = min_vacuum)
 
-#         slabgen = SlabGenerator(initial_structure = bulk,
-#                                 miller_index = miller,
-#                                 center_slab=True,
-#                                 primitive=False,
-#                                 lll_reduce=True,
-#                                 in_unit_planes=True,
-#                                 #max_normal_search=max([abs(l) for l in miller]),
-#                                 min_slab_size=min_thickness,
-#                                 min_vacuum_size=min_vacuum)
-#         bulk = slabgen.get_slab()
+        slabgen = SlabGenerator(initial_structure = bulk,
+                                miller_index = miller,
+                                center_slab=True,
+                                primitive=False,
+                                lll_reduce=True,
+                                in_unit_planes=True,
+                                #max_normal_search=max([abs(l) for l in miller]),
+                                min_slab_size=min_thickness,
+                                min_vacuum_size=min_vacuum)
+        bulk = slabgen.get_slab()
 
-#         #bulk.to(fmt='poscar', filename='POSCAR')
-#         slab.to(fmt='poscar', filename='POSCAR')
+        #bulk.to(fmt='poscar', filename='POSCAR')
+        slab.to(fmt='poscar', filename='POSCAR')
 
+@explicit_serialize
+class FT_EndThickConvo(FiretaskBase):
+    """
+    Firetask description...
+    
+    """
+
+    def run_task(elf, fw_spec):
+        """ Run the Firetask.
+        """ 
+    pass
+
+@explicit_serialize
+class FT_GenerateSlabs(FiretaskBase):
+    """
+    Firetask description...
+    
+    """
+
+    def run_task(elf, fw_spec):
+        """ Run the Firetask.
+        """ 
+    pass
 
 
 # ============================================================================

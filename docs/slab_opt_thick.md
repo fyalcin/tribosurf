@@ -27,9 +27,9 @@ The required and optional parameters are:
 
 2. **conv_slabthick_surfene**: Function to start a subworkflow. Set the computational and cluster parameters and open a subworkflow.
 
-3. **FT_GenerateSlabs**: Create all the necessary inputs for the slabs and save them in the local database, in order to retrieve them later. You can pass a bulk strcture and a list (of dictionary) containing the required options to feed SlabGenerator.
+3. **FT_StartThickConvo**: Firetask to start a detour to relax the bulk and the slabs with different numbers of layers. The data are retrieved from the provided database, the local one as the default.
 
-4. **FT_StartThickConvo**: Firetask to start a detour to relax the bulk and the slabs with different numbers of layers. The data are retrieved from the provided database, the local one as the default.
+4. **FT_GenerateSlabs**: Create all the necessary inputs for the slabs and save them in the local database, in order to retrieve them later. You can pass a bulk strcture and a list (of dictionary) containing the required options to feed SlabGenerator.
 
 5. **FT_RelaxStructure**: Generically relax a structure which is passed as input, such as bulks, slabs and interfaces. Before doing the relaxation it checks if the calculation has been already done previously calculated and stored on databases. It stores the final data on the provided database, the local one as the default.
 

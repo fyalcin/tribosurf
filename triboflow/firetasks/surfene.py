@@ -26,6 +26,18 @@ from triboflow.utils.database import Navigator, NavigatorMP
 # ============================================================================
 
 @explicit_serialize
+class FT_RelaxStructure(FiretaskBase):
+    """
+    Firetask description...
+    
+    """
+
+    def run_task(elf, fw_spec):
+        """ Run the Firetask.
+        """ 
+    pass
+
+@explicit_serialize
 class FT_SurfaceEnergy(FiretaskBase):
     """
     Firetask description...
@@ -38,6 +50,7 @@ class FT_SurfaceEnergy(FiretaskBase):
     
     def run_task(self, fw_spec):
         
+
 
 
 # ============================================================================
