@@ -15,10 +15,13 @@ __copyright__ = 'Prof. M.C. Righi, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 2nd, 2021'
 
+import os
+
 from fireworks.utilities.fw_utilities import explicit_serialize
 from fireworks import FiretaskBase, FWAction
 from atomate.utils.utils import env_chk
 from pymatgen.core.structure import Structure
+from pymatgen.core.surface import SlabGenerator
 from pymatgen.transformations.advanced_transformations import SlabTransformation
 
 from triboflow.utils.database import Navigator, NavigatorMP
@@ -54,46 +57,33 @@ class FT_SlabOptThick(FiretaskBase):
     required_params = ['mp_id', 'miller', 'functional']
     optional_params = ['db_file', 'high_level', 'relax_type', 'convo_kind', 
                        'bulk_name', 'slab_name'] 
-    
+
     def run_task(self, fw_spec):
         """ Run the Firetask.
         """ 
-     
-        # Read required parameters
-        flag = self['mp_id']
-        miller = self['miller']
-        functional = self['functional']
 
-        # Set optional parameters
-        db_file = self.get('db_file')
-        if not db_file:
-            db_file = env_chk('>>db_file<<', fw_spec)
-        high_level = self.get('high_level', None)
-        relax_type = self.get('relax_type', 'slab_pos_relax')
-        convo_kind = self.get('convo_kind', 'surfene')
-
-        slab_name = self.get('slab_struct_name', 'unrelaxed_slab')
-        
-        bulk_name = self.get('bulk_struct_name', 'structure_equiVol')
-        slab_out_name = self.get('slab_out_name', 'relaxed_slab')
-
-        defaults = read_json(currentdir + '/defaults.json')
+        # Define the json file containing default values and read parameters
+        dfl = currentdir + '/defaults_fw.json'
+        p = read_runtask_params(self, fw_spec, required_params, optional_params,
+                                default_file = dfl, default_key="SlabOptThick")
         
         # Retrieve the bulk information from the high level DB
-        nav = Navigator(db_file, high_level)
-        slab = nav.find_data(functional+'.slab_data', {'mpid': flag, 
-                                                       'miller': miller})
+        nav = Navigator(p['db_file'], p['high_level'])
+        slab = nav.find_data(p['functional']+'.slab_data', 
+                             {'mpid': p['mp_id'], 'miller': p['miller']})
 
-        # Run the Subworkflow to converge the thickness
-        stop_convergence = slab.get('opt_thickness')
+        # Start a subworkflow to converge the thickness if not already done
+        stop_convergence = slab.get('opt_thickness', None)
         if not stop_convergence:
-            # Find out the structure
-            bulk = nav.find_data(functional+'.bulk_data', {'mpid': flag})
+            # Retrieve the bulk structure
+            bulk = nav.find_data(p['functional']+'.bulk_data', 
+                                 {'mpid': p['mp_id']})
             structure = Structure.from_dict(bulk.get('structure_fromMP'))
             comp_params = slab.get('comp_parameters', {})
 
-            wf = select_thickness_convo(structure, flag, miller, comp_params, 
-                                        functional, convo_kind)
+            wf = select_slabthick_conv(structure, p['mp_id'], p['miller'], 
+                                       comp_params, p['functional'], 
+                                       p['convo_kind'])
 
             return FWAction(detours=wf, update_spec=fw_spec)
 
@@ -101,54 +91,48 @@ class FT_SlabOptThick(FiretaskBase):
         else:
             return FWAction(update_spec=fw_spec)
 
-@explicit_serialize
-class FT_OptimalThickness(FiretaskBase):
 
-    """
-    Firetask description...
-    
-    """
-    
-    _fw_name = 'Surface Energy calculation'
-    required_params = ['flag', 'miller', 'functional', 'tag']
-    optional_params = ['db_file', 'struct_out_name', 'file_output',
-                       'output_dir', 'remote_copy', 'server', 'user', 'port']
+# @explicit_serialize
+# class FT_OptimalThickness(FiretaskBase):
 
-    def run_task(self, fw_spec):
+#     """
+#     Firetask description...
+    
+#     """
+    
+#     _fw_name = 'Surface Energy calculation'
+#     required_params = ['flag', 'miller', 'functional', 'tag']
+#     optional_params = ['db_file', 'struct_out_name', 'file_output',
+#                        'output_dir', 'remote_copy', 'server', 'user', 'port']
+
+#     def run_task(self, fw_spec):
         
-        bulk lattice = Lattice.cubic(3.508)
-        bulk = Structure(lattice, ["Cu", "Cu", "Cu", "Cu"],
-                    [[0,0,0], [0,0.5,0.5], [0.5,0,0.5], [0.5,0.5,0]
-                    ])
-        miller = (1,1,0)
-        min_thickness = 6
-        min_vacuum = 0
+#         min_thickness = 6
+#         min_vacuum = 0
 
-        Potcar()
+#         slabgen = SlabGenerator(initial_structure = bulk,
+#                                 miller_index = miller,
+#                                 center_slab = True,
+#                                 primitive = False,
+#                                 lll_reduce = True,
+#                                 in_unit_planes = True,
+#                                 #max_normal_search=max([abs(l) for l in miller]),
+#                                 min_slab_size = min_thickness,
+#                                 min_vacuum_size = min_vacuum)
 
-        slabgen = SlabGenerator(initial_structure = bulk,
-                                miller_index = miller,
-                                center_slab = True,
-                                primitive = False,
-                                lll_reduce = True,
-                                in_unit_planes = True,
-                                #max_normal_search=max([abs(l) for l in miller]),
-                                min_slab_size = min_thickness,
-                                min_vacuum_size = min_vacuum)
+#         slabgen = SlabGenerator(initial_structure = bulk,
+#                                 miller_index = miller,
+#                                 center_slab=True,
+#                                 primitive=False,
+#                                 lll_reduce=True,
+#                                 in_unit_planes=True,
+#                                 #max_normal_search=max([abs(l) for l in miller]),
+#                                 min_slab_size=min_thickness,
+#                                 min_vacuum_size=min_vacuum)
+#         bulk = slabgen.get_slab()
 
-        slabgen = SlabGenerator(initial_structure = bulk,
-                                miller_index = miller,
-                                center_slab=True,
-                                primitive=False,
-                                lll_reduce=True,
-                                in_unit_planes=True,
-                                #max_normal_search=max([abs(l) for l in miller]),
-                                min_slab_size=min_thickness,
-                                min_vacuum_size=min_vacuum)
-        bulk = slabgen.get_slab()
-
-        #bulk.to(fmt='poscar', filename='POSCAR')
-        slab.to(fmt='poscar', filename='POSCAR')
+#         #bulk.to(fmt='poscar', filename='POSCAR')
+#         slab.to(fmt='poscar', filename='POSCAR')
 
 
 
@@ -156,16 +140,16 @@ class FT_OptimalThickness(FiretaskBase):
 # Functions
 # ============================================================================
 
-def select_thickness_convo(structure, mp_id, miller, comp_params, 
-                           functional='PBE', convo_kind='surfene'):
+def select_slabthick_conv(structure, mp_id, miller, comp_params, 
+                          functional='PBE', convo_kind='surfene'):
     """
     Select the kind of thickness convergence
     """
     
     if convo_kind == 'surfene':
-        generate_wf = SlabWFs.converge_thickness_surfene
+        generate_wf = SlabWFs.conv_slabthick_surfene
     elif convo_kind == 'alat':
-        generate_wf = SlabWFs.converge_thickness_alat
+        generate_wf = SlabWFs.conv_slabthick_alat
     else:
         raise SlabThicknessError("Wrong input argument for convo_kind. "
                                  "Allowed options: 'surfene', 'alat'.")
@@ -175,4 +159,38 @@ def select_thickness_convo(structure, mp_id, miller, comp_params,
                       print_help = False)
     return wf
 
-def read_slaboptparams():
+def read_runtask_params(obj, fw_spec, required_params, optional_params,
+                        default_file, default_key):
+
+    defaults = read_json(default_file)
+    params = {}
+
+    # Read required and optional parameters
+    for key in required_params:
+        params[key] = obj[key]
+    for key in optional_params:
+        params[key] = obj.get(key, defaults[default_key][key])
+
+    if not 'db_file' in params.keys():
+        params['db_file'] = env_chk('>>db_file<<', fw_spec)
+
+    return params
+
+
+# # Read required parameters
+# flag = self['mp_id']
+# miller = self['miller']
+# functional = self['functional']
+
+# # Set optional parameters
+# db_file = self.get('db_file')
+# if not db_file:
+#     db_file = env_chk('>>db_file<<', fw_spec)
+# high_level = self.get('high_level', None)
+# relax_type = self.get('relax_type', 'slab_pos_relax')
+# convo_kind = self.get('convo_kind', 'surfene')
+
+# slab_name = self.get('slab_struct_name', 'unrelaxed_slab')
+
+# bulk_name = self.get('bulk_struct_name', 'structure_equiVol')
+# slab_out_name = self.get('slab_out_name', 'relaxed_slab')

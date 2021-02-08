@@ -1,0 +1,8 @@
+{
+    "SlabOptThick": {
+        "high_level": null,
+        "relax_type": 'slab_pos_relax',
+        "convo_kind": 'surfene',
+        "bulk_name": null,
+        "slab_name": null
+}

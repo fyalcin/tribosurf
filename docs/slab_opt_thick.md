@@ -20,23 +20,22 @@ It is possible to use our code both as a single workflow, which scan for the bul
 
 A schematic representation of our subworkflow is reported in the figure above. Now, a description of the main Firetasks as well as the list of required and optional parameters is made:
 
-1. **FT_SlabOptThick**: Firetasks to start a subworkflow within another workflow. You need to pass a lattice parameter trova il parametro thickness a
-Convergenza allora fa il detour 
-	- required_params = [<span style="color:orange">'mp_id'</span>, <span style="color:orange">'miller'</span>, <span style="color:orange">'functional'</span>] .
-	- optional_params = [<span style="color:orange">'db_file'</span>, <span style="color:orange">'high_level'</span>, <span style="color:orange">'relax_type'</span>, <span style="color:orange">'convo_kind'</span>, <span style="color:orange">'bulk_name'</span>, <span style="color:orange">'slab_name'</span>]
+1. **FT_SlabOptThick**: Firetasks to start a subworkflow within another workflow. Check if a specific slab saved in the high level database, and identified by an mpid and a set of miller index, has a *opt_thickness* option already present. If not present it starts a subworklow to converge the slab thickness, either via surface energy or lattice parameter (not yet implemented).
+The required and optional parameters are:
+	- **required_params** = [<span style="color:orange">'mp_id'</span>, <span style="color:orange">'miller'</span>, <span style="color:orange">'functional'</span>]
+	- **optional_params** = [<span style="color:orange">'db_file'</span>, <span style="color:orange">'high_level'</span>, <span style="color:orange">'relax_type'</span>, <span style="color:orange">'convo_kind'</span>, <span style="color:orange">'bulk_name'</span>, <span style="color:orange">'slab_name'</span>]
 
-2. **conv_slabthick_surfene**: Controlla I parametri e apre un subworkflow fatto solo di optimal thickness + store data in db
+2. **conv_slabthick_surfene**: Function to start a subworkflow. Set the computational and cluster parameters and open a subworkflow.
 
-3. **FT_GenerateSlabs**: Creo tutti gli input e li salvo nel database locale, in modo da poterli richiamare più tardi
-→ Tu gli passi una lista di strutture (bulk) e una lista di dizionari contenente le opzioni che vuoi per SlabGenerator. Ti crea tutto e ti carica sul db locale (o di alto livello) [creare default da qualche parte]. Flag: type_of_relax=relax (default è None)
+3. **FT_GenerateSlabs**: Create all the necessary inputs for the slabs and save them in the local database, in order to retrieve them later. You can pass a bulk strcture and a list (of dictionary) containing the required options to feed SlabGenerator.
 
-4. **FT_StartThickConvo**: Initial Firetasks of the real subworkflow wh
+4. **FT_StartThickConvo**: Firetask to start a detour to relax the bulk and the slabs with different numbers of layers. The data are retrieved from the provided database, the local one as the default.
 
-5. **FT_RelaxStructure**: Ognuno rilassa una struttura di competenza e salva tutto sul database locale. Controlla sul database locale più ogni database di alto livello che gli passi se la struttura che vuoi calcolare è stata già calcolata
+5. **FT_RelaxStructure**: Generically relax a structure which is passed as input, such as bulks, slabs and interfaces. Before doing the relaxation it checks if the calculation has been already done previously calculated and stored on databases. It stores the final data on the provided database, the local one as the default.
 
-6. **FT_SurfaceEnergy**: Calcola la surface energy raccogliendo tutti I dati che sono stati salvati,
+6. **FT_SurfaceEnergy**: Generically calculate the surface energy of a given slab (or a list of slabs) with respect to the corresponding bulk.
 
-7. **FT_EndThickConvo**: Calcola la surface energy ottimale, seleziona la struttura slab corrispondente, così come il bulk e carica tutto sul db di alto livello
+7. **FT_EndThickConvo**: End the calculation of the optimal slab thickness. It finds out the optimal surface energy and the corresponding number of atomic layers. It stores on the high level db the relaxed slab, its surface energy and optimal thickness. 
 
 
 
