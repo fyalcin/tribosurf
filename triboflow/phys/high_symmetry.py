@@ -8,11 +8,17 @@ Calculate the High Simmetry (HS) points for slab and interface
 @author: gl
 """
 
+__author__ = 'Gabriele Losi'
+__copyright__ = 'Prof. M.C. Righi, University of Bologna'
+__contact__ = 'clelia.righi@unibo.it'
+__date__ = 'February 8th, 2021'
+
 import numpy as np
 from monty.json import jsanitize
 from ase import Atoms
 from pymatgen.analysis.adsorption import AdsorbateSiteFinder
 from pymatgen.analysis.structure_matcher import StructureMatcher
+
 from triboflow.utils.structure_manipulation import stack_aligned_slabs, \
     clean_up_site_properties, recenter_aligned_slabs
 
@@ -67,16 +73,16 @@ def get_slab_hs(slab, allowed_sites=['ontop', 'bridge', 'hollow'], to_array=Fals
     adsf = AdsorbateSiteFinder(slab)
     
     # Extract the unique HS points for the given surface in the unit cell
-    unique_sites = adsf.find_adsorption_sites( distance = 0, 
-                                               symm_reduce = 0.01, 
-                                               near_reduce = 0.01, 
-                                               no_obtuse_hollow = True )
+    unique_sites = adsf.find_adsorption_sites( distance=0, 
+                                               symm_reduce=0.01, 
+                                               near_reduce=0.01, 
+                                               no_obtuse_hollow=True )
     
     #Extract all the HS points for the given surface in the lattice cell
-    replica_sites = adsf.find_adsorption_sites( distance = 0, 
-                                                symm_reduce = 0, 
-                                                near_reduce = 0.01, 
-                                                no_obtuse_hollow = True )
+    replica_sites = adsf.find_adsorption_sites( distance=0, 
+                                                symm_reduce=0, 
+                                                near_reduce=0.01, 
+                                                no_obtuse_hollow=True )
     
     # Identify the unique HS points of the slab and rename them
     hs = {} 
@@ -103,13 +109,13 @@ def get_slab_hs(slab, allowed_sites=['ontop', 'bridge', 'hollow'], to_array=Fals
     
     # Convert the elements of the dictionaries to proper numpy arrays and 
     # remove the z coordinate of the HS sites
-    hs = NormalizeHSDict(hs, to_array)
-    hs_all = NormalizeHSDict(hs_all, to_array)
+    hs = normalize_hs_dict(hs, to_array)
+    hs_all = normalize_hs_dict(hs_all, to_array)
 
     return hs, hs_all
 
 
-def HS_DictConverter(hs, to_array=True):
+def hs_dict_converter(hs, to_array=True):
     """
     Modify the type of the elements of the HS dictionary to list or np.ndarray.
 
@@ -194,11 +200,11 @@ def get_interface_hs(hs_1, hs_2, cell, to_array=False, z_red=True):
     
     typ_1 = list( set(type(k) for k in hs_1.values()) )[0]
     if typ_1 == list:
-        hs_1 = HS_DictConverter(hs_1, to_array=True)
+        hs_1 = hs_dict_converter(hs_1, to_array=True)
         
     typ_2 = list( set(type(k) for k in hs_1.values()) )[0]
     if typ_2 == list:
-        hs_2 = HS_DictConverter(hs_2, to_array=True)
+        hs_2 = hs_dict_converter(hs_2, to_array=True)
         
     
     # Calculate the shift between each HS point of the first material with each
@@ -224,12 +230,12 @@ def get_interface_hs(hs_1, hs_2, cell, to_array=False, z_red=True):
 def fix_hs_dicts(hs_unique, hs_all, top_aligned, bot_aligned,
                  ltol=0.01, stol=0.01, angle_tol=0.01,
                  primitive_cell=False, scale=False):
-    """Remove duplicate shifts from the hs points and assigne the replicas correctly.
+    """Remove duplicate shifts from the hs points and assign the replicas correctly.
     
     A StructureMatcher is defined with the selected tolerances and options and
     then used to remove equivalent shifts from the high-symmetry points
     dictionaries and assign the replicated points correctly to their unique
-    counterparts using the <RemoveEquivalentShifts> and <AssignReplicatePoints>
+    counterparts using the <remove_equivalent_shifts> and <assign_replicate_points>
     functions.
     
 
@@ -269,26 +275,26 @@ def fix_hs_dicts(hs_unique, hs_all, top_aligned, bot_aligned,
                                                 d=4.5)
     
     struct_match = StructureMatcher(ltol=ltol, stol=stol, angle_tol=angle_tol,
-                                primitive_cell=primitive_cell, scale=scale)
+                                    primitive_cell=primitive_cell, scale=scale)
     
-    #Use the structure matcher to find shifts leading to equivalent interfaces
-    #and pop these entries out of the dictionaries.
-    c_u, c_a = RemoveEquivalentShifts(hs_u=hs_unique.copy(),
-                                      hs_a=hs_all.copy(),
-                                      top_slab=top_slab,
-                                      bot_slab=bot_slab,
-                                      structure_matcher=struct_match)
+    # Use the structure matcher to find shifts leading to equivalent interfaces
+    # and pop these entries out of the dictionaries.
+    c_u, c_a = remove_equivalent_shifts(hs_u=hs_unique.copy(),
+                                        hs_a=hs_all.copy(),
+                                        top_slab=top_slab,
+                                        bot_slab=bot_slab,
+                                        structure_matcher=struct_match)
     
-    c_all = AssignReplicatePoints(hs_u=c_u,
-                                   hs_a=c_a,
-                                   top_slab=top_slab,
-                                   bot_slab=bot_slab,
-                                   structure_matcher=struct_match)
+    c_all = assign_replicate_points(hs_u=c_u,
+                                    hs_a=c_a,
+                                    top_slab=top_slab,
+                                    bot_slab=bot_slab,
+                                    structure_matcher=struct_match)
     
     return c_u, c_all
     
 
-def AssignReplicatePoints(hs_u, hs_a, top_slab, bot_slab, structure_matcher):
+def assign_replicate_points(hs_u, hs_a, top_slab, bot_slab, structure_matcher):
     """Assign the replicated high-symmetry points to the correct unique ones.
     
     Although most of the high-symmetry points should be assigned to the correct
@@ -344,7 +350,7 @@ def AssignReplicatePoints(hs_u, hs_a, top_slab, bot_slab, structure_matcher):
     
     return new_hsp_dict_a
 
-def RemoveEquivalentShifts(hs_u, hs_a, top_slab, bot_slab, structure_matcher):
+def remove_equivalent_shifts(hs_u, hs_a, top_slab, bot_slab, structure_matcher):
     """Remove equivalent shifts from an interface high-symmetry point dict.
     
     When the high-symmetry points of two slabs are combined by finding all the
@@ -402,7 +408,7 @@ def RemoveEquivalentShifts(hs_u, hs_a, top_slab, bot_slab, structure_matcher):
     return hs_u, hs_a
     
 
-def NormalizeHSDict(hs, to_array=True):
+def normalize_hs_dict(hs, to_array=True):
     """
     Convert the hs elements returned by get_slab_hs to proper np.array or lists 
     Important to use with unfolded HS points, which are lists of arrays
@@ -448,7 +454,7 @@ def pbc_hspoints(hs, cell, to_array=False, z_red=True):
     if len(typ) > 1:
         raise ValueError('Your dictionary is weird, values have mixed types')
     elif typ[0] != list:
-        hs = HS_DictConverter(hs, to_array=False)
+        hs = hs_dict_converter(hs, to_array=False)
     
     # Run over dictionary values and apply PBC
     hs_new = {}
@@ -463,7 +469,7 @@ def pbc_hspoints(hs, cell, to_array=False, z_red=True):
         if z_red:
             hs_new[k] = hs_new[k][:, :2]
             
-    hs_new = HS_DictConverter(hs_new, to_array=to_array)
+    hs_new = hs_dict_converter(hs_new, to_array=to_array)
     
     return hs_new    
 

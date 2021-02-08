@@ -8,6 +8,11 @@ Python functions to get the Shear Strength (SS) of an interface
 @author: gl
 """
 
+__author__ = 'Gabriele Losi'
+__copyright__ = 'Prof. M.C. Righi, University of Bologna'
+__contact__ = 'clelia.righi@unibo.it'
+__date__ = 'February 8th, 2021'
+
 import numpy as np
 
 
@@ -16,7 +21,7 @@ import numpy as np
 # =============================================================================
 
 
-def GetShearStrength(coords, rbf, delta=0.01):
+def get_shear_strength(coords, rbf, delta=0.01):
     """
     Calculate the shear strength given a path and a potential energy surface.
 
@@ -89,10 +94,10 @@ def GetShearStrength(coords, rbf, delta=0.01):
     return data_ss_mep, ss_mep
         
 
-def GetShearStrength_xy(lattice, rbf, params=None):   
+def get_shear_strength_xy(lattice, rbf, params=None):   
     """
     Calculate the shear strength along the x and y directions of the cell.
-    Simplified version of GetShearStrength.
+    Simplified version of get_shear_strength.
     
     TODO : generalize the function in order to calculate the SS along any 
     straigth line
@@ -121,8 +126,8 @@ def GetShearStrength_xy(lattice, rbf, params=None):
     for i in range(len(x)):
         coordx=x[i]
         coordy=y[i]
-        zdev_x[i] = TakeDerivative(rbf, coordx, coordy, m=0, delta=delta)
-        zdev_y[i] = TakeDerivative(rbf, coordx, coordy, m=None, delta=delta)
+        zdev_x[i] = take_derivative(rbf, coordx, coordy, m=0, delta=delta)
+        zdev_y[i] = take_derivative(rbf, coordx, coordy, m=None, delta=delta)
     
     #Shear strength in GPa    
     ss_x = np.amax(np.abs(zdev_x))*10.0
@@ -139,7 +144,7 @@ def GetShearStrength_xy(lattice, rbf, params=None):
 # =============================================================================
 
 
-def TakeDerivative(rbf, coordx, coordy, m=None ,delta=0.01):
+def take_derivative(rbf, coordx, coordy, m=None ,delta=0.01):
     """
     Inner function used to calculate the shear strength
 
