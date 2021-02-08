@@ -20,13 +20,13 @@ __date__ = 'March 11th, 2020'
 # Custom FireWorks
 # =============================================================================
 
-def RunPESCalcsFW(top_slab, bottom_slab, interface_name,
-                  functional, comp_parameters, tag, FW_name):
+def run_pes_calc_fw(top_slab, bottom_slab, interface_name,
+                    functional, comp_parameters, tag, FW_name):
     """Compute high-symmetry points for an interface and start PES calculations.
     
     Combines two Fireworks that find the high-symmetry points for the interface
     and start the VASP calculations for the unique high-symmetry points
-    respectivly
+    respectively.
     
 
     Parameters
@@ -68,11 +68,12 @@ def RunPESCalcsFW(top_slab, bottom_slab, interface_name,
     
     return FW
 
-def MakePESFW(interface_name, functional, tag, FW_name, file_output,
-              output_dir, remote_copy=False, server=None, user=None, port=None):
+def make_pes_fw(interface_name, functional, tag, FW_name, file_output,
+                output_dir, remote_copy=False, server=None, user=None, 
+                port=None):
     """Retrieve PES calculations from the database and compute the PES.
     
-    Retriev the computed energies of the unique high-symmetry points and match
+    Retrive the computed energies of the unique high-symmetry points and match
     them to the replicate points. Duplicates the points, interpolates with
     radial basis functions and saves the results. Plots the results as well.
     Optionally write file output and copy it to a output directory.
@@ -139,12 +140,12 @@ def MakePESFW(interface_name, functional, tag, FW_name, file_output,
     return FW
 
 
-def CheckInputsFW(mat1_params, mat2_params, compparams,
-                  interface_params, FW_name):
+def check_inputs_fw(mat1_params, mat2_params, compparams,
+                    interface_params, FW_name):
     """Check the input parameters for completeness and add default values.
     
     This Firework uses several Firetasks to check if the necessary input for
-    the heterogeneous Triboflow workflow is given and assignes default values
+    the heterogeneous Triboflow workflow is given and assigns default values
     to optional parameters that are not given. Also makes sure that the
     input parameters are of the correct type and in the correct locations
     in the spec.
@@ -173,33 +174,34 @@ def CheckInputsFW(mat1_params, mat2_params, compparams,
         Firework for checking the parameters.
 
     """
-    FT_Mat1 = FT_CheckMaterialInputDict(input_dict = mat1_params,
-                                        output_dict_name = 'mat_1')
-    FT_Mat2 = FT_CheckMaterialInputDict(input_dict = mat2_params,
-                                        output_dict_name = 'mat_2')
+    FT_Mat1 = FT_CheckMaterialInputDict(input_dict=mat1_params,
+                                        output_dict_name='mat_1')
+    FT_Mat2 = FT_CheckMaterialInputDict(input_dict=mat2_params,
+                                        output_dict_name='mat_2')
     
-    FT_CompParams = FT_CheckCompParamDict(input_dict = compparams,
-                                           output_dict_name = 'comp')
+    FT_CompParams = FT_CheckCompParamDict(input_dict=compparams,
+                                          output_dict_name='comp')
     
-    FT_InterParams = FT_CheckInterfaceParamDict(input_dict = interface_params,
-                                                output_dict_name = 'inter')
+    FT_InterParams = FT_CheckInterfaceParamDict(input_dict=interface_params,
+                                                output_dict_name='inter')
     
-    FT_Mat1ToDB = FT_MakeBulkInDB(mat_data_loc = 'mat_1',
-                                  comp_data_loc = 'comp')
-    FT_Mat2ToDB = FT_MakeBulkInDB(mat_data_loc = 'mat_2',
-                                  comp_data_loc = 'comp')
+    FT_Mat1ToDB = FT_MakeBulkInDB(mat_data_loc='mat_1',
+                                  comp_data_loc='comp')
+    FT_Mat2ToDB = FT_MakeBulkInDB(mat_data_loc='mat_2',
+                                  comp_data_loc='comp')
     
-    FT_Slab1ToDB = FT_MakeSlabInDB(mat_data_loc = 'mat_1',
-                                   comp_data_loc = 'comp')
-    FT_Slab2ToDB = FT_MakeSlabInDB(mat_data_loc = 'mat_2',
-                                   comp_data_loc = 'comp')
+    FT_Slab1ToDB = FT_MakeSlabInDB(mat_data_loc='mat_1',
+                                   comp_data_loc='comp')
+    FT_Slab2ToDB = FT_MakeSlabInDB(mat_data_loc='mat_2',
+                                   comp_data_loc='comp')
     
-    FT_InterfaceToDB = FT_MakeInterfaceInDB(mat1_data_loc = 'mat_1',
-                                            mat2_data_loc = 'mat_2',
-                                            comp_data_loc = 'comp',
-                                            interface_data_loc = 'inter')
+    FT_InterfaceToDB = FT_MakeInterfaceInDB(mat1_data_loc='mat_1',
+                                            mat2_data_loc='mat_2',
+                                            comp_data_loc='comp',
+                                            interface_data_loc='inter')
     
     FW=Firework([FT_Mat1, FT_Mat2, FT_CompParams, FT_InterParams, FT_Mat1ToDB,
                  FT_Mat2ToDB, FT_Slab1ToDB, FT_Slab2ToDB, FT_InterfaceToDB],
-                name = FW_name)
+                name=FW_name)
+    
     return FW

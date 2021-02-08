@@ -31,7 +31,7 @@ class FT_StartKPointConvo(FiretaskBase):
     optional_params = ['db_file', 'k_dens_start', 'k_dens_incr', 'n_converge']
 
     def run_task(self, fw_spec):
-        from triboflow.workflows.subworkflows import ConvergeKpoints_SWF
+        from triboflow.workflows.subworkflows import converge_kpoints_swf
         mp_id = self.get('mp_id')
         functional = self.get('functional')
 
@@ -55,15 +55,15 @@ class FT_StartKPointConvo(FiretaskBase):
         if not stop_convergence:
             structure = Structure.from_dict(data.get('structure_equiVol'))
             comp_params = data.get('comp_parameters', {})
-            SWF = ConvergeKpoints_SWF(structure=structure,
-                                      flag=mp_id,
-                                      comp_parameters=comp_params,
-                                      functional=functional,
-                                      spec=fw_spec, 
-                                      k_dens_start=k_dens_start,
-                                      k_dens_incr=k_dens_incr, 
-                                      n_converge=n_converge,
-                                      db_file=db_file)
+            SWF = converge_kpoints_swf(structure=structure,
+                                       flag=mp_id,
+                                       comp_parameters=comp_params,
+                                       functional=functional,
+                                       spec=fw_spec, 
+                                       k_dens_start=k_dens_start,
+                                       k_dens_incr=k_dens_incr, 
+                                       n_converge=n_converge,
+                                       db_file=db_file)
 
             return FWAction(detours=SWF, update_spec=fw_spec)
         else:

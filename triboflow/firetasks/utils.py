@@ -5,10 +5,13 @@ Created on Wed Jun 17 15:59:59 2020
 """
 
 from pprint import pprint
+
 from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
+
 from triboflow.utils.database import GetBulkFromDB, GetHighLevelDB
+from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.structure_manipulation import interface_name
 
 
@@ -16,7 +19,7 @@ from triboflow.utils.structure_manipulation import interface_name
 class FT_ChooseCompParams(FiretaskBase):
     """Choose the computational parameters for the interface calculations.
     
-    Here computatinal parameters are selected for the interface based on the
+    Here computational parameters are selected for the interface based on the
     converged parameters of the two constituent materials.
     
     Parameters
@@ -32,13 +35,14 @@ class FT_ChooseCompParams(FiretaskBase):
         
     Returns
     -------
-    FWAction that modifys the spec for the next firewoks at the out_loc.
+    FWAction that modifies the spec for the next firewoks at the out_loc.
     """
     
     _fw_name = 'Choose Comp Params'
     required_params = ['mp_id_1', 'mp_id_2', 'miller_1', 'miller_2',
                        'functional']
     optional_params = ['db_file']
+
     def run_task(self, fw_spec):
         
         mp_id_1 = self.get('mp_id_1')
@@ -46,12 +50,20 @@ class FT_ChooseCompParams(FiretaskBase):
         miller_1 = self.get('miller_1')
         miller_2 = self.get('miller_2')
         functional = self.get('functional')
+
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
         
-        data_1 = GetBulkFromDB(mp_id_1, db_file, functional)
-        data_2 = GetBulkFromDB(mp_id_2, db_file, functional)
+        nav_structure = StructureNavigator(
+            db_file=db_file,
+            high_level='triboflow')
+        data_1 = nav_structure.get_bulk_from_db(
+            mp_id=mp_id_1, 
+            functional=functional)
+        data_2 = nav_structure.get_bulk_from_db(
+            mp_id=mp_id_2, 
+            functional=functional)
         
         k_dens1 = data_1['comp_parameters']['k_dens']
         k_dens2 = data_2['comp_parameters']['k_dens']
@@ -67,10 +79,13 @@ class FT_ChooseCompParams(FiretaskBase):
             
         name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
         
-        db = GetHighLevelDB(db_file)
-        col = db[functional+'.interface_data']
-        col.update_one({'name': name},
-                       {'$set': {'comp_parameters.k_dens': k_dens,
+        nav_high = Navigator(
+            db_file=db_file, 
+            high_level='triboflow')
+        nav_high.update_data(
+            collection=functional+'.interface_data', 
+            filter={'name': name},
+            new_values={'$set': {'comp_parameters.k_dens': k_dens,
                                  'comp_parameters.encut': encut,
                                  'comp_parameters.is_metal': metal}})
         return
@@ -78,12 +93,23 @@ class FT_ChooseCompParams(FiretaskBase):
 
 @explicit_serialize
 class FT_PrintFromBulkDB(FiretaskBase):
+
     _fw_name = 'Print bulk data from DB'
     required_params = ['mp_id', 'functional']
     optional_params = ['db_file']
+
     def run_task(self, fw_spec):
+        
         db_file = self.get('db_file', env_chk('>>db_file<<', fw_spec))
-        bulk_dict = GetBulkFromDB(self['mp_id'], db_file, self['functional'])
+        mp_id = self['mp_id']
+        functional = self['functional']
+
+        nav_structure = StructureNavigator(
+            db_file=db_file, 
+            high_level='triboflow')
+        bulk_dict = nav_structure.get_bulk_from_db(
+            mp_id=mp_id,
+            functional=functional)
         print('')
         pprint(bulk_dict)
         print('')
@@ -98,11 +124,13 @@ class FT_PassSpec(FiretaskBase):
     
     _fw_name = 'Pass Spec'
     required_params=['key_list']
+
     def run_task(self, fw_spec):
+
         update = {}
         if self['key_list'] == ['_all']:
             spec = fw_spec
-            return FWAction(update_spec = spec)
+            return FWAction(update_spec=spec)
         else:
             for k in self['key_list']:
                 if fw_spec.get(k) is None:
@@ -111,7 +139,7 @@ class FT_PassSpec(FiretaskBase):
                                      'Currently the spec has the keys:\n'
                                      '{}'.format(k, fw_spec.keys()))
                 update[k] = fw_spec.get(k)
-            return FWAction(update_spec = update)
+            return FWAction(update_spec=update)
 
 
 @explicit_serialize
@@ -130,6 +158,6 @@ class FT_PrintSpec(FiretaskBase):
         pprint.pprint(fw_spec)
         
         spec = fw_spec
-        return FWAction(update_spec = spec)
+        return FWAction(update_spec=spec)
 
 

@@ -60,7 +60,7 @@ class FT_StartPPESWF(FiretaskBase):
     optional_params = ['db_file', 'structure_name', 'out_name']
 
     def run_task(self, fw_spec):
-        from triboflow.workflows.subworkflows import CalcPPES_SWF
+        from triboflow.workflows.subworkflows import calc_ppes_swf
 
         name = self.get('interface_name')
         functional = self.get('functional')
@@ -91,12 +91,12 @@ class FT_StartPPESWF(FiretaskBase):
                 calc_PPES = False
                 
         if calc_PPES:
-            SWF = CalcPPES_SWF(interface_name=name,
-                               functional=functional,
-                               distance_list=d_list,
-                               out_name=out_name,
-                               structure_name=structure_name,
-                               spec=fw_spec)
+            SWF = calc_ppes_swf(interface_name=name,
+                                functional=functional,
+                                distance_list=d_list,
+                                out_name=out_name,
+                                structure_name=structure_name,
+                                spec=fw_spec)
 
             return FWAction(additions=SWF, update_spec=fw_spec)
         else:

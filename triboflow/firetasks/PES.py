@@ -16,6 +16,7 @@ from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 from atomate.vasp.fireworks.core import OptimizeFW, ScanOptimizeFW
 from atomate.vasp.powerups import add_modify_incar
+
 from triboflow.phys.high_symmetry import get_slab_hs, get_interface_hs, \
     pbc_hspoints, fix_hs_dicts
 from triboflow.phys.potential_energy_surface import get_pes
@@ -60,7 +61,7 @@ class FT_StartPESCalcSubWF(FiretaskBase):
 
     def run_task(self, fw_spec):
 
-        from triboflow.workflows.subworkflows import CalcPES_SWF
+        from triboflow.workflows.subworkflows import calc_pes_swf
         mp_id_1 = self.get('mp_id_1')
         mp_id_2 = self.get('mp_id_2')
         miller_1 = self.get('miller_1')
@@ -85,16 +86,18 @@ class FT_StartPESCalcSubWF(FiretaskBase):
         already_done = interface_dict.get('relaxed_structure@min')
         
         if not already_done:
-            SWF = CalcPES_SWF(top_slab=top_slab,
-                              bottom_slab=bot_slab,
-                              interface_name=name,
-                              functional=functional,
-                              comp_parameters=comp_params,
-                              output_dir=None)
+            SWF = calc_pes_swf(top_slab=top_slab,
+                               bottom_slab=bot_slab,
+                               interface_name=name,
+                               functional=functional,
+                               comp_parameters=comp_params,
+                               output_dir=None)
 
             return FWAction(detours=SWF, update_spec=fw_spec)
+
         else:
             return FWAction(update_spec=fw_spec)
+
 
 @explicit_serialize
 class FT_ComputePES(FiretaskBase):
@@ -358,7 +361,7 @@ class FT_StartPESCalcs(FiretaskBase):
     
     Take a list of lateral shifts from the fw_spec and start relaxations
     for each one of them as parallel detours.
-    Heterogeneous_WF
+    heterogeneous_wf
     Parameters
     ----------
     top_slab : pymatgen.core.surface.Slab

@@ -28,7 +28,7 @@ class FT_StartEncutConvo(FiretaskBase):
     required_params = ['mp_id', 'functional']
     optional_params = ['db_file']
     def run_task(self, fw_spec):
-        from triboflow.workflows.subworkflows import ConvergeEncut_SWF
+        from triboflow.workflows.subworkflows import converge_encut_swf
         mp_id = self.get('mp_id')
         functional = self.get('functional')
         db_file = self.get('db_file')
@@ -47,10 +47,10 @@ class FT_StartEncutConvo(FiretaskBase):
         if not stop_convergence:
             structure = Structure.from_dict(data.get('structure_fromMP'))
             comp_params = data.get('comp_parameters', {})
-            SWF = ConvergeEncut_SWF(structure=structure, flag=mp_id,
-                                    comp_parameters=comp_params,
-                                    functional=functional,
-                                    print_help=False)
+            SWF = converge_encut_swf(structure=structure, flag=mp_id,
+                                     comp_parameters=comp_params,
+                                     functional=functional,
+                                     print_help=False)
             return FWAction(detours=SWF, update_spec=fw_spec)
         else:
             return FWAction(update_spec=fw_spec)

@@ -66,7 +66,7 @@ class FT_StartSlabRelaxSWF(FiretaskBase):
                        'bulk_struct_name', 'slab_out_name']
 
     def run_task(self, fw_spec):
-        from triboflow.workflows.subworkflows import MakeAndRelaxSlab_SWF
+        from triboflow.workflows.subworkflows import make_and_relax_slab_swf
 
         mp_id = self.get('mp_id')
         if type(self['miller']) == str:
@@ -104,17 +104,17 @@ class FT_StartSlabRelaxSWF(FiretaskBase):
         min_thickness = slab_data.get('min_thickness', 10)
         min_vacuum = slab_data.get('min_vacuum', 25)
         
-        WF = MakeAndRelaxSlab_SWF(bulk_structure=bulk_struct,
-                                  miller_index=miller,
-                                  flag=mp_id,
-                                  comp_parameters=comp_params,
-                                  functional=functional,
-                                  min_thickness=min_thickness,
-                                  min_vacuum=min_vacuum,
-                                  relax_type=relax_type,
-                                  slab_struct_name=slab_name,
-                                  out_struct_name=slab_out_name,
-                                  print_help=False)
+        WF = make_and_relax_slab_swf(bulk_structure=bulk_struct,
+                                     miller_index=miller,
+                                     flag=mp_id,
+                                     comp_parameters=comp_params,
+                                     functional=functional,
+                                     min_thickness=min_thickness,
+                                     min_vacuum=min_vacuum,
+                                     relax_type=relax_type,
+                                     slab_struct_name=slab_name,
+                                     out_struct_name=slab_out_name,
+                                     print_help=False)
         
         return FWAction(detours=WF)
     

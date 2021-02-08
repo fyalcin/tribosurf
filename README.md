@@ -228,12 +228,12 @@ This workflow converges the computational parameters and the lattice parameters 
 In the (near future), also the PES and PPES will be calculated alongside relevant tribological data.
 The workflow is imported from the `triboflow.workflows.main` module as:
 ```
-from triboflow.workflows.main import Heterogeneous_WF
+from triboflow.workflows.main import heterogeneous_wf
 ```
 and an inputs dictionary has to be passed to it. An example can be found in `triboflow.tests.heterogeneous_WF`:
 ```
 from fireworks import LaunchPad
-from triboflow.workflows.main import Heterogeneous_WF
+from triboflow.workflows.main import heterogeneous_wf
 
 inputs = {'material_1': {'formula': 'Fe',
                          'miller': '110',
@@ -257,7 +257,7 @@ inputs = {'material_1': {'formula': 'Fe',
                               }
           }
 
-WF = Heterogeneous_WF(inputs)
+WF = heterogeneous_wf(inputs)
 lpad = LaunchPad.auto_load()
 lpad.add_wf(WF)
 ```
