@@ -1,8 +1,37 @@
 {
     "SlabOptThick": {
-        "high_level": null,
-        "relax_type": 'slab_pos_relax',
-        "convo_kind": 'surfene',
+        "low_level": null,
+        "high_level": "triboflow",
+        "relax_type": "slab_pos_relax",
+        "convo_kind": "surfene",
         "bulk_name": null,
         "slab_name": null
+    },
+    "subworkflow": {
+        "file_output": false,
+        "output_dir": null, 
+        "remote_copy": false,
+        "server": null, 
+        "user": null, 
+        "port": null,
+        "print_help": false
+    }
+    
+    "comp_params": {
+        "BM_tolerance": 0.01,
+        "energy_tolerance": 0.001,
+        "functional": "SCAN",
+        "use_spin": true,
+        "volume_tolerance": 0.001
+    },
+    "inter_params": {
+        "interface_distance": 2.0,
+        "max_angle_diff": 1.5,
+        "max_mismatch": 0.01,
+        "r1r2_tol": 0.05
+    },
+    "material_params": {
+        "min_thickness": 10.0,
+        "min_vacuum": 25.0
+    }
 }

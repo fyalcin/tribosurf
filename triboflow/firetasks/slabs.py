@@ -25,7 +25,8 @@ from pymatgen.core.surface import SlabGenerator
 from pymatgen.transformations.advanced_transformations import SlabTransformation
 
 from triboflow.utils.database import Navigator, NavigatorMP
-from triboflow.firetasks.slabs_wfs import SlabWFs, SlabThicknessError
+from triboflow.firetasks.slabs_wfs import SlabWFs
+from triboflow.firetasks.errors import SlabThicknessError
 from triboflow.tasks.io import read_json
 
 currentdir = os.path.dirname(__file__)
@@ -55,8 +56,8 @@ class FT_SlabOptThick(FiretaskBase):
     _fw_name = 'Converge the slab thickness'
 
     required_params = ['mp_id', 'miller', 'functional']
-    optional_params = ['db_file', 'high_level', 'relax_type', 'convo_kind', 
-                       'bulk_name', 'slab_name'] 
+    optional_params = ['db_file', 'low_level', 'high_level', 'relax_type', 
+                       'convo_kind', 'bulk_name', 'slab_name'] 
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -81,9 +82,16 @@ class FT_SlabOptThick(FiretaskBase):
             structure = Structure.from_dict(bulk.get('structure_fromMP'))
             comp_params = slab.get('comp_parameters', {})
 
-            wf = select_slabthick_conv(structure, p['mp_id'], p['miller'], 
-                                       comp_params, p['functional'], 
-                                       p['convo_kind'])
+            wf = select_slabthick_conv(structure = structure, 
+                                       mp_id = p['mp_id'], 
+                                       miller = p['miller'],
+                                       functional = p['functional'], 
+                                       comp_params = comp_params,
+                                       db_file = p['db_file'],
+                                       low_level = p['low_level'],
+                                       high_level = p['high_level'],
+                                       bulk_name = p['bulk_name'],
+                                       slab_name = p['slab_name'])
 
             return FWAction(detours=wf, update_spec=fw_spec)
 
@@ -143,9 +151,34 @@ class FT_SlabOptThick(FiretaskBase):
 def select_slabthick_conv(structure, mp_id, miller, comp_params, 
                           functional='PBE', convo_kind='surfene'):
     """
-    Select the kind of thickness convergence
+    [summary]
+
+    Parameters
+    ----------
+    structure : [type]
+        [description]
+    mp_id : [type]
+        [description]
+    miller : [type]
+        [description]
+    comp_params : [type]
+        [description]
+    functional : str, optional
+        [description], by default 'PBE'
+    convo_kind : str, optional
+        [description], by default 'surfene'
+
+    Returns
+    -------
+    [type]
+        [description]
+
+    Raises
+    ------
+    SlabThicknessError
+        [description]
     """
-    
+
     if convo_kind == 'surfene':
         generate_wf = SlabWFs.conv_slabthick_surfene
     elif convo_kind == 'alat':
@@ -161,6 +194,29 @@ def select_slabthick_conv(structure, mp_id, miller, comp_params,
 
 def read_runtask_params(obj, fw_spec, required_params, optional_params,
                         default_file, default_key):
+    """
+    [summary]
+
+    Parameters
+    ----------
+    obj : [type]
+        [description]
+    fw_spec : [type]
+        [description]
+    required_params : [type]
+        [description]
+    optional_params : [type]
+        [description]
+    default_file : [type]
+        [description]
+    default_key : [type]
+        [description]
+
+    Returns
+    -------
+    [type]
+        [description]
+    """
 
     defaults = read_json(default_file)
     params = {}

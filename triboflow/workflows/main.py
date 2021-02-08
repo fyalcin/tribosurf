@@ -130,9 +130,8 @@ def Heterogeneous_WF(inputs):
                     MakeSlabs_M2: [MakeInterface],
                     MakeInterface: [CalcPESPoints]}
 
-    WF_Name = 'TriboFlow '+InterfaceName(mp_id_1, mat_1.get('miller'),
+    WF_Name = 'TriboFlow '+ InterfaceName(mp_id_1, mat_1.get('miller'),
                             mp_id_2, mat_2.get('miller'))
 
     WF = Workflow(WF, Dependencies, name=WF_Name)
     return WF
-

@@ -361,8 +361,7 @@ class Navigator:
 
         filter : dict, optional
             Dictionary containing the name of the document to find.
-            If fileter is empty all the documents in the 
-            collection are returned.
+            If filter is empty all the documents in the collection are returned.
 
         Return
         ------
@@ -403,8 +402,7 @@ class Navigator:
 
         filter : dict, optional
             Dictionary containing the name of the document to find.
-            If fileter is empty all the documents in the 
-            collection are returned.
+            If filter is empty all the documents in the collection are returned.
 
         Return
         ------

@@ -22,6 +22,10 @@ from fireworks import Workflow, Firework
 from triboflow.utils.database import Navigator, NavigatorMP
 from triboflow.firetasks.slabs_wfs import SlabWFs, SlabThicknessError
 from triboflow.firetasks.slabs import FT_OptimalThickness
+from triboflow.firetasks.errors import ReadSubWFsError
+from triboflow.tasks.io import read_json
+
+currentdir = os.path.dirname(__file__)
 
 # ============================================================================
 # Classes
@@ -34,35 +38,28 @@ class SlabWFs:
     """
 
     @staticmethod
-    def conv_slabthick_surfene(structure,
-                                   flag,
-                                   miller,
-                                   comp_parameters={},
-                                   spec={},
-                                   functional='PBE',
-                                   layer_start=4,
-                                   layer_incr=2, 
-                                   n_converge=5, 
-                                   db_file=None, 
-                                   file_output = False,
-                                   output_dir = None, 
-                                   remote_copy = False,
-                                   server = None, 
-                                   user = None, 
-                                   port = None,
-                                   print_help = False):        
+    def conv_slabthick_surfene(structure, mp_id, miller, functional='PBE',
+                               comp_params={}, spec={}, db_file=None,
+                               low_level = None, high_level = 'triboflow', 
+                               bulk_name = None, slab_name = None,
+                               nplane_start=4, nplane_incr=2, nplane_conv=5, 
+                               **kwargs):
         """
-        Method description.
+        Function to set the computational and physical parameters and start a 
+        workflow to converge the thickness of the provided slabs.
 
-        """
+        """                                                                 
 
         name = 'Slab Thickness optimization of ' + \
             structure.composition.reduced_formula + ' ' + str(miller)
         
-        tag = name + '_'+str(uuid4())
+        tag = name + '_' + str(uuid4())
         
+        dfl = currentdir + '/defaults_fw.json'
+        p = read_subwfs_params(default_file = dfl, default_key="subworkflow", **kwargs)
+
         # Check if the chemical formula passed is the same on MP database
-        if flag.startswith('mp-') and flag[3:].isdigit():
+        if mp_id.startswith('mp-') and flag[3:].isdigit():
             nav_mp = NavigatorMP()
             formula_from_struct = structure.composition.reduced_formula
             formula_from_flag = nav_mp.get_property_from_mp(flag, 
@@ -75,7 +72,7 @@ class SlabWFs:
                                     formula_from_struct, formula_from_flag))
         
         # Check computational parameters and use defaults if necessary
-        if comp_parameters == {}:
+        if comp_params == {}:
             print('\nNo computational parameters have been defined!\n'
                 'Workflow will run with:\n'
                 '   ISPIN = 1\n'
@@ -131,4 +128,39 @@ class SlabWFs:
         """
         pass
 
-class SlabThicknessError(Exception): pass
+
+def read_subwfs_params(default_file, default_key, **kwargs):
+    """
+    [summary]
+
+    Parameters
+    ----------
+    default_file : [type]
+        [description]
+    default_key : [type]
+        [description]
+
+    Returns
+    -------
+    [type]
+        [description]
+
+    Raises
+    ------
+    ReadSubWFsError
+        [description]
+    """
+
+    defaults = read_json(default_file)
+    defaults = defaults[default_key]
+    params = {}
+
+    if not set(kwargs.keys()).issubset(set(defaults.keys())):
+        raise ReadSubWFsError("Values passed in kwargs are not known. Allowed "
+                              "values: {}".format(defaults.keys()))
+
+    # Set the parameters, passed by input or default values
+    for key, value in defaults.items():
+        params[key] = kwargs.get(key, value)
+    
+    return params
