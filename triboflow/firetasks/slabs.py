@@ -24,9 +24,9 @@ from pymatgen.core.structure import Structure
 from pymatgen.core.surface import SlabGenerator
 from pymatgen.transformations.advanced_transformations import SlabTransformation
 
-from triboflow.utils.database import Navigator, NavigatorMP
+from triboflow.utils.database import StructureNavigator, NavigatorMP
 from triboflow.firetasks.slabs_wfs import SlabWFs
-from triboflow.firetasks.errors import SlabThicknessError
+from triboflow.firetasks.errors import SlabThicknessError, GenerateSlabsErrors
 from triboflow.tasks.io import read_json
 
 currentdir = os.path.dirname(__file__)
@@ -57,7 +57,8 @@ class FT_SlabOptThick(FiretaskBase):
 
     required_params = ['mp_id', 'miller', 'functional']
     optional_params = ['db_file', 'low_level', 'high_level', 'relax_type', 
-                       'convo_kind', 'bulk_name', 'slab_name'] 
+                       'convo_kind', 'nplane_start', 'nplane_incr', 
+                       'nplane_conv', 'bulk_name', 'slab_name',]
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -69,29 +70,32 @@ class FT_SlabOptThick(FiretaskBase):
                                 default_file = dfl, default_key="SlabOptThick")
         
         # Retrieve the bulk information from the high level DB
-        nav = Navigator(p['db_file'], p['high_level'])
-        slab = nav.find_data(p['functional']+'.slab_data', 
-                             {'mpid': p['mp_id'], 'miller': p['miller']})
+        nav_struct = StructureNavigator(p['db_file'], p['high_level'])
+        slab = nav_struct.get_slab_from_db(mp_id=p['mp_id'], 
+                                           functional=p['functional'], 
+                                           miller=p['miller'])
 
         # Start a subworkflow to converge the thickness if not already done
         stop_convergence = slab.get('opt_thickness', None)
         if not stop_convergence:
             # Retrieve the bulk structure
-            bulk = nav.find_data(p['functional']+'.bulk_data', 
-                                 {'mpid': p['mp_id']})
+            bulk = nav_struct.get_slab_from_db(mp_id=p['mp_id'], 
+                                               functional=p['functional'])
+            if p['bulk_name'] is not None:
+                bulk = bulk[p['bulk_name']]
+
             structure = Structure.from_dict(bulk.get('structure_fromMP'))
             comp_params = slab.get('comp_parameters', {})
 
-            wf = select_slabthick_conv(structure = structure, 
-                                       mp_id = p['mp_id'], 
-                                       miller = p['miller'],
-                                       functional = p['functional'], 
-                                       comp_params = comp_params,
-                                       db_file = p['db_file'],
-                                       low_level = p['low_level'],
-                                       high_level = p['high_level'],
-                                       bulk_name = p['bulk_name'],
-                                       slab_name = p['slab_name'])
+            wf = SlabWFs.select_slabthick_conv(structure=structure, 
+                                               mp_id=p['mp_id'], 
+                                               miller=p['miller'],
+                                               functional=p['functional'], 
+                                               comp_params=comp_params,
+                                               db_file=p['db_file'],
+                                               low_level=p['low_level'],
+                                               high_level=p['high_level'],
+                                               slab_name=p['slab_name'])
 
             return FWAction(detours=wf, update_spec=fw_spec)
 
@@ -106,10 +110,10 @@ class FT_StartThickConvo(FiretaskBase):
     
     """
     
-    _fw_name = 'Surface Energy calculation'
+    _fw_name = 'Start the slab thickness convergence'
     required_params = ['mp_id', 'miller', 'functional']
     optional_params = ['db_file', 'low_level', 'high_level', 'relax_type', 
-                       'convo_kind', 'bulk_name', 'slab_name', ] 
+                       'convo_kind', 'bulk_name', 'slab_name']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -161,10 +165,34 @@ class FT_GenerateSlabs(FiretaskBase):
     
     """
 
-    def run_task(elf, fw_spec):
+    required_params = ['structure', 'mp_id', 'miller', 'functional']
+    optional_params = ['db_file', 'collection', 'thickness', 'vacuum', 'slab_name']
+
+    def run_task(self, fw_spec):
         """ Run the Firetask.
         """ 
-    pass
+
+        # Define the json file containing default values and read parameters
+        dfl = currentdir + '/defaults_fw.json'
+        p = read_runtask_params(self, fw_spec, required_params, optional_params,
+                                default_file = dfl, default_key="GenerateSlabs")
+        
+        GenerateSlabsErrors.check_thickness(p['thickness'])
+        
+        slabs = []
+        for thk in list(p['thickness']):
+            slabgen = SlabGenerator(initial_structure = p['structure'],
+                                    miller_index = p['miller'],
+                                    center_slab=True,
+                                    primitive=False,
+                                    lll_reduce=True,
+                                    in_unit_planes=True,  # Fundamental
+                                    min_slab_size=thk,
+                                    min_vacuum_size=p['vacuum'])
+
+        
+        #if p['high_level'] is not None:
+        #    nav.save
 
 
 # ============================================================================

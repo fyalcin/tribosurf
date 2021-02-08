@@ -43,9 +43,9 @@ class SlabWFs:
     @staticmethod
     def conv_slabthick_surfene(structure, mp_id, miller, functional='PBE',
                                comp_params={}, spec={}, db_file=None,
-                               low_level = None, high_level = 'triboflow', 
-                               bulk_name = None, slab_name = None,
-                               nplane_start=4, nplane_incr=2, nplane_conv=5, 
+                               relax_type="slab_pos_relax", thick_start=4, 
+                               thick_incr=1, steps=6, low_level = None, 
+                               high_level = 'triboflow', slab_name = None,
                                **kwargs):
         """
         Function to set the computational and physical parameters and start a 
@@ -66,8 +66,21 @@ class SlabWFs:
                             comp_params, **kwargs)
 
         # Create a Firework to calculate the Optimal Thickness for a structure
-        ft_start_thick_convo = FT_StartThickConvo(inputs)
-        ft_end_thick_convo = FT_EndThickConvo(inputs)
+        ft_start_thick_convo = FT_StartThickConvo(structure,
+                                                  mp_id,
+                                                  miller,
+                                                  functional,
+                                                  comp_params,
+                                                  db_file,
+                                                  low_level,
+                                                  #high_level,
+                                                  relax_type,
+                                                  thick_start,
+                                                  thick_incr,
+                                                  steps,
+                                                  **kwargs)
+
+        ft_end_thick_convo = FT_EndThickConvo()
 
         # Set it to a firework and a workflow
         fw = Firework([ft_start_thick_convo, ft_end_thick_convo],
