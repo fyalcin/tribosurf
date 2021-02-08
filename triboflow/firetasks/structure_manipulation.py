@@ -19,8 +19,6 @@ from atomate.vasp.fireworks.core import OptimizeFW, ScanOptimizeFW
 from mpinterfaces.transformations import get_aligned_lattices, \
     get_interface # generate_all_configs
 
-from triboflow.utils.database import GetSlabFromDB, GetHighLevelDB, GetDB, \
-    GetBulkFromDB
 from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
 from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
 from triboflow.utils.structure_manipulation import interface_name, \
@@ -433,7 +431,13 @@ class FT_MakeSlabInDB(FiretaskBase):
         min_thickness = self.get('min_thickness', 10)
         min_vacuum = self.get('min_vacuum', 25)
         
-        #slab_data = GetSlabFromDB(flag, db_file, miller, functional)
+        # nav_structure = StructureNavigator(
+        #     db_file=db_file,
+        #     high_level='triboflow')
+        # slab_data = nav_structure.get_slab_from_db(
+        #     mp_id=flag, 
+        #     functional=functional,
+        #     miller=miller)
         
         bulk_conv = SpacegroupAnalyzer(bulk_prim).get_conventional_standard_structure()
         
