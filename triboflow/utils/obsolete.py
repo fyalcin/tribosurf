@@ -9,6 +9,11 @@ Created on Wed Oct 28 16:20:01 2020
 @author: gl
 """
 
+__author__ = 'Gabriele Losi'
+__copyright__ = 'Prof. M.C. Righi, University of Bologna'
+__contact__ = 'clelia.righi@unibo.it'
+__date__ = 'February 8th, 2021'
+
 import numpy as np
 
 
