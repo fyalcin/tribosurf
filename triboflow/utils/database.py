@@ -74,6 +74,9 @@ class Navigator:
     -------
     __get_db(db_file)
         Create an instance of a VaspCalcDb database.
+
+    __initialize_obj_collection(collection)
+        Initialize a MongoDB object collection.
     
     update_data(collection, filter, new_values, )
         Update a single document matching the filter with the new value.
@@ -163,6 +166,32 @@ class Navigator:
         log.info('Successfully connected to: {}.'.format(db_file))
         return vasp_db.db, db_file
     
+    def __initialize_obj_collection(self, collection):
+        """
+        Initialize a MongoDB object collection.
+
+        Parameters
+        ----------
+        collection : str, VaspCalcDb
+            Name of the collection in the database o r in the VaspCalcDb object.
+        
+        Return
+        ------
+        collection_obj : VaspCalcDb
+            Database object containing the collection of the database.     
+        """
+
+        if isinstance(collection, str):
+            collection_obj = self.db.coll[collection]
+        elif isinstance(collection, VaspCalcDb):
+            collection_obj = collection
+        else:
+            raise ValueError('{} is not a valid data type. The collection '
+                             'must be a string or VaspCalcDb.'
+                             ' '.format(type(collection)))
+        
+        return collection_obj
+
     def update_data(self, collection, filter, new_values, upsert=False):
         """
         Update a single document matching the filter with the new value.
@@ -170,7 +199,7 @@ class Navigator:
         https://pymongo.readthedocs.io/en/stable/api/pymongo/collection.html#pymongo.collection.Collection.update_one
 
         Parameters
-        ---------
+        ----------
         collection : str, VaspCalcDb
             Name of the collection in the database or in the VaspCalcDb object.
 
@@ -195,14 +224,7 @@ class Navigator:
 
         """
 
-        if isinstance(collection, str):
-            collection_obj = self.db.coll[collection]
-        elif isinstance(collection, VaspCalcDb):
-            collection_obj = collection
-        else:
-            raise ValueError('{} is not a valid data type. The collection '
-                             'must be a string or VaspCalcDb.'
-                             ' '.format(type(collection)))
+        collection_obj = self.__initialize_obj_collection(collection)
 
         log.info('Updating the collection {} withe the new data {}.'
                  ''.format(collection, new_values))
@@ -215,7 +237,7 @@ class Navigator:
         https://pymongo.readthedocs.io/en/stable/api/pymongo/collection.html#pymongo.collection.Collection.update_many
 
         Parameters
-        ---------
+        ----------
         collection : str, VaspCalcDb
             Name of the collection in the database or in the VaspCalcDb object.
         
@@ -235,14 +257,7 @@ class Navigator:
 
         """
 
-        if isinstance(collection, str):
-            collection_obj = self.db.coll[collection]
-        elif isinstance(collection, VaspCalcDb):
-            collection_obj = collection
-        else:
-            raise ValueError('{} is not a valid data type. The collection '
-                             'must be a string or VaspCalcDb.'
-                             ' '.format(type(collection)))
+        collection_obj = self.__initialize_obj_collection(collection)
 
         log.info('Updating the collection {} withe the new data {}.'
                  ''.format(collection, new_values))
@@ -255,7 +270,7 @@ class Navigator:
         https://pymongo.readthedocs.io/en/stable/api/pymongo/collection.html#pymongo.collection.Collection.insert_one
 
         Parameters
-        ---------
+        ----------
         collection : str, VaspCalcDb
             Name of the collection in the database or a VaspCalcDb object.
 
@@ -275,14 +290,7 @@ class Navigator:
 
         """
 
-        if isinstance(collection, str):
-            collection_obj = self.db.coll[collection]
-        elif isinstance(collection, VaspCalcDb):
-            collection_obj = collection
-        else:
-            raise ValueError('{} is not a valid data type. The collection '
-                             'must be a string or VaspCalcDb.'
-                             ' '.format(type(collection)))
+        collection_obj = self.__initialize_obj_collection(collection)
         
         if not duplicates:
             if self.find_data(collection, data):
@@ -305,7 +313,7 @@ class Navigator:
         https://pymongo.readthedocs.io/en/stable/api/pymongo/collection.html#pymongo.collection.Collection.insert_many
 
         Parameters
-        ---------
+        ----------
         collection : str, VaspCalcDb
             Name of the collection in the database or a VaspCalcDb object.
 
@@ -323,14 +331,8 @@ class Navigator:
 
         """
 
-        if isinstance(collection, str):
-            collection_obj = self.db.coll[collection]
-        elif isinstance(collection, VaspCalcDb):
-            collection_obj = collection
-        else:
-            raise ValueError('{} is not a valid data type. The collection '
-                             'must be a string or VaspCalcDb.'
-                             ' '.format(type(collection)))
+        collection_obj = self.__initialize_obj_collection(collection)
+
         if not duplicates:
             document_index = 0
             duplicates = []
@@ -368,8 +370,7 @@ class Navigator:
 
         filter : dict, optional
             Dictionary containing the name of the document to find.
-            If fileter is empty all the documents in the 
-            collection are returned.
+            If filter is empty all the documents in the collection are returned.
 
         Return
         ------
@@ -379,14 +380,7 @@ class Navigator:
 
         """
 
-        if isinstance(collection, str):
-            collection_obj = self.db.coll[collection]
-        elif isinstance(collection, VaspCalcDb):
-            collection_obj = collection
-        else:
-            raise ValueError('{} is not a valid data type. The collection '
-                             'must be a string or VaspCalcDb.'
-                             ' '.format(type(collection)))
+        collection_obj = self.__initialize_obj_collection(collection)
 
         data = collection_obj.find_one(filter)
 
@@ -411,8 +405,7 @@ class Navigator:
 
         filter : dict, optional
             Dictionary containing the name of the document to find.
-            If fileter is empty all the documents in the 
-            collection are returned.
+            If filter is empty all the documents in the collection are returned.
 
         Return
         ------
@@ -422,14 +415,7 @@ class Navigator:
 
         """
 
-        if isinstance(collection, str):
-            collection_obj = self.db.coll[collection]
-        elif isinstance(collection, VaspCalcDb):
-            collection_obj = collection
-        else:
-            raise ValueError('{} is not a valid data type. The collection '
-                             'must be a string or VaspCalcDb.'
-                             ' '.format(type(collection)))
+        collection_obj = self.__initialize_obj_collection(collection)
 
         data = collection_obj.find(filter)
 
@@ -460,14 +446,7 @@ class Navigator:
 
         """
 
-        if isinstance(collection, str):
-            collection_obj = self.db.coll[collection]
-        elif isinstance(collection, VaspCalcDb):
-            collection_obj = collection
-        else:
-            raise ValueError('{} is not a valid data type. The collection '
-                             'must be a string or VaspCalcDb.'
-                             ' '.format(type(collection)))
+        collection_obj = self.__initialize_obj_collection(collection)
 
         log.info('Deleting {} from the collection {}.'
                  ''.format(filter, collection))
@@ -493,14 +472,7 @@ class Navigator:
 
         """
 
-        if isinstance(collection, str):
-            collection_obj = self.db.coll[collection]
-        elif isinstance(collection, VaspCalcDb):
-            collection_obj = collection
-        else:
-            raise ValueError('{} is not a valid data type. The collection '
-                             'must be a string or VaspCalcDb.'
-                             ' '.format(type(collection)))
+        collection_obj = self.__initialize_obj_collection(collection)
 
         collection_obj.delete_many(filter)
 
@@ -529,14 +501,7 @@ class Navigator:
         if user_date == current_date:
             log.critical('Removing {} from the database.'
                          ''.format(collection))
-            if isinstance(collection, str):
-                collection_obj = self.db.coll[collection]
-            elif isinstance(collection, VaspCalcDb):
-                collection_obj = collection
-            else:
-                raise ValueError('{} is not a valid data type. The collection '
-                                 'must be a string or VaspCalcDb.'
-                                 ' '.format(type(collection)))
+            collection_obj = self.__initialize_obj_collection(collection)
             self.db.collection_obj.drop()
         else:
             log.critical('The current date is wrong!!! '
