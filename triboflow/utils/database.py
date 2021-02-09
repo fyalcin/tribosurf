@@ -35,6 +35,7 @@ log = LoggingBase(
     path=logging_path+'/database.log',
     file_level=configurations['logging']['database_logging_level'])
 
+
 # ============================================================================
 # Navigator Classes
 # ============================================================================
@@ -518,7 +519,7 @@ class StructureNavigator(Navigator):
 
     def add_bulk_to_db(self, structure, mp_id, functional, message=None):
         """
-        Insert a bulk structure in the triboflow high level database.
+        Insert a bulk structure in the chosen database.
 
         Parameters
         ----------
@@ -543,7 +544,45 @@ class StructureNavigator(Navigator):
              'formula': formula,
              'structure_fromMP': structure.as_dict()}, 
              message=message)
-    
+ 
+    def add_slab_to_db(self, structure, mp_id, functional, miller, 
+                        struct_name='unrelaxed', message=None):
+        """
+        Insert a slab structure in the triboflow high level database.
+
+        Parameters
+        ----------
+        structure : pymatgen.core.structure.Structure
+            Structure of the bulk in the pymatgen Structure format.
+
+        mp_id : str
+            Materials Project id of the structure.
+        
+        functional : str
+            Functional. It could be PBE or SCAN.
+        
+        miller : str
+            Miller indices for the slab as a list of three integers.
+        
+        struct_name : str, optional
+            Name of the structure containing the structure data as dict. The
+            default is 'unrelaxed'.
+        
+        message : str or None, optional
+            Custom message to write in the console and/or in the log file.
+            The default is None
+
+        """
+
+        formula = structure.composition.reduced_formula
+        self.insert_data(
+            functional+'.slab_data', 
+            {'mpid': mp_id,
+             'formula': formula,
+             'miller': miller,
+             struct_name: structure.as_dict()}, 
+             message=message)
+
     def get_bulk_from_db(self, mp_id, functional, warning=False):
         """
         Get the data about bulk from the triboflow high level database.
@@ -554,7 +593,7 @@ class StructureNavigator(Navigator):
             Materials Project id of the structure.
         
         functional : str
-            Functional. It could be PBE por SCAN.
+            Functional. It could be PBE or SCAN.
 
         warning : bool
             Raise a warning instead of an error if the structure bulk is not
@@ -745,7 +784,7 @@ class NavigatorMP:
 
         """
         mp_id = self.__mpr.query(criteria={'pretty_formula': chem_formula, 
-                                      'e_above_hull': 0.0},
+                                           'e_above_hull': 0.0},
                                  properties=['material_id'])
 
         if len(mp_id) == 0 or mp_id is None:
@@ -753,7 +792,6 @@ class NavigatorMP:
                                    ' database.'.format(chem_formula))
         return mp_id[0]['material_id']
 
-    
     def get_low_energy_structure(self, chem_formula, mp_id=None, 
                                  print_info=False):
         """
