@@ -44,11 +44,30 @@ class GenerateSlabsError(Exception):
         GenerateSlabsError.check_slab_name(slab_name)
 
         # If one is a list, both of them should be.
-        if isinstance(thickness, list):
-            if not isinstance(slab_name, list):
+        if not (isinstance(thickness, list) and isinstance(slab_name, list)):
                 raise GenerateSlabsError("Wrong type for arguments: thickness, "
-                                         "slab_name. They should be the")
-            
+                                         "slab_name. If one is a list, both "
+                                         "should be.")
+
+class RelaxStructureError(Exception):
+    """ Error when running a relax calculation
+    """
+
+    @staticmethod
+    def check_struct_kind(struct_kind):
+        if struct_kind not in ['bulk', 'slab', 'interface']:
+            raise RelaxStructureError('Wrong value for struct_kind. Allowed '
+                                      'values: "bulk", "slab", "interface".')
+
+    @staticmethod
+    def is_data(structure, mp_id, functional, struct_kind):
+        if structure is None:
+            formula = structure.composition.reduced_formula
+            raise RelaxStructureError('No entry found in DB {} for a {} '
+                                      'structure with mpid: {}, functional: {}'
+                                      .format(formula, struct_kind, mp_id, functional))
+
+
 class ReadSubWFsError(Exception):
     """ Error in reading the subworkflow parameters.
     """
