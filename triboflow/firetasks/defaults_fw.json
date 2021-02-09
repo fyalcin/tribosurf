@@ -50,7 +50,14 @@
         "name": "relaxed",
         "miller": null
     },
-    "subworkflow": {
+    "comp_params": {
+        "BM_tolerance": 0.01,
+        "energy_tolerance": 0.001,
+        "functional": "SCAN",
+        "use_spin": true,
+        "volume_tolerance": 0.001
+    },
+    "cluster_params": {
         "file_output": false,
         "output_dir": null, 
         "remote_copy": false,
@@ -58,13 +65,6 @@
         "user": null, 
         "port": null,
         "print_help": false
-    },
-    "comp_params": {
-        "BM_tolerance": 0.01,
-        "energy_tolerance": 0.001,
-        "functional": "SCAN",
-        "use_spin": true,
-        "volume_tolerance": 0.001
     },
     "inter_params": {
         "interface_distance": 2.0,
