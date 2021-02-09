@@ -19,23 +19,35 @@ class SlabOptThickError(Exception):
     """
     pass
 
-class GenerateSlabsErrors(Exception):
+class GenerateSlabsError(Exception):
     """ Error in generating slabs.
     """
     @staticmethod
     def check_thickness(thickness):
         if not isinstance(thickness, (list, float, int)):
-            raise GenerateSlabsErrors("Wrong type for argument: thickness. "
-                                      "Allowed types: list, float, int.")
+            raise GenerateSlabsError("Wrong type for argument: thickness. "
+                                     "Allowed types: list, float, int.")
     
     @staticmethod
     def check_slabname(slab_name):
         if not isinstance(slab_name, (str, list)):
-            raise GenerateSlabsErrors("Wrong type for argument: slab_name. "
-                                      "Allowed types: list of str, str.")
+            raise GenerateSlabsError("Wrong type for argument: slab_name. "
+                                     "Allowed types: list of str, str.")
         elif not all([isinstance(x, str) for x in list(slab_name)]):
-            raise GenerateSlabsErrors("Wrong type for elements of list: "
-                                       "slab_name. Allowed types: str.")            
+            raise GenerateSlabsError("Wrong type for elements of list: "
+                                     "slab_name. Allowed types: str.")
+
+    @staticmethod
+    def check_slabname_thickness(thickness, slab_name):
+
+        GenerateSlabsError.check_thickness(thickness)
+        GenerateSlabsError.check_slab_name(slab_name)
+
+        # If one is a list, both of them should be.
+        if isinstance(thickness, list):
+            if not isinstance(slab_name, list):
+                raise GenerateSlabsError("Wrong type for arguments: thickness, "
+                                         "slab_name. They should be the")
             
 class ReadSubWFsError(Exception):
     """ Error in reading the subworkflow parameters.
