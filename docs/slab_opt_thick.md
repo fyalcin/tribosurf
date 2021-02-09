@@ -33,9 +33,11 @@ The required and optional parameters are:
 
 5. **FT_RelaxStructure**: Generically relax a structure which is passed as input, such as bulks, slabs and interfaces. Before doing the relaxation it checks if the calculation has been already done previously calculated and stored on databases. It stores the final data on the provided database, the local one as the default.
 
-6. **FT_SurfaceEnergy**: Generically calculate the surface energy of a given slab (or a list of slabs) with respect to the corresponding bulk.
+6. **FT_PutStructInDB**: Retrieve the relaxed structure and store them in the provided Database.
 
-7. **FT_EndThickConvo**: End the calculation of the optimal slab thickness. It finds out the optimal surface energy and the corresponding number of atomic layers. It stores on the high level db the relaxed slab, its surface energy and optimal thickness. 
+7. **FT_SurfaceEnergy**: Generically calculate the surface energy of a given slab (or a list of slabs) with respect to the corresponding bulk.
+
+8. **FT_EndThickConvo**: End the calculation of the optimal slab thickness. It finds out the optimal surface energy and the corresponding number of atomic layers. It stores on the high level db the relaxed slab, its surface energy and optimal thickness. 
 
 
 
