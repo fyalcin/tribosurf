@@ -330,7 +330,7 @@ class FT_RelaxStructure(FiretaskBase):
 
         # Call the navigator for retrieving structure
         nav_struct = StructureNavigator(db_file=self.p['db_file'],
-                                        high_level=self.p['high_level'])
+                                        high_level=self.p['collection'])
 
         # Extract data from database
         if self.p['struct_kind'] == 'bulk':
@@ -354,7 +354,7 @@ class FT_RelaxStructure(FiretaskBase):
         # Get a tag for the calculation
         formula = structure.composition.reduced_formula
         if self.p['miller'] is not None:
-            tag = formula + str(p['miller']) + '_' + str(uuid4())
+            tag = formula + str(self.p['miller']) + '_' + str(uuid4())
         else:
             tag = formula + '_' + str(uuid4())
 
