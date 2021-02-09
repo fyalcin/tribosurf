@@ -69,9 +69,10 @@ class SurfEneWfs:
 
         # Define the name of the slab(s)
         out_names = structure.composition.reduced_formula
+        miller_str = ''.join(str(s) for s in miller)
         if slab_name is not None:
             out_names = slab_name
-        names = [out_names + miller + '_' + str(t) for t in thickness]
+        names = [out_names + miller_str + '_' + str(t) for t in thickness]
 
         ft_generate_slabs = FT_GenerateSlabs(strucure=structure,
                                              mp_id=mp_id,
@@ -101,16 +102,14 @@ class SurfEneWfs:
                                     db_file=db_file,
                                     collection=collection,
                                     name=slab_name,
-                                    relax_type=relax_type,
-                                    symmetrize=False,
-                                    slab_name=names)
-            
+                                    relax_type=relax_type)
+
             ft2 = PutStructInDB()
 
             fw = Firework([ft1, ft2],
                           spec = spec,
                           name = 'Relax slab: ' + slab_name)
-        
+
         # Define the third Firework(s)
         # ==================================================
         ft_surfene = FT_SurfaceEnergy()

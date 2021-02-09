@@ -65,7 +65,7 @@ class FT_SlabOptThick(FiretaskBase):
     required_params = ['mp_id', 'miller', 'functional']
     optional_params = ['db_file', 'low_level', 'high_level', 'relax_type', 
                        'convo_kind', 'thick_start', 'thick_incr', 'nsteps',
-                       'vacuum', 'bulk_name', 'slab_name',]
+                       'vacuum', 'bulk_name', 'slab_name']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -74,7 +74,7 @@ class FT_SlabOptThick(FiretaskBase):
         # Define the json file containing default values and read parameters
         dfl = currentdir + '/defaults_fw.json'
         p = read_runtask_params(self, fw_spec, required_params, optional_params,
-                                default_file = dfl, default_key="SlabOptThick")
+                                default_file=dfl, default_key="SlabOptThick")
         
         # Retrieve the bulk information from the high level DB
         nav_struct = StructureNavigator(p['db_file'], p['high_level'])
@@ -192,10 +192,10 @@ class FT_StartThickConvo(FiretaskBase):
         # Define the json file containing default values and read parameters
         dfl = currentdir + '/defaults_fw.json'
         p = read_runtask_params(self, fw_spec, required_params, optional_params,
-                                default_file = dfl, default_key="StartThickConvo")
+                                default_file=dfl, default_key="StartThickConvo")
 
         if p['convo_kind'] == 'surfene':
-            wf = SurfEneWfs.surface_energy_wf(structure=p['structure'], 
+            wf = SurfEneWfs.surface_energy_wf(structure=p['structure'],
                                               mp_id=p['mp_id'], 
                                               miller=p['miller'], 
                                               functional=p['functional'],
@@ -245,7 +245,7 @@ class FT_GenerateSlabs(FiretaskBase):
         # Define the json file containing default values and read parameters
         dfl = currentdir + '/defaults_fw.json'
         p = read_runtask_params(self, fw_spec, required_params, optional_params,
-                                default_file = dfl, default_key="GenerateSlabs")
+                                default_file=dfl, default_key="GenerateSlabs")
 
         GenerateSlabsError.check_slabname_thickness(p['thickness'], 
                                                     p['slab_name'])
@@ -254,6 +254,15 @@ class FT_GenerateSlabs(FiretaskBase):
         slabs = []
         thickness = list(p['thickness'])
         slab_name = list(p['slab_name'])
+
+        # # Create the bulk
+        # slabgen = SlabGenerator(initial_structure = p['structure'],
+        #                         miller_index = p['miller'],
+        #                         primitive=False,
+        #                         lll_reduce=True,
+        #                         in_unit_planes=True,  # Fundamental
+        #                         min_slab_size=thickness[0],
+        #                         min_vacuum_size=0)
 
         for thk in thickness:
             slabgen = SlabGenerator(initial_structure = p['structure'],
@@ -311,7 +320,7 @@ class FT_RelaxStructure(FiretaskBase):
         # Define the json file containing default values and read parameters
         dfl = currentdir + '/defaults_fw.json'
         p = read_runtask_params(self, fw_spec, required_params, optional_params,
-                                default_file = dfl, default_key="RelaxStructure")
+                                default_file=dfl, default_key="RelaxStructure")
 
         # Get the structure from the Database with a calculation tag
         structure, tag = self.extract_data_from_db()
@@ -360,7 +369,8 @@ class FT_RelaxStructure(FiretaskBase):
         # Get a tag for the calculation
         formula = structure.composition.reduced_formula
         if self.p['miller'] is not None:
-            tag = formula + str(self.p['miller']) + '_' + str(uuid4())
+            miller_str = ''.join(str(s) for s in self.p['miller'])
+            tag = formula + miller_str + '_' + str(uuid4())
         else:
             tag = formula + '_' + str(uuid4())
 
@@ -404,7 +414,7 @@ class FT_PutStructInDB(FiretaskBase):
         # Define the json file containing default values and read parameters
         dfl = currentdir + '/defaults_fw.json'
         p = read_runtask_params(self, fw_spec, required_params, optional_params,
-                                default_file = dfl, default_key="PutStructInDB")
+                                default_file=dfl, default_key="PutStructInDB")
 
         # Set missing cluster params
         self.check_cluster_params(self, dfl)

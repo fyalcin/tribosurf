@@ -542,11 +542,11 @@ class StructureNavigator(Navigator):
             functional+'.bulk_data', 
             {'mpid': mp_id,
              'formula': formula,
-             'structure_fromMP': structure.as_dict()}, 
+             'structure_fromMP': structure.as_dict()},
              message=message)
  
-    def add_slab_to_db(self, structure, mp_id, functional, miller, 
-                        struct_name='unrelaxed', message=None):
+    def add_slab_to_db(self, structure, mp_id, functional, miller,
+                       struct_name='unrelaxed', message=None):
         """
         Insert a slab structure in the triboflow high level database.
 
