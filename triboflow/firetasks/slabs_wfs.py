@@ -48,7 +48,7 @@ class SlabWFs:
                                low_level = None, high_level = 'triboflow',
                                relax_type="slab_pos_relax", thick_start=4, 
                                thick_incr=1, nsteps=6, vacuum=10, slab_name=None,
-                               **kwargs):
+                               cluster_params={}):
         """
         Function to set the computational and physical parameters and start a 
         workflow to converge the thickness of the provided slabs.
@@ -61,11 +61,13 @@ class SlabWFs:
         
         # Set secondary parameters
         dfl = currentdir + '/defaults_fw.json'
-        p = read_subwfs_params(default_file = dfl, default_key="subworkflow", **kwargs)
+        p = read_cluster_params(default_file=dfl, 
+                                default_key="cluster_params", 
+                                cluster_params=cluster_params)
         
         # Print relevant information and raise errors based on parameters
         _check_subwf_params(structure, mp_id, miller, functional, db_file, 
-                            comp_params, **kwargs)
+                            comp_params, cluster_params)
 
         # Create a Firework to calculate the Optimal Thickness for a structure
         ft_start_thick_convo = FT_StartThickConvo(structure=structure,
@@ -102,7 +104,7 @@ class SlabWFs:
         pass
 
     def _check_subwf_params(self, structure, mp_id, miller, functional, db_file, 
-                            comp_params, **kwargs):
+                            comp_params, cluster_params):
 
         # Check if the chemical formula passed is the same on MP database
         if mp_id.startswith('mp-') and mp_id[3:].isdigit():
@@ -134,7 +136,7 @@ class SlabWFs:
                 '    "k_dens": <int>}\n')
         
         # Print help to the user
-        if kwargs['print_help']:
+        if cluster_params['print_help']:
             print('Once you workflow has finished you can access the '
                   'results from the database using this code:\n\n'
                   'import pprint\n'
@@ -143,7 +145,7 @@ class SlabWFs:
                   'results = find_data({} + ".slab_data", {"mpid": {}, "miller": {}})\n'
                   'pprint.pprint(results)\n'.format(db_file, functional, mp_id, miller))
 
-def read_subwfs_params(default_file, default_key, **kwargs):
+def read_cluster_params(default_file, default_key, cluster_params):
     """
     [summary]
 
@@ -169,12 +171,12 @@ def read_subwfs_params(default_file, default_key, **kwargs):
     defaults = defaults[default_key]
     params = {}
 
-    if not set(kwargs.keys()).issubset(set(defaults.keys())):
-        raise ReadSubWFsError("Values passed in kwargs are not known. Allowed "
-                              "values: {}".format(defaults.keys()))
+    if not set(cluster_params.keys()).issubset(set(defaults.keys())):
+        raise ReadSubWFsError("Values passed in cluster params are not known. "
+                              "Allowed values: {}".format(defaults.keys()))
 
     # Set the parameters, passed by input or default values
     for key, value in defaults.items():
-        params[key] = kwargs.get(key, value)
+        params[key] = cluster_params.get(key, value)
     
     return params

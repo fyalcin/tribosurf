@@ -22,9 +22,11 @@ from triboflow.firetasks.slabs import FT_GenerateSlabs, FT_RelaxStructure
 class SurfEneWfs:
 
     @staticmethod
-    def surface_energy_wf(structure, mp_id, miller, functional='PBE', db_file=None, 
-                          collection=None, thick_start=4, thick_incr=1, nsteps=6, 
-                          vacuum=10, ext_index=True, slab_name=None, spec={}):
+    def surface_energy_wf(structure, mp_id, miller, functional='PBE', 
+                          comp_params={}, db_file=None, collection=None, 
+                          thick_start=4, thick_incr=1, nsteps=6, vacuum=10, 
+                          relax_type="slab_pos_relax", ext_index=True, 
+                          slab_name=None, spec={}, cluster_params={}):
         """
         Description...
 
@@ -59,9 +61,9 @@ class SurfEneWfs:
         """
 
         # Define the first Firework
-        # =========================================================================
+        # =====================================================================
 
-        # Define the thicknesses that are required to calculate the surface energies
+        # Define the thicks that are required to calculate the surface energies
         thickness = np.arange(thick_start, thick_start + nsteps * thick_incr)
         thickness = thickness.tolist()
 
@@ -72,36 +74,50 @@ class SurfEneWfs:
         names = [out_names + miller + '_' + str(t) for t in thickness]
 
         ft_generate_slabs = FT_GenerateSlabs(strucure=structure,
-                                            mp_id=mp_id,
-                                            miller=miller,
-                                            functional=functional,
-                                            db_file=db_file,
-                                            collection=collection,
-                                            thickness=thickness,
-                                            vacuum=vacuum,
-                                            ext_index=ext_index,
-                                            symmetrize=False,
-                                            slab_name=names)
+                                             mp_id=mp_id,
+                                             miller=miller,
+                                             functional=functional,
+                                             db_file=db_file,
+                                             collection=collection,
+                                             thickness=thickness,
+                                             vacuum=vacuum,
+                                             ext_index=ext_index,
+                                             symmetrize=False,
+                                             slab_name=names)
         fw_genslabs = Firework([ft_generate_slabs],
                                spec = spec,
                                name = 'Generate ' + str(nsteps) + ' slabs' )
 
         # Define the second Firework(s)
         # ==================================================
-
         fw_relax_slabs = []
-        for thk in thickness:
+        for slab_name in names:
 
-            ft = FT_RelaxStructure()
-            fw = Firework([ft_generate_slabs],
-                          spec = spec,
-                          name = 'Generate ' + str(nsteps) + ' slabs' )
+            ft1 = FT_RelaxStructure(mp_id=mp_id,
+                                    miller=miller,
+                                    functional=functional,
+                                    comp_params=comp_params,
+                                    struct_kind='slab',
+                                    db_file=db_file,
+                                    collection=collection,
+                                    name=slab_name,
+                                    relax_type=relax_type,
+                                    symmetrize=False,
+                                    slab_name=names)
             
-            FT_MakeStructureInDB()
+            ft2 = PutStructInDB()
+
+            fw = Firework([ft1, ft2],
+                          spec = spec,
+                          name = 'Relax slab: ' + slab_name)
         
         # Define the third Firework(s)
         # ==================================================
-        FT_SurfaceEnergy
+        ft_surfene = FT_SurfaceEnergy()
+
+        fw = Firework([ft1, ft2],
+                        spec = spec,
+                        name = 'Calculate the Surface Energy')
         
         Workflow()
 

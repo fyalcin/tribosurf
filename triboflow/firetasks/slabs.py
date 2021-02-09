@@ -194,18 +194,24 @@ class FT_StartThickConvo(FiretaskBase):
         p = read_runtask_params(self, fw_spec, required_params, optional_params,
                                 default_file = dfl, default_key="StartThickConvo")
 
-        wf = SurfEneWfs.surface_energy_wf(structure=p['structure'], 
-                                          mp_id=p['mp_id'], 
-                                          miller=p['miller'], 
-                                          functional=p['functional'], 
-                                          db_file=p['db_file'], 
-                                          collection=p['collection'],
-                                          thick_start=p['thick_start'], 
-                                          thick_incr=p['thick_incr'], 
-                                          nsteps=p['nsteps'], 
-                                          vacuum=p['vacuum'], 
-                                          ext_index=p['ext_index'], 
-                                          slab_name=p['slab_name'])
+        if p['convo_kind'] == 'surfene':
+            wf = SurfEneWfs.surface_energy_wf(structure=p['structure'], 
+                                              mp_id=p['mp_id'], 
+                                              miller=p['miller'], 
+                                              functional=p['functional'],
+                                              comp_params=p['comp_params'],
+                                              db_file=p['db_file'], 
+                                              collection=p['collection'],
+                                              thick_start=p['thick_start'], 
+                                              thick_incr=p['thick_incr'], 
+                                              nsteps=p['nsteps'],
+                                              vacuum=p['vacuum'],
+                                              relax_type=p['relax_type'],
+                                              ext_index=p['ext_index'], 
+                                              slab_name=p['slab_name'],
+                                              cluster_params=p['cluster_params'])
+        else:
+            raise SystemExit('Lattice parameter convo not yet implemented')
         
         return FWAction(detours=wf, update_spec=fw_spec)
 
@@ -381,6 +387,49 @@ class FT_RelaxStructure(FiretaskBase):
 
         return fw
 
+@explicit_serialize
+class FT_PutStructInDB(FiretaskBase):
+    """
+    Firetask description...
+    
+    """
+
+    required_params = ['mp_id', 'functional', 'tag']
+    optional_params = ['miller', 'name', 'db_file', 'cluster_params']
+
+    def run_task(self, fw_spec):
+        """ Run the Firetask.
+        """ 
+
+        # Define the json file containing default values and read parameters
+        dfl = currentdir + '/defaults_fw.json'
+        p = read_runtask_params(self, fw_spec, required_params, optional_params,
+                                default_file = dfl, default_key="PutStructInDB")
+
+        # Set missing cluster params
+        self.check_cluster_params(self, dfl)
+
+        # Get the structure from the Database with a calculation tag
+        structure, tag = self.extract_data_from_db()
+        if p['name'] is not None:
+            structure = structure['name']
+
+    def check_cluster_params(self, dfl):
+        
+        defaults = read_json(dfl)
+        cluster_params = self.p['cluster_params']
+
+        # Set default parameters if key is absent
+        if not cluster_params:
+            cluster_params = defaults['cluster_params']
+        
+        else:
+            for key, value in defaults.items():
+                if not key in cluster_params.keys():
+                    cluster_params[key] = value
+        
+        self.p['cluster_params'] = cluster_params
+
 # ============================================================================
 # Functions
 # ============================================================================
@@ -420,7 +469,14 @@ def read_runtask_params(obj, fw_spec, required_params, optional_params,
     for key in optional_params:
         params[key] = obj.get(key, defaults[default_key][key])
 
-    if not 'db_file' in params.keys():
-        params['db_file'] = env_chk('>>db_file<<', fw_spec)
+    # Clean db_file
+    if 'db_file' in params.keys():
+        if params['db_file'] is None:
+            params['db_file'] = env_chk('>>db_file<<', fw_spec)
+
+    # Clean miller index
+    if 'miller' in params.keys():
+        if isinstance(params['miller'], str):
+            miller = [int(k) for k in list(params['miller'])]
 
     return params
