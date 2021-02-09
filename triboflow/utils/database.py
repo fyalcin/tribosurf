@@ -583,9 +583,9 @@ class StructureNavigator(Navigator):
                       '{}.bulk_data collection.'.format(mp_id, functional)
             if warning:
                 log.warning(message)
+                return None
             else:
                 raise StuctNavigatorError(message)
-
 
     def get_slab_from_db(self, mp_id, functional, miller, warning=False):
         """
@@ -631,6 +631,7 @@ class StructureNavigator(Navigator):
                       .format(mp_id, miller, functional)
             if warning:
                 log.warning(message)
+                return None
             else:
                 raise StuctNavigatorError(message)
 
@@ -673,6 +674,7 @@ class StructureNavigator(Navigator):
                       '{}.interface_data collection.'.format(name, functional)
             if warning:
                 log.warning(message)
+                return None
             else:
                 raise StuctNavigatorError(message)
 
@@ -698,7 +700,6 @@ class StructureNavigator(Navigator):
 
         interface = self.db.eos.find(
             {'formula_pretty': formula}).sort('created_at', pymongo.DESCENDING)
-        
         return interface[0]
     
 class NavigatorMP:
