@@ -390,14 +390,14 @@ def ConvergeKpoints_SWF(structure,
     structure : pymatgen.core.structure.Structure
         The structure for which to converge the K-pint grids.
     flag : str
-        An identifyer to find the results in the database. It is strongly
+        An identifier to find the results in the database. It is strongly
         suggested to use the proper Materials-ID from the MaterialsProject
         if it is known for the specific input structure. Otherwise use something
         unique which you can find again.
     comp_parameters : dict
         Dictionary of computational parameters for the VASP calculations.
         Convergence criterion in eV/atom can be given here under the key:
-        'energy_tolerence' and defaults to 0.001 (1meV/atom).
+        'energy_tolerance' and defaults to 0.001 (1meV/atom).
     spec : dict
         Previous fw_spec that will be updated and/or passed on for child
         Fireworks.
@@ -521,7 +521,7 @@ def ConvergeEncut_SWF(structure,
     
     Takes a given structure, computational parameters, and a optional list
     of deformations and uses these deformations to compute an
-    Birch-Murgnahan equation of state for higher and higher energy cutoffs.
+    Birch-Murnaghan equation of state for higher and higher energy cutoffs.
     Once bulk modulus and equilibrium volume do not change any longer,
     convergence is reached. Output is printed to the screen and saved in the
     high-level triboflow database where it can be queried using the mp_id

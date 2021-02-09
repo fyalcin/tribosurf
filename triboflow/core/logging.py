@@ -167,6 +167,7 @@ class LoggingBase:
             Log format.
 
         """
+
         console_logger = logging.getLogger(name + '_console_logger')
 
         console_handler = logging.StreamHandler()
@@ -215,6 +216,7 @@ class LoggingBase:
             Message to print at debug level.
 
         """
+
         CGREEN = '\33[32m'
         CEND = '\033[0m'
         console_message = CGREEN + message + CEND
@@ -233,6 +235,7 @@ class LoggingBase:
             Message to print at debug level.
 
         """
+
         self.console_logger.info(message)
 
         if self.path:
@@ -248,6 +251,7 @@ class LoggingBase:
             Message to print at debug level.
 
         """
+
         CYELLOW = '\33[33m'
         CEND = '\033[0m'
         console_message = CYELLOW + message + CEND
@@ -266,6 +270,7 @@ class LoggingBase:
             Message to print at debug level.
 
         """
+
         CRED = '\33[31m'
         CEND = '\033[0m'
         console_message = CRED + message + CEND
@@ -284,6 +289,7 @@ class LoggingBase:
             Message to print at debug level.
 
         """
+
         CBOLD = '\033[1m'
         CRED = '\33[31m'
         CEND = '\033[0m'
