@@ -19,13 +19,15 @@ __date__ = 'February 2nd, 2021'
 import os
 
 from uuid import uuid4
+import numpy as np
 from pymatgen.core.structure import Structure
+from pymatgen.core.surface import Slab
 from fireworks import Workflow, Firework
 
 from triboflow.utils.database import Navigator, NavigatorMP
 from triboflow.firetasks.slabs import FT_StartThickConvo, FT_EndThickConvo 
 from triboflow.firetasks.slabs import FT_OptimalThickness
-from triboflow.firetasks.errors import SlabThicknessError, ReadSubWFsError
+from triboflow.utils.errors import SlabThicknessError, ReadSubWFsError
 from triboflow.tasks.io import read_json
 
 currentdir = os.path.dirname(__file__)
