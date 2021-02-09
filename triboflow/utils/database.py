@@ -24,6 +24,7 @@ from pymatgen.ext.matproj import MPRester
 from atomate.vasp.database import VaspCalcDb
 
 from triboflow.core.logging import LoggingBase
+from triboflow.utils.errors import NavigatorError, StuctNavigatorError, NavigatorMPError
 
 # Logging
 configurations = LoggingBase.get_config()
@@ -137,8 +138,8 @@ class Navigator:
         db_file : str
             Path where the database file is saved.
         
-        Return
-        ------
+        Returns
+        -------
         vasp_db.db : VaspCalcDb
             VASP database object.
 
@@ -153,15 +154,15 @@ class Navigator:
                 conf_path = conf_file.rstrip('FW_config.yaml')
                 db_file = conf_path + 'db.json'
             else:
-                raise SystemError('Could not find "FW_CONFIG_FILE" environment '
-                                  'variable.\nPlease make sure that your python'
-                                  'environment is configured correctly.')
+                raise NavigatorError('Could not find "FW_CONFIG_FILE" environment '
+                                     'variable.\nPlease make sure that your python'
+                                     'environment is configured correctly.')
 
         try:
             vasp_db = VaspCalcDb.from_db_file(db_file)
         except: 
-            raise SystemError('The database file does not exist in path: {}'
-                              .format(db_file))
+            raise NavigatorError('The database file does not exist in path: {}'
+                                 .format(db_file))
 
         log.info('Successfully connected to: {}.'.format(db_file))
         return vasp_db.db, db_file
@@ -175,8 +176,8 @@ class Navigator:
         collection : str, VaspCalcDb
             Name of the collection in the database o r in the VaspCalcDb object.
         
-        Return
-        ------
+        Returns
+        -------
         collection_obj : VaspCalcDb
             Database object containing the collection of the database.     
         """
@@ -186,9 +187,9 @@ class Navigator:
         elif isinstance(collection, VaspCalcDb):
             collection_obj = collection
         else:
-            raise ValueError('{} is not a valid data type. The collection '
-                             'must be a string or VaspCalcDb.'
-                             ' '.format(type(collection)))
+            raise NavigatorError('{} is not a valid data type. The collection '
+                                 'must be a string or VaspCalcDb.'
+                                 ' '.format(type(collection)))
         
         return collection_obj
 
@@ -217,10 +218,6 @@ class Navigator:
         upsert : bool
             PyMongo parameter for the update_one function. If True update_one 
             performs an insertion if no documents match the filter.
-        
-        Return
-        ------
-        None.
 
         """
 
@@ -250,10 +247,6 @@ class Navigator:
         upsert : bool
             PyMongo parameter for the update_one function. If True update_one 
             performs an insertion if no documents match the filter.
-        
-        Return
-        ------
-        None.
 
         """
 
@@ -283,10 +276,6 @@ class Navigator:
         
         message : str, Optional
             Custom message to write in the console and/or in the log file.
-
-        Return
-        ------
-        None.
 
         """
 
@@ -324,10 +313,6 @@ class Navigator:
         duplicates : bool, Optional
             If True the data are saved in the database even if they are 
             duplicates.
-
-        Return
-        ------
-        None.
 
         """
 
@@ -372,8 +357,8 @@ class Navigator:
             Dictionary containing the name of the document to find.
             If filter is empty all the documents in the collection are returned.
 
-        Return
-        ------
+        Returns
+        -------
         data : variable object
             A variable object depending on the type of the retrived data.
             data is None if nothing has been found.
@@ -407,8 +392,8 @@ class Navigator:
             Dictionary containing the name of the document to find.
             If filter is empty all the documents in the collection are returned.
 
-        Return
-        ------
+        Returns
+        -------
         data : variable object
             A variable object depending on the type of the data.
             data is None if nothing has been found.
@@ -440,10 +425,6 @@ class Navigator:
         filter : dict
             Document to be removed.
 
-        Return
-        ------
-        None.
-
         """
 
         collection_obj = self.__initialize_obj_collection(collection)
@@ -466,10 +447,6 @@ class Navigator:
         filter : dict
             Documents to be removed.
 
-        Return
-        ------
-        None.
-
         """
 
         collection_obj = self.__initialize_obj_collection(collection)
@@ -486,10 +463,6 @@ class Navigator:
         ----------
         collection : str
             Name of the collection to be removed.
-
-        Return
-        ------
-        None.
 
         """
         log.critical('This will drop all entries {} from the database. '
@@ -538,7 +511,6 @@ class StructureNavigator(Navigator):
     get_last_bmd_data_from_db(formula)
         Get the last bulkmodule from the FireWorks database.
 
-
     """
 
     def __init__(self, db_file, high_level):
@@ -562,10 +534,6 @@ class StructureNavigator(Navigator):
         message : str, Optional
             Custom message to write in the console and/or in the log file.
 
-        Returns
-        -------
-        None.
-
         """
 
         formula = structure.composition.reduced_formula
@@ -576,7 +544,7 @@ class StructureNavigator(Navigator):
              'structure_fromMP': structure.as_dict()}, 
              message=message)
     
-    def get_bulk_from_db(self, mp_id, functional):
+    def get_bulk_from_db(self, mp_id, functional, warning=False):
         """
         Get the data about bulk from the triboflow high level database.
         
@@ -587,10 +555,14 @@ class StructureNavigator(Navigator):
         
         functional : str
             Functional. It could be PBE por SCAN.
+
+        warning : bool
+            Raise a warning instead of an error if the structure bulk is not
+            found in the database. The default is False.
         
         Raises
         ------
-        IOError
+        NavigatorError
             If there is no result from the query.
 
         Returns
@@ -607,11 +579,15 @@ class StructureNavigator(Navigator):
         if bulk:
             return bulk
         else:
-            raise IOError('No bulk material with MP-ID {} is found in the'
-                          '{}.bulk_data collection.'.format(mp_id, functional))
+            message = 'No bulk material with MP-ID {} is found in the ' \
+                      '{}.bulk_data collection.'.format(mp_id, functional)
+            if warning:
+                log.warning(message)
+            else:
+                raise StuctNavigatorError(message)
 
 
-    def get_slab_from_db(self, mp_id, functional, miller):
+    def get_slab_from_db(self, mp_id, functional, miller, warning=False):
         """
         Get the data about slab from the triboflow high level database.
 
@@ -626,9 +602,13 @@ class StructureNavigator(Navigator):
         miller : str
             Miller indices for the slab as a list of three integers.
         
+        warning : bool
+            Raise a warning instead of an error if the structure slab is not
+            found in the database. The default is False.
+        
         Raises
         ------
-        IOError
+        StuctNavigatorError
             If there is no result from the query.
 
         Returns
@@ -642,14 +622,19 @@ class StructureNavigator(Navigator):
             functional+'.slab_data',
             {'mpid': mp_id, 'miller': miller})
         
+        # Return the slab or alternatively raise an error or warning
         if slab:
             return slab
         else:
-            raise IOError('No slab with MP-ID {} and miller indices {} was found'
-                          ' in the {}.slab_data collection.'
-                          .format(mp_id, miller, functional))
+            message = 'No slab with MP-ID {} and miller indices ' \
+                      '{} was found in the {}.slab_data collection.' \
+                      .format(mp_id, miller, functional)
+            if warning:
+                log.warning(message)
+            else:
+                raise StuctNavigatorError(message)
 
-    def get_interface_from_db(self, name, functional):
+    def get_interface_from_db(self, name, functional, warning=False):
         """
         Get the data about intreface from the eos database.
 
@@ -660,10 +645,14 @@ class StructureNavigator(Navigator):
         
         functional : str
             Functional. It could be PBE por SCAN.
-        
+
+        warning : bool
+            Raise a warning instead of an error if the selected interface is not
+            found in the database. The default is False.
+
         Raises
         ------
-        IOError
+        StuctNavigatorError
             If there is no result from the query.
         
         Returns
@@ -680,9 +669,12 @@ class StructureNavigator(Navigator):
         if interface:
             return interface
         else:
-            raise IOError(
-                'No interface with name {} was found in the '
-                '{}.interface_data collection.'.format(name, functional))
+            message = 'No interface with name {} was found in the ' \
+                      '{}.interface_data collection.'.format(name, functional)
+            if warning:
+                log.warning(message)
+            else:
+                raise StuctNavigatorError(message)
 
     def get_last_bmd_data_from_db(self, formula):
         """
@@ -756,8 +748,8 @@ class NavigatorMP:
                                  properties=['material_id'])
 
         if len(mp_id) == 0 or mp_id is None:
-            raise NameError('{} has not been found in the Materials Project'
-                             ' database.'.format(chem_formula))
+            raise NavigatorMPError('{} has not been found in the Materials Project'
+                                   ' database.'.format(chem_formula))
         return mp_id[0]['material_id']
 
     
@@ -819,8 +811,8 @@ class NavigatorMP:
                 properties=['material_id'])
 
             if id_list == []:
-                raise NameError('{} has not been found in the MaterialsProject'
-                                'database'.format(chem_formula))
+                raise NavigatorMPError('{} has not been found in the MaterialsProject'
+                                       'database'.format(chem_formula))
             else:
                 mp_id = id_list[0]['material_id']
                 struct = self.__mpr.get_structure_by_material_id(mp_id)
