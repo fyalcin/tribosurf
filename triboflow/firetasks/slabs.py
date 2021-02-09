@@ -300,7 +300,7 @@ class FT_RelaxStructure(FiretaskBase):
     
     """
 
-    required_params = ['mp_id', 'functional', 'struct_kind',]
+    required_params = ['mp_id', 'functional', 'struct_kind']
     optional_params = ['comp_params', 'miller', 'name', 'db_file', 'collection',
                        'relax_type']
 
@@ -394,7 +394,7 @@ class FT_PutStructInDB(FiretaskBase):
     
     """
 
-    required_params = ['mp_id', 'functional', 'tag']
+    required_params = ['mp_id', 'functional', 'tag', 'struct_kind']
     optional_params = ['miller', 'name', 'db_file', 'cluster_params']
 
     def run_task(self, fw_spec):

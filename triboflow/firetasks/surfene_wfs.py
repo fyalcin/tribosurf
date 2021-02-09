@@ -16,7 +16,7 @@ __date__ = 'February 9th, 2021'
 import numpy as np
 from fireworks import Workflow, Firework
 
-from triboflow.firetasks.slabs import FT_GenerateSlabs, FT_RelaxStructure
+from triboflow.firetasks.slabs import FT_GenerateSlabs, FT_RelaxStructure, FT_PutStructInDB
 
 
 class SurfEneWfs:
