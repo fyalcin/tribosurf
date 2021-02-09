@@ -43,9 +43,9 @@ class SlabWFs:
     @staticmethod
     def conv_slabthick_surfene(structure, mp_id, miller, functional='PBE',
                                comp_params={}, spec={}, db_file=None,
+                               low_level = None, high_level = 'triboflow',
                                relax_type="slab_pos_relax", thick_start=4, 
-                               thick_incr=1, steps=6, low_level = None, 
-                               high_level = 'triboflow', slab_name = None,
+                               thick_incr=1, nsteps=6, vacuum=10, slab_name=None,
                                **kwargs):
         """
         Function to set the computational and physical parameters and start a 
@@ -66,19 +66,21 @@ class SlabWFs:
                             comp_params, **kwargs)
 
         # Create a Firework to calculate the Optimal Thickness for a structure
-        ft_start_thick_convo = FT_StartThickConvo(structure,
-                                                  mp_id,
-                                                  miller,
-                                                  functional,
-                                                  comp_params,
-                                                  db_file,
-                                                  low_level,
-                                                  #high_level,
-                                                  relax_type,
-                                                  thick_start,
-                                                  thick_incr,
-                                                  steps,
-                                                  **kwargs)
+        ft_start_thick_convo = FT_StartThickConvo(structure=structure,
+                                                  mp_id=mp_id,
+                                                  miller=miller,
+                                                  functional=functional,
+                                                  comp_params=comp_params,
+                                                  db_file=db_file,
+                                                  collection=low_level,
+                                                  convo_kind='surfene',
+                                                  relax_type=relax_type,
+                                                  thick_start=thick_start,
+                                                  thick_incr=thick_incr,
+                                                  nsteps=nsteps,
+                                                  vacuum=vacuum,
+                                                  slab_name=slab_name,
+                                                  cluster_params=p)
 
         ft_end_thick_convo = FT_EndThickConvo()
 

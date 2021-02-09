@@ -16,6 +16,7 @@ __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 2nd, 2021'
 
 import os
+import monty
 
 from fireworks.utilities.fw_utilities import explicit_serialize
 from fireworks import FiretaskBase, FWAction
@@ -26,7 +27,7 @@ from pymatgen.transformations.advanced_transformations import SlabTransformation
 
 from triboflow.utils.database import StructureNavigator, NavigatorMP
 from triboflow.firetasks.slabs_wfs import SlabWFs
-from triboflow.firetasks.errors import SlabThicknessError, GenerateSlabsErrors
+from triboflow.firetasks.errors import SlabThicknessError, GenerateSlabsError
 from triboflow.tasks.io import read_json
 
 currentdir = os.path.dirname(__file__)
@@ -57,8 +58,8 @@ class FT_SlabOptThick(FiretaskBase):
 
     required_params = ['mp_id', 'miller', 'functional']
     optional_params = ['db_file', 'low_level', 'high_level', 'relax_type', 
-                       'convo_kind', 'nplane_start', 'nplane_incr', 
-                       'nplane_conv', 'bulk_name', 'slab_name',]
+                       'convo_kind', 'nplane_start', 'nplane_incr', 'nsteps', 
+                       'bulk_name', 'slab_name',]
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -111,9 +112,10 @@ class FT_StartThickConvo(FiretaskBase):
     """
     
     _fw_name = 'Start the slab thickness convergence'
-    required_params = ['mp_id', 'miller', 'functional']
-    optional_params = ['db_file', 'low_level', 'high_level', 'relax_type', 
-                       'convo_kind', 'bulk_name', 'slab_name']
+    required_params = ['structure', 'mp_id', 'miller', 'functional']
+    optional_params = ['db_file', 'collection', 'comp_params', 'convo_kind',
+                       'relax_type', 'thick_start', 'thick_incr', 'nsteps',
+                       'vacuum', 'slab_name', 'cluster_params']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -122,29 +124,28 @@ class FT_StartThickConvo(FiretaskBase):
         min_thickness = 6
         min_vacuum = 0
 
-        slabgen = SlabGenerator(initial_structure = bulk,
-                                miller_index = miller,
-                                center_slab = True,
-                                primitive = False,
-                                lll_reduce = True,
-                                in_unit_planes = True,
-                                #max_normal_search=max([abs(l) for l in miller]),
-                                min_slab_size = min_thickness,
-                                min_vacuum_size = min_vacuum)
+        # nav_struct = StructureNavigator(p['db_file'], p['collection'])
+        # slab_db = nav_struct.get_slab_from_db(p['mp_id'], p['functional'], 
+        #                                       p['miller'], warning=True)
 
-        slabgen = SlabGenerator(initial_structure = bulk,
-                                miller_index = miller,
-                                center_slab=True,
-                                primitive=False,
-                                lll_reduce=True,
-                                in_unit_planes=True,
-                                #max_normal_search=max([abs(l) for l in miller]),
-                                min_slab_size=min_thickness,
-                                min_vacuum_size=min_vacuum)
-        bulk = slabgen.get_slab()
+
+        # Define the first Firetask 
+        names=None
+
+
+        FT_GenerateSlabs(strucure=p['structure'],
+                         mp_id=p['mp_id'],
+                         miller=p['miller'],
+                         functional=p['functional'],
+                         db_file=p[''],
+                         collection,
+                         thickness,
+                         vacuum,
+                         ext_index,
+                         symmetrize=False,
+                         slab_name=names)
 
         #bulk.to(fmt='poscar', filename='POSCAR')
-        slab.to(fmt='poscar', filename='POSCAR')
 
 @explicit_serialize
 class FT_EndThickConvo(FiretaskBase):
@@ -166,7 +167,8 @@ class FT_GenerateSlabs(FiretaskBase):
     """
 
     required_params = ['structure', 'mp_id', 'miller', 'functional']
-    optional_params = ['db_file', 'collection', 'thickness', 'vacuum', 'slab_name']
+    optional_params = ['db_file', 'collection', 'thickness', 'vacuum', 
+                       'ext_index', 'symmetrize', 'slab_name']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -177,10 +179,15 @@ class FT_GenerateSlabs(FiretaskBase):
         p = read_runtask_params(self, fw_spec, required_params, optional_params,
                                 default_file = dfl, default_key="GenerateSlabs")
         
-        GenerateSlabsErrors.check_thickness(p['thickness'])
-        
+        GenerateSlabsError.check_thickness(p['thickness'])
+        GenerateSlabsError.check_slabname(p['slab_name'])
+
+        # Generate the slabs for each structure passed as input
         slabs = []
-        for thk in list(p['thickness']):
+        thickness = list(p['thickness'])
+        slab_name = list(p['slab_name'])
+
+        for thk in thickness:
             slabgen = SlabGenerator(initial_structure = p['structure'],
                                     miller_index = p['miller'],
                                     center_slab=True,
@@ -189,11 +196,34 @@ class FT_GenerateSlabs(FiretaskBase):
                                     in_unit_planes=True,  # Fundamental
                                     min_slab_size=thk,
                                     min_vacuum_size=p['vacuum'])
+            s = slabgen.get_slabs(bonds=None, ftol=0.1, tol=0.1, 
+                                  max_broken_bonds=0, symmetrize=p['symmetrize'],
+                                  repair=False)
+            # If exit index is True (default), return the first element.
+            # TODO: Generalize this approach by evaluating the different slabs
+            # that are returned and select the optimal one.
+            if p['ext_index']:
+                s = s[0]
 
+            slabs.append(s)
+
+        # Add the slabs to the "collection" Database
+        nav_struct = StructureNavigator(p['db_file'], p['collection'])
         
-        #if p['high_level'] is not None:
-        #    nav.save
-
+        # Store unrelaxed data in the Database
+        for slab, name in zip(slabs, slab_name):
+            slab_dict = monty.json.jsanitize(s.as_dict(), allow_bson=True)
+            nav_struct.add_slab_to_db(structure=slab, 
+                                      mp_id=p['mp_id'],
+                                      functional=p['functional'],
+                                      miller=p['miller'],
+                                      struct_name=name)
+        
+        # coll.update_one({'mpid': flag, 'miller': miller},
+        #                 {'$set': {'unrelaxed_slab': slab_dict}},
+        #                 upsert=True)
+        
+        return FWAction(update_spec=fw_spec)
 
 # ============================================================================
 # Functions
