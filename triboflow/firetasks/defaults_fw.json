@@ -15,7 +15,7 @@
     "StartThickConvo": {
         "db_file": null,
         "collection": null,
-        "comp_params": null,
+        "comp_params": {},
         "convo_kind": "surfene",
         "relax_type": "slab_pos_relax",
         "thick_start": 4,
@@ -24,7 +24,7 @@
         "vacuum": 10,
         "ext_index": true,
         "slab_name": null,
-        "cluster_params": null
+        "cluster_params": {}
     },
     "GenerateSlabs": {
         "structure": null,
@@ -39,10 +39,16 @@
     "RelaxStructure": {
         "db_file": null,
         "collection": null,
-        "comp_params": null,
+        "comp_params": {},
         "miller": null,
         "name": null,
         "relax_type": "slab_pos_relax"
+    },
+    "PutStructInDB": {
+        "db_file": null,
+        "miller": null,
+        "name": "relaxed",
+        "miller": null
     },
     "subworkflow": {
         "file_output": false,
