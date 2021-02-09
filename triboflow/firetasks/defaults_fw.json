@@ -1,5 +1,6 @@
 {
     "SlabOptThick": {
+        "db_file": null,
         "low_level": null,
         "high_level": "triboflow",
         "relax_type": "slab_pos_relax",
@@ -7,8 +8,23 @@
         "thick_start": 4,
         "thick_incr": 1,
         "nsteps": 6,
+        "vacuum": 10,
         "bulk_name": null,
         "slab_name": null
+    },
+    "StartThickConvo": {
+        "db_file": null,
+        "collection": null,
+        "comp_params": null,
+        "convo_kind": "surfene",
+        "relax_type": "slab_pos_relax",
+        "thick_start": 4,
+        "thick_incr": 1,
+        "nsteps": 6,
+        "vacuum": 10,
+        "ext_index": true,
+        "slab_name": null,
+        "cluster_params": null
     },
     "GenerateSlabs": {
         "structure": null,
@@ -19,6 +35,14 @@
         "symmetrize": false,
         "vacuum": 0,
         "slab_name": null
+    },
+    "RelaxStructure": {
+        "db_file": null,
+        "collection": null,
+        "comp_params": null,
+        "miller": null,
+        "name": null,
+        "relax_type": "slab_pos_relax"
     },
     "subworkflow": {
         "file_output": false,
