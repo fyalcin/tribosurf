@@ -11,7 +11,7 @@ atomic layers.
 """
 
 __author__ = 'Gabriele Losi'
-__copyright__ = 'Prof. M.C. Righi, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 2nd, 2021'
 
@@ -29,8 +29,8 @@ from pymatgen.core.surface import SlabGenerator
 from pymatgen.transformations.advanced_transformations import SlabTransformation
 
 from triboflow.utils.database import StructureNavigator, NavigatorMP
-from triboflow.firetasks.slabs_wfs import SlabWFs
-from triboflow.firetasks.surfene_wfs import SurfEneWfs
+from triboflow.firetasks.slabs_wfs import SlabWF
+from triboflow.firetasks.surfene_wfs import SurfEneWF
 from triboflow.utils.errors import SlabOptThickError, GenerateSlabsError, RelaxStructureError
 from triboflow.tasks.io import read_json
 from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
@@ -44,11 +44,13 @@ currentdir = os.path.dirname(__file__)
 
 @explicit_serialize
 class FT_SlabOptThick(FiretaskBase):
-    """
+    """ Author: Gabriele Losi; Copyright 2021, Prof. M.C. Righi, UniBO.
+
     Start a subworkflow as a detour to calculate the optimal thickness generated
     from a provided bulk structure and with a certain orientation.
     The thickness can be converged either by evaluating how the surface energy
     or the lattice parameters changes with the number of atomic planes.
+    At the moment only the surface energy convergence is implemented.
 
     bulk_name : str or None, optional
         Name of the bulk structure in the bulk database (material is
@@ -60,7 +62,7 @@ class FT_SlabOptThick(FiretaskBase):
 
     """
     
-    _fw_name = 'Start a swf to converge slab thickness'
+    _fw_name = 'Start a subworkflow to converge slab thickness'
 
     required_params = ['mp_id', 'miller', 'functional']
     optional_params = ['db_file', 'low_level', 'high_level', 'relax_type', 
@@ -123,43 +125,15 @@ class FT_SlabOptThick(FiretaskBase):
                               relax_type="slab_pos_relax", convo_kind='surfene'):
         """
         Select the desired subworkflow from the SlabWFs class, to converge the 
-        slab thickness either via surface energy or lattice parameter.
-
-        Parameters
-        ----------
-        structure : pymatgen.core.structure.Structure
-            Structure of the bulk to be processed.
-
-        mp_id : str
-            [description]
-
-        miller : str
-            [description]
-
-        comp_params : dict
-            [description]
-
-        functional : str, optional
-            [description], by default 'PBE'
-
-        convo_kind : str, optional
-            [description], by default 'surfene'
-
-        Returns
-        -------
-        [type]
-            [description]
-
-        Raises
-        ------
-        SlabThicknessError
-            When a wrong input argument is passed to convo_kind
+        slab thickness either by evaluating the surface energy or the lattice 
+        parameter.
+        
         """
 
         if convo_kind == 'surfene':
-            generate_wf = SlabWFs.conv_slabthick_surfene
+            generate_wf = SlabWF.conv_slabthick_surfene
         elif convo_kind == 'alat':
-            generate_wf = SlabWFs.conv_slabthick_alat
+            generate_wf = SlabWF.conv_slabthick_alat
         else:
             raise SlabOptThickError("Wrong input argument for convo_kind. "
                                     "Allowed options: 'surfene', 'alat'.")
@@ -195,21 +169,21 @@ class FT_StartThickConvo(FiretaskBase):
                                 default_file=dfl, default_key="StartThickConvo")
 
         if p['convo_kind'] == 'surfene':
-            wf = SurfEneWfs.surface_energy_wf(structure=p['structure'],
-                                              mp_id=p['mp_id'], 
-                                              miller=p['miller'], 
-                                              functional=p['functional'],
-                                              comp_params=p['comp_params'],
-                                              db_file=p['db_file'], 
-                                              collection=p['collection'],
-                                              thick_start=p['thick_start'], 
-                                              thick_incr=p['thick_incr'], 
-                                              nsteps=p['nsteps'],
-                                              vacuum=p['vacuum'],
-                                              relax_type=p['relax_type'],
-                                              ext_index=p['ext_index'], 
-                                              slab_name=p['slab_name'],
-                                              cluster_params=p['cluster_params'])
+            wf = SurfEneWF.surface_energy(structure=p['structure'],
+                                          mp_id=p['mp_id'], 
+                                          miller=p['miller'], 
+                                          functional=p['functional'],
+                                          comp_params=p['comp_params'],
+                                          db_file=p['db_file'], 
+                                          collection=p['collection'],
+                                          thick_start=p['thick_start'], 
+                                          thick_incr=p['thick_incr'], 
+                                          nsteps=p['nsteps'],
+                                          vacuum=p['vacuum'],
+                                          relax_type=p['relax_type'],
+                                          ext_index=p['ext_index'], 
+                                          slab_name=p['slab_name'],
+                                          cluster_params=p['cluster_params'])
         else:
             raise SystemExit('Lattice parameter convo not yet implemented')
         

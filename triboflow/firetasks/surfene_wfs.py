@@ -19,14 +19,14 @@ from fireworks import Workflow, Firework
 from triboflow.firetasks.slabs import FT_GenerateSlabs, FT_RelaxStructure, FT_PutStructInDB
 
 
-class SurfEneWfs:
+class SurfEneWF:
 
     @staticmethod
-    def surface_energy_wf(structure, mp_id, miller, functional='PBE', 
-                          comp_params={}, db_file=None, collection=None, 
-                          thick_start=4, thick_incr=1, nsteps=6, vacuum=10, 
-                          relax_type="slab_pos_relax", ext_index=True, 
-                          slab_name=None, spec={}, cluster_params={}):
+    def surface_energy(structure, mp_id, miller, functional='PBE', 
+                       comp_params={}, db_file=None, collection=None, 
+                       thick_start=4, thick_incr=1, nsteps=6, vacuum=10, 
+                       relax_type="slab_pos_relax", ext_index=True, 
+                       slab_name=None, spec={}, cluster_params={}):
         """
         Description...
 
@@ -74,7 +74,7 @@ class SurfEneWfs:
             out_names = slab_name
         names = [out_names + miller_str + '_' + str(t) for t in thickness]
 
-        ft_generate_slabs = FT_GenerateSlabs(strucure=structure,
+        ft_generate_slabs = FT_GenerateSlabs(structure=structure,
                                              mp_id=mp_id,
                                              miller=miller,
                                              functional=functional,
@@ -119,4 +119,3 @@ class SurfEneWfs:
                         name = 'Calculate the Surface Energy')
         
         Workflow()
-

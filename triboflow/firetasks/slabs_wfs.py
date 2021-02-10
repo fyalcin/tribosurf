@@ -36,7 +36,7 @@ currentdir = os.path.dirname(__file__)
 # Classes
 # ============================================================================
 
-class SlabWFs:
+class SlabWF:
     """
     Collection of static methods to manipulate slab structures.
     
