@@ -24,7 +24,7 @@ A schematic representation of our subworkflow is reported in the figure above. N
 
 #### Firetasks
 
-1. **FT_SlabOptThick**: Firetask to start a subworkflow as a detour within another job stream. Check if a specific slab (identified by `mp_id`,` functional` and `miller`) is already present in the ` high_level` db and if it contains a <span style =" color: orange ">'opt_thickness'</span> type his dictionary. Otherwise, the corresponding bulk structure is retrieved from the `high_level` db and a subworkflow is started to converge the slab thickness, either via the surface energy or the lattice parameter (not implemented yet). The subworkflow is created through the static method of an external class, e.g. *SlabWF.conv_slabthick_surfene* and is composed of two Firetasks: *FT_StartThickConvo* and *FT_EndThickConvo*.<br/>
+1. **FT_SlabOptThick**: Firetask to start a subworkflow as a detour within another workflow. Check if a specific slab (identified by `mp_id`,` functional` and `miller`) is already present in the ` high_level` db and if it contains a <span style =" color: orange ">'opt_thickness'</span> type his dictionary. Otherwise, the corresponding bulk structure is retrieved from the `high_level` db and a subworkflow is started to converge the slab thickness, either via the surface energy or the lattice parameter (not implemented yet). The subworkflow is created through the static method of an external class, e.g. *SlabWF.conv_slabthick_surfene* and is composed of two Firetasks: *FT_StartThickConvo* and *FT_EndThickConvo*.<br/>
 Input arguments are:
 	- **required_params** = [<span style="color:orange">'mp_id'</span>, <span style="color:orange">'miller'</span>, <span style="color:orange">'functional'</span>]
 	- **optional_params** = [<span style="color:orange">'db_file'</span>, <span style="color:orange">'low_level'</span>, <span style="color:orange">'high_level'</span>, <span style="color:orange">'relax_type'</span>, <span style="color:orange">'convo_kind'</span>, <span style="color:orange">'thick_start'</span>, <span style="color:orange">'thick_incr'</span>, <span style="color:orange">'nsteps'</span>, <span style="color:orange">'vacuum'</span>, <span style="color:orange">'bulk_name'</span>, <span style="color:orange">'slab_name'</span>] <br/>
@@ -110,8 +110,40 @@ Input arguments are:
 These firetasks rely on two subworkflows:
 - **conv_slabthick_surfene**: Function to start a subworkflow to calculate the optimal thickness for a given bulk structure along a given orientation. Set the computational and cluster parameters and open a subworkflow. <br/>
 Input arguments are:
+-- `structure`:
+-- `mp_id`:
+-- `miller`:
+-- `functional`:
+-- `comp_params`:
+-- `db_file`:
+-- `collection`:
+-- `thick_start`:
+-- `thick_incr`:
+-- `nsteps`:
+-- `vacuum`:
+-- `relax_type`:
+-- `ext_index`:
+-- `slab_name`:
+-- `spec`:
+-- `cluster_params`:
 
 - **surface_energy**: Function to start a subworkflow to calculate the surface energy of a slab of a list of slabs. Set the computational and cluster parameters and open a subworkflow. <br/>
 Input arguments are:
+-- `structure`:
+-- `mp_id`:
+-- `miller`:
+-- `functional`:
+-- `comp_params`:
+-- `db_file`:
+-- `collection`:
+-- `thick_start`:
+-- `thick_incr`:
+-- `nsteps`:
+-- `vacuum`:
+-- `relax_type`:
+-- `ext_index`:
+-- `slab_name`:
+-- `spec`:
+-- `cluster_params`:
 
-### Functioning Hyphotesis
+### Functioning
