@@ -239,6 +239,11 @@ class FT_GenerateSlabs(FiretaskBase):
         #                         min_vacuum_size=0)
 
         for thk in thickness:
+
+            if thk == 0:
+                bulk = slabgen.oriented_unit_cell()
+                
+            else:
             slabgen = SlabGenerator(initial_structure = p['structure'],
                                     miller_index = p['miller'],
                                     center_slab=True,
@@ -247,6 +252,7 @@ class FT_GenerateSlabs(FiretaskBase):
                                     in_unit_planes=True,  # Fundamental
                                     min_slab_size=thk,
                                     min_vacuum_size=p['vacuum'])
+            
             s = slabgen.get_slabs(bonds=None, ftol=0.1, tol=0.1, 
                                   max_broken_bonds=0, symmetrize=p['symmetrize'],
                                   repair=False)

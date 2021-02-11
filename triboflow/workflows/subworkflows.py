@@ -36,7 +36,6 @@ def CalcPES_SWF(top_slab, bottom_slab,
     is generally dependent on which machine the calculations are executed,
     and not on the machine where the workflow is submitted. Also ssh-keys need
     to be set up for remote_copy to work!
-
     
     Parameters
     ----------
@@ -147,8 +146,8 @@ def CalcPES_SWF(top_slab, bottom_slab,
     
 def CalcPPES_SWF(interface_name, functional, distance_list = [-0.5, -0.25, 0.0,
                                 0.25, 0.5, 2.5, 3.0, 4.0, 5.0, 7.5],
-             out_name = 'PPES@minimum', structure_name = 'minimum_relaxed',
-             spec = {}):
+                 out_name = 'PPES@minimum', structure_name = 'minimum_relaxed',
+                 spec = {}):
     """
     Generate a subworkflow that calculates a PPES using static calculations.
     
@@ -232,7 +231,7 @@ def MakeAndRelaxSlab_SWF(bulk_structure,
     miller_index : list of int or str
         Miller indices of the slab to make.
     flag : str
-        An identifyer to find the results in the database. It is strongly
+        An identifier to find the results in the database. It is strongly
         suggested to use the proper Materials-ID from the MaterialsProject
         if it is known for the specific input structure. Otherwise use something
         unique which you can find again.

@@ -37,7 +37,17 @@ class SurfEneWF:
         mp_id : [type]
             [description]
         miller : [type]
-            [description]
+            [description] ft_generate_slabs = FT_GenerateSlabs(structure=structure,
+                                             mp_id=mp_id,
+                                             miller=miller,
+                                             functional=functional,
+                                             db_file=db_file,
+                                             collection=collection,
+                                             thickness=thickness,
+                                             vacuum=vacuum,
+                                             ext_index=ext_index,
+                                             symmetrize=False,
+                                             slab_name
         functional : str, optional
             [description], by default 'PBE'
         db_file : [type], optional
@@ -103,8 +113,6 @@ class SurfEneWF:
                                     collection=collection,
                                     name=slab_name,
                                     relax_type=relax_type)
-
-            ft2 = PutStructInDB()
 
             fw = Firework([ft1, ft2],
                           spec = spec,
