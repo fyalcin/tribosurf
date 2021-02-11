@@ -146,4 +146,42 @@ Input arguments are:
 -- `spec`:
 -- `cluster_params`:
 
-### Functioning
+### Design and Functioning
+The dictionaries of the bulk should have a structure like this:
+```
+bulk = {
+    'mp_id': mp_id,
+    'functional': functional,
+    'structfrommp': { structure, ... },
+    'orientation': { 111: { structure, energy, energy_per_atom, surface_energy, ... }, 100: {...}, ... }
+    }
+```
+
+The dictionaries of the slabs should have a structure like this:
+```
+slab_miller = {
+    'mp_id': mp_id,
+    'functional': functional,
+    'miller': miller, 
+    'opt_thickness': opt_thickness, 
+    'surface_energy': surface_energy (found from the max possible thickness, see below),
+    'unrelaxed_slab': unrelaxed_structure,
+    'relaxed_slab': relaxed_structure,
+    'data_opt': { surface_energy (, energy, gap, ...) },
+    'thickness': {data_5: { surface_energy(, energy, gap, ...), unrelaxed_slab, relaxed_slab }, ... }
+    }
+```
+
+To converge the slab thickness by calculating the surface energy, there is a possible general assumption that we can make:
+- The maximum possible thickness for the slab is set, e.g. 12.
+
+To parallelization made at the level of `FT_RelaxStructure` can be done in two different approaches:
+1. At the first iteration only 3 calculations are carried out, that is: the bulk oriented along the Miller index (h, k, l), the slab with the minimum thickness (e.g. 4 layers), and the slab with the maximum allowed thickness (e.g.  2 layers). If it is not reached, the subworkflow is called recursively on the next possible slab (e.g. 5 layers), its surface energy is calculated and compared with the last one and if convergence is not reached, repeat again. In the end, if the convergence is never reached, keep the slab with the maximum thickness is the optimal one. At the first step, the workflow is generated with the following options.
+```
+Workflow([fw_0, fw_1, fw_2, fw_3, fw_4], {fw_0: [fw_1, fw_2, fw_3], fw_1: [fw_4], fw_2: [fw_4], fw_3: [fw_4]})
+```
+N.B. Each Firetask is encapsulated in a single Fireworks.
+
+2. An alternative approach would be to directly start in parallel any expected calculation, e.g. at the first iteration already run the bulk and the slabs with thickness: 4, 5, 6, 7, 8, 9, 10, 11, 12.
+
+We decided to stick with the first option to limit the computational efforts of the cluster. In case we do not want to set a maximum thickness value, that value could be increased if the converge is not reached at the end of the loop.

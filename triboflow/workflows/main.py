@@ -52,7 +52,7 @@ def Heterogeneous_WF(inputs):
 
     Initialize = CheckInputsFW(mat1_params = mat_1,
                                mat2_params = mat_2,
-                               compparams = comp_params,
+                               comp_params = comp_params,
                                interface_params = inter_params,
                                FW_name = 'Check input parameters')
     WF.append(Initialize)
