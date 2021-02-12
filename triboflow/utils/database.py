@@ -752,12 +752,12 @@ class NavigatorMP:
 
         """
         mp_id = self.__mpr.query(criteria={'pretty_formula': chem_formula, 
-                                      'e_above_hull': 0.0},
+                                           'e_above_hull': 0.0},
                                  properties=['material_id'])
 
         if len(mp_id) == 0 or mp_id is None:
             raise NameError('{} has not been found in the Materials Project'
-                             ' database.'.format(chem_formula))
+                            ' database.'.format(chem_formula))
         return mp_id[0]['material_id']
 
     
