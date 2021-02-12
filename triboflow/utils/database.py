@@ -178,7 +178,8 @@ class Navigator:
         Return
         ------
         collection_obj : VaspCalcDb
-            Database object containing the collection of the database.     
+            Database object containing the collection of the database.
+  
         """
 
         if isinstance(collection, str):
@@ -537,7 +538,6 @@ class StructureNavigator(Navigator):
 
     get_last_bmd_data_from_db(formula)
         Get the last bulkmodule from the FireWorks database.
-
 
     """
 
