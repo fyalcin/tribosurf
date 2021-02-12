@@ -305,8 +305,8 @@ class LoggingBase:
             Dictionary containing the configurations.
         """
 
-        project_folder = os.getcwd()
-        config_path = project_folder + '/triboflow/core/config.json' 
+        project_folder = os.path.dirname(__file__)
+        config_path = project_folder + '/config.json' 
         with open(config_path, 'r') as config:
             config = json.load(config)
         
@@ -326,10 +326,10 @@ class LoggingBase:
             The path to log folder.
         """
         
-        project_folder = os.getcwd()
+        project_folder = os.path.dirname(__file__)
         # PurePosixPath gets the first level parten directory
         log_folder_object = PurePosixPath(project_folder)
-        log_folder = str(log_folder_object.parent) + '/log/'
+        log_folder = str(log_folder_object.parent.parent.parent) + '/log/'
         log_path = Path(log_folder)
 
         if not log_path.is_dir():
