@@ -28,8 +28,6 @@ from pymatgen.core.structure import Structure
 from pymatgen.core.surface import SlabGenerator
 
 from triboflow.utils.database import StructureNavigator
-from triboflow.firetasks.slabs_wfs import SlabWF
-from triboflow.firetasks.surfene_wfs import SurfEneWF
 from triboflow.utils.errors import SlabOptThickError, GenerateSlabsError, RelaxStructureError
 from triboflow.tasks.io import read_json
 from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
@@ -51,6 +49,8 @@ class FT_SlabOptThick(FiretaskBase):
     or the lattice parameters changes with the number of atomic planes.
     At the moment only the surface energy convergence is implemented.
 
+    Parameters
+    ----------
     mp_id : str
         MP-id of the structure from the MP database.
     
@@ -60,56 +60,56 @@ class FT_SlabOptThick(FiretaskBase):
     functional : str
         Functional for the pseudopotential to be adopted.
 
-    db_file: str or None
+    db_file : str or None
         Path to the location of the database. If nothing is provided it will be
         searched by env_check from Atomate. The default is None.
         
-    low_level: str or None, optional
+    low_level : str or None, optional
         Name of the table of the "low level" database, saved in db_file. The 
         intermediate calculations and raw data during will be saved here. If 
         nothing is passed the Firework database is used. The default is None.
 
-    high_level: str, optional
+    high_level : str, optional
         Name of the table of the "high level" database, saved in db_file.
         The slab optimal thickness will be saved here. The slab energy and
         surface energy will be saved too if convo_kind is 'surfene'.
         The default is 'triboflow'.
 
-    relax_type: str, optional
+    relax_type : str, optional
         The type of relaxation to be performed during the simulation, to be feed
         to GetCustomVaspRelaxSettings. The default is 'slab_pos_relax'.
 
-    convo_kind: str, optional
+    convo_kind : str, optional
         Type of convergence to be performed. Allowed values are: 'surfene', 
         'alat'. The latter is not implemented yet. The default is 'surfene'.
     
-    thick_min: int, optional
+    thick_min : int, optional
         Number of atomic layers for the slab to be used as starting point.
         The default is 4.
         
-    thick_max: int, optional
+    thick_max : int, optional
         Maximum number of allowed atomic layers for the slab. If the convergence
         is not reached this value is assumed to be the optimal one.
         The default is 12.
 
-    thick_incr: int, optional
+    thick_incr : int, optional
         The incremental number of atomic layers to be added at each step.
         The default is 2.
 
-    vacuum: int or float, optional
+    vacuum : int or float, optional
         Vacuum to be used for creating in the slabs cells. The default is 10.
 
-    in_unit_planes: bool, optional
+    in_unit_planes : bool, optional
         Decide if thick_min, thick_max, thick_incr, and vacuum are expressed in
         units of number of atomic layers or Angstrom. The default is True.
 
-    bulk_name: str or None, optional
+    bulk_name : str or None, optional
         Name of the custom bulk dictionary, to be retrieved from the high level
         database and to be used to build the slabs. Bulks are identified by 
         mp_id and functional but there might be different structures of the
         same material. The default is None.
 
-    slab_name: str or None, optional
+    slab_name : str or None, optional
         Custom name to store the slab dictionary in the high level database at
         the end of the convergence procedure. The default is None.
 
@@ -118,8 +118,8 @@ class FT_SlabOptThick(FiretaskBase):
     _fw_name = 'Start a subworkflow to converge slab thickness'
 
     required_params = ['mp_id', 'miller', 'functional']
-    optional_params = ['db_file', 'low_level', 'high_level', 'relax_type', 
-                       'convo_kind', 'thick_min', 'thick_max', 'thick_incr',
+    optional_params = ['db_file', 'low_level', 'high_level', 'convo_kind',
+                       'relax_type', 'thick_min', 'thick_max', 'thick_incr',
                        'vacuum', 'in_unit_planes', 'bulk_name', 'slab_name']
 
     def run_task(self, fw_spec):
@@ -183,6 +183,8 @@ class FT_SlabOptThick(FiretaskBase):
         
         """
 
+        from triboflow.firetasks.slabs_wfs import SlabWF
+
         if convo_kind == 'surfene':
             generate_wf = SlabWF.conv_slabthick_surfene
         elif convo_kind == 'alat':
@@ -201,20 +203,94 @@ class FT_SlabOptThick(FiretaskBase):
 
 @explicit_serialize
 class FT_StartThickConvo(FiretaskBase):
-    """
-    Firetask description...
+    """ Author: Gabriele Losi; Copyright 2021, Prof. M.C. Righi, UniBO.
+
+    It starts a subworkflow as a detour to converge the thickness of a slab.
+    The thickness can be converged either by evaluating how the surface energy
+    or the lattice parameters changes with the number of atomic planes.
+    It is the first element of the SlabWF.conv_slabthick_surfene workflow.
+
+    (At the moment only the surface energy convergence is implemented)
     
+    Parameters
+    ----------
+    structure : pymatgen.core.structure.Structure
+        Bulk structure to build the slabs.
+
+    mp_id : str
+        MP-id of the structure from the MP database.
+    
+    miller : list of int, or str
+        Miller indexes (h, k, l) to select the slab orientation.
+        
+    functional : str
+        Functional for the pseudopotential to be adopted.
+
+    db_file : str or None
+        Path to the location of the database. If nothing is provided it will be
+        searched by env_check from Atomate. The default is None.
+        
+    database : str or None, optional
+        Name of the table where the data will be stored, within db_file. If 
+        nothing is passed the Firework database is used. The default is None.
+
+    convo_kind : str, optional
+        Type of convergence to be performed. Allowed values are: 'surfene', 
+        'alat'. The latter is not implemented yet. The default is 'surfene'.
+
+    relax_type : str, optional
+        The type of relaxation to be performed during the simulation, to be feed
+        to GetCustomVaspRelaxSettings. The default is 'slab_pos_relax'.
+
+    comp_params : dict, optional
+        Computational parameters for the VASP simulations. If not set, default 
+        parameters will be used instead. The default is {}.
+    
+    thick_min : int, optional
+        Number of atomic layers for the slab to be used as starting point.
+        The default is 4.
+        
+    thick_max : int, optional
+        Maximum number of allowed atomic layers for the slab. If the convergence
+        is not reached this value is assumed to be the optimal one.
+        The default is 12.
+
+    thick_incr : int, optional
+        The incremental number of atomic layers to be added at each step.
+        The default is 2.
+
+    vacuum : int or float, optional
+        Vacuum to be used for creating in the slabs cells. The default is 10.
+
+    in_unit_planes : bool, optional
+        Decide if thick_min, thick_max, thick_incr, and vacuum are expressed in
+        units of number of atomic layers or Angstrom. The default is True.
+
+    ext_index : int, optional
+        Use the ext_index element from SlabGenerator.get_slabs as a slab.
+        The default is 0.
+
+    slab_name : str or None, optional
+        Custom name to store the slab dictionary in the high level database at
+        the end of the convergence procedure. The default is None.
+
+    cluster_params : dict, optional
+        Dictionary containing cluster-related options to run efficiently the
+        VASP simulations on a cluster. The default is {}.
+
     """
     
     _fw_name = 'Start the slab thickness convergence'
     required_params = ['structure', 'mp_id', 'miller', 'functional']
-    optional_params = ['db_file', 'collection', 'comp_params', 'convo_kind',
-                       'relax_type', 'thick_start', 'thick_incr', 'nsteps',
-                       'vacuum', 'ext_index', 'slab_name', 'cluster_params']
+    optional_params = ['db_file', 'database', 'convo_kind', 'relax_type',
+                       'comp_params', 'thick_min', 'thick_max', 'thick_incr',
+                       'vacuum', 'in_unit_planes', 'ext_index', 'slab_name', 
+                       'cluster_params']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
         """
+        from triboflow.firetasks.surfene_wfs import SurfEneWF
 
         # Define the json file containing default values and read parameters
         dfl = currentdir + '/defaults_fw.json'
@@ -228,7 +304,7 @@ class FT_StartThickConvo(FiretaskBase):
                                           functional=p['functional'],
                                           comp_params=p['comp_params'],
                                           db_file=p['db_file'], 
-                                          collection=p['collection'],
+                                          database=p['database'],
                                           thick_start=p['thick_start'], 
                                           thick_incr=p['thick_incr'], 
                                           nsteps=p['nsteps'],
@@ -262,7 +338,7 @@ class FT_GenerateSlabs(FiretaskBase):
     """
 
     required_params = ['structure', 'mp_id', 'miller', 'functional']
-    optional_params = ['db_file', 'collection', 'thickness', 'vacuum', 
+    optional_params = ['db_file', 'database', 'thickness', 'vacuum', 
                        'ext_index', 'symmetrize', 'slab_name']
 
     def run_task(self, fw_spec):
@@ -317,8 +393,8 @@ class FT_GenerateSlabs(FiretaskBase):
 
             slabs.append(s)
 
-        # Add the slabs to the "collection" Database
-        nav_struct = StructureNavigator(p['db_file'], p['collection'])
+        # Add the slabs to the "database" DB within the db_file path
+        nav_struct = StructureNavigator(p['db_file'], p['database'])
         
         # Store unrelaxed data in the Database
         for slab, name in zip(slabs, slab_name):
@@ -343,7 +419,7 @@ class FT_RelaxStructure(FiretaskBase):
     """
 
     required_params = ['mp_id', 'functional', 'struct_kind']
-    optional_params = ['comp_params', 'miller', 'name', 'db_file', 'collection',
+    optional_params = ['comp_params', 'miller', 'name', 'db_file', 'database',
                        'relax_type']
 
     def run_task(self, fw_spec):
@@ -378,7 +454,7 @@ class FT_RelaxStructure(FiretaskBase):
 
         # Call the navigator for retrieving structure
         nav_struct = StructureNavigator(db_file=self.p['db_file'],
-                                        high_level=self.p['collection'])
+                                        high_level=self.p['database'])
 
         # Extract data from database
         if self.p['struct_kind'] == 'bulk':
