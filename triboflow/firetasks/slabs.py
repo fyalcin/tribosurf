@@ -128,7 +128,7 @@ class FT_SlabOptThick(FiretaskBase):
 
         # Define the json file containing default values and read parameters
         dfl = currentdir + '/defaults_fw.json'
-        p = read_runtask_params(self, fw_spec, required_params, optional_params,
+        p = read_runtask_params(self, fw_spec, self.required_params, self.optional_params,
                                 default_file=dfl, default_key="SlabOptThick")
         
         # Retrieve the bulk information from the high level DB
@@ -285,7 +285,7 @@ class FT_StartThickConvo(FiretaskBase):
 
         # Define the json file containing default values and read parameters
         dfl = currentdir + '/defaults_fw.json'
-        p = read_runtask_params(self, fw_spec, required_params, optional_params,
+        p = read_runtask_params(self, fw_spec, self.required_params, self.optional_params,
                                 default_file=dfl, default_key="StartThickConvo")
 
         if p['convo_kind'] == 'surfene':
@@ -341,7 +341,7 @@ class FT_GenerateSlabs(FiretaskBase):
 
         # Define the json file containing default values and read parameters
         dfl = currentdir + '/defaults_fw.json'
-        p = read_runtask_params(self, fw_spec, required_params, optional_params,
+        p = read_runtask_params(self, fw_spec, self.required_params, self.optional_params,
                                 default_file=dfl, default_key="GenerateSlabs")
 
         GenerateSlabsError.check_slabname_thickness(p['thickness'],
@@ -422,7 +422,7 @@ class FT_RelaxStructure(FiretaskBase):
 
         # Define the json file containing default values and read parameters
         dfl = currentdir + '/defaults_fw.json'
-        p = read_runtask_params(self, fw_spec, required_params, optional_params,
+        p = read_runtask_params(self, fw_spec, self.required_params, self.optional_params,
                                 default_file=dfl, default_key="RelaxStructure")
 
         # Get the structure from the Database with a calculation tag
@@ -516,7 +516,7 @@ class FT_PutStructInDB(FiretaskBase):
 
         # Define the json file containing default values and read parameters
         dfl = currentdir + '/defaults_fw.json'
-        p = read_runtask_params(self, fw_spec, required_params, optional_params,
+        p = read_runtask_params(self, fw_spec, self.required_params, self.optional_params,
                                 default_file=dfl, default_key="PutStructInDB")
 
         # Set missing cluster params

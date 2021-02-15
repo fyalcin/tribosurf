@@ -17,8 +17,8 @@ __date__ = 'February 2nd, 2021'
 #from atomate.utils.utils import env_chk
 
 import os
-
 from uuid import uuid4
+
 from fireworks import Workflow, Firework
 
 from triboflow.utils.database import Navigator, NavigatorMP
@@ -45,10 +45,10 @@ class SlabWF:
     @staticmethod
     def conv_slabthick_surfene(structure, mp_id, miller, functional='PBE',
                                comp_params={}, spec={}, db_file=None,
-                               low_level = None, high_level = 'triboflow',
+                               low_level=None, high_level='triboflow',
                                relax_type="slab_pos_relax", thick_min=4, 
-                               thick_max=12, thick_incr=2, vacuum=10, 
-                               slab_name=None, cluster_params={}):
+                               thick_max=12, thick_incr=2, vacuum=10,
+                               in_unit_planes=True, cluster_params={}):
         """ Author: Gabriele Losi; Copyright 2021, Prof. M.C. Righi, UniBO.
 
         Function to set the computational and physical parameters and start a 
@@ -85,7 +85,6 @@ class SlabWF:
                                                   thick_incr=thick_incr,
                                                   vacuum=vacuum,
                                                   in_unit_planes=in_unit_planes,
-                                                  slab_name=slab_name,
                                                   cluster_params=p)
 
         ft_end_thick_convo = FT_EndThickConvo()
@@ -153,30 +152,11 @@ class SlabWF:
                   'import pprint\n'
                   'from triboflow.utils.database import GetBulkFromDB\n\n'
                   'nav = Navigator({})'
-                  'results = find_data({} + ".slab_data", {"mpid": {}, "miller": {}})\n'
+                  'results = find_data({} + ".slab_data", dict("mpid": {}, '
+                  '"miller": {}))\n'
                   'pprint.pprint(results)\n'.format(db_file, functional, mp_id, miller))
 
 def read_cluster_params(default_file, default_key, cluster_params):
-    """
-    [summary]
-
-    Parameters
-    ----------
-    default_file : [type]
-        [description]
-    default_key : [type]
-        [description]
-
-    Returns
-    -------
-    [type]
-        [description]
-
-    Raises
-    ------
-    ReadSubWFsError
-        [description]
-    """
 
     defaults = read_json(default_file)
     defaults = defaults[default_key]
