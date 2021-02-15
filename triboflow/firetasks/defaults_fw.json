@@ -10,6 +10,7 @@
         "thick_incr": 2,
         "vacuum": 10,
         "in_unit_planes": true,
+        "ext_index": 0,
         "bulk_name": "structure_fromMP",
         "slab_name": null,
     },
@@ -25,17 +26,19 @@
         "vacuum": 10,
         "ext_index": 0,
         "slab_name": null,
-        "cluster_params": {}
+        "cluster_params": {},
+        "recursion": false
     },
     "GenerateSlabs": {
         "db_file": null,
         "database": null,
+        "collection": "slab_data",
         "thickness": 4,
         "vacuum": 10,
         "symmetrize": false,
         "ext_index": 0,
-        "tag": null,
-        "slab_name": null
+        "in_unit_planes": true,
+        "slab_name": 'unrelaxed_slab'
     },
     "RelaxStructure": {
         "db_file": null,
