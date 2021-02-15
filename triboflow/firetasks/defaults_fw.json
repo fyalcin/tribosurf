@@ -28,13 +28,13 @@
         "cluster_params": {}
     },
     "GenerateSlabs": {
-        "structure": null,
         "db_file": null,
         "database": null,
         "thickness": 4,
         "vacuum": 10,
         "symmetrize": false,
         "ext_index": 0,
+        "tag": null,
         "slab_name": null
     },
     "RelaxStructure": {

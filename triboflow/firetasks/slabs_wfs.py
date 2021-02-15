@@ -18,11 +18,15 @@ __date__ = 'February 2nd, 2021'
 
 import os
 
+from uuid import uuid4
 from fireworks import Workflow, Firework
 
-from triboflow.utils.database import NavigatorMP
-from triboflow.firetasks.slabs import FT_StartThickConvo, FT_EndThickConvo 
-from triboflow.utils.errors import ReadSubWFsError
+from triboflow.utils.database import Navigator, NavigatorMP
+from triboflow.firetasks.slabs import (
+    FT_StartThickConvo,
+    FT_EndThickConvo
+)
+from triboflow.utils.errors import SlabThicknessError, ReadSubWFsError
 from triboflow.tasks.io import read_json
 
 currentdir = os.path.dirname(__file__)
@@ -32,7 +36,8 @@ currentdir = os.path.dirname(__file__)
 # ============================================================================
 
 class SlabWF:
-    """
+    """ Author: Gabriele Losi; Copyright 2021, Prof. M.C. Righi, UniBO.
+
     Collection of static methods to manipulate slab structures.
     
     """
@@ -40,22 +45,22 @@ class SlabWF:
     @staticmethod
     def conv_slabthick_surfene(structure, mp_id, miller, functional='PBE',
                                comp_params={}, spec={}, db_file=None,
-                               low_level=None, high_level='triboflow',
-                               relax_type='slab_pos_relax', thick_min=4,
+                               low_level = None, high_level = 'triboflow',
+                               relax_type="slab_pos_relax", thick_min=4, 
                                thick_max=12, thick_incr=2, vacuum=10, 
-                               in_unit_planes=True, slab_name=None,
-                               cluster_params={}):
-        """
+                               slab_name=None, cluster_params={}):
+        """ Author: Gabriele Losi; Copyright 2021, Prof. M.C. Righi, UniBO.
+
         Function to set the computational and physical parameters and start a 
         workflow to converge the thickness of the provided slabs.
 
         """     
 
+        # Set the Workflow name
         name = 'Slab Thickness optimization of ' + \
                 structure.composition.reduced_formula + ' ' + str(miller)
-        #tag = name + '_' + str(uuid4())
         
-        # Set secondary parameters
+        # Set the cluster parameters
         dfl = currentdir + '/defaults_fw.json'
         p = read_cluster_params(default_file=dfl, 
                                 default_key="cluster_params", 
@@ -72,7 +77,7 @@ class SlabWF:
                                                   functional=functional,
                                                   comp_params=comp_params,
                                                   db_file=db_file,
-                                                  collection=low_level,
+                                                  database=low_level,
                                                   convo_kind='surfene',
                                                   relax_type=relax_type,
                                                   thick_min=thick_min,
@@ -95,13 +100,22 @@ class SlabWF:
 
     @staticmethod
     def conv_slabthick_alat():        
-        """
-        Method description
+        """ Author: Gabriele Losi; Copyright 2021, Prof. M.C. Righi, UniBO.
+
+        Subworkflow to converge the slab thickness by converging the lattice
+        parameters. Not implemented yet.
         """
         pass
-
+    
+    @staticmethod
     def _check_subwf_params(self, structure, mp_id, miller, functional, db_file, 
                             comp_params, cluster_params):
+        """ Author: Gabriele Losi; Copyright 2021, Prof. M.C. Righi, UniBO.
+
+        Check if the parameters passed to the Firetasks are correct or not and
+        print information.
+        ** This is a temporary method, to be refactored more logically. **
+        """
 
         # Check if the chemical formula passed is the same on MP database
         if mp_id.startswith('mp-') and mp_id[3:].isdigit():

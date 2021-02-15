@@ -87,3 +87,8 @@ class NavigatorMPError(Exception):
     """ Errors in querying the online MP database.
     """
     pass
+
+class ReadParamsError(Exception):
+    """ Errors when reading, parsing or retrieving data or parameters in FTs.
+    """
+    pass

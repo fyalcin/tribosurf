@@ -27,7 +27,7 @@ A schematic representation of our subworkflow is reported in the figure above. N
 1. **FT_SlabOptThick**: Firetask to start a subworkflow as a detour within another workflow. Check if a specific slab (identified by `mp_id`,` functional` and `miller`) is already present in the ` high_level` db and if it contains a <span style =" color: orange ">'opt_thickness'</span> type his dictionary. Otherwise, the corresponding bulk structure is retrieved from the `high_level` db and a subworkflow is started to converge the slab thickness, either via the surface energy or the lattice parameter (not implemented yet). The subworkflow is created through the static method of an external class, e.g. *SlabWF.conv_slabthick_surfene* and is composed of two Firetasks: *FT_StartThickConvo* and *FT_EndThickConvo*.<br/>
 Input arguments are:
 	- **required_params** = [<span style="color:orange">'mp_id'</span>, <span style="color:orange">'miller'</span>, <span style="color:orange">'functional'</span>]
-	- **optional_params** = [<span style="color:orange">'db_file'</span>, <span style="color:orange">'low_level'</span>, <span style="color:orange">'high_level'</span>, <span style="color:orange">'relax_type'</span>, <span style="color:orange">'convo_kind'</span>, <span style="color:orange">'thick_start'</span>, <span style="color:orange">'thick_incr'</span>, <span style="color:orange">'nsteps'</span>, <span style="color:orange">'vacuum'</span>, <span style="color:orange">'bulk_name'</span>, <span style="color:orange">'slab_name'</span>] <br/>
+	- **optional_params** = [<span style="color:orange">'db_file'</span>, <span style="color:orange">'low_level'</span>, <span style="color:orange">'high_level'</span>, <span style="color:orange">'relax_type'</span>, <span style="color:orange">'convo_kind'</span>, <span style="color:orange">'thick_min'</span>, <span style="color:orange">'thick_max'</span>, <span style="color:orange">'thick_incr'</span>, <span style="color:orange">'vacuum'</span>, <span style="color:orange">'in_unit_planes'</span>, <span style="color:orange">'bulk_name'</span>, <span style="color:orange">'slab_name'</span>] <br/>
 Parameters description:
 -- `mp_id`: mp-id of the structure from the MP database.
 -- `miller`: miller indexes of the slab orientation.
@@ -37,12 +37,13 @@ Parameters description:
 -- `high_level`: collection name of the "high level" database. The final results concerning the slab optimal thickness and the surface energy will be saved here.
 -- `relax_type`: type of relaxation to be performed during the simulation.
 -- `convo_kind`: type of convolution. Allowed values are: <span style="color:orange">'surfene'</span>, <span style="color:orange">'alat'</span>.
--- `thick_start`: number of atomic layers for the slab to be used as starting point.
+-- `thick_min`: number of atomic layers for the slab to be used as starting point.
+-- `thick_max`: maximum possible number of atomic layers for the slab.
 -- `thick_incr`: incremental number of atomic layers at each step.
--- `nsteps`: number of steps to be done to converge the slab thickness.
--- `vacuum`: Minimum vacuum to be used for creating the slabs.
--- `bulk_name`: Name of the bulk dictionary in the `high_level` db containing the data.
--- `slab_name`: Name of the slab dictionary to be saved in the `high_level` db at the end of the convergence.
+-- `vacuum`: minimum vacuum to be used for creating the slabs.
+-- `in_unit_planes`: decide if the thickness parameters refer to number of atomic layers or Angstrom units.
+-- `bulk_name`: name of the bulk dictionary in the `high_level` db containing the data.
+-- `slab_name`: name of the slab dictionary to be saved in the `high_level` db at the end of the convergence.
 
 2. **FT_StartThickConvo**: Firetask to start a subworkflow to calculate and converge the surface energy for a `structure` passed by input, which identified by means of `mp_id`, `miller`, and `functional`. A detour is started to run a self consistent calculation to relax the bulk along a particular orientation and the corresponding slabs, with incresing number of layers. The workflow is created through a static method of an external class, i.e. *SurfEneWF.surface_energy*, and is composed of three Firetasks: *FT_GenerateSlabs*, *FT_RelaxStructure*, and *FT_SurfaceEnergy* <br/>
 Input arguments are:

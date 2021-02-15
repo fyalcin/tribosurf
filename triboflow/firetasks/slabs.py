@@ -103,7 +103,7 @@ class FT_SlabOptThick(FiretaskBase):
         Decide if thick_min, thick_max, thick_incr, and vacuum are expressed in
         units of number of atomic layers or Angstrom. The default is True.
 
-    bulk_name : str or None, optional
+    bulk_name : str or list None, optional
         Name of the custom bulk dictionary, to be retrieved from the high level
         database and to be used to build the slabs. Bulks are identified by 
         mp_id and functional but there might be different structures of the
