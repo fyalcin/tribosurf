@@ -22,25 +22,52 @@ class SlabOptThickError(Exception):
 class GenerateSlabsError(Exception):
     """ Error in generating slabs.
     """
+
+    @staticmethod
+    def check_miller(miller):
+        if not isinstance(miller, list):
+            raise GenerateSlabsError("Wrong type for argument: miller. "
+                                     "Allowed types: list")
+        elif any([isinstance(x, list) for x in miller]) and not all([isinstance(x, list) for x in miller]):
+            raise GenerateSlabsError("Wrong type for elements of list: "
+                                     "miller. Allowed types: list.")
+
     @staticmethod
     def check_thickness(thickness):
         if not isinstance(thickness, (list, float, int)):
             raise GenerateSlabsError("Wrong type for argument: thickness. "
                                      "Allowed types: list, float, int.")
-    
+        if isinstance(thickness, list):
+            if not all([isinstance(x, float, int) for x in thickness]):
+                raise GenerateSlabsError("Wrong type for elements of list: "
+                                         "miller. Allowed types: int, float.")
+
+    @staticmethod
+    def check_vacuum(vacuum):
+        if not isinstance(vacuum, (list, float, int)):
+            raise GenerateSlabsError("Wrong type for argument: vacuum. "
+                                     "Allowed types: list")
+        if isinstance(check_vacuum, list):
+            if not all([isinstance(x, (float, int)) for x in vacuum]):
+                raise GenerateSlabsError("Wrong type for elements of list: "
+                                         "vacuum. Allowed types: list.")
+
     @staticmethod
     def check_slabname(slab_name):
         if not isinstance(slab_name, (str, list)):
             raise GenerateSlabsError("Wrong type for argument: slab_name. "
                                      "Allowed types: list of str, str.")
-        elif not all([isinstance(x, str) for x in list(slab_name)]):
-            raise GenerateSlabsError("Wrong type for elements of list: "
-                                     "slab_name. Allowed types: str.")
+        if isinstance(slab_name, list):
+            if not all([isinstance(x, str) for x in list(slab_name)]):
+                raise GenerateSlabsError("Wrong type for elements of list: "
+                                         "slab_name. Allowed types: str.")
 
     @staticmethod
-    def check_slabname_thickness(thickness, slab_name):
-
+    def check_inputs(miller, thickness, vacuum, slab_name):
+        
+        GenerateSlabsError.check_miller(miller)
         GenerateSlabsError.check_thickness(thickness)
+        GenerateSlabsError.check_vacuum(vacuum)
         GenerateSlabsError.check_slab_name(slab_name)
 
         # If one is a list, both of them should be.
@@ -68,7 +95,7 @@ class RelaxStructureError(Exception):
                                       .format(formula, struct_kind, mp_id, functional))
 
 
-class ReadSubWFsError(Exception):
+class SubWFError(Exception):
     """ Error in reading the subworkflow parameters.
     """
     pass
