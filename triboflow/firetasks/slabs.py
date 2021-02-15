@@ -26,12 +26,13 @@ from atomate.utils.utils import env_chk
 from atomate.vasp.powerups import add_modify_incar
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import SlabGenerator
+from atomate.vasp.fireworks.core import OptimizeFW, ScanOptimizeFW
 
-from triboflow.utils.database import StructureNavigator
+from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.errors import SlabOptThickError, GenerateSlabsError, RelaxStructureError, ReadParamsError
 from triboflow.tasks.io import read_json
 from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
-from atomate.vasp.fireworks.core import OptimizeFW, ScanOptimizeFW
+from triboflow.firetasks.surfene_wfs import get_miller_str
 
 currentdir = os.path.dirname(__file__)
 
@@ -102,6 +103,10 @@ class FT_SlabOptThick(FiretaskBase):
     in_unit_planes : bool, optional
         Decide if thick_min, thick_max, thick_incr, and vacuum are expressed in
         units of number of atomic layers or Angstrom. The default is True.
+    
+    ext_index : int, optional
+        Use the ext_index element from SlabGenerator.get_slabs as a slab.
+        The default is 0.
 
     bulk_name : str or list None, optional
         Name of the custom bulk dictionary, to be retrieved from the high level
@@ -120,7 +125,8 @@ class FT_SlabOptThick(FiretaskBase):
     required_params = ['mp_id', 'miller', 'functional']
     optional_params = ['db_file', 'low_level', 'high_level', 'convo_kind',
                        'relax_type', 'thick_min', 'thick_max', 'thick_incr',
-                       'vacuum', 'in_unit_planes', 'bulk_name', 'slab_name']
+                       'vacuum', 'in_unit_planes', 'ext_index', 'bulk_name', 
+                       'slab_name']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -188,7 +194,8 @@ class FT_SlabOptThick(FiretaskBase):
                          low_level=p['low_level'], high_level=p['high_level'],
                          relax_type=p['relax_type'], thick_min=p['thick_min'], 
                          thick_max=p['thick_max'], thick_incr=p['thick_incr'], 
-                         vacuum=p['vacuum'], in_unit_planes=p['in_unit_planes'])
+                         vacuum=p['vacuum'], in_unit_planes=p['in_unit_planes'],
+                         ext_index=p['ext_index'])
 
         return wf
 
@@ -261,10 +268,6 @@ class FT_StartThickConvo(FiretaskBase):
         Use the ext_index element from SlabGenerator.get_slabs as a slab.
         The default is 0.
 
-    slab_name : str or None, optional
-        Custom name to store the slab dictionary in the high level database at
-        the end of the convergence procedure. The default is None.
-
     cluster_params : dict, optional
         Dictionary containing cluster-related options to run efficiently the
         VASP simulations on a cluster. The default is {}.
@@ -275,8 +278,8 @@ class FT_StartThickConvo(FiretaskBase):
     required_params = ['structure', 'mp_id', 'miller', 'functional']
     optional_params = ['db_file', 'database', 'convo_kind', 'relax_type',
                        'comp_params', 'thick_min', 'thick_max', 'thick_incr',
-                       'vacuum', 'in_unit_planes', 'ext_index', 'slab_name', 
-                       'cluster_params']
+                       'vacuum', 'in_unit_planes', 'ext_index', 'cluster_params',
+                       'recursion']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -293,17 +296,18 @@ class FT_StartThickConvo(FiretaskBase):
                                           mp_id=p['mp_id'], 
                                           miller=p['miller'], 
                                           functional=p['functional'],
-                                          comp_params=p['comp_params'],
                                           db_file=p['db_file'], 
                                           database=p['database'],
-                                          thick_start=p['thick_start'], 
-                                          thick_incr=p['thick_incr'], 
-                                          nsteps=p['nsteps'],
-                                          vacuum=p['vacuum'],
                                           relax_type=p['relax_type'],
+                                          comp_params=p['comp_params'],
+                                          thick_min=p['thick_min'], 
+                                          thick_max=p['thick_max'],
+                                          thick_incr=p['thick_incr'],
+                                          vacuum=p['vacuum'],
+                                          in_unit_planes=p['slab_name'],
                                           ext_index=p['ext_index'], 
-                                          slab_name=p['slab_name'],
-                                          cluster_params=p['cluster_params'])
+                                          cluster_params=p['cluster_params'],
+                                          recursion=p['recursion'])
         else:
             raise SystemExit('Lattice parameter convo not yet implemented')
         
@@ -332,8 +336,8 @@ class FT_GenerateSlabs(FiretaskBase):
     """
 
     required_params = ['structure', 'mp_id', 'miller', 'functional']
-    optional_params = ['db_file', 'database', 'thickness', 'vacuum', 
-                       'symmetrize', 'ext_index', 'tag', 'slab_name']
+    optional_params = ['db_file', 'database', 'collection', 'thickness', 'vacuum', 
+                       'symmetrize', 'ext_index', 'in_unit_planes', 'slab_name']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -349,61 +353,69 @@ class FT_GenerateSlabs(FiretaskBase):
 
         # Generate the slabs for each structure passed as input
         slabs = []
-        thickness = list(p['thickness'])
-        slab_name = list(p['slab_name'])
+        miller, thickness, vacuum, slab_name = self.set_loop_params(p)
 
-        # # Create the bulk
-        # slabgen = SlabGenerator(initial_structure = p['structure'],
-        #                         miller_index = p['miller'],
-        #                         primitive=False,
-        #                         lll_reduce=True,
-        #                         in_unit_planes=True,  # Fundamental
-        #                         min_slab_size=thickness[0],
-        #                         min_vacuum_size=0)
-
-        for thk in thickness:
-
+        # Generate the different slabs, 
+        for hkl, thk, vac in zip(miller, thickness, vacuum):
+            # Oriented bulk case
             if thk == 0:
-                pass
-                #bulk = slabgen.oriented_unit_cell()
-                
-            slabgen = SlabGenerator(initial_structure = p['structure'],
-                                    miller_index = p['miller'],
-                                    center_slab=True,
-                                    primitive=False,
-                                    lll_reduce=True,
-                                    in_unit_planes=True,  # Fundamental
-                                    min_slab_size=thk,
-                                    min_vacuum_size=p['vacuum'])
+                s = orient_bulk(p['structure'], miller, 
+                                p['thick_max'], p['in_unit_planes'])
             
-            s = slabgen.get_slabs(bonds=None, ftol=0.1, tol=0.1, 
-                                  max_broken_bonds=0, symmetrize=p['symmetrize'],
-                                  repair=False)
-            # If exit index is True (default), return the first element.
-            # TODO: Generalize this approach by evaluating the different slabs
-            # that are returned and select the optimal one.
-            if p['ext_index']:
-                s = s[0]
+            # Slab case
+            else:
+                slabgen = SlabGenerator(initial_structure = p['structure'],
+                                        miller_index = hkl,
+                                        center_slab=True,
+                                        primitive=False,
+                                        lll_reduce=True,
+                                        in_unit_planes=p['in_unit_planes'],
+                                        min_slab_size=thk,
+                                        min_vacuum_size=p['vacuum'])
+            
+                # Select the ext_index-th slab from the list of possible slabs
+                s = slabgen.get_slabs(bonds=None, ftol=0.1, tol=0.1, repair=False,
+                                      max_broken_bonds=0, symmetrize=p['symmetrize'])
+                s = s[p['ext_index']]
 
             slabs.append(s)
 
         # Add the slabs to the "database" DB within the db_file path
-        nav_struct = StructureNavigator(p['db_file'], p['database'])
+        nav = Navigator(p['db_file'], p['database'])
         
         # Store unrelaxed data in the Database
-        for slab, name in zip(slabs, slab_name):
+        for slab, hkl, name in zip(slabs, miller, slab_name):
             slab_dict = monty.json.jsanitize(s.as_dict(), allow_bson=True)
-            nav_struct.add_slab_to_db(structure=slab, 
-                                      mp_id=p['mp_id'],
-                                      functional=p['functional'],
-                                      miller=p['miller'],
-                                      struct_name=name)
-        
+            nav.insert_data(collection=p['collection'], 
+                            filter={
+                                'mpid': p['mp_id'],
+                                'formula': p['structure'].composition.reduced_formula,
+                                'miller': hkl,
+                                name: p['structure'].as_dict()},        
+
         # coll.update_one({'mpid': flag, 'miller': miller},
         #                 {'$set': {'unrelaxed_slab': slab_dict}},
         #                 upsert=True)
         
         return FWAction(update_spec=fw_spec)
+    
+    def set_loop_params(self, p):
+
+        GenerateSlabsError.check_inputs(p['miller'], p['thickness'], 
+                                        p['vacuum'], p['slab_name'])
+
+        miller = p['miller']
+        thickness = list(p['thickness'])
+        vacuum = p['vacuum']
+        slab_name = list(p['slab_name'])
+        
+        if not all([isinstance(x, list) for x in miller]):
+            miller = [miller] * len(thickness)
+        
+        if not isinstance(vacuum, list):
+            vacuum = [vacuum] * len(thickness)
+
+        return miller, thickness, vacuum, slab_name
 
 @explicit_serialize
 class FT_RelaxStructure(FiretaskBase):
@@ -628,7 +640,25 @@ def multiple_info_from_struct_dict(struct_dict, name):
     
     return info
 
-
 # Small test
 if __name__ == '__main__':
     FT_SlabOptThick(mp_id='mp-100', functional='PBE', miller=[1,0,0])
+
+def orient_bulk(structure, miller, thickness, primitive=False, lll_reduce=True, 
+                in_unit_planes=True):
+    """
+    Orient a bulk unit cell along a certain miller direction
+    """
+    
+    # Generate the oriented bulk
+    slabgen = SlabGenerator(initial_structure = structure,
+                            miller_index = miller,
+                            primitive=primitive,
+                            lll_reduce=lll_reduce,
+                            in_unit_planes=in_unit_planes,
+                            min_slab_size=thickness,
+                            min_vacuum_size=0)
+    
+    bulk_miller = slabgen.oriented_unit_cell()
+
+    return bulk_miller

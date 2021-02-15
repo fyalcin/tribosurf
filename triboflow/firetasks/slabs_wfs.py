@@ -26,7 +26,7 @@ from triboflow.firetasks.slabs import (
     FT_StartThickConvo,
     FT_EndThickConvo
 )
-from triboflow.utils.errors import SlabThicknessError, ReadSubWFsError
+from triboflow.utils.errors import SlabThicknessError, SubWFError
 from triboflow.tasks.io import read_json
 
 currentdir = os.path.dirname(__file__)
@@ -48,7 +48,7 @@ class SlabWF:
                                low_level=None, high_level='triboflow',
                                relax_type="slab_pos_relax", thick_min=4, 
                                thick_max=12, thick_incr=2, vacuum=10,
-                               in_unit_planes=True, cluster_params={}):
+                               in_unit_planes=True, ext_index=0, cluster_params={}):
         """ Author: Gabriele Losi; Copyright 2021, Prof. M.C. Righi, UniBO.
 
         Function to set the computational and physical parameters and start a 
@@ -85,9 +85,10 @@ class SlabWF:
                                                   thick_incr=thick_incr,
                                                   vacuum=vacuum,
                                                   in_unit_planes=in_unit_planes,
+                                                  ext_index=ext_index,
                                                   cluster_params=p)
 
-        ft_end_thick_convo = FT_EndThickConvo()
+        ft_end_thick_convo = FT_EndThickConvo(low_level, high_level)
 
         # Set it to a firework and a workflow
         fw = Firework([ft_start_thick_convo, ft_end_thick_convo],
@@ -163,8 +164,8 @@ def read_cluster_params(default_file, default_key, cluster_params):
     params = {}
 
     if not set(cluster_params.keys()).issubset(set(defaults.keys())):
-        raise ReadSubWFsError("Values passed in cluster params are not known. "
-                              "Allowed values: {}".format(defaults.keys()))
+        raise SubWFError("The values passed in cluster params are not known. "
+                         "Allowed values: {}".format(defaults.keys()))
 
     # Set the parameters, passed by input or default values
     for key, value in defaults.items():
