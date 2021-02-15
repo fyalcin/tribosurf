@@ -21,14 +21,13 @@ from uuid import uuid4
 
 from fireworks.utilities.fw_utilities import explicit_serialize
 from fireworks import FiretaskBase, FWAction
-from fireworks import Workflow, Firework
+from fireworks import Workflow
 from atomate.utils.utils import env_chk
 from atomate.vasp.powerups import add_modify_incar
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import SlabGenerator
-from pymatgen.transformations.advanced_transformations import SlabTransformation
 
-from triboflow.utils.database import StructureNavigator, NavigatorMP
+from triboflow.utils.database import StructureNavigator
 from triboflow.firetasks.slabs_wfs import SlabWF
 from triboflow.firetasks.surfene_wfs import SurfEneWF
 from triboflow.utils.errors import SlabOptThickError, GenerateSlabsError, RelaxStructureError
@@ -52,13 +51,67 @@ class FT_SlabOptThick(FiretaskBase):
     or the lattice parameters changes with the number of atomic planes.
     At the moment only the surface energy convergence is implemented.
 
-    bulk_name : str or None, optional
-        Name of the bulk structure in the bulk database (material is
-        identified by mp_id, but there might be different structures of the
-        same material.) The default is None.
-    slab_name : str or None, optional
-        Name of the slab to be put in the DB, otherwise identified by mp_id 
-        and miller index. The default is None.
+    mp_id : str
+        MP-id of the structure from the MP database.
+    
+    miller : list of int, or str
+        Miller indexes (h, k, l) to select the slab orientation.
+        
+    functional : str
+        Functional for the pseudopotential to be adopted.
+
+    db_file: str or None
+        Path to the location of the database. If nothing is provided it will be
+        searched by env_check from Atomate. The default is None.
+        
+    low_level: str or None, optional
+        Name of the table of the "low level" database, saved in db_file. The 
+        intermediate calculations and raw data during will be saved here. If 
+        nothing is passed the Firework database is used. The default is None.
+
+    high_level: str, optional
+        Name of the table of the "high level" database, saved in db_file.
+        The slab optimal thickness will be saved here. The slab energy and
+        surface energy will be saved too if convo_kind is 'surfene'.
+        The default is 'triboflow'.
+
+    relax_type: str, optional
+        The type of relaxation to be performed during the simulation, to be feed
+        to GetCustomVaspRelaxSettings. The default is 'slab_pos_relax'.
+
+    convo_kind: str, optional
+        Type of convergence to be performed. Allowed values are: 'surfene', 
+        'alat'. The latter is not implemented yet. The default is 'surfene'.
+    
+    thick_min: int, optional
+        Number of atomic layers for the slab to be used as starting point.
+        The default is 4.
+        
+    thick_max: int, optional
+        Maximum number of allowed atomic layers for the slab. If the convergence
+        is not reached this value is assumed to be the optimal one.
+        The default is 12.
+
+    thick_incr: int, optional
+        The incremental number of atomic layers to be added at each step.
+        The default is 2.
+
+    vacuum: int or float, optional
+        Vacuum to be used for creating in the slabs cells. The default is 10.
+
+    in_unit_planes: bool, optional
+        Decide if thick_min, thick_max, thick_incr, and vacuum are expressed in
+        units of number of atomic layers or Angstrom. The default is True.
+
+    bulk_name: str or None, optional
+        Name of the custom bulk dictionary, to be retrieved from the high level
+        database and to be used to build the slabs. Bulks are identified by 
+        mp_id and functional but there might be different structures of the
+        same material. The default is None.
+
+    slab_name: str or None, optional
+        Custom name to store the slab dictionary in the high level database at
+        the end of the convergence procedure. The default is None.
 
     """
     
@@ -66,8 +119,8 @@ class FT_SlabOptThick(FiretaskBase):
 
     required_params = ['mp_id', 'miller', 'functional']
     optional_params = ['db_file', 'low_level', 'high_level', 'relax_type', 
-                       'convo_kind', 'thick_start', 'thick_incr', 'nsteps',
-                       'vacuum', 'bulk_name', 'slab_name']
+                       'convo_kind', 'thick_min', 'thick_max', 'thick_incr',
+                       'vacuum', 'in_unit_planes', 'bulk_name', 'slab_name']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -241,9 +294,9 @@ class FT_GenerateSlabs(FiretaskBase):
         for thk in thickness:
 
             if thk == 0:
-                bulk = slabgen.oriented_unit_cell()
+                pass
+                #bulk = slabgen.oriented_unit_cell()
                 
-            else:
             slabgen = SlabGenerator(initial_structure = p['structure'],
                                     miller_index = p['miller'],
                                     center_slab=True,
@@ -427,7 +480,8 @@ class FT_PutStructInDB(FiretaskBase):
 def read_runtask_params(obj, fw_spec, required_params, optional_params,
                         default_file, default_key):
     """
-    [summary]
+    General function to read the required and optional parameters of a 
+    firetask instance. If 
 
     Parameters
     ----------
@@ -470,3 +524,7 @@ def read_runtask_params(obj, fw_spec, required_params, optional_params,
             miller = [int(k) for k in list(params['miller'])]
 
     return params
+
+# Small test
+if __name__ == '__main__':
+    FT_SlabOptThick(mp_id='mp-100', functional='PBE', miller=[1,0,0])
