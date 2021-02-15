@@ -107,11 +107,11 @@ class FT_SlabOptThick(FiretaskBase):
         Name of the custom bulk dictionary, to be retrieved from the high level
         database and to be used to build the slabs. Bulks are identified by 
         mp_id and functional but there might be different structures of the
-        same material. The default is None.
+        same material. The default is "structure_fromMP".
 
     slab_name : str or None, optional
-        Custom name to store the slab dictionary in the high level database at
-        the end of the convergence procedure. The default is None.
+        Where to search for the information about the optimal thickness in the
+        slab dictionary in the high level database. The default is None.
 
     """
     
@@ -136,34 +136,27 @@ class FT_SlabOptThick(FiretaskBase):
         slab = nav_struct.get_slab_from_db(mp_id=p['mp_id'], 
                                            functional=p['functional'], 
                                            miller=p['miller'])
+        
+        # If data is saved elsewhere from standard position
+        if p['slab_name'] is not None:
+            slab = one_info_from_struct_dict(slab, p['slab_name'])
 
         # Start a subworkflow to converge the thickness if not already done
         stop_convergence = slab.get('opt_thickness', None)
+
         if not stop_convergence:
-            # Retrieve the bulk structure
+            
+            # Retrieve the desired bulk structure
             bulk = nav_struct.get_slab_from_db(mp_id=p['mp_id'], 
                                                functional=p['functional'])
-            if p['bulk_name'] is not None:
-                bulk = bulk[p['bulk_name']]
+            bulk = one_info_from_struct_dict(bulk, p['bulk_name'])
 
             structure = Structure.from_dict(bulk.get('structure_fromMP'))
-            comp_params = slab.get('comp_parameters', {})
+            comp_params = slab.get('comp_params', {})
 
             wf = self.select_slabthick_conv(structure=structure, 
-                                            mp_id=p['mp_id'], 
-                                            miller=p['miller'],
-                                            functional=p['functional'], 
                                             comp_params=comp_params,
-                                            db_file=p['db_file'],
-                                            low_level=p['low_level'],
-                                            high_level=p['high_level'],
-                                            thick_start=p['thick_start'],
-                                            thick_incr=p['thick_incr'],
-                                            nsteps=p['nsteps'],
-                                            vacuum=p['vacuum'],
-                                            slab_name=p['slab_name'],
-                                            convo_kind=p['convo_kind'],
-                                            relax_type=p['relax_type'])
+                                            p=p)
 
             return FWAction(detours=wf, update_spec=fw_spec)
 
@@ -171,11 +164,7 @@ class FT_SlabOptThick(FiretaskBase):
         else:
             return FWAction(update_spec=fw_spec)
 
-    def select_slabthick_conv(self, structure, mp_id, miller, comp_params, 
-                              db_file=None, low_level=None, high_level='triboflow', 
-                              thick_start=4, thick_incr=1, nsteps=6, vacuum=10, 
-                              slab_name=None, functional='PBE', 
-                              relax_type="slab_pos_relax", convo_kind='surfene'):
+    def select_slabthick_conv(self, structure, comp_params, p):
         """
         Select the desired subworkflow from the SlabWFs class, to converge the 
         slab thickness either by evaluating the surface energy or the lattice 
@@ -185,19 +174,21 @@ class FT_SlabOptThick(FiretaskBase):
 
         from triboflow.firetasks.slabs_wfs import SlabWF
 
-        if convo_kind == 'surfene':
+        if p['convo_kind'] == 'surfene':
             generate_wf = SlabWF.conv_slabthick_surfene
-        elif convo_kind == 'alat':
+        elif p['convo_kind'] == 'alat':
             generate_wf = SlabWF.conv_slabthick_alat
         else:
             raise SlabOptThickError("Wrong input argument for convo_kind. "
                                     "Allowed options: 'surfene', 'alat'.")
 
-        wf = generate_wf(structure = structure, mp_id = mp_id, miller = miller,
-                        functional = functional, comp_params = comp_params,
-                        db_file=db_file, low_level=low_level, high_level=high_level,
-                        thick_start=thick_start, thick_incr=thick_incr, nsteps=nsteps,
-                        vacuum=vacuum, slab_name=slab_name, relax_type=relax_type)
+        wf = generate_wf(structure=structure, mp_id=p['mp_id'], 
+                         miller=p['miller'], functional=p['functional'], 
+                         comp_params=p['comp_params'], db_file=p['db_file'],
+                         low_level=p['low_level'], high_level=p['high_level'],
+                         relax_type=p['relax_type'], thick_min=p['thick_min'], 
+                         thick_max=p['thick_max'], thick_incr=p['thick_incr'], 
+                         vacuum=p['vacuum'], in_unit_planes=p['in_unit_planes'])
 
         return wf
 

@@ -10,8 +10,8 @@
         "thick_incr": 2,
         "vacuum": 10,
         "in_unit_planes": true,
-        "bulk_name": null,
-        "slab_name": null
+        "bulk_name": "structure_fromMP",
+        "slab_name": null,
     },
     "StartThickConvo": {
         "db_file": null,

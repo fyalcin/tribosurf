@@ -18,16 +18,11 @@ __date__ = 'February 2nd, 2021'
 
 import os
 
-from uuid import uuid4
-import numpy as np
-from pymatgen.core.structure import Structure
-from pymatgen.core.surface import Slab
 from fireworks import Workflow, Firework
 
-from triboflow.utils.database import Navigator, NavigatorMP
+from triboflow.utils.database import NavigatorMP
 from triboflow.firetasks.slabs import FT_StartThickConvo, FT_EndThickConvo 
-from triboflow.firetasks.slabs import FT_OptimalThickness
-from triboflow.utils.errors import SlabThicknessError, ReadSubWFsError
+from triboflow.utils.errors import ReadSubWFsError
 from triboflow.tasks.io import read_json
 
 currentdir = os.path.dirname(__file__)
@@ -45,15 +40,16 @@ class SlabWF:
     @staticmethod
     def conv_slabthick_surfene(structure, mp_id, miller, functional='PBE',
                                comp_params={}, spec={}, db_file=None,
-                               low_level = None, high_level = 'triboflow',
-                               relax_type="slab_pos_relax", thick_start=4, 
-                               thick_incr=1, nsteps=6, vacuum=10, slab_name=None,
+                               low_level=None, high_level='triboflow',
+                               relax_type='slab_pos_relax', thick_min=4,
+                               thick_max=12, thick_incr=2, vacuum=10, 
+                               in_unit_planes=True, slab_name=None,
                                cluster_params={}):
         """
         Function to set the computational and physical parameters and start a 
         workflow to converge the thickness of the provided slabs.
 
-        """                                                                 
+        """     
 
         name = 'Slab Thickness optimization of ' + \
                 structure.composition.reduced_formula + ' ' + str(miller)
@@ -66,8 +62,8 @@ class SlabWF:
                                 cluster_params=cluster_params)
         
         # Print relevant information and raise errors based on parameters
-        _check_subwf_params(structure, mp_id, miller, functional, db_file, 
-                            comp_params, cluster_params)
+        SlabWF._check_subwf_params(structure, mp_id, miller, functional, 
+                                   db_file, comp_params, cluster_params)
 
         # Create a Firework to calculate the Optimal Thickness for a structure
         ft_start_thick_convo = FT_StartThickConvo(structure=structure,
@@ -79,10 +75,11 @@ class SlabWF:
                                                   collection=low_level,
                                                   convo_kind='surfene',
                                                   relax_type=relax_type,
-                                                  thick_start=thick_start,
+                                                  thick_min=thick_min,
+                                                  thick_max=thick_max,
                                                   thick_incr=thick_incr,
-                                                  nsteps=nsteps,
                                                   vacuum=vacuum,
+                                                  in_unit_planes=in_unit_planes,
                                                   slab_name=slab_name,
                                                   cluster_params=p)
 
