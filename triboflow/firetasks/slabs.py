@@ -28,7 +28,7 @@ from pymatgen.core.structure import Structure
 from pymatgen.core.surface import SlabGenerator
 
 from triboflow.utils.database import StructureNavigator
-from triboflow.utils.errors import SlabOptThickError, GenerateSlabsError, RelaxStructureError
+from triboflow.utils.errors import SlabOptThickError, GenerateSlabsError, RelaxStructureError, ReadParamsError
 from triboflow.tasks.io import read_json
 from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
 from atomate.vasp.fireworks.core import OptimizeFW, ScanOptimizeFW
@@ -333,13 +333,16 @@ class FT_EndThickConvo(FiretaskBase):
 @explicit_serialize
 class FT_GenerateSlabs(FiretaskBase):
     """
-    Firetask description...
+     Generate a slab or a list of slabs out of a given structure. Parameters 
+     hat are taken into account to generate the possible different slabs are: 
+     miller, thickness, vacuum, slab_name. The slabs are generated with 
+     SlabGenerator and stored in the database.
     
     """
 
     required_params = ['structure', 'mp_id', 'miller', 'functional']
     optional_params = ['db_file', 'database', 'thickness', 'vacuum', 
-                       'ext_index', 'symmetrize', 'slab_name']
+                       'symmetrize', 'ext_index', 'tag', 'slab_name']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -350,7 +353,7 @@ class FT_GenerateSlabs(FiretaskBase):
         p = read_runtask_params(self, fw_spec, required_params, optional_params,
                                 default_file=dfl, default_key="GenerateSlabs")
 
-        GenerateSlabsError.check_slabname_thickness(p['thickness'], 
+        GenerateSlabsError.check_slabname_thickness(p['thickness'],
                                                     p['slab_name'])
 
         # Generate the slabs for each structure passed as input
@@ -600,6 +603,40 @@ def read_runtask_params(obj, fw_spec, required_params, optional_params,
             miller = [int(k) for k in list(params['miller'])]
 
     return params
+
+def one_info_from_struct_dict(struct_dict, name):
+
+    # Simply read a dictionary key
+    if isinstance(name, str):
+        info = struct_dict[name]
+    
+    # You can have multiple innested keys
+    elif isinstance(name, list):
+        if all([isinstance(x, str) for x in name]):
+
+            info = struct_dict.copy()
+            for n in name:
+                info = info[n]  # Read one key after the other
+    
+    else:
+        ReadParamsError('Error in reading struct_dict, name is wrong.')
+
+    return info
+
+def multiple_info_from_struct_dict(struct_dict, name):
+
+    # Extract many info at the same time 
+    if isinstance(name, list):
+        if all([isinstance(x, list) for x in name]):
+            info = []
+            for n in name:
+                info.append(one_info_from_struct_dict(struct_dict, n))
+
+        else:
+            info = one_info_from_struct_dict(struct_dict, name)
+    
+    return info
+
 
 # Small test
 if __name__ == '__main__':
