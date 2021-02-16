@@ -32,21 +32,21 @@
     "GenerateSlabs": {
         "db_file": null,
         "database": null,
-        "collection": "slab_data",
         "thickness": 4,
+        "thick_max": 12,
         "vacuum": 10,
         "symmetrize": false,
         "ext_index": 0,
         "in_unit_planes": true,
-        "slab_name": 'unrelaxed_slab'
+        "slab_name": "unrelaxed_slab"
     },
     "RelaxStructure": {
         "db_file": null,
         "database": null,
+        "relax_type": "slab_pos_relax",
         "comp_params": {},
         "miller": null,
-        "name": null,
-        "relax_type": "slab_pos_relax"
+        "check_key": "relaxed",
     },
     "PutStructInDB": {
         "db_file": null,
