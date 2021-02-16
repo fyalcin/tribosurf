@@ -62,7 +62,7 @@ class SlabWF:
         
         # Set the cluster parameters
         dfl = currentdir + '/defaults_fw.json'
-        p = read_cluster_params(default_file=dfl, 
+        p = read_default_params(default_file=dfl, 
                                 default_key="cluster_params", 
                                 cluster_params=cluster_params)
         
@@ -157,18 +157,19 @@ class SlabWF:
                   '"miller": {}))\n'
                   'pprint.pprint(results)\n'.format(db_file, functional, mp_id, miller))
 
-def read_cluster_params(default_file, default_key, cluster_params):
+def read_default_params(default_file, default_key, dict_params):
 
     defaults = read_json(default_file)
     defaults = defaults[default_key]
     params = {}
 
-    if not set(cluster_params.keys()).issubset(set(defaults.keys())):
-        raise SubWFError("The values passed in cluster params are not known. "
-                         "Allowed values: {}".format(defaults.keys()))
+    if not set(dict_params.keys()).issubset(set(defaults.keys())):
+        raise SubWFError("The values passed as dictionary params are not known. "
+                         "Allowed values for {}, read in {}: {}".format(
+                             default_key, default_file, defaults.keys()))
 
     # Set the parameters, passed by input or default values
     for key, value in defaults.items():
-        params[key] = cluster_params.get(key, value)
+        params[key] = dict_params.get(key, value)
     
     return params

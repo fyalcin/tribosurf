@@ -20,6 +20,7 @@ from pymatgen.core.surface import SlabGenerator
 from fireworks import Workflow, Firework
 
 from triboflow.firetasks.slabs import FT_GenerateSlabs, FT_RelaxStructure
+from triboflow.firetasks.surfene import FT_SurfaceEnergy
 from triboflow.utils.errors import SubWFError
 
 

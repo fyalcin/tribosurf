@@ -46,7 +46,7 @@ class GenerateSlabsError(Exception):
     def check_vacuum(vacuum):
         if not isinstance(vacuum, (list, float, int)):
             raise GenerateSlabsError("Wrong type for argument: vacuum. "
-                                     "Allowed types: list")
+                                     "Allowed type: list")
         if isinstance(check_vacuum, list):
             if not all([isinstance(x, (float, int)) for x in vacuum]):
                 raise GenerateSlabsError("Wrong type for elements of list: "
@@ -94,6 +94,37 @@ class RelaxStructureError(Exception):
             raise RelaxStructureError('No entry found in DB {} for a '
                                       'structure with mpid: {}, functional: {}'
                                       .format(formula, mp_id, functional))
+
+class MoveStructInDBError(RelaxStructureError):
+    """ Errors when moving data between two different db_file/database/collection.
+    """
+    
+    @staticmethod
+    def check_name_tag(name_tag):
+
+        if isinstance(name_tag, list):
+            if not all([isinstance(n, list) for n in name_tag]):
+                raise MoveStructInDBError("Wrong type for arguments: name_tag. "
+                                          "Allowed type: list")
+        
+        elif not isinstance(name_tag, str):
+            raise MoveStructInDBError("Wrong argument: name_tag. "
+                                      "Allowed types: str, list")
+
+    @staticmethod
+    def check_name(name):
+        if not isinstance(name, str):
+            raise MoveStructInDBError("Wrong argument: name. Allowed types: str")
+
+    @staticmethod
+    def check_name(name, name_tag):
+        MoveStructInDBError.check_name(name)
+        MoveStructInDBError.check_name_tag(name_tag)
+
+class SurfaceEnergyError(Exception):
+    """ Error in surface energy Firetask.
+    """
+    pass
 
 class SubWFError(Exception):
     """ Error in reading the subworkflow parameters.

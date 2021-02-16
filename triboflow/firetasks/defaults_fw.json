@@ -48,10 +48,17 @@
         "miller": null,
         "check_key": "relaxed",
     },
-    "PutStructInDB": {
-        "db_file": null,
+    "MoveStructInDB": {
+        "db_file_from": null,
+        "database_from": null,
+        "database_to": "triboflow",
         "miller": null,
-        "name": "relaxed"
+        "name": "relaxed",
+        "name_tag"
+        "is_slab": false,
+        "check_key": "relaxed",
+        "override": false,
+        "cluster_params": null
     },
     "comp_params": {
         "BM_tolerance": 0.01,

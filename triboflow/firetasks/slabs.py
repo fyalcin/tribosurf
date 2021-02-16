@@ -25,20 +25,22 @@ from fireworks import Workflow
 from atomate.utils.utils import env_chk
 from atomate.vasp.powerups import add_modify_incar
 from pymatgen.core.structure import Structure
-from pymatgen.core.surface import SlabGenerator
+from pymatgen.core.surface import SlabGenerator, Slab
 from atomate.vasp.fireworks.core import OptimizeFW, ScanOptimizeFW
 
 from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.errors import (
     SlabOptThickError, 
     GenerateSlabsError, 
-    RelaxStructureError, 
+    RelaxStructureError,
+    MoveStructInDBError,
     ReadParamsError,
     WriteParamsError
 )
 from triboflow.tasks.io import read_json
 from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
 from triboflow.firetasks.surfene_wfs import get_miller_str
+from triboflow.firetasks.slabs_wfs import read_default_params
 
 currentdir = os.path.dirname(__file__)
 
@@ -434,7 +436,15 @@ class FT_RelaxStructure(FiretaskBase):
                                 default_key="RelaxStructure")
 
         # Retrieve the structure and check if it has been already calculated
-        structure, is_done = self.get_structure(p)
+        structure, is_done = getcheck_struct(db_file=p['db_file'],
+                                             mp_id=p['mp_id'],
+                                             functional=p['functional'],
+                                             collection=p['collection'],
+                                             error=RelaxStructureError,
+                                             check_key=p['check_key'],
+                                             database=p['database'],
+                                             miller=p['miller'],
+                                             name=p['name'])
 
         # Run the simulation if the calculation is not already done
         if not is_done:
@@ -444,35 +454,14 @@ class FT_RelaxStructure(FiretaskBase):
         # Continue the Workflow
         else:
             return FWAction(update_spec=fw_spec)            
-    
-    def get_structure(self, p):
-            
-        # Check if collection does exist
-        RelaxStructureError.check_collection(p['collection'])
-
-        # Retrieve the structure from the Database
-        structure = retrieve_structure_from_db(db_file=p['db_file'], 
-                                               database=p['database'], 
-                                               collection=p['collection'], 
-                                               mp_id=p['mp_id'],
-                                               miller=p['miller'],
-                                               name=p['name'],
-                                               pymatgen_obj=False)
-        RelaxStructureError.is_data(structure, p['mp_id'], p['functional'])
-
-        # Check if the calculation is already done, searching for given keys
-        is_done = True if p['check_key'] in structure.keys() else False
-
-        return structure, is_done
 
     def run_relax_detour(self, structure, p, dfl):
 
         # Check tag and computational parameters
         tag = p['tag']
         comp_params = p['comp_params']
-        if not comp_params:
-            defaults = read_json(dfl)
-            comp_params = defaults['comp_params']
+        if not bool(comp_params):
+            comp_params = read_default_params(dfl, 'comp_params', comp_params)
         
         # Set options for vasp
         vis = GetCustomVaspRelaxSettings(structure, comp_params, p['relax_type'])
@@ -492,48 +481,69 @@ class FT_RelaxStructure(FiretaskBase):
 
         return wf
 
+
 @explicit_serialize
-class FT_PutStructInDB(FiretaskBase):
+class FT_MoveStructInDB(FiretaskBase):
     """
     Firetask description...
     
     """
 
-    required_params = ['mp_id', 'functional', 'tag', 'struct_kind']
-    optional_params = ['miller', 'name', 'db_file', 'cluster_params']
+    required_params = ['mp_id', 'collection_from', 'collection_to', 'tag']
+    optional_params = ['db_file', 'database_from', 'database_to', 'miller',
+                       'name', 'name_tag', 'is_slab', 'override', 'cluster_params']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
-        """ 
+        """
 
         # Define the json file containing default values and read parameters
         dfl = currentdir + '/defaults_fw.json'
-        p = read_runtask_params(self, fw_spec, self.required_params, self.optional_params,
-                                default_file=dfl, default_key="PutStructInDB")
-
-        # Set missing cluster params
-        self.check_cluster_params(self, dfl)
-
-        # Get the structure from the Database with a calculation tag
-        structure, tag = self.extract_data_from_db()
-        if p['name'] is not None:
-            structure = structure['name']
-
-    def check_cluster_params(self, dfl):
+        p = read_runtask_params(self, 
+                                fw_spec,
+                                self.required_params,
+                                self.optional_params,
+                                default_file=dfl,
+                                default_key="PutStructInDB")
         
-        defaults = read_json(dfl)
-        cluster_params = self.p['cluster_params']
+        # Set missing cluster parameters
+        cluster_params = read_default_params(default_file=dfl, 
+                                             default_key="cluster_params", 
+                                             cluster_params=cluster_params)
 
-        # Set default parameters if key is absent
-        if not cluster_params:
-            cluster_params = defaults['cluster_params']
+        # Check if a structure is already present in name and check_key
+        _, is_done = getcheck_struct(db_file=p['db_file'],
+                                     mp_id=p['mp_id'],
+                                     functional=p['functional'],
+                                     collection=p['collection'],
+                                     error=RelaxStructureError,
+                                     check_key=p['check_key'],
+                                     database=p['database'],
+                                     miller=p['miller'],
+                                     name=p['name_to']) # TODO: fix check_key taht should be removed
         
-        else:
-            for key, value in defaults.items():
-                if not key in cluster_params.keys():
-                    cluster_params[key] = value
+        # Save everything in the high level DB
+        if not is_done or (is_done and p['override']):
+
+            vasp_calc, structure = retrieve_from_tag(db_file=p['db_file'],
+                                                     collection=p['collection'],
+                                                     tag=p['tag'],
+                                                     name=['structure', 'output'],
+                                                     database=p['database'],
+                                                     is_slab=p['is_slab'])
+            
+            dict = write_one_info_from_struct_dict(structure.as_dict(), name)
+
+            db = GetHighLevelDB(db_file)
+            coll = db[functional+'.slab_data']
+            coll.update_one({'mpid': flag, 'miller': miller},
+                            {'$set': {out_name: slab.as_dict()}})
+    
+    def set_params(self, name, name_tag, vasp_calc):
         
-        self.p['cluster_params'] = cluster_params
+        MoveStructInDBError.check_names(name, name_tag)
+
+
 
 # ============================================================================
 # Functions
@@ -576,12 +586,10 @@ def get_one_info_from_struct_dict(struct_dict, name):
     
     # You can have multiple nested keys
     elif isinstance(name, list):
-        if all([isinstance(x, str) for x in name]):
+        info = struct_dict.copy()
+        for n in name:
+            info = info[n]  # Read one key after the other
 
-            info = struct_dict.copy()
-            for n in name:
-                info = info[n]  # Read one key after the other
-    
     else:
         ReadParamsError('Error in reading struct_dict, name is wrong.')
 
@@ -603,7 +611,7 @@ def get_multiple_info_from_struct_dict(struct_dict, name):
 
 def write_one_info_from_struct_dict(data, name):
     """
-    Prepare the dictionary to be stored in the database
+    Prepare the dictionary to be stored in the database.
     
     """
 
@@ -622,8 +630,8 @@ def write_one_info_from_struct_dict(data, name):
     
     return d
 
-def retrieve_structure_from_db(db_file, mp_id, collection, database=None, 
-                               miller=None, name=None, pymatgen_obj=False):
+def retrieve_from_db(db_file, mp_id, collection, database=None, 
+                     miller=None, name=None, is_slab=False, pymatgen_obj=True):
 
     # Call the navigator for retrieving structure
     nav = Navigator(db_file=db_file, high_level=database)
@@ -640,10 +648,55 @@ def retrieve_structure_from_db(db_file, mp_id, collection, database=None,
         structure = get_one_info_from_struct_dict(structure, name)
     
     if pymatgen_obj:
-        structure = Structure.from_dict(structure)
+        func = Slab if is_slab else Structure
+        structure = func.from_dict(structure)
 
     return structure
 
+
+def retrieve_from_tag(db_file, collection, tag, name=None, database=None, is_slab=False):
+
+    # Call the navigator for retrieving structure
+    nav = Navigator(db_file=db_file, high_level=database)
+
+    vasp_calc = nav.find_data(collection, {'task_label': tag})
+
+    # Select the correct function to extract the structure from the dict
+    func = Slab if is_slab else Structure
+    
+    # Retrieve the correct dictionary and obtain the structure
+    struct_dict = vasp_calc
+    if name is not None:
+        struct_dict = get_one_info_from_struct_dict(vasp_calc, name)
+    structure = func.from_dict(struct_dict)
+    
+    return vasp_calc, structure
+
+
+def getcheck_struct(db_file, mp_id, functional, collection, error, database=None,
+                    miller=None, name=None, check_key=None, pymatgen_obj=False):
+        
+    # Check if collection does exist
+    error.check_collection(collection)
+
+    # Retrieve the structure from the Database
+    structure = retrieve_from_db(db_file=db_file, 
+                                 database=database, 
+                                 collection=collection, 
+                                 mp_id=mp_id,
+                                 miller=miller,
+                                 name=name,
+                                 pymatgen_obj=pymatgen_obj)
+    error.is_data(structure, mp_id, functional)
+
+    # Check if the calculation is already done, searching for given keys
+    if check_key is not None:
+        is_done = True if check_key in structure.keys() else False
+    else:
+        is_done = name 
+        is_done = None
+
+    return structure, is_done
 
 def orient_bulk(structure, miller, thickness, primitive=False, lll_reduce=True, 
                 in_unit_planes=True):

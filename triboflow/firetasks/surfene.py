@@ -33,7 +33,7 @@ class FT_SurfaceEnergy(FiretaskBase):
     """
     
     _fw_name = 'Surface Energy calculation'
-    required_params = ['bulk', 'slab']
+    required_params = ['bulk', 'slab', 'tag']
     optional_params = ['db_file']
     
     def run_task(self, fw_spec):
