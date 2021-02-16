@@ -57,10 +57,6 @@ class GenerateSlabsError(Exception):
         if not isinstance(slab_name, (str, list)):
             raise GenerateSlabsError("Wrong type for argument: slab_name. "
                                      "Allowed types: list of str, str.")
-        if isinstance(slab_name, list):
-            if not all([isinstance(x, str) for x in list(slab_name)]):
-                raise GenerateSlabsError("Wrong type for elements of list: "
-                                         "slab_name. Allowed types: str.")
 
     @staticmethod
     def check_inputs(miller, thickness, vacuum, slab_name):
@@ -71,29 +67,33 @@ class GenerateSlabsError(Exception):
         GenerateSlabsError.check_slab_name(slab_name)
 
         # If one is a list, both of them should be.
-        if not (isinstance(thickness, list) and isinstance(slab_name, list)):
+        if isinstance(thickness, list):
+            if not isinstance(slab_name, list):
                 raise GenerateSlabsError("Wrong type for arguments: thickness, "
                                          "slab_name. If one is a list, both "
                                          "should be.")
+            if len(thickness) != len(slab_name):
+                raise GenerateSlabsError("Wrong arguments: thickness, slab_name. " 
+                                         "They should have the same length if lists")               
 
 class RelaxStructureError(Exception):
     """ Error when running a relax calculation
     """
 
     @staticmethod
-    def check_struct_kind(struct_kind):
-        if struct_kind not in ['bulk', 'slab', 'interface']:
-            raise RelaxStructureError('Wrong value for struct_kind. Allowed '
-                                      'values: "bulk", "slab", "interface".')
+    def check_collection(collection):
+        if collection not in ['bulk_data', 'slab_data', 'interface_data']:
+            raise RelaxStructureError('Wrong value for collection. Allowed '
+                                      'values: "bulk_data", "slab_data", '
+                                      '"interface_data"')
 
     @staticmethod
-    def is_data(structure, mp_id, functional, struct_kind):
+    def is_data(structure, mp_id, functional):
         if structure is None:
             formula = structure.composition.reduced_formula
-            raise RelaxStructureError('No entry found in DB {} for a {} '
+            raise RelaxStructureError('No entry found in DB {} for a '
                                       'structure with mpid: {}, functional: {}'
-                                      .format(formula, struct_kind, mp_id, functional))
-
+                                      .format(formula, mp_id, functional))
 
 class SubWFError(Exception):
     """ Error in reading the subworkflow parameters.
@@ -117,5 +117,10 @@ class NavigatorMPError(Exception):
 
 class ReadParamsError(Exception):
     """ Errors when reading, parsing or retrieving data or parameters in FTs.
+    """
+    pass
+
+class ReadWriteParamsError(Exception):
+    """ Errors when writing data to dictionary to be stored in DB.
     """
     pass
