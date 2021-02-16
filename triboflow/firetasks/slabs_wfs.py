@@ -125,10 +125,10 @@ class SlabWF:
                                                             ['pretty_formula'])
             if not formula_from_flag == formula_from_struct:
                 raise SystemExit('The chemical formula of your structure ({}) '
-                                'does not match the chemical formula of the flag '
-                                '(mp-id) you have chosen which corresponds '
-                                'to {}.\n'.format(
-                                formula_from_struct, formula_from_flag))
+                                 'does not match the chemical formula of the flag '
+                                 '(mp-id) you have chosen which corresponds '
+                                 'to {}.\n'.format(
+                                 formula_from_struct, formula_from_flag))
         
         # Check computational parameters and use defaults if necessary
         if comp_params == {}:

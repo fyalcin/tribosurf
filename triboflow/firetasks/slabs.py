@@ -29,7 +29,13 @@ from pymatgen.core.surface import SlabGenerator
 from atomate.vasp.fireworks.core import OptimizeFW, ScanOptimizeFW
 
 from triboflow.utils.database import Navigator, StructureNavigator
-from triboflow.utils.errors import SlabOptThickError, GenerateSlabsError, RelaxStructureError, ReadParamsError
+from triboflow.utils.errors import (
+    SlabOptThickError, 
+    GenerateSlabsError, 
+    RelaxStructureError, 
+    ReadParamsError,
+    WriteParamsError
+)
 from triboflow.tasks.io import read_json
 from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
 from triboflow.firetasks.surfene_wfs import get_miller_str
@@ -145,7 +151,7 @@ class FT_SlabOptThick(FiretaskBase):
         
         # If data is saved elsewhere from standard position
         if p['slab_name'] is not None:
-            slab = one_info_from_struct_dict(slab, p['slab_name'])
+            slab = get_one_info_from_struct_dict(slab, p['slab_name'])
 
         # Start a subworkflow to converge the thickness if not already done
         stop_convergence = slab.get('opt_thickness', None)
@@ -155,7 +161,7 @@ class FT_SlabOptThick(FiretaskBase):
             # Retrieve the desired bulk structure
             bulk = nav_struct.get_slab_from_db(mp_id=p['mp_id'], 
                                                functional=p['functional'])
-            bulk = one_info_from_struct_dict(bulk, p['bulk_name'])
+            bulk = get_one_info_from_struct_dict(bulk, p['bulk_name'])
 
             structure = Structure.from_dict(bulk.get('structure_fromMP'))
             comp_params = slab.get('comp_params', {})
@@ -325,6 +331,7 @@ class FT_EndThickConvo(FiretaskBase):
         """ 
     pass
 
+
 @explicit_serialize
 class FT_GenerateSlabs(FiretaskBase):
     """
@@ -335,8 +342,8 @@ class FT_GenerateSlabs(FiretaskBase):
     
     """
 
-    required_params = ['structure', 'mp_id', 'miller', 'functional']
-    optional_params = ['db_file', 'database', 'collection', 'thickness', 'vacuum', 
+    required_params = ['structure', 'mp_id', 'miller', 'collection']
+    optional_params = ['db_file', 'database', 'thickness', 'thick_max', 'vacuum', 
                        'symmetrize', 'ext_index', 'in_unit_planes', 'slab_name']
 
     def run_task(self, fw_spec):
@@ -348,58 +355,24 @@ class FT_GenerateSlabs(FiretaskBase):
         p = read_runtask_params(self, fw_spec, self.required_params, self.optional_params,
                                 default_file=dfl, default_key="GenerateSlabs")
 
-        GenerateSlabsError.check_slabname_thickness(p['thickness'],
-                                                    p['slab_name'])
-
         # Generate the slabs for each structure passed as input
-        slabs = []
-        miller, thickness, vacuum, slab_name = self.set_loop_params(p)
+        miller, thickness, vacuum, slab_name = self.set_lists_to_loop(p)
 
-        # Generate the different slabs, 
-        for hkl, thk, vac in zip(miller, thickness, vacuum):
-            # Oriented bulk case
-            if thk == 0:
-                s = orient_bulk(p['structure'], miller, 
-                                p['thick_max'], p['in_unit_planes'])
-            
-            # Slab case
-            else:
-                slabgen = SlabGenerator(initial_structure = p['structure'],
-                                        miller_index = hkl,
-                                        center_slab=True,
-                                        primitive=False,
-                                        lll_reduce=True,
-                                        in_unit_planes=p['in_unit_planes'],
-                                        min_slab_size=thk,
-                                        min_vacuum_size=p['vacuum'])
-            
-                # Select the ext_index-th slab from the list of possible slabs
-                s = slabgen.get_slabs(bonds=None, ftol=0.1, tol=0.1, repair=False,
-                                      max_broken_bonds=0, symmetrize=p['symmetrize'])
-                s = s[p['ext_index']]
-
-            slabs.append(s)
-
-        # Add the slabs to the "database" DB within the db_file path
-        nav = Navigator(p['db_file'], p['database'])
+        # Generate the slabs, taking into account miller, thickness, vacuum
+        slabs = generate_slabs(structure=p['structure'], 
+                               miller=miller, 
+                               thickness=thickness, 
+                               vacuum=vacuum, 
+                               thick_bulk=p['thick_max'],
+                               ext_index=p['ext_index'],
+                               in_unit_planes=p['in_unit_planes'])
         
-        # Store unrelaxed data in the Database
-        for slab, hkl, name in zip(slabs, miller, slab_name):
-            slab_dict = monty.json.jsanitize(s.as_dict(), allow_bson=True)
-            nav.insert_data(collection=p['collection'], 
-                            filter={
-                                'mpid': p['mp_id'],
-                                'formula': p['structure'].composition.reduced_formula,
-                                'miller': hkl,
-                                name: p['structure'].as_dict()},        
-
-        # coll.update_one({'mpid': flag, 'miller': miller},
-        #                 {'$set': {'unrelaxed_slab': slab_dict}},
-        #                 upsert=True)
+        # Store the slab structure in collection.name in database, within db_file
+        self.structure_in_db(slabs, miller, slab_name, p)
         
         return FWAction(update_spec=fw_spec)
     
-    def set_loop_params(self, p):
+    def set_lists_to_loop(self, p):
 
         GenerateSlabsError.check_inputs(p['miller'], p['thickness'], 
                                         p['vacuum'], p['slab_name'])
@@ -416,17 +389,36 @@ class FT_GenerateSlabs(FiretaskBase):
             vacuum = [vacuum] * len(thickness)
 
         return miller, thickness, vacuum, slab_name
+    
+    def structure_in_db(self, slabs, miller, slab_name, p):
+
+        nav = Navigator(p['db_file'], p['database'])
+        
+        # Store unrelaxed data in the Database
+        for s, hkl, name in zip(slabs, miller, slab_name):
+            # Clean the data and create a dictionary with the given path
+            slab_dict = monty.json.jsanitize(s.as_dict(), allow_bson=True)
+            update_data = write_one_info_from_struct_dict(slab_dict, name)
+
+            nav.update_data(collection=p['collection'], 
+                            filter={'mpid': p['mp_id'], 'miller': hkl},
+                            new_values={'$set': update_data},
+                            upsert=True)
+
 
 @explicit_serialize
 class FT_RelaxStructure(FiretaskBase):
     """
-    Firetask description...
+    Retrieve a structure based on mp_id, and name out of a collection found in
+    db_file and database. The slab is relaxed following the 'relax_type' procedure
+    using an Atomate workflow. The result is stored in the same database with 
+    a tag that can be provided by the user.
     
     """
 
-    required_params = ['mp_id', 'functional', 'struct_kind']
-    optional_params = ['comp_params', 'miller', 'name', 'db_file', 'database',
-                       'relax_type']
+    required_params = ['mp_id', 'functional', 'collection', 'name', 'tag']
+    optional_params = ['db_file', 'database', 'relax_type', 'comp_params', 
+                       'miller', 'check_key']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -434,83 +426,71 @@ class FT_RelaxStructure(FiretaskBase):
 
         # Define the json file containing default values and read parameters
         dfl = currentdir + '/defaults_fw.json'
-        p = read_runtask_params(self, fw_spec, self.required_params, self.optional_params,
-                                default_file=dfl, default_key="RelaxStructure")
+        p = read_runtask_params(self,
+                                fw_spec, 
+                                self.required_params, 
+                                self.optional_params,
+                                default_file=dfl, 
+                                default_key="RelaxStructure")
 
-        # Get the structure from the Database with a calculation tag
-        structure, tag = self.extract_data_from_db()
-        if p['name'] is not None:
-            structure = structure['name']
+        # Retrieve the structure and check if it has been already calculated
+        structure, is_done = self.get_structure(p)
 
-        # Set the simulation if the calculation is not already at convergence
-        if 'relaxed' or 'relaxed_slab' not in structure:
-            fw = self.set_calculation(structure, tag, dfl)
+        # Run the simulation if the calculation is not already done
+        if not is_done:
+            wf = self.run_relax_detour(structure, p, dfl)
+            return FWAction(detours=wf, update_spec=fw_spec)
 
-            # Set the Relaxation Workflow for making a detour.
-            # Use add_modify_incar powerup to add KPAR and NCORE settings based on 
-            # env_chk in my_fworker.yaml.
-            wf_name = tag.split('_')[0] + p['relax_type']
-            opt_wf = add_modify_incar(Workflow([fw], name=wf_name))
-
-            return FWAction(detours=opt_wf)
-    
-    def extract_data_from_db(self):
-
-        RelaxStructureError.check_struct_kind(self.p['struct_kind'])
-
-        # Call the navigator for retrieving structure
-        nav_struct = StructureNavigator(db_file=self.p['db_file'],
-                                        high_level=self.p['database'])
-
-        # Extract data from database
-        if self.p['struct_kind'] == 'bulk':
-            structure = nav_struct.get_bulk_from_db(self.p['mp_id'], 
-                                                    self.p['functional'],
-                                                    warning=True)
-        elif self.p['struct_kind'] == 'slab':
-            structure = nav_struct.get_slab_from_db(self.p['mp_id'], 
-                                                    self.p['functional'], 
-                                                    self.p['miller'], 
-                                                    warning=True)
-        elif self.p['struct_kind'] == 'interface':
-            structure = nav_struct.get_interface_from_db(self.p['name'],
-                                                         self.p['functional'],
-                                                         warning=True)
-        
-        RelaxStructureError.is_data(structure=structure, mp_id=self.p['mp_id'], 
-                                    functional=self.p['functional'], 
-                                    struct_kind=self.p['struct_kind'])
-        
-        # Get a tag for the calculation
-        formula = structure.composition.reduced_formula
-        if self.p['miller'] is not None:
-            miller_str = ''.join(str(s) for s in self.p['miller'])
-            tag = formula + miller_str + '_' + str(uuid4())
+        # Continue the Workflow
         else:
-            tag = formula + '_' + str(uuid4())
+            return FWAction(update_spec=fw_spec)            
+    
+    def get_structure(self, p):
+            
+        # Check if collection does exist
+        RelaxStructureError.check_collection(p['collection'])
 
-        return structure, tag
+        # Retrieve the structure from the Database
+        structure = retrieve_structure_from_db(db_file=p['db_file'], 
+                                               database=p['database'], 
+                                               collection=p['collection'], 
+                                               mp_id=p['mp_id'],
+                                               miller=p['miller'],
+                                               name=p['name'],
+                                               pymatgen_obj=False)
+        RelaxStructureError.is_data(structure, p['mp_id'], p['functional'])
 
-    def set_calculation(self, structure, tag, dfl):
+        # Check if the calculation is already done, searching for given keys
+        is_done = True if p['check_key'] in structure.keys() else False
 
-        # Check the computational parameters
-        comp_params = self.p['comp_params']
+        return structure, is_done
+
+    def run_relax_detour(self, structure, p, dfl):
+
+        # Check tag and computational parameters
+        tag = p['tag']
+        comp_params = p['comp_params']
         if not comp_params:
             defaults = read_json(dfl)
             comp_params = defaults['comp_params']
-
-        # Set options for vasp
-        vis = GetCustomVaspRelaxSettings(structure, comp_params,
-                                         self.p['relax_type'])
         
-        # Create the Firework to run the simulation
-        if self.p['functional'] == 'SCAN':
+        # Set options for vasp
+        vis = GetCustomVaspRelaxSettings(structure, comp_params, p['relax_type'])
+        
+        # Create the Firework to run perform the simulation
+        if p['functional'] == 'SCAN':
             fw = ScanOptimizeFW(structure=structure, name=tag, vasp_input_set=vis)
         else:
             fw = OptimizeFW(structure, name=tag, vasp_input_set=vis,
                             half_kpts_first_relax=True)
 
-        return fw
+        # Define the workflow name
+        wf_name = p['mp_id'] + '_' + p['relax_type']
+
+        # Use add_modify_incar to add KPAR and NCORE settings based on env_chk
+        wf = add_modify_incar(Workflow([fw], name=wf_name))
+
+        return wf
 
 @explicit_serialize
 class FT_PutStructInDB(FiretaskBase):
@@ -565,25 +545,6 @@ def read_runtask_params(obj, fw_spec, required_params, optional_params,
     General function to read the required and optional parameters of a 
     firetask instance. If 
 
-    Parameters
-    ----------
-    obj : [type]
-        [description]
-    fw_spec : [type]
-        [description]
-    required_params : [type]
-        [description]
-    optional_params : [type]
-        [description]
-    default_file : [type]
-        [description]
-    default_key : [type]
-        [description]
-
-    Returns
-    -------
-    [type]
-        [description]
     """
 
     defaults = read_json(default_file)
@@ -607,13 +568,13 @@ def read_runtask_params(obj, fw_spec, required_params, optional_params,
 
     return params
 
-def one_info_from_struct_dict(struct_dict, name):
+def get_one_info_from_struct_dict(struct_dict, name):
 
     # Simply read a dictionary key
     if isinstance(name, str):
         info = struct_dict[name]
     
-    # You can have multiple innested keys
+    # You can have multiple nested keys
     elif isinstance(name, list):
         if all([isinstance(x, str) for x in name]):
 
@@ -626,23 +587,63 @@ def one_info_from_struct_dict(struct_dict, name):
 
     return info
 
-def multiple_info_from_struct_dict(struct_dict, name):
+def get_multiple_info_from_struct_dict(struct_dict, name):
 
     # Extract many info at the same time 
     if isinstance(name, list):
         if all([isinstance(x, list) for x in name]):
             info = []
             for n in name:
-                info.append(one_info_from_struct_dict(struct_dict, n))
+                info.append(get_one_info_from_struct_dict(struct_dict, n))
 
         else:
-            info = one_info_from_struct_dict(struct_dict, name)
+            info = get_one_info_from_struct_dict(struct_dict, name)
     
     return info
 
-# Small test
-if __name__ == '__main__':
-    FT_SlabOptThick(mp_id='mp-100', functional='PBE', miller=[1,0,0])
+def write_one_info_from_struct_dict(data, name):
+    """
+    Prepare the dictionary to be stored in the database
+    
+    """
+
+    # Simply write a dictionary with a single key
+    if isinstance(name, str):
+        d = {name: data}
+
+    # You can have multiple nested keys
+    elif isinstance(name, list):
+        d = {name[-1]: data}   
+        for key in name[-2::-1]:
+            d = {key: d}
+    
+    else:
+        WriteParamsError('Error in writing data, name is wrong.')
+    
+    return d
+
+def retrieve_structure_from_db(db_file, mp_id, collection, database=None, 
+                               miller=None, name=None, pymatgen_obj=False):
+
+    # Call the navigator for retrieving structure
+    nav = Navigator(db_file=db_file, high_level=database)
+    
+    # Define the filter to be used
+    filter = {'mpid': mp_id}
+    if miller is not None:
+        filter.update({'miller': miller})
+    
+    # Extract data from the database
+    structure = nav.find_data(collection=collection, filter=filter)
+    
+    if name is not None:
+        structure = get_one_info_from_struct_dict(structure, name)
+    
+    if pymatgen_obj:
+        structure = Structure.from_dict(structure)
+
+    return structure
+
 
 def orient_bulk(structure, miller, thickness, primitive=False, lll_reduce=True, 
                 in_unit_planes=True):
@@ -662,3 +663,45 @@ def orient_bulk(structure, miller, thickness, primitive=False, lll_reduce=True,
     bulk_miller = slabgen.oriented_unit_cell()
 
     return bulk_miller
+
+def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
+                   center_slab=True, primitive=False, lll_reduce=True,
+                   in_unit_planes=True,  ext_index=None, bonds=None, ftol=0.1, 
+                   tol=0.1, repair=False, max_broken_bonds=0, symmetrize=False):
+    """
+    Create and return a list of slabs out of a structure.
+
+    """
+
+    slabs = []
+    for hkl, thk, vac in zip(miller, thickness, vacuum):
+
+        # Oriented bulk case
+        if thk == 0:
+            s = orient_bulk(structure, miller, thick_bulk, in_unit_planes)
+        
+        # Slab case
+        else:
+            slabgen = SlabGenerator(initial_structure=structure,
+                                    miller_index=hkl,
+                                    center_slab=center_slab,
+                                    primitive=primitive,
+                                    lll_reduce=lll_reduce,
+                                    in_unit_planes=in_unit_planes,
+                                    min_slab_size=thk,
+                                    min_vacuum_size=vacuum)
+        
+            # Select the ext_index-th slab from the list of possible slabs
+            s = slabgen.get_slabs(bonds=bonds, 
+                                  ftol=ftol, 
+                                  tol=tol, 
+                                  repair=repair,
+                                  max_broken_bonds=max_broken_bonds, 
+                                  symmetrize=symmetrize)
+            
+            if ext_index:
+                s = s[ext_index]
+
+        slabs.append(s)
+    
+    return slabs
