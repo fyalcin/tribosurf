@@ -27,12 +27,12 @@ from triboflow.utils.errors import SubWFError
 class SurfEneWF:
 
     @staticmethod
-    def surface_energy(structure, mp_id, miller, functional='PBE', spec={},
-                       db_file=None, low_level=None, high_level='triboflow',
-                       relax_type="slab_pos_relax", comp_params={}, thick_min=4, 
-                       thick_max=12, thick_incr=2, vacuum=10, in_unit_planes=True, 
-                       ext_index=0, cluster_params={}, parallelization='low', 
-                       recursion=False):
+    def conv_surface_energy(structure, mp_id, miller, functional='PBE', spec={},
+                            db_file=None, low_level=None, high_level='triboflow',
+                            relax_type='slab_pos_relax', comp_params={}, thick_min=4, 
+                            thick_max=12, thick_incr=2, vacuum=10, in_unit_planes=True, 
+                            ext_index=0, cluster_params={}, parallelization='low', 
+                            recursion=False):
         """
         Description of the method...
 
@@ -105,11 +105,6 @@ class SurfEneWF:
                                      miller=miller,
                                      check_key='relaxed')
 
-            required_params = ['mp_id', 'collection_from', 'collection_to', 'tag']
-            optional_params = ['db_file', 'database_from', 'database_to', 'miller',
-                            'name_check', 'name', 'name_tag', 'struct_kind', 
-                            'override', 'cluster_params']
-
             ft_2 = FT_MoveStructInDB(mp_id=mp_id,
                                      collection_from=functional+'.slab_data',
                                      collection_to=functional+'.slab_data',
@@ -147,16 +142,38 @@ class SurfEneWF:
 
         # Define the third Firework(s)
         # ==================================================
-        ft_surfene = FT_SurfaceEnergy()
 
-        # Define the name of the slab(s)
+        # Set the location of the energies in the high level DB
+        name_surfene = [['thickness', 'data_0', 'calc_output']]
+        thk_loop = thickness if recursion else thickness[1:]
+        for thk in thk_loop:
+            name_surfene.append(['thickness', 'data_' + str(thk), 'calc_output'])
 
+        ft_surfene = FT_SurfaceEnergy(mp_id=mp_id,
+                                      collection=functional+'.slab_data',
+                                      miller=miller,
+                                      name=name_surfene,
+                                      db_file=db_file,
+                                      database=high_level)
 
-        fw = Firework([ft_surfene],
-                        spec = spec,
-                        name = 'Calculate the Surface Energy')
-        
-        Workflow()
+        fw_surfene = Firework([ft_surfene],
+                              spec = spec,
+                              name = 'Calculate the Surface Energies')
+
+        # Define and return the Workflow
+        # ==================================================       
+
+        # Build the workflow list and the links between elements
+        wf_list = [fw_gen_slabs, ]
+        links = {fw_gen_slabs: fw_relax_slabs}
+        for fw in fw_relax_slabs:
+            wf_list.append(fw)
+            links.update({fw: [fw_surfene]})
+        wf_list.append(fw_surfene)
+
+        wf = Workflow(wf_list, links, name="Converge surface energy WF")
+
+        return wf
 
 def create_tags(name):
 
