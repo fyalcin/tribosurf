@@ -43,6 +43,10 @@ class SlabWF:
     """
 
     @staticmethod
+    def make_and_relax_slab(structure, mp_id, miller, functional,):
+        pass
+
+    @staticmethod
     def conv_slabthick_surfene(structure, mp_id, miller, functional='PBE',
                                comp_params={}, spec={}, db_file=None,
                                low_level=None, high_level='triboflow',

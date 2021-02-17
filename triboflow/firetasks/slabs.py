@@ -536,7 +536,7 @@ class FT_MoveStructInDB(FiretaskBase):
             # Manage stdout, save a local poscar with results
             wf = self.user_output(vasp_calc, p)
             if wf is not None:
-                return FWAction(update_spec=fw_spec, detours=wf)
+                return FWAction(detours=wf, update_spec=fw_spec)
         
         else:  
             return FWAction(update_spec=fw_spec)

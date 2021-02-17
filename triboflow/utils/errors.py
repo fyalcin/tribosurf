@@ -76,16 +76,9 @@ class GenerateSlabsError(Exception):
                 raise GenerateSlabsError("Wrong arguments: thickness, slab_name. " 
                                          "They should have the same length if lists")               
 
-class RelaxStructureError(Exception):
+class RelaxStructureError(GeneralErrorFT):
     """ Error when running a relax calculation
     """
-
-    @staticmethod
-    def check_collection(collection):
-        if collection not in ['bulk_data', 'slab_data', 'interface_data']:
-            raise RelaxStructureError('Wrong value for collection. Allowed '
-                                      'values: "bulk_data", "slab_data", '
-                                      '"interface_data"')
 
     @staticmethod
     def is_data(structure, mp_id, functional):
@@ -95,7 +88,7 @@ class RelaxStructureError(Exception):
                                       'structure with mpid: {}, functional: {}'
                                       .format(formula, mp_id, functional))
 
-class MoveStructInDBError(RelaxStructureError):
+class MoveStructInDBError(GeneralErrorFT):
     """ Errors when moving data between two different db_file/database/collection.
     """
     
@@ -122,7 +115,7 @@ class MoveStructInDBError(RelaxStructureError):
             raise MoveStructInDBError("Wrong arguments: name or name_tag. If "
                                       "converted to str, should have same length")
 
-class SurfaceEnergyError(Exception):
+class SurfaceEnergyError(GeneralErrorFT):
     """ Error in surface energy Firetask.
     """
     pass
@@ -156,3 +149,17 @@ class ReadWriteParamsError(Exception):
     """ Errors when writing data to dictionary to be stored in DB.
     """
     pass
+
+
+class GeneralErrorFT(Exception):
+
+    @staticmethod
+    def check_collection(collection, functional = ['PBE', 'SCAN'], 
+                         data = ['bulk_data', 'slab_data', 'interface_data']):
+        
+        allowed_collections = [f + '.' + d for f in functional for d in data]
+
+        if collection not in allowed_collections:
+            raise RelaxStructureError('Wrong value for collection. Allowed '
+                                        'values: "bulk_data", "slab_data", '
+                                        '"interface_data"')
