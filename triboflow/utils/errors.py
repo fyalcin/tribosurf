@@ -14,12 +14,25 @@ __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 8th, 2021'
 
 
-class SlabOptThickError(Exception): 
+class GeneralErrorFT(Exception):
+
+    @staticmethod
+    def check_collection(collection, functional = ['PBE', 'SCAN'], 
+                         data = ['bulk_data', 'slab_data', 'interface_data']):
+        
+        allowed_collections = [f + '.' + d for f in functional for d in data]
+
+        if collection not in allowed_collections:
+            raise RelaxStructureError('Wrong value for collection. Allowed '
+                                        'values: "bulk_data", "slab_data", '
+                                        '"interface_data"')
+
+class SlabOptThickError(GeneralErrorFT): 
     """ Error in Slab Optimal Thickness workflows and dependencies.
     """
     pass
 
-class GenerateSlabsError(Exception):
+class GenerateSlabsError(GeneralErrorFT):
     """ Error in generating slabs.
     """
 
@@ -145,21 +158,7 @@ class ReadParamsError(Exception):
     """
     pass
 
-class ReadWriteParamsError(Exception):
+class WriteParamsError(Exception):
     """ Errors when writing data to dictionary to be stored in DB.
     """
     pass
-
-
-class GeneralErrorFT(Exception):
-
-    @staticmethod
-    def check_collection(collection, functional = ['PBE', 'SCAN'], 
-                         data = ['bulk_data', 'slab_data', 'interface_data']):
-        
-        allowed_collections = [f + '.' + d for f in functional for d in data]
-
-        if collection not in allowed_collections:
-            raise RelaxStructureError('Wrong value for collection. Allowed '
-                                        'values: "bulk_data", "slab_data", '
-                                        '"interface_data"')
