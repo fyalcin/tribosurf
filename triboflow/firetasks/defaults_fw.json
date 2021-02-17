@@ -60,6 +60,10 @@
         "override": false,
         "cluster_params": null
     },
+    "SurfaceEnergy": {
+        "db_file": null,
+        "database": "triboflow"
+    },
     "comp_params": {
         "BM_tolerance": 0.01,
         "energy_tolerance": 0.001,
