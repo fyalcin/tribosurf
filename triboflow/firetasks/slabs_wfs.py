@@ -50,9 +50,11 @@ class SlabWF:
     def conv_slabthick_surfene(structure, mp_id, miller, functional='PBE',
                                comp_params={}, spec={}, db_file=None,
                                low_level=None, high_level='triboflow',
-                               relax_type="slab_pos_relax", thick_min=4, 
+                               relax_type='slab_pos_relax', thick_min=4, 
                                thick_max=12, thick_incr=2, vacuum=10,
-                               in_unit_planes=True, ext_index=0, cluster_params={}):
+                               in_unit_planes=True, ext_index=0,
+                               parallelization='low', recursion=False,
+                               cluster_params={}):
         """ Author: Gabriele Losi; Copyright 2021, Prof. M.C. Righi, UniBO.
 
         Function to set the computational and physical parameters and start a 
@@ -91,14 +93,36 @@ class SlabWF:
                                                   vacuum=vacuum,
                                                   in_unit_planes=in_unit_planes,
                                                   ext_index=ext_index,
+                                                  parallelization=parallelization,
+                                                  recursion=recursion,
                                                   cluster_params=p)
 
-        ft_end_thick_convo = FT_EndThickConvo(low_level, high_level)
+        ft_end_thick_convo = FT_EndThickConvo(structure=structure,
+                                              mp_id=mp_id, 
+                                              miller=miller, 
+                                              functional=functional,
+                                              comp_params=comp_params, 
+                                              spec=spec, 
+                                              db_file=db_file,
+                                              low_level=low_level, 
+                                              high_level=high_level,
+                                              relax_type=relax_type, 
+                                              thick_min=thick_min,
+                                              thick_max=thick_max, 
+                                              thick_incr=thick_incr, 
+                                              vacuum=vacuum,
+                                              in_unit_planes=in_unit_planes, 
+                                              ext_index=ext_index,
+                                              parallelization=parallelization, 
+                                              recursion=recursion,
+                                              cluster_params=cluster_params)
 
         # Set it to a firework and a workflow
+        # TODO: Understand if it is possible to have a structure of this kind
+        # if a detour is done.
         fw = Firework([ft_start_thick_convo, ft_end_thick_convo],
                       spec = spec,
-                      name = 'Converge slab thickness via surfene')           
+                      name = 'Converge slab thickness via surfene WF')           
         wf = Workflow([fw], name=name)
 
         return wf

@@ -20,6 +20,7 @@ import monty
 from uuid import uuid4
 from pprint import pprint, pformat
 
+import numpy as np
 from fireworks.utilities.fw_utilities import explicit_serialize
 from fireworks import FiretaskBase, FWAction
 from fireworks import Firework, Workflow, FileWriteTask
@@ -197,7 +198,7 @@ class FT_SlabOptThick(FiretaskBase):
             generate_wf = SlabWF.conv_slabthick_alat
         else:
             raise SlabOptThickError("Wrong input argument for convo_kind. "
-                                    "Allowed options: 'surfene', 'alat'.")
+                                    "Allowed options: 'surfene', 'alat'")
 
         wf = generate_wf(structure=structure, mp_id=p['mp_id'], 
                          miller=p['miller'], functional=p['functional'], 
@@ -332,7 +333,7 @@ class FT_StartThickConvo(FiretaskBase):
 
             else:
                 raise SystemExit('Lattice parameter convergence not yet implemented')
-        
+
 
 @explicit_serialize
 class FT_EndThickConvo(FiretaskBase):
@@ -341,10 +342,87 @@ class FT_EndThickConvo(FiretaskBase):
     
     """
 
+    required_params = ['structure', 'mp_id', 'miller']
+    optional_params = ['db_file', 'low_level', 'high_level', 'functional', 
+                       'convo_kind', 'relax_type', 'comp_params', 'thick_min', 
+                       'thick_max', 'thick_incr', 'vacuum', 'in_unit_planes', 
+                       'ext_index', 'parallelization', 'cluster_params']
+
     def run_task(self, fw_spec):
         """ Run the Firetask.
         """ 
-    pass
+
+        # Define the json file containing default values and read parameters
+        dfl = currentdir + '/defaults_fw.json'
+        p = read_runtask_params(self, fw_spec, self.required_params, 
+                                self.optional_params, default_file=dfl, 
+                                default_key="EndThickConvo")
+        
+        # Retrieve the surface energy
+        surface_energies = self.get_data(p)
+
+        # Analyze energies, if convergence is reached data is stored in DB
+        stop_convergence = self.analyze_data(surface_energies, p)
+
+        # Decide whether to rerun recursively the surface energy workflow
+        if not stop_convergence:
+            wf = None
+            return FWAction(detours=wf, update_spec=fw_spec)
+
+        else:
+            return FWAction(update_spec=fw_spec)
+        
+        def get_data(self, p):
+
+            if p['convo_kind'] == 'surfene':
+                data = self._get_surfene(p)
+
+            else:
+                raise SlabOptThickError("Wrong argument: 'convo_kind'. Allowed "
+                                        "values: 'surfene', 'alat'")
+            
+            return data
+        
+        def analyze_data(self, energies, p):
+
+            if p['convo_kind'] == 'surfene':
+                data = self._analyze_surfene(energies, p)
+                
+            else:
+                raise SlabOptThickError("Wrong argument: 'convo_kind'. Allowed "
+                                        "values: 'surfene', 'alat'")
+            
+            return stop_convergence
+        
+        # def recursion_wf(self, p):
+        #     wf = generate_wf(structure=structure, mp_id=p['mp_id'], 
+        #             miller=p['miller'], functional=p['functional'], 
+        #             comp_params=p['comp_params'], db_file=p['db_file'],
+        #             low_level=p['low_level'], high_level=p['high_level'],
+        #             relax_type=p['relax_type'], thick_min=p['thick_min'], 
+        #             thick_max=p['thick_max'], thick_incr=p['thick_incr'], 
+        #             vacuum=p['vacuum'], in_unit_planes=p['in_unit_planes'],
+        #             ext_index=p['ext_index']
+
+        def _get_surfene(self, p):
+            
+            # Create the list of keys to be used when reading the dictionary
+            thickness = np.arange(p['thick_min'], p['thick_max'], p['thick_incr'])
+            name = [['thickness', 'data_' + str(thk), 'calc_output', 'surface_energy'] 
+                    for thk in thickness]
+
+            # Call the navigator for retrieving the dictionary out of the DB
+            nav = Navigator(db_file=p['db_file'], high_level=p['high_level'])
+            filter = {'mpid': p['mp_id'], 'miller': p['miller']}
+            data_dict = nav.find_data(p['functional'] + '.slab_data', filter)
+
+            # Get the surface energies
+            energies = get_multiple_info_from_struct_dict(data_dict, p['name'])
+
+            return energies
+        
+        def analyze_surfene(self, energies, p):
+            pass
 
 
 @explicit_serialize
@@ -358,7 +436,7 @@ class FT_GenerateSlabs(FiretaskBase):
     """
 
     required_params = ['structure', 'mp_id', 'miller', 'collection']
-    optional_params = ['db_file', 'database', 'thickness', 'thick_max', 'vacuum', 
+    optional_params = ['db_file', 'database', 'thickness', 'thick_max', 'vacuum',
                        'symmetrize', 'ext_index', 'in_unit_planes', 'slab_name']
 
     def run_task(self, fw_spec):
