@@ -123,7 +123,9 @@ class SurfEneWF:
                                          'calc_output']
                                          ],
                                      name=[
-                                         ['thickness', str(thk), 'calc_output'] * 6
+                                         ['thickness', 
+                                          'data_' + str(thk), 
+                                          'calc_output'] * 7
                                          ],
                                      name_tag=[
                                          ['output', 'structure'],
@@ -131,6 +133,7 @@ class SurfEneWF:
                                          ['output', 'energy'],
                                          ['output', 'energy_per_atom' ],
                                          ['output', 'bandgap'],
+                                         ['nsites'],
                                          ['_id']
                                          ],
                                      struct_kind='slab',
