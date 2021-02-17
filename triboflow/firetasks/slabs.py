@@ -290,7 +290,7 @@ class FT_StartThickConvo(FiretaskBase):
     optional_params = ['db_file', 'low_level', 'high_level', 'convo_kind', 
                        'relax_type', 'comp_params', 'thick_min', 'thick_max', 
                        'thick_incr', 'vacuum', 'in_unit_planes', 'ext_index', 
-                       'cluster_params', 'recursion']
+                       'parallelization', 'recursion', 'cluster_params']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -299,31 +299,40 @@ class FT_StartThickConvo(FiretaskBase):
 
         # Define the json file containing default values and read parameters
         dfl = currentdir + '/defaults_fw.json'
-        p = read_runtask_params(self, fw_spec, self.required_params, self.optional_params,
-                                default_file=dfl, default_key="StartThickConvo")
-
-        if p['convo_kind'] == 'surfene':
-            wf = SurfEneWF.surface_energy(structure=p['structure'],
-                                          mp_id=p['mp_id'], 
-                                          miller=p['miller'], 
-                                          functional=p['functional'],
-                                          db_file=p['db_file'], 
-                                          low_level=p['low_level'],
-                                          high_level=p['high_level'],
-                                          relax_type=p['relax_type'],
-                                          comp_params=p['comp_params'],
-                                          thick_min=p['thick_min'], 
-                                          thick_max=p['thick_max'],
-                                          thick_incr=p['thick_incr'],
-                                          vacuum=p['vacuum'],
-                                          in_unit_planes=p['slab_name'],
-                                          ext_index=p['ext_index'], 
-                                          cluster_params=p['cluster_params'],
-                                          recursion=p['recursion'])
-        else:
-            raise SystemExit('Lattice parameter convo not yet implemented')
+        p = read_runtask_params(self, fw_spec, self.required_params, 
+                                self.optional_params, default_file=dfl, 
+                                default_key="StartThickConvo")
         
+        # Select the convergence of interest
+        wf = self.select_conv(p)
+
         return FWAction(detours=wf, update_spec=fw_spec)
+
+        def select_conv(self, p):
+
+            if p['convo_kind'] == 'surfene':
+                wf = SurfEneWF.surface_energy(structure=p['structure'],
+                                            mp_id=p['mp_id'], 
+                                            miller=p['miller'], 
+                                            functional=p['functional'],
+                                            db_file=p['db_file'], 
+                                            low_level=p['low_level'],
+                                            high_level=p['high_level'],
+                                            relax_type=p['relax_type'],
+                                            comp_params=p['comp_params'],
+                                            thick_min=p['thick_min'], 
+                                            thick_max=p['thick_max'],
+                                            thick_incr=p['thick_incr'],
+                                            vacuum=p['vacuum'],
+                                            in_unit_planes=p['slab_name'],
+                                            ext_index=p['ext_index'], 
+                                            parallelization=p['parallelization'],
+                                            recursion=p['recursion'],
+                                            cluster_params=p['cluster_params'])
+
+            else:
+                raise SystemExit('Lattice parameter convergence not yet implemented')
+        
 
 @explicit_serialize
 class FT_EndThickConvo(FiretaskBase):
