@@ -19,7 +19,7 @@ import numpy as np
 from pymatgen.core.surface import SlabGenerator
 from fireworks import Workflow, Firework
 
-from triboflow.firetasks.slabs import FT_GenerateSlabs, FT_RelaxStructure
+from triboflow.firetasks.slabs import FT_GenerateSlabs, FT_RelaxStructure, FT_MoveStructInDB
 from triboflow.firetasks.surfene import FT_SurfaceEnergy
 from triboflow.utils.errors import SubWFError
 
@@ -28,10 +28,11 @@ class SurfEneWF:
 
     @staticmethod
     def surface_energy(structure, mp_id, miller, functional='PBE', spec={},
-                       db_file=None, database=None, relax_type="slab_pos_relax",
-                       comp_params={}, thick_min=4, thick_max=12, thick_incr=2, 
-                       vacuum=10, in_unit_planes=True, ext_index=0, 
-                       cluster_params={}, parallelization='low', recursion=False):
+                       db_file=None, low_level=None, high_level='triboflow',
+                       relax_type="slab_pos_relax", comp_params={}, thick_min=4, 
+                       thick_max=12, thick_incr=2, vacuum=10, in_unit_planes=True, 
+                       ext_index=0, cluster_params={}, parallelization='low', 
+                       recursion=False):
         """
         Description of the method...
 
@@ -71,7 +72,7 @@ class SurfEneWF:
                                         miller=miller,
                                         collection=functional+'.slab_data',
                                         db_file=db_file,
-                                        database=database,
+                                        database=low_level,
                                         thickness=thickness,
                                         thick_max=thick_max,
                                         vacuum=vacuum,
@@ -91,22 +92,54 @@ class SurfEneWF:
 
         # Create the Firetasks to relax the structures
         fw_relax_slabs = []
-        for i, name in enumerate(slab_name):
-            ft = FT_RelaxStructure(mp_id=mp_id,
-                                   functional=functional,
-                                   collection=functional+'.slab_data',
-                                   name=slab_name[i][0],
-                                   db_file=db_file,
-                                   database=database,
-                                   relax_type=relax_type,
-                                   comp_params=comp_params,
-                                   miller=miller,
-                                   check_key='relaxed',
-                                   tag=tags[i])
+        for thk, n, t in zip(thickness, slab_name, tags):
+            ft_1 = FT_RelaxStructure(mp_id=mp_id,
+                                     functional=functional,
+                                     collection=functional+'.slab_data',
+                                     name=n,
+                                     tag=t,
+                                     db_file=db_file,
+                                     database=low_level,
+                                     relax_type=relax_type,
+                                     comp_params=comp_params,
+                                     miller=miller,
+                                     check_key='relaxed')
 
-            fw = Firework([ft],
+            required_params = ['mp_id', 'collection_from', 'collection_to', 'tag']
+            optional_params = ['db_file', 'database_from', 'database_to', 'miller',
+                            'name_check', 'name', 'name_tag', 'struct_kind', 
+                            'override', 'cluster_params']
+
+            ft_2 = FT_MoveStructInDB(mp_id=mp_id,
+                                     collection_from=functional+'.slab_data',
+                                     collection_to=functional+'.slab_data',
+                                     db_file=db_file,
+                                     database_from=low_level,
+                                     database_to=high_level,
+                                     miller=miller,
+                                     name_chek=[
+                                         ['thickness', 
+                                         'data_' + str(thk), 
+                                         'calc_output']
+                                         ],
+                                     name=[
+                                         ['thickness', str(thk), 'calc_output'] * 6
+                                         ],
+                                     name_tag=[
+                                         ['output', 'structure'],
+                                         ['output', 'density'],
+                                         ['output', 'energy'],
+                                         ['output', 'energy_per_atom' ],
+                                         ['output', 'bandgap'],
+                                         ['_id']
+                                         ],
+                                     struct_kind='slab',
+                                     override=True,
+                                     cluster_params=cluster_params)
+
+            fw = Firework([ft_1, ft_2],
                           spec = spec,
-                          name = 'Relax slab: ' + name)
+                          name = 'Relax and store in DB, slab: ' + n)
             fw_relax_slabs.append(fw)
 
         # Define the third Firework(s)
@@ -116,7 +149,7 @@ class SurfEneWF:
         # Define the name of the slab(s)
 
 
-        fw = Firework([ft1, ft2],
+        fw = Firework([ft_surfene],
                         spec = spec,
                         name = 'Calculate the Surface Energy')
         

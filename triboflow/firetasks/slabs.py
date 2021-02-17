@@ -287,10 +287,10 @@ class FT_StartThickConvo(FiretaskBase):
     
     _fw_name = 'Start the slab thickness convergence'
     required_params = ['structure', 'mp_id', 'miller', 'functional']
-    optional_params = ['db_file', 'database', 'convo_kind', 'relax_type',
-                       'comp_params', 'thick_min', 'thick_max', 'thick_incr',
-                       'vacuum', 'in_unit_planes', 'ext_index', 'cluster_params',
-                       'recursion']
+    optional_params = ['db_file', 'low_level', 'high_level', 'convo_kind', 
+                       'relax_type', 'comp_params', 'thick_min', 'thick_max', 
+                       'thick_incr', 'vacuum', 'in_unit_planes', 'ext_index', 
+                       'cluster_params', 'recursion']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -308,7 +308,8 @@ class FT_StartThickConvo(FiretaskBase):
                                           miller=p['miller'], 
                                           functional=p['functional'],
                                           db_file=p['db_file'], 
-                                          database=p['database'],
+                                          low_level=p['low_level'],
+                                          high_level=p['high_level'],
                                           relax_type=p['relax_type'],
                                           comp_params=p['comp_params'],
                                           thick_min=p['thick_min'], 
@@ -550,12 +551,12 @@ class FT_MoveStructInDB(FiretaskBase):
         else:
             # Retrieve the structure from the Database
             structure = retrieve_from_db(db_file=p['db_file'], 
-                                        database=p['database'], 
-                                        collection=p['collection'], 
-                                        mp_id=p['mp_id'],
-                                        miller=p['miller'],
-                                        name=p['name_check'],
-                                        pymatgen_obj=False)
+                                         database=p['database'], 
+                                         collection=p['collection'], 
+                                         mp_id=p['mp_id'],
+                                         miller=p['miller'],
+                                         name=p['name_check'],
+                                         pymatgen_obj=False)
         
             # Check if the calculation is already done
             is_done = False if (structure is None or not bool(structure)) else False

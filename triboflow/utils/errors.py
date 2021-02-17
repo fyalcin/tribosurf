@@ -103,30 +103,24 @@ class MoveStructInDBError(RelaxStructureError):
     def check_name(name, msg='name'):
 
         if isinstance(name, list):
-            if not all([isinstance(n, list) for n in name_tag]):
+            if not all([isinstance(n, list) for n in name]):
                 raise MoveStructInDBError("Wrong type for arguments: {}. "
                                           "Allowed type: list".format(msg))
         
-        elif not isinstance(name, str):
-            raise MoveStructInDBError("Wrong argument: {}. "
-                                      "Allowed types: str, list".format(msg))
-
-    @staticmethod
-    def check_name_str(name, msg='name'):
-        if not isinstance(name, str):
-            raise MoveStructInDBError("Wrong argument: {}. Allowed types: str"
-                                      "".format(msg))
+        # elif not isinstance(name, str):
+        #     raise MoveStructInDBError("Wrong argument: {}. "
+        #                               "Allowed types: str, list".format(msg))
 
     @staticmethod
     def check_names(name_check, name, name_tag):
 
-        MoveStructInDBError.check_name_str(name_check, 'name_check')
+        MoveStructInDBError.check_name(name_check, 'name_check')
         MoveStructInDBError.check_name(name, 'name')
         MoveStructInDBError.check_name(name_tag, 'name_tag')
 
         if len(list(name)) != len(list(name_tag)):
             raise MoveStructInDBError("Wrong arguments: name or name_tag. If "
-                                      "converted to str, should have same lenght")
+                                      "converted to str, should have same length")
 
 class SurfaceEnergyError(Exception):
     """ Error in surface energy Firetask.
