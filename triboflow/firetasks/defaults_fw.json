@@ -49,14 +49,14 @@
         "check_key": "relaxed",
     },
     "MoveStructInDB": {
-        "db_file_from": null,
+        "db_file": null,
         "database_from": null,
         "database_to": "triboflow",
         "miller": null,
-        "name": "relaxed",
-        "name_tag"
-        "is_slab": false,
-        "check_key": "relaxed",
+        "name_check": null,
+        "name": [["calc_output"], ["calc_output", "task_id"]],
+        "name_tag": [["output", "structure"], ["_id"]],
+        "struct_kind": "bulk",
         "override": false,
         "cluster_params": null
     },

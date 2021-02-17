@@ -18,12 +18,14 @@ __date__ = 'February 2nd, 2021'
 import os
 import monty
 from uuid import uuid4
+from pprint import pprint, pformat
 
 from fireworks.utilities.fw_utilities import explicit_serialize
 from fireworks import FiretaskBase, FWAction
-from fireworks import Workflow
+from fireworks import Firework, Workflow, FileWriteTask
 from atomate.utils.utils import env_chk
 from atomate.vasp.powerups import add_modify_incar
+from pymatgen.io.vasp.inputs import Poscar
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import SlabGenerator, Slab
 from atomate.vasp.fireworks.core import OptimizeFW, ScanOptimizeFW
@@ -41,6 +43,7 @@ from triboflow.tasks.io import read_json
 from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
 from triboflow.firetasks.surfene_wfs import get_miller_str
 from triboflow.firetasks.slabs_wfs import read_default_params
+from triboflow.utils.file_manipulation import copy_output_files
 
 currentdir = os.path.dirname(__file__)
 
@@ -400,7 +403,7 @@ class FT_GenerateSlabs(FiretaskBase):
         for s, hkl, name in zip(slabs, miller, slab_name):
             # Clean the data and create a dictionary with the given path
             slab_dict = monty.json.jsanitize(s.as_dict(), allow_bson=True)
-            update_data = write_one_info_from_struct_dict(slab_dict, name)
+            update_data = write_one_dict_for_db(slab_dict, name)
 
             nav.update_data(collection=p['collection'], 
                             filter={'mpid': p['mp_id'], 'miller': hkl},
@@ -436,15 +439,7 @@ class FT_RelaxStructure(FiretaskBase):
                                 default_key="RelaxStructure")
 
         # Retrieve the structure and check if it has been already calculated
-        structure, is_done = getcheck_struct(db_file=p['db_file'],
-                                             mp_id=p['mp_id'],
-                                             functional=p['functional'],
-                                             collection=p['collection'],
-                                             error=RelaxStructureError,
-                                             check_key=p['check_key'],
-                                             database=p['database'],
-                                             miller=p['miller'],
-                                             name=p['name'])
+        structure, is_done = getcheck_struct(p, pymatgen_obj=False)
 
         # Run the simulation if the calculation is not already done
         if not is_done:
@@ -453,7 +448,28 @@ class FT_RelaxStructure(FiretaskBase):
 
         # Continue the Workflow
         else:
-            return FWAction(update_spec=fw_spec)            
+            return FWAction(update_spec=fw_spec)
+
+    def getcheck_struct(self, p, pymatgen_obj=False):
+        
+        # Check if collection does exist
+        RelaxStructureError.check_collection(p['collection'])
+
+        # Retrieve the structure from the Database
+        structure = retrieve_from_db(db_file=p['db_file'], 
+                                     database=p['database'], 
+                                     collection=p['collection'], 
+                                     mp_id=p['mp_id'],
+                                     miller=p['miller'],
+                                     name=p['name'],
+                                     pymatgen_obj=pymatgen_obj)
+        RelaxStructureError.is_data(structure, p['mp_id'], p['functional'])
+
+        # Check if the calculation is already done, searching for given keys
+        if p['check_key'] is not None:
+            is_done = True if p['check_key'] in structure.keys() else False
+
+        return structure, is_done      
 
     def run_relax_detour(self, structure, p, dfl):
 
@@ -491,7 +507,8 @@ class FT_MoveStructInDB(FiretaskBase):
 
     required_params = ['mp_id', 'collection_from', 'collection_to', 'tag']
     optional_params = ['db_file', 'database_from', 'database_to', 'miller',
-                       'name', 'name_tag', 'is_slab', 'override', 'cluster_params']
+                       'name_check', 'name', 'name_tag', 'struct_kind', 
+                       'override', 'cluster_params']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -504,45 +521,126 @@ class FT_MoveStructInDB(FiretaskBase):
                                 self.required_params,
                                 self.optional_params,
                                 default_file=dfl,
-                                default_key="PutStructInDB")
+                                default_key="MoveStructInDB")
+
+        # Check if a structure is already present in name and check_key
+        is_done = self.check_struct(p)
         
-        # Set missing cluster parameters
+        if not is_done or (is_done and p['override']):
+            
+            # Extract the information and store in destination db
+            vasp_calc, info = self.get_results_from_tag(p)
+            self.store_results(info, p)
+
+            # Manage stdout, save a local poscar with results
+            wf = self.user_output(vasp_calc, p)
+            if wf is not None:
+                return FWAction(update_spec=fw_spec, detours=wf)
+        
+        else:  
+            return FWAction(update_spec=fw_spec)
+    
+    def check_struct(self, p):
+        
+        # Check if collection does exist
+        MoveStructInDBError.check_collection(p['collection'])
+
+        if p['name_check'] is None:
+            is_done = False
+        else:
+            # Retrieve the structure from the Database
+            structure = retrieve_from_db(db_file=p['db_file'], 
+                                        database=p['database'], 
+                                        collection=p['collection'], 
+                                        mp_id=p['mp_id'],
+                                        miller=p['miller'],
+                                        name=p['name_check'],
+                                        pymatgen_obj=False)
+        
+            # Check if the calculation is already done
+            is_done = False if (structure is None or not bool(structure)) else False
+
+        return is_done
+    
+    def get_results_from_tag(self, p):
+        
+        # Retrieve the vasp_calc_output and the info
+        vasp_calc, info = retrieve_from_tag(db_file=p['db_file'],
+                                            collection=p['collection_from'],
+                                            tag=p['tag'],
+                                            name=p['name_tag'],
+                                            database=p['database_from'])
+        return vasp_calc, info
+    
+    def store_results(self, info, p):
+
+        # Dictionaries are stored in name[i]/name_tag[i]
+        name = []
+        for n, n_t in zip(list(p['name']), list(p['name_tag'])):
+            name.append(list(n).append(list(n_t)[-1]))
+        
+        # Prepare the list of dictionaries to be stored in the database
+        info_dict = write_multiple_dict_for_db(info, name)
+    
+        # Prepare the database and options where to store data
+        nav = Navigator(db_file=p['db_file'], high_level=p['database_to'])
+        filter = {'mpid': p['mp_id']}
+        if p['miller'] is not None:
+            filter.update({'miller': p['miller']})
+    
+        # Effectively store the data
+        for d in info_dict:
+            nav.update_data(p['collection_to'], filter, {'$set': d})
+    
+    def user_output(self, vasp_calc, p, dfl):
+
+        cluster_params = p['cluster_params']
+        
+        # Set missing values in cluster parameters
         cluster_params = read_default_params(default_file=dfl, 
                                              default_key="cluster_params", 
                                              cluster_params=cluster_params)
 
-        # Check if a structure is already present in name and check_key
-        _, is_done = getcheck_struct(db_file=p['db_file'],
-                                     mp_id=p['mp_id'],
-                                     functional=p['functional'],
-                                     collection=p['collection'],
-                                     error=RelaxStructureError,
-                                     check_key=p['check_key'],
-                                     database=p['database'],
-                                     miller=p['miller'],
-                                     name=p['name_to']) # TODO: fix check_key taht should be removed
-        
-        # Save everything in the high level DB
-        if not is_done or (is_done and p['override']):
+        func = _select_func_from_dict(p['struct_kind'])
+        structure = func.from_dict(vasp_calc['output']['structure'])
 
-            vasp_calc, structure = retrieve_from_tag(db_file=p['db_file'],
-                                                     collection=p['collection'],
-                                                     tag=p['tag'],
-                                                     name=['structure', 'output'],
-                                                     database=p['database'],
-                                                     is_slab=p['is_slab'])
+        # Output to screen
+        print('')
+        print('Relaxed output structure as pymatgen.surface.Slab dictionary:')
+        pprint(structure.as_dict())
+        print('')
+        
+        # handle file output:
+        if p['file_output']:
             
-            dict = write_one_info_from_struct_dict(structure.as_dict(), name)
+            # Define POSCAR and dictionary ouput names
+            prefix = p['mp_id'] + p['struct_kind']
+            if p['miller'] is not None:
+                prefix = prefix + p['miller']
+            poscar_name = prefix + '_POSCAR.vasp'
+            structure_name = prefix + '_dict.txt'
 
-            db = GetHighLevelDB(db_file)
-            coll = db[functional+'.slab_data']
-            coll.update_one({'mpid': flag, 'miller': miller},
-                            {'$set': {out_name: slab.as_dict()}})
-    
-    def set_params(self, name, name_tag, vasp_calc):
+            # Define the subworkflow to write and copy the structure
+            poscar_str = Poscar(structure).get_string()
+            write_ft = FileWriteTask(files_to_write=
+                                     [{'filename': poscar_name,
+                                       'contents': poscar_str},
+                                      {'filename': structure_name,
+                                       'contents': pformat(structure.as_dict())}])
+            copy_ft = copy_output_files(file_list=[poscar_name, structure_name],
+                                        output_dir=p['output_dir'],
+                                        remote_copy=p['remote_copy'],
+                                        server=p['server'],
+                                        user=['server'],
+                                        port=['port'])
+            fw = Firework([write_ft, copy_ft],
+                          name='Copy the results of structure result')
+            wf = Workflow.from_Firework(fw, name='Copy structure to file')
+
+        else:
+            wf = None
         
-        MoveStructInDBError.check_names(name, name_tag)
-
+        return wf
 
 
 # ============================================================================
@@ -609,7 +707,7 @@ def get_multiple_info_from_struct_dict(struct_dict, name):
     
     return info
 
-def write_one_info_from_struct_dict(data, name):
+def write_one_dict_for_db(data, name):
     """
     Prepare the dictionary to be stored in the database.
     
@@ -630,6 +728,26 @@ def write_one_info_from_struct_dict(data, name):
     
     return d
 
+def write_multiple_dict_for_db(data, name):
+    """
+    Prepare a dictionary to be stored in the database. This is a wrapper of
+    write_one_dict_for_db and works with a list of data and name.
+
+    """
+
+    # Extract many info at the same time 
+    if isinstance(name, list):
+        if all([isinstance(n, list) for n in name]) and isinstance(data, list):
+            d = []
+            for i, n in enumerate(name):
+                d.append(write_one_dict_for_db(data[i], n))
+
+        else:
+            WriteParamsError('Error in writing data, data or name is wrong.')
+    
+    return d
+
+
 def retrieve_from_db(db_file, mp_id, collection, database=None, 
                      miller=None, name=None, is_slab=False, pymatgen_obj=True):
 
@@ -644,59 +762,31 @@ def retrieve_from_db(db_file, mp_id, collection, database=None,
     # Extract data from the database
     structure = nav.find_data(collection=collection, filter=filter)
     
-    if name is not None:
-        structure = get_one_info_from_struct_dict(structure, name)
-    
-    if pymatgen_obj:
-        func = Slab if is_slab else Structure
-        structure = func.from_dict(structure)
+    if structure is not None:
+        if name is not None:
+            try:
+                structure = get_one_info_from_struct_dict(structure, name)
+            except:
+                structure = None
+        
+        if pymatgen_obj and structure is not None:
+            func = Slab if is_slab else Structure
+            structure = func.from_dict(structure)
 
     return structure
 
+def retrieve_from_tag(db_file, collection, tag, name=None, database=None):
 
-def retrieve_from_tag(db_file, collection, tag, name=None, database=None, is_slab=False):
-
-    # Call the navigator for retrieving structure
+    # Call the navigator and retrieve the simulation data from tag
     nav = Navigator(db_file=db_file, high_level=database)
-
     vasp_calc = nav.find_data(collection, {'task_label': tag})
-
-    # Select the correct function to extract the structure from the dict
-    func = Slab if is_slab else Structure
     
     # Retrieve the correct dictionary and obtain the structure
-    struct_dict = vasp_calc
+    info = None
     if name is not None:
-        struct_dict = get_one_info_from_struct_dict(vasp_calc, name)
-    structure = func.from_dict(struct_dict)
+        info = get_multiple_info_from_struct_dict(vasp_calc, name)
     
-    return vasp_calc, structure
-
-
-def getcheck_struct(db_file, mp_id, functional, collection, error, database=None,
-                    miller=None, name=None, check_key=None, pymatgen_obj=False):
-        
-    # Check if collection does exist
-    error.check_collection(collection)
-
-    # Retrieve the structure from the Database
-    structure = retrieve_from_db(db_file=db_file, 
-                                 database=database, 
-                                 collection=collection, 
-                                 mp_id=mp_id,
-                                 miller=miller,
-                                 name=name,
-                                 pymatgen_obj=pymatgen_obj)
-    error.is_data(structure, mp_id, functional)
-
-    # Check if the calculation is already done, searching for given keys
-    if check_key is not None:
-        is_done = True if check_key in structure.keys() else False
-    else:
-        is_done = name 
-        is_done = None
-
-    return structure, is_done
+    return vasp_calc, info
 
 def orient_bulk(structure, miller, thickness, primitive=False, lll_reduce=True, 
                 in_unit_planes=True):
@@ -758,3 +848,15 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
         slabs.append(s)
     
     return slabs
+
+def _select_func_from_dict(struct_kind):
+
+    if struct_kind == 'bulk':
+        func = Structure
+    elif struct_kind == 'slab':
+        func = Slab
+    else:
+        ValueError("Wrong argument: struct_kind. Allowed values: "
+                   "'bulk', 'slab'. Given value: {}".format(struct_kind)) 
+    
+    return func
