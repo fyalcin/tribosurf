@@ -112,7 +112,7 @@ class SurfEneWF:
                                      database_from=low_level,
                                      database_to=high_level,
                                      miller=miller,
-                                     name_chek=[
+                                     name_check=[
                                          ['thickness', 
                                          'data_' + str(thk), 
                                          'calc_output']
@@ -120,15 +120,17 @@ class SurfEneWF:
                                      name=[
                                          ['thickness', 
                                           'data_' + str(thk), 
-                                          'calc_output'] * 7
+                                          'calc_output'] * 9
                                          ],
                                      name_tag=[
                                          ['output', 'structure'],
+                                         ['nsites'],
                                          ['output', 'density'],
                                          ['output', 'energy'],
                                          ['output', 'energy_per_atom' ],
                                          ['output', 'bandgap'],
-                                         ['nsites'],
+                                         ['output', 'forces'],
+                                         ['output', 'stresses'],                                         
                                          ['_id']
                                          ],
                                      struct_kind='slab',
