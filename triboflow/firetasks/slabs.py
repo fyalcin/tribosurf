@@ -207,7 +207,7 @@ class FT_SlabOptThick(FiretaskBase):
                          relax_type=p['relax_type'], thick_min=p['thick_min'], 
                          thick_max=p['thick_max'], thick_incr=p['thick_incr'], 
                          vacuum=p['vacuum'], in_unit_planes=p['in_unit_planes'],
-                         ext_index=p['ext_index'], p['conv_thr'])
+                         ext_index=p['ext_index'], conv_thr=p['conv_thr'])
 
         return wf
 
