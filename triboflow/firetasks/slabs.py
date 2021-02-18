@@ -85,14 +85,14 @@ class FT_SlabOptThick(FiretaskBase):
     high_level : str, optional
         Name of the table of the "high level" database, saved in db_file.
         The slab optimal thickness will be saved here. The slab energy and
-        surface energy will be saved too if convo_kind is 'surfene'.
+        surface energy will be saved too if conv_kind is 'surfene'.
         The default is 'triboflow'.
 
     relax_type : str, optional
         The type of relaxation to be performed during the simulation, to be feed
         to GetCustomVaspRelaxSettings. The default is 'slab_pos_relax'.
 
-    convo_kind : str, optional
+    conv_kind : str, optional
         Type of convergence to be performed. Allowed values are: 'surfene', 
         'alat'. The latter is not implemented yet. The default is 'surfene'.
     
@@ -135,10 +135,10 @@ class FT_SlabOptThick(FiretaskBase):
     _fw_name = 'Start a subworkflow to converge slab thickness'
 
     required_params = ['mp_id', 'miller', 'functional']
-    optional_params = ['db_file', 'low_level', 'high_level', 'convo_kind',
+    optional_params = ['db_file', 'low_level', 'high_level', 'conv_kind',
                        'relax_type', 'thick_min', 'thick_max', 'thick_incr',
-                       'vacuum', 'in_unit_planes', 'ext_index', 'bulk_name', 
-                       'slab_name']
+                       'vacuum', 'in_unit_planes', 'ext_index', 'conv_thr',
+                       'bulk_name', 'slab_name']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -192,12 +192,12 @@ class FT_SlabOptThick(FiretaskBase):
 
         from triboflow.firetasks.slabs_wfs import SlabWF
 
-        if p['convo_kind'] == 'surfene':
+        if p['conv_kind'] == 'surfene':
             generate_wf = SlabWF.conv_slabthick_surfene
-        elif p['convo_kind'] == 'alat':
+        elif p['conv_kind'] == 'alat':
             generate_wf = SlabWF.conv_slabthick_alat
         else:
-            raise SlabOptThickError("Wrong input argument for convo_kind. "
+            raise SlabOptThickError("Wrong input argument for conv_kind. "
                                     "Allowed options: 'surfene', 'alat'")
 
         wf = generate_wf(structure=structure, mp_id=p['mp_id'], 
@@ -207,7 +207,7 @@ class FT_SlabOptThick(FiretaskBase):
                          relax_type=p['relax_type'], thick_min=p['thick_min'], 
                          thick_max=p['thick_max'], thick_incr=p['thick_incr'], 
                          vacuum=p['vacuum'], in_unit_planes=p['in_unit_planes'],
-                         ext_index=p['ext_index'])
+                         ext_index=p['ext_index'], p['conv_thr'])
 
         return wf
 
@@ -244,7 +244,7 @@ class FT_StartThickConvo(FiretaskBase):
         Name of the table where the data will be stored, within db_file. If 
         nothing is passed the Firework database is used. The default is None.
 
-    convo_kind : str, optional
+    conv_kind : str, optional
         Type of convergence to be performed. Allowed values are: 'surfene', 
         'alat'. The latter is not implemented yet. The default is 'surfene'.
 
@@ -288,7 +288,7 @@ class FT_StartThickConvo(FiretaskBase):
     
     _fw_name = 'Start the slab thickness convergence'
     required_params = ['structure', 'mp_id', 'miller', 'functional']
-    optional_params = ['db_file', 'low_level', 'high_level', 'convo_kind', 
+    optional_params = ['db_file', 'low_level', 'high_level', 'conv_kind', 
                        'relax_type', 'comp_params', 'thick_min', 'thick_max', 
                        'thick_incr', 'vacuum', 'in_unit_planes', 'ext_index', 
                        'parallelization', 'recursion', 'cluster_params']
@@ -311,7 +311,7 @@ class FT_StartThickConvo(FiretaskBase):
 
         def select_conv(self, p):
 
-            if p['convo_kind'] == 'surfene':
+            if p['conv_kind'] == 'surfene':
                 wf = SurfEneWF.surface_energy(structure=p['structure'],
                                             mp_id=p['mp_id'], 
                                             miller=p['miller'], 
@@ -344,9 +344,9 @@ class FT_EndThickConvo(FiretaskBase):
 
     required_params = ['structure', 'mp_id', 'miller']
     optional_params = ['db_file', 'low_level', 'high_level', 'functional', 
-                       'convo_kind', 'relax_type', 'comp_params', 'thick_min', 
+                       'conv_kind', 'relax_type', 'comp_params', 'thick_min', 
                        'thick_max', 'thick_incr', 'vacuum', 'in_unit_planes', 
-                       'ext_index', 'parallelization', 'cluster_params']
+                       'ext_index', 'conv_thr', 'parallelization', 'cluster_params']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -374,22 +374,22 @@ class FT_EndThickConvo(FiretaskBase):
         
         def get_data(self, p):
 
-            if p['convo_kind'] == 'surfene':
+            if p['conv_kind'] == 'surfene':
                 data = self._get_surfene(p)
 
             else:
-                raise SlabOptThickError("Wrong argument: 'convo_kind'. Allowed "
+                raise SlabOptThickError("Wrong argument: 'conv_kind'. Allowed "
                                         "values: 'surfene', 'alat'")
             
             return data
         
         def analyze_data(self, energies, p):
 
-            if p['convo_kind'] == 'surfene':
+            if p['conv_kind'] == 'surfene':
                 data = self._analyze_surfene(energies, p)
                 
             else:
-                raise SlabOptThickError("Wrong argument: 'convo_kind'. Allowed "
+                raise SlabOptThickError("Wrong argument: 'conv_kind'. Allowed "
                                         "values: 'surfene', 'alat'")
             
             return stop_convergence

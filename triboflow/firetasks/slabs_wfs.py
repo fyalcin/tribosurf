@@ -52,7 +52,7 @@ class SlabWF:
                                low_level=None, high_level='triboflow',
                                relax_type='slab_pos_relax', thick_min=4, 
                                thick_max=12, thick_incr=2, vacuum=10,
-                               in_unit_planes=True, ext_index=0,
+                               in_unit_planes=True, ext_index=0, conv_thr=0.025,
                                parallelization='low', recursion=False,
                                cluster_params={}):
         """ Author: Gabriele Losi; Copyright 2021, Prof. M.C. Righi, UniBO.
@@ -85,7 +85,7 @@ class SlabWF:
                                                   db_file=db_file,
                                                   low_level=low_level,
                                                   high_level=high_level,
-                                                  convo_kind='surfene',
+                                                  conv_kind='surfene',
                                                   relax_type=relax_type,
                                                   thick_min=thick_min,
                                                   thick_max=thick_max,
@@ -113,6 +113,7 @@ class SlabWF:
                                               vacuum=vacuum,
                                               in_unit_planes=in_unit_planes, 
                                               ext_index=ext_index,
+                                              conv_thr=conv_thr,
                                               parallelization=parallelization, 
                                               recursion=recursion,
                                               cluster_params=cluster_params)
