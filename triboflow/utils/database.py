@@ -227,7 +227,7 @@ class Navigator:
 
         collection_obj = self.__initialize_obj_collection(collection)
 
-        log.info('Updating the collection {} withe the new data {}.'
+        log.info('Updating the collection {} with the new data {}.'
                  ''.format(collection, new_values))
         collection_obj.update_one(filter, new_values, upsert)
     
@@ -260,7 +260,7 @@ class Navigator:
 
         collection_obj = self.__initialize_obj_collection(collection)
 
-        log.info('Updating the collection {} withe the new data {}.'
+        log.info('Updating the collection {} with the new data {}.'
                  ''.format(collection, new_values))
         collection_obj.update_many(filter, new_values, upsert)
 
