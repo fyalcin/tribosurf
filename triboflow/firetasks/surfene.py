@@ -18,11 +18,8 @@ import os
 import numpy as np
 from fireworks.utilities.fw_utilities import explicit_serialize
 from fireworks import FiretaskBase, FWAction
-from atomate.utils.utils import env_chk
-from pymatgen.transformations.advanced_transformations import SlabTransformation
-from pymatgen.core.surface import Slab
 
-from triboflow.utils.database import Navigator, NavigatorMP
+from triboflow.utils.database import Navigator
 from triboflow.firetasks.slabs import read_runtask_params, get_multiple_info_from_struct_dict, write_multiple_dict_for_db
 from triboflow.utils.errors import SurfaceEnergyError
 

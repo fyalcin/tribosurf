@@ -17,16 +17,15 @@ __date__ = 'February 2nd, 2021'
 #from atomate.utils.utils import env_chk
 
 import os
-from uuid import uuid4
 
 from fireworks import Workflow, Firework
 
-from triboflow.utils.database import Navigator, NavigatorMP
+from triboflow.utils.database import NavigatorMP
 from triboflow.firetasks.slabs import (
     FT_StartThickConvo,
     FT_EndThickConvo
 )
-from triboflow.utils.errors import SlabThicknessError, SubWFError
+from triboflow.utils.errors import SubWFError
 from triboflow.tasks.io import read_json
 
 currentdir = os.path.dirname(__file__)

@@ -17,7 +17,6 @@ __date__ = 'February 2nd, 2021'
 
 import os
 import monty
-from uuid import uuid4
 from pprint import pprint, pformat
 
 import numpy as np
@@ -42,7 +41,6 @@ from triboflow.utils.errors import (
 )
 from triboflow.tasks.io import read_json
 from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
-from triboflow.firetasks.surfene_wfs import get_miller_str
 from triboflow.firetasks.slabs_wfs import read_default_params
 from triboflow.utils.file_manipulation import copy_output_files
 
@@ -330,6 +328,7 @@ class FT_StartThickConvo(FiretaskBase):
                                             parallelization=p['parallelization'],
                                             recursion=p['recursion'],
                                             cluster_params=p['cluster_params'])
+                return wf
 
             else:
                 raise SystemExit('Lattice parameter convergence not yet implemented')
@@ -387,6 +386,7 @@ class FT_EndThickConvo(FiretaskBase):
             else:
                 raise SlabOptThickError("Wrong argument: 'conv_kind'. Allowed "
                                         "values: 'surfene', 'alat'")
+            return case
 
         def get_data(self, case, p):
             """
@@ -579,7 +579,7 @@ class FT_RelaxStructure(FiretaskBase):
                                 default_key="RelaxStructure")
 
         # Retrieve the structure and check if it has been already calculated
-        structure, is_done = getcheck_struct(p, pymatgen_obj=False)
+        structure, is_done = self.getcheck_struct(p, pymatgen_obj=False)
 
         # Run the simulation if the calculation is not already done
         if not is_done:
@@ -812,7 +812,7 @@ def read_runtask_params(obj, fw_spec, required_params, optional_params,
     # Clean miller index
     if 'miller' in params.keys():
         if isinstance(params['miller'], str):
-            miller = [int(k) for k in list(params['miller'])]
+            params['miller'] = [int(k) for k in list(params['miller'])]
 
     return params
 

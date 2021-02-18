@@ -16,7 +16,6 @@ __date__ = 'February 9th, 2021'
 from uuid import uuid4
 
 import numpy as np
-from pymatgen.core.surface import SlabGenerator
 from fireworks import Workflow, Firework
 
 from triboflow.firetasks.slabs import FT_GenerateSlabs, FT_RelaxStructure, FT_MoveStructInDB
