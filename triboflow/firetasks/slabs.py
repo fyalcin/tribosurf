@@ -357,72 +357,124 @@ class FT_EndThickConvo(FiretaskBase):
         p = read_runtask_params(self, fw_spec, self.required_params, 
                                 self.optional_params, default_file=dfl, 
                                 default_key="EndThickConvo")
+        case = self._get_case()
         
         # Retrieve the surface energy
-        surface_energies = self.get_data(p)
+        data, index = self.get_data(case, p)
 
-        # Analyze energies, if convergence is reached data is stored in DB
-        stop_convergence = self.analyze_data(surface_energies, p)
+        # Analyze the data, if convergence is reached data is stored in DB
+        stop_convergence = self.analyze_data(data, index, case, p)
 
         # Decide whether to rerun recursively the surface energy workflow
         if not stop_convergence:
-            wf = None
+            wf = self.call_recursion()
+
             return FWAction(detours=wf, update_spec=fw_spec)
 
         else:
             return FWAction(update_spec=fw_spec)
-        
-        def get_data(self, p):
 
+        def _get_case(self, p):
+            """
+            Extrac
+
+            """
+            # Select the keys to be used when reading the dictionary
             if p['conv_kind'] == 'surfene':
-                data = self._get_surfene(p)
-
+                case = 'surface_energy'
+            elif p['conv_kind'] == 'alat':
+                case = 'lattice'
             else:
                 raise SlabOptThickError("Wrong argument: 'conv_kind'. Allowed "
                                         "values: 'surfene', 'alat'")
-            
-            return data
-        
-        def analyze_data(self, energies, p):
 
-            if p['conv_kind'] == 'surfene':
-                data = self._analyze_surfene(energies, p)
-                
-            else:
-                raise SlabOptThickError("Wrong argument: 'conv_kind'. Allowed "
-                                        "values: 'surfene', 'alat'")
-            
-            return stop_convergence
-        
-        # def recursion_wf(self, p):
-        #     wf = generate_wf(structure=structure, mp_id=p['mp_id'], 
-        #             miller=p['miller'], functional=p['functional'], 
-        #             comp_params=p['comp_params'], db_file=p['db_file'],
-        #             low_level=p['low_level'], high_level=p['high_level'],
-        #             relax_type=p['relax_type'], thick_min=p['thick_min'], 
-        #             thick_max=p['thick_max'], thick_incr=p['thick_incr'], 
-        #             vacuum=p['vacuum'], in_unit_planes=p['in_unit_planes'],
-        #             ext_index=p['ext_index']
+        def get_data(self, case, p):
+            """
+            Extract the surface energies from the high level DB.
 
-        def _get_surfene(self, p):
-            
-            # Create the list of keys to be used when reading the dictionary
-            thickness = np.arange(p['thick_min'], p['thick_max'], p['thick_incr'])
-            name = [['thickness', 'data_' + str(thk), 'calc_output', 'surface_energy'] 
-                    for thk in thickness]
+            """
 
-            # Call the navigator for retrieving the dictionary out of the DB
+            # Call the navigator for retrieving the thickness dict out of DB
             nav = Navigator(db_file=p['db_file'], high_level=p['high_level'])
-            filter = {'mpid': p['mp_id'], 'miller': p['miller']}
-            data_dict = nav.find_data(p['functional'] + '.slab_data', filter)
+            thickness_dict = nav.find_data(p['functional'] + '.slab_data', 
+                                           {'mpid': p['mp_id'], 
+                                           'miller': p['miller']})['thickness']
+            
+            # Get the indexes with the thickness and the desired data
+            index = []
+            data = []
+            for key, item in thickness_dict.values():
+                if key.startswith('data_'):
+                    index.append(key.split('_')[-1])
+                    data.append(item['calc_output', case])
+            sorted_index = index.argsort()
+            index = np.array(index[sorted_index])
+            data = np.array(data[sorted_index])
 
-            # Get the surface energies
-            energies = get_multiple_info_from_struct_dict(data_dict, p['name'])
-
-            return energies
+            # Check for consistency with the value from the max thickness
+            dmax = thickness_dict['data_' + str(p['max_thick'])]['calc_output'][case]
+            if dmax != data[-1]:
+                raise SlabOptThickError("An unexpected error occurred")
+            
+            return data, index
         
-        def analyze_surfene(self, energies, p):
-            pass
+        def analyze_data(self, data, index, case, p):
+
+            # Calculate the relative error to the last element
+            error_to_last = np.abs((data - data[-1]) / data[-1])
+
+            # Evaluate what is the lower converged data
+            i = np.argwhere(error_to_last <= p['conv_thr'])
+            index_converged = index[i]
+            
+
+            if p['parallelization'] == 'low':
+                if len(index_converged > 1):
+                    self.store_to_db(index_converged[0])
+                    stop_convergence = False
+            
+            elif p['parallelization'] == 'high':
+                self.store_to_db(index_converged[0])
+                stop_convergence = True
+
+            return stop_convergence
+
+        def store_to_db(self, index):
+
+            nav = Navigator(db_file=p['db_file'], high_level=p['high_level'])
+            out_dict = nav.find_data(collection=p['functional'] + '.slab_data', 
+                                     filter={'mpid': p['mp_id'], 'miller': p['miller']})
+            
+            # Extract the data to be saved elsewhere
+            name = ['thickness', 'data_' + str(index), 'calc_output']
+            store_dict = get_one_info_from_struct_dict(out_dict, name)
+
+            nav.update_data(collection=p['functional'] + '.slab_data', 
+                            filter={'mpid': p['mp_id'], 'miller': p['miller']},
+                            new_values={'$set': {'calc_output': store_dict}})
+
+        def call_recursion(self, fw_spec, p):
+            from triboflow.firetasks.slabs_wfs import SlabWF
+
+            # Select the correct function to call the workflow 
+            if p['conv_kind'] == 'surfene':
+                generate_wf = SlabWF.conv_slabthick_surfene
+            else:
+                pass
+            
+            # Generate the workflow for the detour
+            wf = generate_wf(structure=p['structure'], mp_id=p['mp_id'], 
+                             miller=p['miller'], functional=p['functional'], 
+                             comp_params=p['comp_params'], spec=fw_spec, 
+                             db_file=p['db_file'], low_level=p['low_level'], 
+                             high_level=p['high_level'], relax_type=p['relax_type'], 
+                             thick_min=p['thick_min'], thick_max=p['thick_max'], 
+                             thick_incr=p['thick_incr'], vacuum=p['vacuum'], 
+                             in_unit_planes=p['in_unit_planes'], ext_index=p['ext_index'], 
+                             conv_thr=p['conv_thr'], parallelization=p['parallelization'], 
+                             recursion=True, cluster_params=p['cluster_params'])
+            
+            return wf
 
 
 @explicit_serialize
