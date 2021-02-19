@@ -101,7 +101,7 @@ class RelaxStructureError(GeneralErrorFT):
                                       'structure with mpid: {}, functional: {}'
                                       .format(formula, mp_id, functional))
 
-class MoveStructInDBError(GeneralErrorFT):
+class MoveTagResultsError(GeneralErrorFT):
     """ Errors when moving data between two different db_file/database/collection.
     """
     
@@ -110,22 +110,22 @@ class MoveStructInDBError(GeneralErrorFT):
 
         if isinstance(name, list):
             if not all([isinstance(n, list) for n in name]):
-                raise MoveStructInDBError("Wrong type for arguments: {}. "
+                raise MoveTagResultsError("Wrong type for arguments: {}. "
                                           "Allowed type: list".format(msg))
         
         # elif not isinstance(name, str):
-        #     raise MoveStructInDBError("Wrong argument: {}. "
+        #     raise MoveTagResultsError("Wrong argument: {}. "
         #                               "Allowed types: str, list".format(msg))
 
     @staticmethod
     def check_names(name_check, name, name_tag):
 
-        MoveStructInDBError.check_name(name_check, 'name_check')
-        MoveStructInDBError.check_name(name, 'name')
-        MoveStructInDBError.check_name(name_tag, 'name_tag')
+        MoveTagResultsError.check_name(name_check, 'name_check')
+        MoveTagResultsError.check_name(name, 'name')
+        MoveTagResultsError.check_name(name_tag, 'name_tag')
 
         if len(list(name)) != len(list(name_tag)):
-            raise MoveStructInDBError("Wrong arguments: name or name_tag. If "
+            raise MoveTagResultsError("Wrong arguments: name or name_tag. If "
                                       "converted to str, should have same length")
 
 class SurfaceEnergyError(GeneralErrorFT):

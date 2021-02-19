@@ -3,7 +3,7 @@
 """
 Created on Tue Feb  9 14:47:15 2021
 
-Workflows for the surface energy
+Workflows for calculating or converging the surface energy of a slab.
 
 @author: glosi000
 """
@@ -18,9 +18,13 @@ from uuid import uuid4
 import numpy as np
 from fireworks import Workflow, Firework
 
-from triboflow.firetasks.slabs import FT_GenerateSlabs, FT_RelaxStructure, FT_MoveStructInDB
 from triboflow.firetasks.surfene import FT_SurfaceEnergy
 from triboflow.utils.errors import SubWFError
+from triboflow.firetasks.slabs import (
+    FT_GenerateSlabs, 
+    FT_RelaxStructure, 
+    FT_MoveTagResults
+)
 
 
 class SurfEneWF:
@@ -104,37 +108,37 @@ class SurfEneWF:
                                      miller=miller,
                                      check_key='relaxed')
 
-            ft_2 = FT_MoveStructInDB(mp_id=mp_id,
-                                     collection_from=functional+'.slab_data',
-                                     collection_to=functional+'.slab_data',
-                                     db_file=db_file,
-                                     database_from=low_level,
-                                     database_to=high_level,
-                                     miller=miller,
-                                     name_check=[
-                                         ['thickness', 
+            ft_2 = FT_MoveTagResults(mp_id=mp_id,
+                                    collection_from=functional+'.slab_data',
+                                    collection_to=functional+'.slab_data',
+                                    db_file=db_file,
+                                    database_from=low_level,
+                                    database_to=high_level,
+                                    miller=miller,
+                                    name_check=[
+                                        ['thickness', 
+                                        'data_' + str(thk), 
+                                        'calc_output']
+                                        ],
+                                    name=[
+                                        ['thickness', 
                                          'data_' + str(thk), 
-                                         'calc_output']
-                                         ],
-                                     name=[
-                                         ['thickness', 
-                                          'data_' + str(thk), 
-                                          'calc_output'] * 9
-                                         ],
-                                     name_tag=[
-                                         ['output', 'structure'],
-                                         ['nsites'],
-                                         ['output', 'density'],
-                                         ['output', 'energy'],
-                                         ['output', 'energy_per_atom' ],
-                                         ['output', 'bandgap'],
-                                         ['output', 'forces'],
-                                         ['output', 'stresses'],                                         
-                                         ['_id']
-                                         ],
-                                     struct_kind='slab',
-                                     override=True,
-                                     cluster_params=cluster_params)
+                                         'calc_output'] * 9
+                                        ],
+                                    name_tag=[
+                                        ['output', 'structure'],
+                                        ['nsites'],
+                                        ['output', 'density'],
+                                        ['output', 'energy'],
+                                        ['output', 'energy_per_atom' ],
+                                        ['output', 'bandgap'],
+                                        ['output', 'forces'],
+                                        ['output', 'stresses'],                                         
+                                        ['_id']
+                                        ],
+                                    struct_kind='slab',
+                                    override=True,
+                                    cluster_params=cluster_params)
 
             fw = Firework([ft_1, ft_2],
                           spec = spec,

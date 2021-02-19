@@ -35,7 +35,7 @@ from triboflow.utils.errors import (
     SlabOptThickError, 
     GenerateSlabsError, 
     RelaxStructureError,
-    MoveStructInDBError,
+    MoveTagResultsError,
     ReadParamsError,
     WriteParamsError
 )
@@ -639,7 +639,7 @@ class FT_RelaxStructure(FiretaskBase):
 
 
 @explicit_serialize
-class FT_MoveStructInDB(FiretaskBase):
+class FT_MoveVaspOutInDB(FiretaskBase):
     """
     Firetask description...
     
@@ -661,7 +661,7 @@ class FT_MoveStructInDB(FiretaskBase):
                                 self.required_params,
                                 self.optional_params,
                                 default_file=dfl,
-                                default_key="MoveStructInDB")
+                                default_key="MoveTagResults")
 
         # Check if a structure is already present in name and check_key
         is_done = self.check_struct(p)
@@ -683,7 +683,7 @@ class FT_MoveStructInDB(FiretaskBase):
     def check_struct(self, p):
         
         # Check if collection does exist
-        MoveStructInDBError.check_collection(p['collection'])
+        MoveTagResultsError.check_collection(p['collection'])
 
         if p['name_check'] is None:
             is_done = False

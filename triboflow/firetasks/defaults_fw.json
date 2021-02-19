@@ -69,7 +69,7 @@
         "miller": null,
         "check_key": "relaxed",
     },
-    "MoveStructInDB": {
+    "MoveTagResults": {
         "db_file": null,
         "database_from": null,
         "database_to": "triboflow",
