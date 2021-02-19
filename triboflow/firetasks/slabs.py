@@ -118,13 +118,13 @@ class FT_SlabOptThick(FiretaskBase):
         Use the ext_index element from SlabGenerator.get_slabs as a slab.
         The default is 0.
 
-    bulk_name : str or list None, optional
+    bulk_entry : str or list None, optional
         Name of the custom bulk dictionary, to be retrieved from the high level
         database and to be used to build the slabs. Bulks are identified by 
         mp_id and functional but there might be different structures of the
         same material. The default is "structure_fromMP".
 
-    slab_name : str or None, optional
+    slab_entry : str or None, optional
         Where to search for the information about the optimal thickness in the
         slab dictionary in the high level database. The default is None.
 
@@ -136,7 +136,7 @@ class FT_SlabOptThick(FiretaskBase):
     optional_params = ['db_file', 'low_level', 'high_level', 'conv_kind',
                        'relax_type', 'thick_min', 'thick_max', 'thick_incr',
                        'vacuum', 'in_unit_planes', 'ext_index', 'conv_thr',
-                       'bulk_name', 'slab_name']
+                       'bulk_entry', 'slab_entry']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -154,8 +154,8 @@ class FT_SlabOptThick(FiretaskBase):
                                            miller=p['miller'])
         
         # If data is saved elsewhere from standard position
-        if p['slab_name'] is not None:
-            slab = get_one_info_from_struct_dict(slab, p['slab_name'])
+        if p['slab_entry'] is not None:
+            slab = get_one_info_from_struct_dict(slab, p['slab_entry'])
 
         # Start a subworkflow to converge the thickness if not already done
         stop_convergence = slab.get('opt_thickness', None)
@@ -165,7 +165,7 @@ class FT_SlabOptThick(FiretaskBase):
             # Retrieve the desired bulk structure
             bulk = nav_struct.get_slab_from_db(mp_id=p['mp_id'], 
                                                functional=p['functional'])
-            bulk = get_one_info_from_struct_dict(bulk, p['bulk_name'])
+            bulk = get_one_info_from_struct_dict(bulk, p['bulk_entry'])
 
             structure = Structure.from_dict(bulk.get('structure_fromMP'))
             comp_params = slab.get('comp_params', {})
@@ -323,7 +323,7 @@ class FT_StartThickConvo(FiretaskBase):
                                             thick_max=p['thick_max'],
                                             thick_incr=p['thick_incr'],
                                             vacuum=p['vacuum'],
-                                            in_unit_planes=p['slab_name'],
+                                            in_unit_planes=p['in_unit_planes'],
                                             ext_index=p['ext_index'], 
                                             parallelization=p['parallelization'],
                                             recursion=p['recursion'],
@@ -445,8 +445,8 @@ class FT_EndThickConvo(FiretaskBase):
                                      filter={'mpid': p['mp_id'], 'miller': p['miller']})
             
             # Extract the data to be saved elsewhere
-            name = ['thickness', 'data_' + str(index), 'calc_output']
-            store_dict = get_one_info_from_struct_dict(out_dict, name)
+            entry = ['thickness', 'data_' + str(index), 'calc_output']
+            store_dict = get_one_info_from_struct_dict(out_dict, entry)
 
             nav.update_data(collection=p['functional'] + '.slab_data', 
                             filter={'mpid': p['mp_id'], 'miller': p['miller']},
@@ -481,14 +481,14 @@ class FT_GenerateSlabs(FiretaskBase):
     """
      Generate a slab or a list of slabs out of a given structure. Parameters 
      hat are taken into account to generate the possible different slabs are: 
-     miller, thickness, vacuum, slab_name. The slabs are generated with 
+     miller, thickness, vacuum, entry. The slabs are generated with 
      SlabGenerator and stored in the database.
     
     """
 
     required_params = ['structure', 'mp_id', 'miller', 'collection']
-    optional_params = ['db_file', 'database', 'thickness', 'thick_max', 'vacuum',
-                       'symmetrize', 'ext_index', 'in_unit_planes', 'slab_name']
+    optional_params = ['db_file', 'database', 'thickness', 'thick_bulk', 'vacuum',
+                       'symmetrize', 'ext_index', 'in_unit_planes', 'entry']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -500,26 +500,26 @@ class FT_GenerateSlabs(FiretaskBase):
                                 default_file=dfl, default_key="GenerateSlabs")
 
         # Generate the slabs for each structure passed as input
-        miller, thickness, vacuum, slab_name = self._convert_to_list(p)
+        miller, thickness, vacuum, entry = self._convert_to_list(p)
 
         # Generate the slabs, taking into account miller, thickness, vacuum
         slabs = generate_slabs(structure=p['structure'], 
                                miller=miller, 
                                thickness=thickness, 
                                vacuum=vacuum, 
-                               thick_bulk=p['thick_max'],
+                               thick_bulk=p['thick_bulk'],
                                ext_index=p['ext_index'],
                                in_unit_planes=p['in_unit_planes'])
         
-        # Store the slab structure in collection.name in database, within db_file
-        self.structure_in_db(slabs, miller, slab_name, p)
+        # Store the slab structure in collection.field.entry in db, within db_file
+        self.structure_in_db(slabs, miller, entry, p)
         
         return FWAction(update_spec=fw_spec)
     
     def _convert_to_list(self, p):
 
         GenerateSlabsError.check_inputs(p['miller'], p['thickness'], 
-                                        p['vacuum'], p['slab_name'])
+                                        p['vacuum'], p['entry'])
         
         miller = p['miller']
         if not all([isinstance(x, list) for x in miller]):
@@ -529,24 +529,24 @@ class FT_GenerateSlabs(FiretaskBase):
         if not isinstance(thickness, list):
             thickness = [thickness] * len(miller)
         
-        slab_name = p['slab_name']
-        if not isinstance(slab_name, list):
-            slab_name = [slab_name] * len(miller)
+        entry = p['entry']
+        if not isinstance(entry, list):
+            entry = [entry] * len(miller)
 
         vacuum = p['vacuum']
         if not isinstance(vacuum, list):
             vacuum = [vacuum] * len(miller)
 
-        return miller, thickness, vacuum, slab_name
+        return miller, thickness, vacuum, entry
     
-    def structure_in_db(self, slabs, miller, slab_name, p):
+    def structure_in_db(self, slabs, miller, entry, p):
 
         nav = Navigator(p['db_file'], p['database'])
         
         # Store unrelaxed data in the Database
-        for s, hkl, name in zip(slabs, miller, slab_name):
+        for s, hkl, en in zip(slabs, miller, entry):
             # Clean the data and create a dictionary with the given path
-            update_data = write_one_dict_for_db(s.as_dict(), name)
+            update_data = write_one_dict_for_db(s.as_dict(), en)
             nav.update_data(collection=p['collection'], 
                             filter={'mpid': p['mp_id'], 'miller': hkl},
                             new_values={'$set': update_data},
@@ -556,14 +556,14 @@ class FT_GenerateSlabs(FiretaskBase):
 @explicit_serialize
 class FT_RelaxStructure(FiretaskBase):
     """
-    Retrieve a structure based on mp_id, and name out of a collection found in
+    Retrieve a structure based on mp_id and entry out of a collection found in
     db_file and database. The slab is relaxed following the 'relax_type' procedure
     using an Atomate workflow. The result is stored in the same database with 
     a tag that can be provided by the user.
     
     """
 
-    required_params = ['mp_id', 'functional', 'collection', 'name', 'tag']
+    required_params = ['mp_id', 'functional', 'collection', 'entry', 'tag']
     optional_params = ['db_file', 'database', 'relax_type', 'comp_params', 
                        'miller', 'check_key']
 
@@ -603,7 +603,7 @@ class FT_RelaxStructure(FiretaskBase):
                                      collection=p['collection'], 
                                      mp_id=p['mp_id'],
                                      miller=p['miller'],
-                                     name=p['name'],
+                                     entry=p['entry'],
                                      pymatgen_obj=pymatgen_obj)
         RelaxStructureError.is_data(structure, p['mp_id'], p['functional'])
 
@@ -665,7 +665,7 @@ class FT_MoveTagResults(FiretaskBase):
                                 default_file=dfl,
                                 default_key="MoveTagResults")
 
-        # Check if a structure is already present in name and check_key
+        # Check if a structure is already present in entry and check_key
         is_done = self.check_struct(p)
         
         if not is_done or (is_done and p['override']):
@@ -696,7 +696,7 @@ class FT_MoveTagResults(FiretaskBase):
                                          collection=p['collection'], 
                                          mp_id=p['mp_id'],
                                          miller=p['miller'],
-                                         name=p['entry_check'],
+                                         entry=p['entry_check'],
                                          pymatgen_obj=False)
         
             # Check if the calculation is already done
@@ -710,13 +710,13 @@ class FT_MoveTagResults(FiretaskBase):
         vasp_calc, info = retrieve_from_tag(db_file=p['db_file'],
                                             collection=p['collection_from'],
                                             tag=p['tag'],
-                                            name=p['entry_tag'],
+                                            entry=p['entry_tag'],
                                             database=p['database_from'])
         return vasp_calc, info
     
     def store_results(self, info, p):
 
-        # Dictionaries are stored in name[i]/name_tag[i]
+        # Dictionaries are stored in entry_to[i]/entry_from[i]
         name = []
         for n, n_t in zip(list(p['entry']), list(p['entry_tag'])):
             name.append(list(n).append(list(n_t)[-1]))

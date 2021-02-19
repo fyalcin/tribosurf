@@ -38,7 +38,7 @@ class FT_SurfaceEnergy(FiretaskBase):
     """
     
     _fw_name = 'Surface Energy calculation'
-    required_params = ['mp_id', 'collection', 'miller', 'name']
+    required_params = ['mp_id', 'collection', 'miller', 'entry']
     optional_params = ['db_file', 'database']
     
     def run_task(self, fw_spec):
@@ -51,7 +51,7 @@ class FT_SurfaceEnergy(FiretaskBase):
                                 self.optional_params, default_file=dfl,
                                 default_key="SurfaceEnergy")
 
-        # Calculate the surface energies from names
+        # Calculate the surface energies from the provided entries
         surfene = self.get_surfene(p)
 
         # Store surface energies in DB
@@ -69,20 +69,20 @@ class FT_SurfaceEnergy(FiretaskBase):
                                 filter={'mpid': p['mp_id'], 'miller': p['miller']})
             
             # Extract the output dictionary containing energies and get surfene
-            output_list = get_multiple_info_from_struct_dict(dic, p['name'])
+            output_list = get_multiple_info_from_struct_dict(dic, p['entry'])
             surfene = calculate_surface_energy(output_list, sym_surface=True)
 
             return surfene
         
         def store_to_db(self, surfene, p):
 
-            # Dictionaries are stored in name[i]/name_tag[i]
-            name = []
-            for n in p['name'][1:]:
-                name.append(n.append('surface_energy'))
+            # Extract the surface energies from the provided dictionary entry
+            entry = []
+            for n in p['entry'][1:]:
+                entry.append(n.append('surface_energy'))
             
             # Prepare the list of dictionaries to be stored in the database
-            info_dict = write_multiple_dict_for_db(surfene, name)
+            info_dict = write_multiple_dict_for_db(surfene, entry)
         
             # Prepare the database and options where to store data
             nav = Navigator(db_file=p['db_file'], high_level=p['database_to'])

@@ -66,27 +66,27 @@ class GenerateSlabsError(GeneralErrorFT):
                                          "vacuum. Allowed types: list.")
 
     @staticmethod
-    def check_slabname(slab_name):
-        if not isinstance(slab_name, (str, list)):
-            raise GenerateSlabsError("Wrong type for argument: slab_name. "
+    def check_entry(entry):
+        if not isinstance(entry, (str, list)):
+            raise GenerateSlabsError("Wrong type for argument: entry. "
                                      "Allowed types: list of str, str.")
 
     @staticmethod
-    def check_inputs(miller, thickness, vacuum, slab_name):
+    def check_inputs(miller, thickness, vacuum, entry):
         
         GenerateSlabsError.check_miller(miller)
         GenerateSlabsError.check_thickness(thickness)
         GenerateSlabsError.check_vacuum(vacuum)
-        GenerateSlabsError.check_slabname(slab_name)
+        GenerateSlabsError.check_entry(entry)
 
         # If one is a list, both of them should be.
         if isinstance(thickness, list):
-            if not isinstance(slab_name, list):
+            if not isinstance(entry, list):
                 raise GenerateSlabsError("Wrong type for arguments: thickness, "
-                                         "slab_name. If one is a list, both "
+                                         "entry. If one is a list, both "
                                          "should be.")
-            if len(thickness) != len(slab_name):
-                raise GenerateSlabsError("Wrong arguments: thickness, slab_name. " 
+            if len(thickness) != len(entry):
+                raise GenerateSlabsError("Wrong arguments: thickness, entry. " 
                                          "They should have the same length if lists")               
 
 class RelaxStructureError(GeneralErrorFT):
@@ -106,26 +106,26 @@ class MoveTagResultsError(GeneralErrorFT):
     """
     
     @staticmethod
-    def check_name(name, msg='name'):
+    def check_entry(entry, msg='entry'):
 
-        if isinstance(name, list):
-            if not all([isinstance(n, list) for n in name]):
+        if isinstance(entry, list):
+            if not all([isinstance(n, list) for n in entry]):
                 raise MoveTagResultsError("Wrong type for arguments: {}. "
                                           "Allowed type: list".format(msg))
         
-        # elif not isinstance(name, str):
+        # elif not isinstance(entry, str):
         #     raise MoveTagResultsError("Wrong argument: {}. "
         #                               "Allowed types: str, list".format(msg))
 
     @staticmethod
-    def check_names(name_check, name, name_tag):
+    def check_entries(entry_check, entry_to, entry_from):
 
-        MoveTagResultsError.check_name(name_check, 'name_check')
-        MoveTagResultsError.check_name(name, 'name')
-        MoveTagResultsError.check_name(name_tag, 'name_tag')
+        MoveTagResultsError.check_entry(entry_check, 'entry_check')
+        MoveTagResultsError.check_entry(entry_to, 'entry')
+        MoveTagResultsError.check_entry(entry_from, 'entry_tag')
 
-        if len(list(name)) != len(list(name_tag)):
-            raise MoveTagResultsError("Wrong arguments: name or name_tag. If "
+        if len(list(entry_to)) != len(list(entry_from)):
+            raise MoveTagResultsError("Wrong arguments: entry or entry_tag. If "
                                       "converted to str, should have same length")
 
 class SurfaceEnergyError(GeneralErrorFT):

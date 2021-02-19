@@ -57,7 +57,7 @@ class SlabWF:
 
         """     
 
-        # Set the Workflow name
+        # Set the name of the Workflow
         name = 'Slab Thickness optimization of ' + \
                 structure.composition.reduced_formula + ' ' + str(miller)
         

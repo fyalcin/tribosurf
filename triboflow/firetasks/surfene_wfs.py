@@ -64,9 +64,10 @@ class SurfEneWF:
                               "Allowed value: 'low', 'high'")
 
         # Create the dictionary key where the unrelaxed slab will be saved
+        formula = structure.composition.reduced_formula
         miller_str = get_miller_str(miller)
-        # formula = structure.composition.reduced_formula
-        slab_name = [['slab_' + miller_str + '_' + str(t), 'unrelaxed'] for t in thickness]
+        slab_entry = [[formula + 'slab_' + miller_str + '_' + str(t), 
+                       'unrelaxed'] for t in thickness]
 
         # Generate the slabs and store them in the low level database, under
         # the dictionary key: 'unrelaxed_slab'
@@ -81,25 +82,25 @@ class SurfEneWF:
                                         vacuum=vacuum,
                                         ext_index=ext_index,
                                         in_unit_planes=in_unit_planes,
-                                        slab_name=slab_name)
+                                        entry=slab_entry)
 
         fw_gen_slabs = Firework([ft_gen_slabs],
-                                spec = spec,
-                                name = 'Generate ' + str(len(thickness)) + ' slabs')
+                                spec=spec,
+                                name='Generate ' + str(len(thickness)) + ' slabs')
 
         # Define the second Firework
         # ==================================================
 
         # Create the tags to store the calculation of the slabs
-        tags = create_tags(slab_name)
+        tags = create_tags(slab_entry)
 
         # Create the Firetasks to relax the structures
         fw_relax_slabs = []
-        for thk, n, t in zip(thickness, slab_name, tags):
+        for thk, n, t in zip(thickness, slab_entry, tags):
             ft_1 = FT_RelaxStructure(mp_id=mp_id,
                                      functional=functional,
                                      collection=functional+'.slab_data',
-                                     name=n,
+                                     entry=n,
                                      tag=t,
                                      db_file=db_file,
                                      database=low_level,
@@ -115,17 +116,17 @@ class SurfEneWF:
                                     database_from=low_level,
                                     database_to=high_level,
                                     miller=miller,
-                                    name_check=[
+                                    entry_check=[
                                         ['thickness', 
                                         'data_' + str(thk), 
                                         'calc_output']
                                         ],
-                                    name=[
+                                    entry_to=[
                                         ['thickness', 
                                          'data_' + str(thk), 
                                          'calc_output'] * 9
                                         ],
-                                    name_tag=[
+                                    entry_from=[
                                         ['output', 'structure'],
                                         ['nsites'],
                                         ['output', 'density'],
@@ -141,29 +142,29 @@ class SurfEneWF:
                                     cluster_params=cluster_params)
 
             fw = Firework([ft_1, ft_2],
-                          spec = spec,
-                          name = 'Relax and store in DB, slab: ' + n)
+                          spec=spec,
+                          name='Relax and store in DB, slab: ' + n)
             fw_relax_slabs.append(fw)
 
         # Define the third Firework(s)
         # ==================================================
 
         # Set the location of the energies in the high level DB
-        name_surfene = [['thickness', 'data_0', 'calc_output']]
+        entry_surfene = [['thickness', 'data_0', 'calc_output']]
         thk_loop = thickness if recursion else thickness[1:]
         for thk in thk_loop:
-            name_surfene.append(['thickness', 'data_' + str(thk), 'calc_output'])
+            entry_surfene.append(['thickness', 'data_' + str(thk), 'calc_output'])
 
         ft_surfene = FT_SurfaceEnergy(mp_id=mp_id,
                                       collection=functional+'.slab_data',
                                       miller=miller,
-                                      name=name_surfene,
+                                      entry=entry_surfene,
                                       db_file=db_file,
                                       database=high_level)
 
         fw_surfene = Firework([ft_surfene],
-                              spec = spec,
-                              name = 'Calculate the Surface Energies')
+                              spec=spec,
+                              name='Calculate the Surface Energies')
 
         # Define and return the Workflow
         # ==================================================       
@@ -180,14 +181,14 @@ class SurfEneWF:
 
         return wf
 
-def create_tags(name):
+def create_tags(prefix):
 
     # Create a list of tags
-    if isinstance(name, list):
-        tag = [n + '_' + str(uuid4()) for n in name]
+    if isinstance(prefix, list):
+        tag = [n + '_' + str(uuid4()) for n in prefix]
 
     else:
-        tag = name + '_' + str(uuid4())
+        tag = prefix + '_' + str(uuid4())
     
     return tag
 
