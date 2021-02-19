@@ -375,8 +375,7 @@ class FT_EndThickConvo(FiretaskBase):
 
         def _get_case(self, p):
             """
-            Extrac
-
+            
             """
             # Select the keys to be used when reading the dictionary
             if p['conv_kind'] == 'surfene':
@@ -501,7 +500,7 @@ class FT_GenerateSlabs(FiretaskBase):
                                 default_file=dfl, default_key="GenerateSlabs")
 
         # Generate the slabs for each structure passed as input
-        miller, thickness, vacuum, slab_name = self.set_lists_to_loop(p)
+        miller, thickness, vacuum, slab_name = self._convert_to_list(p)
 
         # Generate the slabs, taking into account miller, thickness, vacuum
         slabs = generate_slabs(structure=p['structure'], 
@@ -517,21 +516,26 @@ class FT_GenerateSlabs(FiretaskBase):
         
         return FWAction(update_spec=fw_spec)
     
-    def set_lists_to_loop(self, p):
+    def _convert_to_list(self, p):
 
         GenerateSlabsError.check_inputs(p['miller'], p['thickness'], 
                                         p['vacuum'], p['slab_name'])
-
+        
         miller = p['miller']
-        thickness = list(p['thickness'])
-        vacuum = p['vacuum']
-        slab_name = list(p['slab_name'])
-        
         if not all([isinstance(x, list) for x in miller]):
-            miller = [miller] * len(thickness)
+            miller = [miller]
         
+        thickness = p['thickness']
+        if not isinstance(thickness, list):
+            thickness = [thickness] * len(miller)
+        
+        slab_name = p['slab_name']
+        if not isinstance(slab_name, list):
+            slab_name = [slab_name] * len(miller)
+
+        vacuum = p['vacuum']
         if not isinstance(vacuum, list):
-            vacuum = [vacuum] * len(thickness)
+            vacuum = [vacuum] * len(miller)
 
         return miller, thickness, vacuum, slab_name
     
@@ -542,9 +546,7 @@ class FT_GenerateSlabs(FiretaskBase):
         # Store unrelaxed data in the Database
         for s, hkl, name in zip(slabs, miller, slab_name):
             # Clean the data and create a dictionary with the given path
-            slab_dict = monty.json.jsanitize(s.as_dict(), allow_bson=True)
-            update_data = write_one_dict_for_db(slab_dict, name)
-
+            update_data = write_one_dict_for_db(s.as_dict(), name)
             nav.update_data(collection=p['collection'], 
                             filter={'mpid': p['mp_id'], 'miller': hkl},
                             new_values={'$set': update_data},
@@ -639,7 +641,7 @@ class FT_RelaxStructure(FiretaskBase):
 
 
 @explicit_serialize
-class FT_MoveVaspOutInDB(FiretaskBase):
+class FT_MoveTagResults(FiretaskBase):
     """
     Firetask description...
     
@@ -647,7 +649,7 @@ class FT_MoveVaspOutInDB(FiretaskBase):
 
     required_params = ['mp_id', 'collection_from', 'collection_to', 'tag']
     optional_params = ['db_file', 'database_from', 'database_to', 'miller',
-                       'name_check', 'name', 'name_tag', 'struct_kind', 
+                       'entry_check', 'entry_to', 'entry_from', 'struct_kind', 
                        'override', 'cluster_params']
 
     def run_task(self, fw_spec):
@@ -685,7 +687,7 @@ class FT_MoveVaspOutInDB(FiretaskBase):
         # Check if collection does exist
         MoveTagResultsError.check_collection(p['collection'])
 
-        if p['name_check'] is None:
+        if p['entry_check'] is None:
             is_done = False
         else:
             # Retrieve the structure from the Database
@@ -694,7 +696,7 @@ class FT_MoveVaspOutInDB(FiretaskBase):
                                          collection=p['collection'], 
                                          mp_id=p['mp_id'],
                                          miller=p['miller'],
-                                         name=p['name_check'],
+                                         name=p['entry_check'],
                                          pymatgen_obj=False)
         
             # Check if the calculation is already done
@@ -708,7 +710,7 @@ class FT_MoveVaspOutInDB(FiretaskBase):
         vasp_calc, info = retrieve_from_tag(db_file=p['db_file'],
                                             collection=p['collection_from'],
                                             tag=p['tag'],
-                                            name=p['name_tag'],
+                                            name=p['entry_tag'],
                                             database=p['database_from'])
         return vasp_calc, info
     
@@ -716,7 +718,7 @@ class FT_MoveVaspOutInDB(FiretaskBase):
 
         # Dictionaries are stored in name[i]/name_tag[i]
         name = []
-        for n, n_t in zip(list(p['name']), list(p['name_tag'])):
+        for n, n_t in zip(list(p['entry']), list(p['entry_tag'])):
             name.append(list(n).append(list(n_t)[-1]))
         
         # Prepare the list of dictionaries to be stored in the database
@@ -949,7 +951,7 @@ def orient_bulk(structure, miller, thickness, primitive=False, lll_reduce=True,
 
 def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
                    center_slab=True, primitive=False, lll_reduce=True,
-                   in_unit_planes=True,  ext_index=None, bonds=None, ftol=0.1, 
+                   in_unit_planes=True,  ext_index=0, bonds=None, ftol=0.1, 
                    tol=0.1, repair=False, max_broken_bonds=0, symmetrize=False):
     """
     Create and return a list of slabs out of a structure.
@@ -961,7 +963,7 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
 
         # Oriented bulk case
         if thk == 0:
-            s = orient_bulk(structure, miller, thick_bulk, in_unit_planes)
+            s = orient_bulk(structure, hkl, thick_bulk, in_unit_planes)
         
         # Slab case
         else:
@@ -972,7 +974,7 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
                                     lll_reduce=lll_reduce,
                                     in_unit_planes=in_unit_planes,
                                     min_slab_size=thk,
-                                    min_vacuum_size=vacuum)
+                                    min_vacuum_size=vac)
         
             # Select the ext_index-th slab from the list of possible slabs
             s = slabgen.get_slabs(bonds=bonds, 
@@ -981,9 +983,8 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
                                   repair=repair,
                                   max_broken_bonds=max_broken_bonds, 
                                   symmetrize=symmetrize)
-            
-            if ext_index:
-                s = s[ext_index]
+
+            s = s[ext_index]
 
         slabs.append(s)
     
