@@ -14,9 +14,9 @@ from fireworks import FWAction, FiretaskBase, Firework, Workflow, FileWriteTask
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 from atomate.vasp.powerups import add_modify_incar
-from atomate.vasp.fireworks.core import OptimizeFW, ScanOptimizeFW
 from mpinterfaces.transformations import get_aligned_lattices, \
     get_interface#generate_all_configs
+from triboflow.workflows.base import dynamic_relax_swf
 from triboflow.utils.database import GetSlabFromDB, GetHighLevelDB, GetDB, \
     GetBulkFromDB
 from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
@@ -312,19 +312,12 @@ class FT_StartSlabRelax(FiretaskBase):
         if 'relaxed_slab' not in slab_data:
             vis = GetCustomVaspRelaxSettings(slab_to_relax, comp_params,
                                              relax_type)
-            if functional == 'SCAN':
-                FW = ScanOptimizeFW(structure=slab_to_relax,
-                                    name=tag,
-                                    vasp_input_set = vis)
-            else:
-                FW = OptimizeFW(slab_to_relax, name=tag,
-                                     vasp_input_set = vis,
-                                     half_kpts_first_relax = True)
+            inputs = [[slab_to_relax, vis, tag]]
             wf_name = formula+miller_str+'_'+relax_type
-            #Use add_modify_incar powerup to add KPAR and NCORE settings
-            #based on env_chk in my_fworker.yaml
-            Optimize_WF = add_modify_incar(Workflow([FW], name = wf_name))
-            return FWAction(detours=Optimize_WF)
+            WF = dynamic_relax_swf(inputs_list=inputs,
+                                   wf_name=wf_name)
+                        
+            return FWAction(detours=WF)
 
 @explicit_serialize
 class FT_MakeSlabInDB(FiretaskBase):

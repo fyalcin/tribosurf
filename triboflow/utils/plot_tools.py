@@ -162,3 +162,18 @@ def Plot_UniformGrid(grid, cell, n_a, n_b):
     
     ax.plot(x, y, z)
     plt.show()
+
+def plot_kpoint_convergence(bulk_dict):
+    k_dens_l = bulk_dict['k_dens_info']['k_dens_list']
+    energy_l = bulk_dict['k_dens_info']['energy_list']
+    nr_sites = len(bulk_dict['structure_fromMP']['sites'])
+    tol = bulk_dict['k_dens_info']['Energy_tol_abs']*1000
+    E_l = np.asarray(energy_l)
+    E_l = (E_l - E_l[-1])*1000
+    plt.plot(k_dens_l, E_l, 'ro--')
+    plt.ylim([-tol*5, tol*5])
+    plt.xlabel('kpoint denisty')
+    plt.ylabel('total energy [meV/atom]')
+    plt.axhline(y=-tol, linestyle='dotted')
+    plt.axhline(y=tol, linestyle='dotted')
+    return

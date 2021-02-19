@@ -3,7 +3,7 @@
 Created on Mon Jun 22 12:29:28 2020
 @author: mwo
 """
-
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
@@ -155,6 +155,8 @@ class FT_MakeBulkInDB(FiretaskBase):
         
         functional = comp_data['functional']
         struct, mp_id = GetLowEnergyStructure(data['formula'], data['mp_id'])
+        sga = SpacegroupAnalyzer(struct)
+        prim_struct = sga.get_primitive_standard_structure()
         
         bandgap = GetPropertyFromMP(mp_id, 'band_gap')
         if bandgap > 0.2:
@@ -174,6 +176,7 @@ class FT_MakeBulkInDB(FiretaskBase):
              col.insert_one({'mpid': mp_id,
                              'formula': data['formula'],
                              'structure_fromMP': struct.as_dict(),
+                             'primitive_structure': prim_struct.as_dict(),
                              'comp_parameters': comp_data})
              return
         

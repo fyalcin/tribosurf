@@ -2,7 +2,8 @@ import os
 import subprocess
 
 from pymatgen.io.vasp.inputs import Kpoints
-from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet, MPStaticSet
+from pymatgen.io.vasp.sets import (MPRelaxSet, MPScanRelaxSet, MPStaticSet,
+                                   MPScanStaticSet)
 
 from triboflow.utils.file_manipulation import RemoveMatchingFiles
 
@@ -129,6 +130,7 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
     uis['SIGMA'] = 0.05
     uis['ISMEAR'] = -5
     uis['EDIFF'] = 1.0e-6
+    uis['SYMPREC'] = 1e-06
     
     if static_type.endswith('from_scratch'):
         uis['ICHARG'] = 2
@@ -180,6 +182,7 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
     if comp_parameters.get('functional') == 'SCAN':
         uis['METAGGA'] = 'SCAN'
         uis['ALGO'] = 'All'
+        uis['LELF'] = False #otherwise KPAR >1 crashes
         
     if static_type.endswith('follow_up'):
         uis['ISTART'] = 1
@@ -206,11 +209,15 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
                     kpts=[[kpoints.kpts[0][0], kpoints.kpts[0][1], 1]])
     else:
         uks = kpoints
-        
-    # Set vasp input set (currently none available for static SCAN!)
-    vis = MPStaticSet(structure, user_incar_settings = uis, vdw = vdw,
-                    user_kpoints_settings = uks,
-                    user_potcar_functional = 'PBE_54')
+    
+    if comp_parameters.get('functional') == 'SCAN':
+        vis = MPScanStaticSet(structure, user_incar_settings = uis, vdw = vdw,
+                              user_kpoints_settings = uks,
+                              user_potcar_functional = 'PBE_54')
+    else:
+        vis = MPStaticSet(structure, user_incar_settings = uis, vdw = vdw,
+                          user_kpoints_settings = uks,
+                          user_potcar_functional = 'PBE_54')
         
     return vis
       
@@ -243,10 +250,9 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
     """
 
     allowed_types = ['bulk_full_relax', 'bulk_vol_relax', 'bulk_pos_relax',
-                        'bulk_shape_relax',
-                        'slab_shape_relax', 'slab_pos_relax',
-                        'interface_shape_relax', 'interface_pos_relax',
-                        'interface_z_relax']
+                     'bulk_shape_relax', 'slab_shape_relax', 'slab_pos_relax',
+                     'interface_shape_relax', 'interface_pos_relax',
+                     'interface_z_relax']
     
     if relax_type not in allowed_types:
         raise SystemExit('relax type is not known. Please select from: {}'
@@ -263,6 +269,7 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
     uis['NELMIN'] = 5
     uis['EDIFF'] = 0.5E-5
     uis['LAECHG'] = '.FALSE.'
+    uis['SYMPREC'] = 1e-06
     
     if structure.num_sites < 20:
         uis['LREAL'] = '.FALSE.'
@@ -360,6 +367,7 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
                     uis['SIGMA'] = 0.1
                     uis['ISMEAR'] = 0
             uis['METAGGA'] = 'SCAN'
+            uis['LELF'] = False #otherwise KPAR >1 crashes
             vis = MPScanRelaxSet(structure, user_incar_settings = uis,
                                 vdw = vdw, user_kpoints_settings = uks,
                                 user_potcar_functional = 'PBE_54')
