@@ -1,114 +1,140 @@
 {
-    "SlabOptThick": {
-        "db_file": null,
-        "low_level": null,
-        "high_level": "triboflow",
-        "conv_kind": "surfene",
-        "relax_type": "slab_pos_relax",
-        "thick_min": 4,
-        "thick_max": 12,
-        "thick_incr": 2,
-        "vacuum": 10,
-        "in_unit_planes": true,
-        "ext_index": 0,
-        "conv_thr": 0.025,
-        "bulk_name": "structure_fromMP",
-        "slab_name": null,
-    },
-    "StartThickConvo": {
-        "db_file": null,
-        "low_level": null,
-        "high_level": "triboflow",
-        "conv_kind": "surfene",
-        "relax_type": "slab_pos_relax",
-        "comp_params": {},
-        "thick_min": 4,
-        "thick_max": 12,
-        "thick_incr": 2,
-        "vacuum": 10,
-        "in_unit_planes": true,
-        "ext_index": 0,
-        "parallelization": "low",
-        "recursion": false,
-        "cluster_params": {},
-    },
-    "EndThickConvo": {
-        "db_file": null,
-        "low_level": null,
-        "high_level": "triboflow",
-        "functional": "PBE",
-        "conv_kind": "surfene",
-        "relax_type": "slab_pos_relax",
-        "comp_params": {},
-        "thick_min": 4,
-        "thick_max": 12,
-        "thick_incr": 2,
-        "vacuum": 10,
-        "in_unit_planes": true,
-        "ext_index": 0,
-        "conv_thr": 0.025,
-        "parallelization": "low",
-        "cluster_params": {},
-    },
-    "GenerateSlabs": {
-        "db_file": null,
-        "database": null,
-        "thickness": 4,
-        "thick_max": 12,
-        "vacuum": 10,
-        "symmetrize": false,
-        "ext_index": 0,
-        "in_unit_planes": true,
-        "slab_name": "unrelaxed_slab"
-    },
-    "RelaxStructure": {
-        "db_file": null,
-        "database": null,
-        "relax_type": "slab_pos_relax",
-        "comp_params": {},
-        "miller": null,
-        "check_key": "relaxed",
-    },
-    "MoveTagResults": {
-        "db_file": null,
-        "database_from": null,
-        "database_to": "triboflow",
-        "miller": null,
-        "name_check": null,
-        "name": [["calc_output"], ["calc_output", "task_id"]],
-        "name_tag": [["output", "structure"], ["_id"]],
-        "struct_kind": "bulk",
-        "override": false,
-        "cluster_params": null
-    },
-    "SurfaceEnergy": {
-        "db_file": null,
-        "database": "triboflow"
-    },
-    "comp_params": {
-        "BM_tolerance": 0.01,
-        "energy_tolerance": 0.001,
-        "functional": "SCAN",
-        "use_spin": true,
-        "volume_tolerance": 0.001
-    },
-    "cluster_params": {
-        "file_output": false,
-        "output_dir": null, 
-        "remote_copy": false,
-        "server": null, 
-        "user": null, 
-        "port": null,
-        "print_help": false
-    },
-    "inter_params": {
-        "interface_distance": 2.0,
-        "max_angle_diff": 1.5,
-        "max_mismatch": 0.01,
-        "r1r2_tol": 0.05
-    },
-    "material_params": {
-        "min_thickness": 10.0,
-        "min_vacuum": 25.0
-    }
+   "SlabOptThick":{
+      "db_file":null,
+      "low_level":null,
+      "high_level":"triboflow",
+      "conv_kind":"surfene",
+      "relax_type":"slab_pos_relax",
+      "thick_min":4,
+      "thick_max":12,
+      "thick_incr":2,
+      "vacuum":10,
+      "in_unit_planes":true,
+      "ext_index":0,
+      "conv_thr":0.025,
+      "bulk_name":"structure_fromMP",
+      "slab_name":null
+   },
+   "StartThickConvo":{
+      "db_file":null,
+      "low_level":null,
+      "high_level":"triboflow",
+      "conv_kind":"surfene",
+      "relax_type":"slab_pos_relax",
+      "comp_params":{
+         
+      },
+      "thick_min":4,
+      "thick_max":12,
+      "thick_incr":2,
+      "vacuum":10,
+      "in_unit_planes":true,
+      "ext_index":0,
+      "parallelization":"low",
+      "recursion":false,
+      "cluster_params":{
+         
+      }
+   },
+   "EndThickConvo":{
+      "db_file":null,
+      "low_level":null,
+      "high_level":"triboflow",
+      "functional":"PBE",
+      "conv_kind":"surfene",
+      "relax_type":"slab_pos_relax",
+      "comp_params":{
+         
+      },
+      "thick_min":4,
+      "thick_max":12,
+      "thick_incr":2,
+      "vacuum":10,
+      "in_unit_planes":true,
+      "ext_index":0,
+      "conv_thr":0.025,
+      "parallelization":"low",
+      "cluster_params":{
+         
+      }
+   },
+   "GenerateSlabs":{
+      "db_file":null,
+      "database":null,
+      "thickness":4,
+      "thick_max":12,
+      "vacuum":10,
+      "symmetrize":false,
+      "ext_index":0,
+      "in_unit_planes":true,
+      "slab_name":"unrelaxed_slab"
+   },
+   "RelaxStructure":{
+      "db_file":null,
+      "database":null,
+      "relax_type":"slab_pos_relax",
+      "comp_params":{
+         
+      },
+      "miller":null,
+      "check_key":"relaxed"
+   },
+   "MoveTagResults":{
+      "db_file":null,
+      "database_from":null,
+      "database_to":"triboflow",
+      "miller":null,
+      "name_check":null,
+      "name":[
+         [
+            "calc_output"
+         ],
+         [
+            "calc_output",
+            "task_id"
+         ]
+      ],
+      "name_tag":[
+         [
+            "output",
+            "structure"
+         ],
+         [
+            "_id"
+         ]
+      ],
+      "struct_kind":"bulk",
+      "override":false,
+      "cluster_params":null
+   },
+   "SurfaceEnergy":{
+      "db_file":null,
+      "database":"triboflow"
+   },
+   "comp_params":{
+      "BM_tolerance":0.01,
+      "energy_tolerance":0.001,
+      "functional":"SCAN",
+      "use_spin":true,
+      "volume_tolerance":0.001
+   },
+   "cluster_params":{
+      "file_output":false,
+      "output_dir":null,
+      "remote_copy":false,
+      "server":null,
+      "user":null,
+      "port":null,
+      "print_help":false
+   },
+   "inter_params":{
+      "interface_distance":2.0,
+      "max_angle_diff":1.5,
+      "max_mismatch":0.01,
+      "r1r2_tol":0.05
+   },
+   "material_params":{
+      "min_thickness":10.0,
+      "min_vacuum":25.0
+   }
 }
