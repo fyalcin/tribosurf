@@ -51,7 +51,7 @@ class GenerateSlabsError(GeneralErrorFT):
             raise GenerateSlabsError("Wrong type for argument: thickness. "
                                      "Allowed types: list, float, int.")
         if isinstance(thickness, list):
-            if not all([isinstance(x, float, int) for x in thickness]):
+            if not all([isinstance(x, (float, int)) for x in thickness]):
                 raise GenerateSlabsError("Wrong type for elements of list: "
                                          "miller. Allowed types: int, float.")
 
@@ -60,7 +60,7 @@ class GenerateSlabsError(GeneralErrorFT):
         if not isinstance(vacuum, (list, float, int)):
             raise GenerateSlabsError("Wrong type for argument: vacuum. "
                                      "Allowed type: list")
-        if isinstance(check_vacuum, list):
+        if isinstance(vacuum, list):
             if not all([isinstance(x, (float, int)) for x in vacuum]):
                 raise GenerateSlabsError("Wrong type for elements of list: "
                                          "vacuum. Allowed types: list.")
@@ -77,7 +77,7 @@ class GenerateSlabsError(GeneralErrorFT):
         GenerateSlabsError.check_miller(miller)
         GenerateSlabsError.check_thickness(thickness)
         GenerateSlabsError.check_vacuum(vacuum)
-        GenerateSlabsError.check_slab_name(slab_name)
+        GenerateSlabsError.check_slabname(slab_name)
 
         # If one is a list, both of them should be.
         if isinstance(thickness, list):
