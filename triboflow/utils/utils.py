@@ -33,6 +33,14 @@ The module contains the following functions:
     Author: Gabriele Losi (glosi000)
     Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
 
+** Input/function handling **:
+    - create_tags
+    - get_miller_str
+    - select_struct_func
+
+    Author: Gabriele Losi (glosi000)
+    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
+
 """
 
 __author__ = 'Gabriele Losi'
@@ -41,6 +49,8 @@ __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 22nd, 2021'
 
 import json
+from uuid import uuid4
+
 from pymatgen.core.surface import Structure, Slab
 from atomate.utils.utils import env_chk
 
@@ -375,24 +385,6 @@ def write_multiple_dict(data, entry):
 # Retrieve structure and VASP output from DB
 # ============================================================================
 
-def select_struct_func(struct_kind):
-    """
-    Select a function to work on pymatgen structure, depending on the value
-    of `struct_kind` it returns either `pymatgen.core.surface.Structure` or 
-    `pymatgen.core.surface.Slab`.
-
-    """
-
-    if struct_kind == 'bulk':
-        func = Structure
-    elif struct_kind == 'slab':
-        func = Slab
-    else:
-        ValueError("Wrong argument: struct_kind. Allowed values: "
-                   "'bulk', 'slab'. Given value: {}".format(struct_kind)) 
-
-    return func
-
 def retrieve_from_db(db_file, mp_id, collection, database=None, 
                      miller=None, entry=None, is_slab=False, pymatgen_obj=True):
     """
@@ -448,6 +440,27 @@ def retrieve_from_db(db_file, mp_id, collection, database=None,
     return structure
 
 def retrieve_from_tag(db_file, collection, tag, entry=None, database=None):
+    """
+    [summary]
+
+    Parameters
+    ----------
+    db_file : [type]
+        [description]
+    collection : [type]
+        [description]
+    tag : [type]
+        [description]
+    entry : [type], optional
+        [description], by default None
+    database : [type], optional
+        [description], by default None
+
+    Returns
+    -------
+    [type]
+        [description]
+    """
 
     # Call the navigator and retrieve the simulation data from tag
     nav = Navigator(db_file=db_file, high_level=database)
@@ -459,3 +472,47 @@ def retrieve_from_tag(db_file, collection, tag, entry=None, database=None):
         info = get_multiple_info_from_dict(vasp_calc, entry)
     
     return vasp_calc, info
+
+
+# ============================================================================
+# Secondary tools to work with input parameters and functions
+# ============================================================================
+
+def create_tags(prefix):
+    """
+    Create a tag out of a prefix.
+
+    """
+
+    # Create a list of tags
+    if isinstance(prefix, list):
+        tag = [n + '_' + str(uuid4()) for n in prefix]
+
+    else:
+        tag = prefix + '_' + str(uuid4())
+    
+    return tag
+
+def get_miller_str(miller):
+    """
+    Convert a miller index from list to string.
+
+    """
+    return ''.join(str(s) for s in miller)
+
+def select_struct_func(struct_kind):
+    """
+    Select a function to work on pymatgen structure, depending on the value
+    of `struct_kind` it returns either `pymatgen.core.surface.Structure` or 
+    `pymatgen.core.surface.Slab`.
+
+    """
+
+    if struct_kind == 'bulk':
+        func = Structure
+    elif struct_kind == 'slab':
+        func = Slab
+    else:
+        ValueError("Wrong argument: struct_kind. Allowed values: "
+                   "'bulk', 'slab'. Given value: {}".format(struct_kind)) 
+    return func
