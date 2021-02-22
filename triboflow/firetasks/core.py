@@ -50,7 +50,7 @@ from triboflow.utils.database import Navigator
 from triboflow.utils.utils import (
     read_runtask_params,
     read_default_params,
-    write_multiple_dict_for_db,
+    write_multiple_dict,
     select_struct_func,
     retrieve_from_db,
     retrieve_from_tag
