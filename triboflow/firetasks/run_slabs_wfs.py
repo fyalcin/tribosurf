@@ -380,7 +380,7 @@ class FT_EndThickConvo(FiretaskBase):
         # Analyze the data, if convergence is reached data is stored in DB
         stop_convergence = self.analyze_data(data, index, case, p)
 
-        # Decide whether to rerun recursively the surface energy workflow
+        # Rerun recursively the surface energy subworkflow within detours
         if not stop_convergence:
             wf = self.call_recursion()
 
@@ -391,8 +391,10 @@ class FT_EndThickConvo(FiretaskBase):
 
         def _get_case(self, p):
             """
+            Define the dictionary key to be read from 'conv_kind'.
             
             """
+            
             # Select the keys to be used when reading the dictionary
             if p['conv_kind'] == 'surfene':
                 case = 'surface_energy'
@@ -434,6 +436,29 @@ class FT_EndThickConvo(FiretaskBase):
             return data, index
         
         def analyze_data(self, data, index, case, p):
+            """
+            Analyze the data to understand if the convergence has been achieved.
+
+            Parameters
+            ----------
+            data : list of floats
+                List containing the values to be checked for convergence.
+
+            index : list of int
+                List containing the thicknesses of the different slabs.
+
+            case : str
+                Dictionary key to identify the type of data and store them.
+
+            p : dict
+                Dictionary with the input parameters of the Firetask.
+
+            Returns
+            -------
+            stop_convergence : bool
+                Decide the fate of the calculation.
+
+            """
 
             # Calculate the relative error to the last element
             error_to_last = np.abs((data - data[-1]) / data[-1])
@@ -442,19 +467,48 @@ class FT_EndThickConvo(FiretaskBase):
             i = np.argwhere(error_to_last <= p['conv_thr'])
             index_converged = index[i]
             
-
+            # If a low parallelization is selected, three calculations are done
+            # at the beginning (bulk, min, max), and if convergence is not 
+            # achieved, then a calculation is done one by one until convergence
+            # is not attained or you go above max
             if p['parallelization'] == 'low':
+                
+                # If length>1, then a material has converged other than max
                 if len(index_converged > 1):
                     self.store_to_db(index_converged[0])
+                    stop_convergence = True
+                    
+                # If length=1, material is not converged, but if the next step
+                # brings you above the max thickness, then convergence is
+                # assumed to be reached at thick_max
+                elif p['thick_min'] + p['thick_incr'] >= p['thick_max']:
+                    self.store_to_db(index_converged[0])
+                    stop_convergence = True
+                
+                # If length=1 and you are far from thick max, recursion is done
+                else:
                     stop_convergence = False
             
+            # If high level parallelization
             elif p['parallelization'] == 'high':
                 self.store_to_db(index_converged[0])
                 stop_convergence = True
-
+            
             return stop_convergence
 
         def store_to_db(self, index):
+            """
+            Store the surface energy or the latice parameter that have been
+            obtained in a more accessible point within the database field.
+            If the same convergence calculation is called again, it will stop
+            when it finds that the parameters is already converged.
+
+            Parameters
+            ----------
+            index : int
+                Index of the thickness indicating the optimal slab.
+
+            """
 
             nav = Navigator(db_file=p['db_file'], high_level=p['high_level'])
             out_dict = nav.find_data(collection=p['functional'] + '.slab_data', 
@@ -469,6 +523,11 @@ class FT_EndThickConvo(FiretaskBase):
                             new_values={'$set': {'calc_output': store_dict}})
 
         def call_recursion(self, fw_spec, p):
+            """
+            Call the convergence workflow on the slab optimal thickness in a
+            recursive way.
+            
+            """
             
             from triboflow.workflows.slabs_wfs import SlabWF
 
@@ -484,10 +543,11 @@ class FT_EndThickConvo(FiretaskBase):
                              comp_params=p['comp_params'], spec=fw_spec, 
                              db_file=p['db_file'], low_level=p['low_level'], 
                              high_level=p['high_level'], relax_type=p['relax_type'], 
-                             thick_min=p['thick_min'], thick_max=p['thick_max'], 
-                             thick_incr=p['thick_incr'], vacuum=p['vacuum'], 
-                             in_unit_planes=p['in_unit_planes'], ext_index=p['ext_index'], 
-                             conv_thr=p['conv_thr'], parallelization=p['parallelization'], 
+                             thick_min=p['thick_min']+p['thick_incr'], 
+                             thick_max=p['thick_max'], thick_incr=p['thick_incr'], 
+                             vacuum=p['vacuum'], in_unit_planes=p['in_unit_planes'], 
+                             ext_index=p['ext_index'], conv_thr=p['conv_thr'], 
+                             parallelization=p['parallelization'], 
                              recursion=True, cluster_params=p['cluster_params'])
             
             return wf
