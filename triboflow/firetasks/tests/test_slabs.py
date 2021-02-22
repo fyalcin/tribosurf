@@ -1,3 +1,14 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Feb 22 16:27:12 2021
+
+The the Firetasks of the `slabs` module.
+
+Author: Gabriele Losi (glosi000)
+Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
+"""
+
 from triboflow.firetasks.slabs import FT_GenerateSlabs
 from triboflow.utils.database import StructureNavigator
 import os
@@ -13,7 +24,7 @@ currentdir = os.path.dirname(__file__)
 
 mp_id = 'mp-126'
 functional = 'PBE'
-miller = [[1, 0, 0], [3, 3, 3], [1, 2, 2], [9, 9, 9]]
+miller = [[1, 0, 0], [3, 3, 3], [1, 2, 2], [11, 0, 0]]
 db_file = None
 high_level = "tribchem"
 database = high_level
@@ -35,11 +46,12 @@ ft = FT_GenerateSlabs(structure=structure,
                       db_file=db_file,
                       database=database,
                       thickness=thickness,
-                      thick_max=thick_max,
+                      thick_bulk=thick_max,
                       vacuum=vacuum,
+                      symmetrize=False,
                       ext_index=ext_index,
                       in_unit_planes=in_unit_planes,
-                      slab_name=slab_name)
+                      entry=slab_name)
 
 wf = Workflow([Firework([ft])])
 
