@@ -3,13 +3,22 @@
 """
 Created on Tue Feb  2 14:54:53 2021
 
-Firetasks to calculate the surface energy for a bulk and a given orientation.
+Firetasks to calculate the surface energy for a slab along a given orientation.
 
-@author: glosi000
+The module contains the following Firetasks:
+
+** Surface Energy evaluation **
+    - FT_SurfaceEnergy
+    Calculate the surface energy between of one or more slabs with respect to
+    the bulk structure having the same orientation.
+
+    Author: Gabriele Losi (glosi000)
+    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
+
 """
 
 __author__ = 'Gabriele Losi'
-__copyright__ = 'Prof. M.C. Righi, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 2nd, 2021'
 
@@ -19,15 +28,14 @@ import numpy as np
 from fireworks.utilities.fw_utilities import explicit_serialize
 from fireworks import FiretaskBase, FWAction
 
+from triboflow.phys.surface_energy import calculate_surface_energy
+
 from triboflow.utils.database import Navigator
 from triboflow.firetasks.slabs import read_runtask_params, get_multiple_info_from_struct_dict, write_multiple_dict_for_db
 from triboflow.utils.errors import SurfaceEnergyError
 
 currentdir = os.path.dirname(__file__)
 
-# ============================================================================
-# Firetasks
-# ============================================================================
 
 @explicit_serialize
 class FT_SurfaceEnergy(FiretaskBase):
@@ -95,46 +103,3 @@ class FT_SurfaceEnergy(FiretaskBase):
 
         def _check_errors(self, p):
             SurfaceEnergyError.check_collection(p['collection'])
-
-
-# ============================================================================
-# Functions
-# ============================================================================
-
-def calculate_surface_energy(output_list, sym_surface=True):
-    """
-    Calculate the surface energy by passing a list containing all the dictionary
-    with the output data. The first element is treated to be the bulk oriented
-    along a specific miller index direction.
-
-    Parameters
-    ----------
-    output_list : list of dict
-        List of dictionaries where each one contains the output of a VASP
-        simulation. Basically output_list can be whatever dictionary, fundamental
-        keys that should be present are however: structure, energy, energy_per_atom.
-    
-    sym_surface : bool, optional
-        If the surfaces are to be considered symmetric or not.
-    
-    Returns
-    -------
-    surfene : list of floats
-        List containing the surface energies calculated from output_list.
-    """
-
-    # Take out the energy per atom of the bulk
-    energy_per_atom = output_list[0]['energy_per_atom']
-
-    # Loop over the slab elements of output_list and calculate surface energy
-    surfene = np.array([])
-    for d in output_list[1:]:
-        energy = d['energy']
-        nsites = d['nsites']
-        surfene.append(energy - energy_per_atom * nsites)
-
-    # Divide the surface energies by two if the surfaces are symmetric
-    if sym_surface:
-        surfene /= 2.
-
-    return surfene
