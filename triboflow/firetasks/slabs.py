@@ -27,20 +27,14 @@ import os
 
 from fireworks.utilities.fw_utilities import explicit_serialize
 from fireworks import FiretaskBase, FWAction
-from fireworks import Workflow
-from atomate.vasp.powerups import add_modify_incar
-from atomate.vasp.fireworks.core import OptimizeFW, ScanOptimizeFW
 
 from triboflow.phys.solid_state import generate_slabs
 from triboflow.utils.database import Navigator
 from triboflow.utils.utils import (
     read_runtask_params,
-    read_default_params,
-    write_one_dict, 
-    retrieve_from_db
+    write_one_dict
 )
-from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
-from triboflow.utils.errors import GenerateSlabsError, RelaxStructureError
+from triboflow.utils.errors import GenerateSlabsError
 
 
 currentdir = os.path.dirname(__file__)
