@@ -131,5 +131,3 @@ class FT_PrintSpec(FiretaskBase):
         
         spec = fw_spec
         return FWAction(update_spec = spec)
-
-

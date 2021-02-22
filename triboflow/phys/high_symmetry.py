@@ -468,5 +468,3 @@ def PBC_HSPoints(hs, cell, to_array=False, z_red=True):
     hs_new = HS_DictConverter(hs_new, to_array=to_array)
     
     return hs_new    
-
-

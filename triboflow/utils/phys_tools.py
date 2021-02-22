@@ -27,8 +27,6 @@ def PBC_Coordinates(data, cell, to_array=True, scaled_positions=False):
 
     """
     
-    
-    
     # Check the types of the input parameters
     if not ( (isinstance(data, list)) or (isinstance(data, np.ndarray)) ):
             raise TypeError("data must be a numpy array or a list")
@@ -246,4 +244,3 @@ def Orthorombize(data, cell, return_3x3=True):
         cell = np.array([[x_up, y_dw, 0], [x_dw, y_up, 0], [0, 0, 1]])
     
     return orthorombic, cell
-

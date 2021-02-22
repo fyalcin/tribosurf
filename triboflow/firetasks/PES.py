@@ -119,7 +119,6 @@ class FT_ComputePES(FiretaskBase):
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
         
-        
         inter_dict = GetInterfaceFromDB(name, db_file, functional)
         struct = Structure.from_dict(inter_dict['relaxed_structure@min'])
         

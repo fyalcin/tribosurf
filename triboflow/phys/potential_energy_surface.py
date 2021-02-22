@@ -132,10 +132,6 @@ def RemoveDuplicates(data, rounding_decimal=5):
         E.append([E_dict[str(i)]])
     
     return np.hstack((xy_unique, np.array(E)))
-    
-    
-        
-
 
 def UnfoldPES(hs_all, E_unique):
     """
@@ -205,7 +201,6 @@ def UnfoldPES(hs_all, E_unique):
     E_array = np.array(E_array)      
     
     return E_list, E_array
-
 
 def plot_pes(data, lattice, to_fig=None):
     """
