@@ -3,29 +3,45 @@
 """
 Created on Wed Jan 13 11:57:19 2021
 
-This module contains Firetasks useful to load atomic structures from local 
-machine or database, and initialize workflows.
+This module contains Firetasks useful to load atomic structures from local source
+or online database, providing a starting point for any more complex workflow
+initialized from scratch.
 
-# Integrates functions from firetasks.iocheck and fireworks.common
+The module contains:
 
-@author: glosi000
+** Firetasks **:
+    - FTCheckInput
+    Checks a dictionary for essential keys and adds default values.
+
+** Functions **:
+    - unbundle_input
+    - material_from_mp
+    - read_input_dict
+    - dict_consistency
+
+    Author: Gabriele Losi (glosi000)
+    Credits: The code is partially based on the original work of Michael 
+    Wolloch, Triboflow package, Wien University
+    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
+
 """
 
 __author__ = 'Gabriele Losi'
-__credits__ = 'This module is based on the Triboflow package, Michael Wolloch'
-__copyright__ = 'Prof. M.C. Righi, University of Bologna'
+__credits__ = 'This module is based on the work of Michael Wolloch, TriboFlow'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'January 13th, 2021'
+
+import os
+
+from fireworks import FWAction, FiretaskBase, explicit_serialize
 
 from triboflow.utils.database import NavigatorMP
 from triboflow.tasks.io import read_json
 
-from fireworks.utilities.fw_utilities import explicit_serialize
-from fireworks import FWAction, FiretaskBase
-import os
-
 
 currentdir = os.path.dirname(__file__)
+
 
 # ============================================================================
 # FireTasks
@@ -44,12 +60,15 @@ class FTCheckInput(FiretaskBase):
     ----------
     input_dict : list of str
         Location of the input parameters dictionary to be checked in the spec.
+
     read_key : str
         Dictionary key to be used to extract the corresponding list of keys
         and default values to compare the input to.
+
     output_dict_name: list of str, optional
         Location of the output dictionary that is going to be put into the
         spec. The default is 'out_params'.
+
     fw_name : str, optional
         Give a custom name to the Firetask call.
         The default is 'check '+read_key+' dictionary'
@@ -120,10 +139,13 @@ def unbundle_input(inputs, keys=['material', 'comp_params', 'inter_params']):
     -------
     material_1 : dict
         Parameters of the first material.
+
     material_2 : dict
         Parameters of the second material.
+
     comp_params : dict
         Computational parameters for the simulation.
+
     inter_params : dict
         Interface parameters to match the slabs.
         

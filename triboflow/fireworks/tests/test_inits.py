@@ -8,10 +8,12 @@ Test the initializing Firetasks for setting up a Workflow.
 @author: glosi000
 """
 
-from triboflow.tasks.init_check import FTCheckInput
-from triboflow.tasks.init_fws import InitFWs
 from fireworks import LaunchPad, Workflow
 from fireworks.core.rocket_launcher import rapidfire
+
+from triboflow.firetasks.init_check import FTCheckInput
+from triboflow.fireworks.init_fws import InitFWs
+
 
 inputs = {'material_1': {'formula': 'Pt',
                          'miller': '111',

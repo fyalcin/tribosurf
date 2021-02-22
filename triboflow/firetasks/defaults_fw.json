@@ -112,13 +112,6 @@
       "db_file":null,
       "database":"triboflow"
    },
-   "comp_params":{
-      "BM_tolerance":0.01,
-      "energy_tolerance":0.001,
-      "functional":"SCAN",
-      "use_spin":true,
-      "volume_tolerance":0.001
-   },
    "cluster_params":{
       "file_output":false,
       "output_dir":null,
@@ -128,7 +121,14 @@
       "port":null,
       "print_help":false
    },
-   "inter_params":{
+   "comp_params":{
+      "BM_tolerance":0.01,
+      "energy_tolerance":0.001,
+      "functional":"SCAN",
+      "use_spin":true,
+      "volume_tolerance":0.001
+   },
+   "interface_params":{
       "interface_distance":2.0,
       "max_angle_diff":1.5,
       "max_mismatch":0.01,

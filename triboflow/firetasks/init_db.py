@@ -3,19 +3,39 @@
 """
 Created on Wed Jan 20 15:41:22 2021
 
-Modules to put nulk, slabs, and interfaces in DB during initializing phase.
+Modules to put bulk, slabs, and interfaces in DB during initializing phase.
 
-@author: glosi000
+The module contains:
+
+** Firetasks **:
+    - FT_PutMaterialInDB
+    Put a bulk and the required slab from MP into the high level DB..
+    
+    - FT_PutInterfaceInDB
+    Put the information to make an interface between two materials into the 
+    high level DB.
+
+** Functions **:
+    - put_bulk_in_db
+    - put_slab_in_db
+    - put_inter_in_db
+    - material_data_for_db
+    - interface_name
+
+    Author: Gabriele Losi (glosi000)
+    Credits: The code is partially based on the original work of Michael 
+    Wolloch, Triboflow package, Wien University
+    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
+
 """
 
 __author__ = 'Gabriele Losi'
-__credits__ = 'This module is based on the Triboflow package, Michael Wolloch'
+__credits__ = 'This module is based on the work of Michael Wolloch, TriboFlow'
 __copyright__ = 'Prof. M.C. Righi, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'January 20th, 2021'
 
 from triboflow.utils.database import Navigator, NavigatorMP
-from triboflow.tasks.handle_struct import interface_name
 
 from fireworks.utilities.fw_utilities import explicit_serialize
 from fireworks import FiretaskBase
@@ -27,7 +47,7 @@ from atomate.utils.utils import env_chk
 # ============================================================================
 
 @explicit_serialize
-class FTPutMaterialInDB(FiretaskBase):
+class FT_PutMaterialInDB(FiretaskBase):
     """ 
     Put a bulk and the required slab from MP into the high level DB.
     
@@ -64,7 +84,7 @@ class FTPutMaterialInDB(FiretaskBase):
         put_slab_in_db(data, comp_params, db_file)
 
 @explicit_serialize
-class FTPutInterfaceInDB(FiretaskBase):
+class FT_PutInterfaceInDB(FiretaskBase):
     """
     Put the information to make an interface between two materials into the 
     high level DB.
@@ -127,7 +147,7 @@ def put_bulk_in_db(data, comp_params, db_file):
     """
     
     # Extract data from dictionaries and from MP using NavigatorMP
-    struct, mp_id, functional, comp_params = material_data_dor_db(
+    struct, mp_id, functional, comp_params = material_data_for_db(
         data, comp_params, db_file, metal_thr = 0.2)
     
     # Load the bulk structure into the high level DB
@@ -154,7 +174,7 @@ def put_slab_in_db(data, comp_params, db_file):
     """
 
     # Extract data from dictionaries and from MP using NavigatorMP
-    _, mp_id, functional, comp_params = material_data_dor_db(
+    _, mp_id, functional, comp_params = material_data_for_db(
         data, comp_params, db_file, metal_thr = 0.5)
 
     # Load the slab structure into the high level DB
@@ -188,9 +208,9 @@ def put_inter_in_db(data_1, data_2, comp_params, inter_params, db_file):
 
     # Extract data from dictionaries and from MP using NavigatorMP
     functional = comp_params['functional']
-    struct_1, mp_id_1, _, _ = material_data_dor_db(data_1, comp_params, 
+    struct_1, mp_id_1, _, _ = material_data_for_db(data_1, comp_params, 
                                                    db_file, metal_thr=None)
-    struct_2, mp_id_2, _, _ = material_data_dor_db(data_2, comp_params,
+    struct_2, mp_id_2, _, _ = material_data_for_db(data_2, comp_params,
                                                    db_file, metal_thr=None)
     name = interface_name(mp_id_1, data_1['miller'], mp_id_2, data_2['miller'])
     
@@ -201,7 +221,7 @@ def put_inter_in_db(data_1, data_2, comp_params, inter_params, db_file):
                           'comp_parameters': comp_params,
                           'interface_parameters': inter_params})
 
-def material_data_dor_db(data, comp_params, db_file, metal_thr=None):
+def material_data_for_db(data, comp_params, db_file, metal_thr=None):
     """
     Extract material information from data dictionary and MP online database.
     Returned parameters are suitable to be stored in high level DB.
@@ -249,3 +269,47 @@ def material_data_dor_db(data, comp_params, db_file, metal_thr=None):
         comp_params['is_metal'] = True if bandgap <= metal_thr else False
     
     return struct, mp_id, functional, comp_params
+
+def interface_name(mp_id_1, miller_1, mp_id_2, miller_2):
+    """
+    Return a name for an interface based on MP-IDs and miller indices.
+
+    Parameters
+    ----------
+    mp_id_1 : str
+        MP ID of the first material.
+    miller_1 : list of int or str
+        Miller indices of first material given either as list or str.
+    mp_id_2 : str
+        MP ID of the second material.
+    miller_2 : list of int or str
+        Miller indices of the second material given either as list or str.
+
+    Returns
+    -------
+    name : str
+        Unique name for the interface of two slabs.
+    """
+
+    nav_mp = NavigatorMP()
+    f1 = nav_mp.get_property_from_mp(
+        mp_id=mp_id_1, 
+        properties=['pretty_formula'])['pretty_formula']
+    f2 = nav_mp.get_property_from_mp(
+        mp_id=mp_id_2,
+        properties=['pretty_formula'])['pretty_formula']
+    
+    # Assign the miller index as a string
+    m1 = miller_1
+    m2 = miller_2
+    if isinstance(miller_1, list):
+        m1 = ''.join(str(s) for s in miller_1)
+    if isinstance(miller_2, list):
+        m2 = ''.join(str(s) for s in miller_2)
+
+    n1 = min(f1 + m1, f2 + m2)
+    n2 = max(f1 + m1, f2 + m2)
+    ids = min(mp_id_1 + '_' + mp_id_2, mp_id_2 + '_' + mp_id_1)
+    name = '_'.join((n1, n2, ids))
+    
+    return name
