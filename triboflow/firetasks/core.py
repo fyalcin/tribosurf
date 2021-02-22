@@ -38,13 +38,18 @@ from pprint import pprint, pformat
 from pymatgen.io.vasp.inputs import Poscar
 from atomate.vasp.fireworks.core import OptimizeFW, ScanOptimizeFW
 from atomate.vasp.powerups import add_modify_incar
-from fireworks import Firework, Workflow, FWAction, FiretaskBase, FileWriteTask
-
+from fireworks import (
+    Firework, 
+    Workflow, 
+    FWAction, 
+    FiretaskBase, 
+    FileWriteTask, 
+    explicit_serialize
+)
 from triboflow.utils.database import Navigator
 from triboflow.utils.utils import (
     read_runtask_params,
     read_default_params,
-    write_one_dict,
     write_multiple_dict_for_db,
     select_struct_func,
     retrieve_from_db,
