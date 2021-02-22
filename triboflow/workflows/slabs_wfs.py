@@ -3,9 +3,20 @@
 """
 Created on Tue Feb  2 15:02:48 2021
 
-Classes to generate subworkflows for calculating slab properties.
+Collection of Workflow to study the properties and structures of crystal slabs.
 
-@author: glosi000
+The module contains:
+    
+** SlabWF **:
+    General class to work on crystalline slabs, workflows are static method.
+    It includes the following methods:
+        - conv_slabthick_surfene
+        - conv_slabthick_alat
+        - _check_subwf_params
+        
+    Author: Gabriele Losi (glosi000)
+    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
+
 """
 
 __author__ = 'Gabriele Losi'
@@ -13,20 +24,17 @@ __copyright__ = 'Prof. M.C. Righi, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 2nd, 2021'
 
-#from fireworks import FiretaskBase, FWAction
-#from atomate.utils.utils import env_chk
 
 import os
 
 from fireworks import Workflow, Firework
 
 from triboflow.utils.database import NavigatorMP
-from triboflow.firetasks.slabs import (
+from triboflow.firetasks.run_slabs_wfs import (
     FT_StartThickConvo,
     FT_EndThickConvo
 )
-from triboflow.utils.errors import SubWFError
-from triboflow.tasks.io import read_json
+from triboflow.utils.utils import read_default_params
 
 currentdir = os.path.dirname(__file__)
 
@@ -35,9 +43,11 @@ currentdir = os.path.dirname(__file__)
 # ============================================================================
 
 class SlabWF:
-    """ Author: Gabriele Losi; Copyright 2021, Prof. M.C. Righi, UniBO.
-
-    Collection of static methods to manipulate slab structures.
+    """
+    Collection of static methods to create, cut, modify, merge, and generally
+    manipulate slab structures. It also contains methods to manage the 
+    optimization of a slab thickness, based on the evaluation of the surface 
+    energy and the lattice parameter.
     
     """
 
@@ -50,8 +60,7 @@ class SlabWF:
                                in_unit_planes=True, ext_index=0, conv_thr=0.025,
                                parallelization='low', recursion=False,
                                cluster_params={}):
-        """ Author: Gabriele Losi; Copyright 2021, Prof. M.C. Righi, UniBO.
-
+        """ 
         Function to set the computational and physical parameters and start a 
         workflow to converge the thickness of the provided slabs.
 
@@ -125,8 +134,7 @@ class SlabWF:
 
     @staticmethod
     def conv_slabthick_alat():        
-        """ Author: Gabriele Losi; Copyright 2021, Prof. M.C. Righi, UniBO.
-
+        """
         Subworkflow to converge the slab thickness by converging the lattice
         parameters. Not implemented yet.
         """
@@ -135,11 +143,9 @@ class SlabWF:
     @staticmethod
     def _check_subwf_params(self, structure, mp_id, miller, functional, db_file, 
                             comp_params, cluster_params):
-        """ Author: Gabriele Losi; Copyright 2021, Prof. M.C. Righi, UniBO.
+        """
+        Check if the Firetasks parameters are correct and print information.
 
-        Check if the parameters passed to the Firetasks are correct or not and
-        print information.
-        ** This is a temporary method, to be refactored more logically. **
         """
 
         # Check if the chemical formula passed is the same on MP database
@@ -181,20 +187,3 @@ class SlabWF:
                   'results = find_data({} + ".slab_data", dict("mpid": {}, '
                   '"miller": {}))\n'
                   'pprint.pprint(results)\n'.format(db_file, functional, mp_id, miller))
-
-def read_default_params(default_file, default_key, dict_params):
-
-    defaults = read_json(default_file)
-    defaults = defaults[default_key]
-    params = {}
-
-    if not set(dict_params.keys()).issubset(set(defaults.keys())):
-        raise SubWFError("The values passed as dictionary params are not known. "
-                         "Allowed values for {}, read in {}: {}".format(
-                             default_key, default_file, defaults.keys()))
-
-    # Set the parameters, passed by input or default values
-    for key, value in defaults.items():
-        params[key] = dict_params.get(key, value)
-    
-    return params

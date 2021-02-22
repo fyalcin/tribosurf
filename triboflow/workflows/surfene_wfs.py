@@ -3,9 +3,20 @@
 """
 Created on Tue Feb  9 14:47:15 2021
 
-Workflows for calculating or converging the surface energy of a slab.
+Workflows for calculating and converging the surface energy of a slab.
 
-@author: glosi000
+The module contains:
+    
+** SurfEneWF **:
+    General class to work on crystalline slabs, workflows are static method.
+    It includes the following methods:
+        - conv_slabthick_surfene
+        - conv_slabthick_alat
+        - _check_subwf_params
+        
+    Author: Gabriele Losi (glosi000)
+    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
+
 """
 
 __author__ = 'Gabriele Losi'
@@ -13,21 +24,26 @@ __copyright__ = 'Prof. M.C. Righi, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 9th, 2021'
 
-from uuid import uuid4
 
 import numpy as np
 from fireworks import Workflow, Firework
 
-from triboflow.firetasks.surfene import FT_SurfaceEnergy
-from triboflow.utils.errors import SubWFError
+from triboflow.utils.utils import create_tags, get_miller_str
 from triboflow.firetasks.slabs import (
     FT_GenerateSlabs, 
     FT_RelaxStructure, 
     FT_MoveTagResults
 )
+from triboflow.firetasks.surfene import FT_SurfaceEnergy
+from triboflow.utils.errors import SubWFError
 
 
 class SurfEneWF:
+    """
+    Collection of static methods to calculate the surface energy of a slab. 
+    It also contains methods to converge the surface energy of a slab.
+    
+    """
 
     @staticmethod
     def conv_surface_energy(structure, mp_id, miller, functional='PBE', spec={},
@@ -180,17 +196,3 @@ class SurfEneWF:
         wf = Workflow(wf_list, links, name="Converge surface energy WF")
 
         return wf
-
-def create_tags(prefix):
-
-    # Create a list of tags
-    if isinstance(prefix, list):
-        tag = [n + '_' + str(uuid4()) for n in prefix]
-
-    else:
-        tag = prefix + '_' + str(uuid4())
-    
-    return tag
-
-def get_miller_str(miller):
-    return ''.join(str(s) for s in miller)
