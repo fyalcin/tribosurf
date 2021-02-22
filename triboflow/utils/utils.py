@@ -73,7 +73,7 @@ def read_runtask_params(obj, fw_spec, required_params, optional_params,
     Parameters
     ----------
     obj : Firetask object
-        Instance of a Firetask-derived class, i.e. inherited from FireTaskBase.
+        Instance of a Firetask-derived class, i.e. inherited from FiretaskBase.
         It is necessary to read the arguments passed as input by the user.
 
     fw_spec : dict
