@@ -105,6 +105,7 @@
       ],
       "struct_kind":"bulk",
       "override":false,
+      "tag_key":"task_label",
       "cluster_params":null
    },
    "SurfaceEnergy":{

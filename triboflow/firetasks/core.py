@@ -168,7 +168,7 @@ class FT_MoveTagResults(FiretaskBase):
     required_params = ['mp_id', 'collection_from', 'collection_to', 'tag']
     optional_params = ['db_file', 'database_from', 'database_to', 'miller',
                        'entry_check', 'entry_to', 'entry_from', 'struct_kind', 
-                       'override', 'cluster_params']
+                       'override', 'tag_key', 'cluster_params']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -203,11 +203,9 @@ class FT_MoveTagResults(FiretaskBase):
     def check_struct(self, p):
         
         # Check if collection does exist
-        MoveTagResultsError.check_collection(p['collection'])
+        MoveTagResultsError.check_collection(p['collection_to'])
 
-        if p['entry_check'] is None:
-            is_done = False
-        else:
+        if p['entry_check'] is not None:
             # Retrieve the structure from the Database
             structure = retrieve_from_db(db_file=p['db_file'], 
                                          database=p['database'], 
@@ -216,9 +214,11 @@ class FT_MoveTagResults(FiretaskBase):
                                          miller=p['miller'],
                                          entry=p['entry_check'],
                                          pymatgen_obj=False)
-        
             # Check if the calculation is already done
             is_done = False if (structure is None or not bool(structure)) else False
+            
+        else:
+            is_done = False
 
         return is_done
     
@@ -228,7 +228,8 @@ class FT_MoveTagResults(FiretaskBase):
         vasp_calc, info = retrieve_from_tag(db_file=p['db_file'],
                                             collection=p['collection_from'],
                                             tag=p['tag'],
-                                            entry=p['entry_tag'],
+                                            tag_key=p['tag_key'],
+                                            entry=p['entry_from'],
                                             database=p['database_from'])
         return vasp_calc, info
     
@@ -236,11 +237,11 @@ class FT_MoveTagResults(FiretaskBase):
 
         # Dictionaries are stored in entry_to[i]/entry_from[i]
         entry = []
-        for n, n_t in zip(list(p['entry']), list(p['entry_tag'])):
+        for n, n_t in zip(list(p['entry_to']), list(p['entry_from'])):
             entry.append(list(n).append(list(n_t)[-1]))
         
         # Prepare the list of dictionaries to be stored in the database
-        info_dict = write_multiple_dict_for_db(info, entry)
+        info_dict = write_multiple_dict(info, entry)
     
         # Prepare the database and options where to store data
         nav = Navigator(db_file=p['db_file'], high_level=p['database_to'])
