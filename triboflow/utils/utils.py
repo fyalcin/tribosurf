@@ -385,29 +385,43 @@ def write_multiple_dict(data, entry):
 # Retrieve structure and VASP output from DB
 # ============================================================================
 
-def retrieve_from_db(db_file, mp_id, collection, database=None, 
+def retrieve_from_db(mp_id, collection, db_file=None, database=None, 
                      miller=None, entry=None, is_slab=False, pymatgen_obj=True):
     """
     [summary]
 
     Parameters
     ----------
-    db_file : [type]
-        [description]
-    mp_id : [type]
-        [description]
-    collection : [type]
-        [description]
-    database : [type], optional
-        [description], by default None
-    miller : [type], optional
-        [description], by default None
-    entry : [type], optional
-        [description], by default None
+    mp_id : str
+        MP ID from the Materials Project, identify a material.
+
+    collection : str
+        Collection in the database to parse through.
+
+    db_file : str or None, optional
+        Location of the database. If it is None, it will be searched for a
+        'localhost' on the hosting machine. The default is None.
+
+    database : str or None, optional
+        Database toquery. The default is None.
+
+    miller : list, optional
+        Miller index identifying the orientation of the slab. If it is not 
+        None, it can be used as an option as filter together with `mp_id`.
+        The default is None.
+
+    entry : str or list or None, optional
+        Key or list of keys to be used to extract a piece of information from 
+        the `vasp_calc` dictionary. The default is None.
+
     is_slab : bool, optional
-        [description], by default False
+        Recognize the type of structure to convert a Structure or Slab
+        dictionary back to a pymatgen object, by applying the `.from_dict`
+        method. Meaninful only when `pymatgen_obj=True`. The default is False.
+
     pymatgen_obj : bool, optional
-        [description], by default True
+        Decide to return a pymatgen object or a dictionary. The default is 
+        True.
 
     Returns
     -------
@@ -439,32 +453,50 @@ def retrieve_from_db(db_file, mp_id, collection, database=None,
 
     return structure
 
-def retrieve_from_tag(db_file, collection, tag, entry=None, database=None):
+def retrieve_from_tag(collection, tag, tag_key='task_label', entry=None, 
+                      db_file=None, database=None):
     """
-    [summary]
+    Retrieve a dictionary field out of the database based on the combination
+    {tag_key : tag} as filter. Useful to retrieve quickly the results of a 
+    VASP simulation run with Atomate and typically stored in the low level DB.
 
     Parameters
     ----------
-    db_file : [type]
-        [description]
-    collection : [type]
-        [description]
-    tag : [type]
-        [description]
-    entry : [type], optional
-        [description], by default None
-    database : [type], optional
-        [description], by default None
+    collection : str
+        Collection in the database to parse through.
+
+    tag : any python object
+        Object to be found within the database to identify the correct field.
+    
+    tag_key : str, optional
+        Dict key to filter the fields of the dictionary retrieved from the 
+        database. The default is 'task_label'.
+        
+    entry : str or list or list of lists or None, optional
+        Key or list of keys to be used to extract a piece of information or 
+        multiple values from the `vasp_calc` dictionary. The default is None.
+
+    db_file : str or None
+        Location of the database. If it is None, it will be searched for a
+        'localhost' on the hosting machine. The default is None.
+
+    database : str or None, optional
+        Database toquery. The default is None.
 
     Returns
     -------
-    [type]
-        [description]
+    vasp_calc : dict
+        Dictionary field retrieved from `database` in `db_file`.
+    
+    info : any python object
+        Content of the `vasp_calc` dictionary, read using entry as a key or
+        a list of nested keys. If `entry=None` it returns None.
+
     """
 
     # Call the navigator and retrieve the simulation data from tag
     nav = Navigator(db_file=db_file, high_level=database)
-    vasp_calc = nav.find_data(collection, {'task_label': tag})
+    vasp_calc = nav.find_data(collection, {tag_key: tag})
     
     # Retrieve the correct dictionary and obtain the structure
     info = None
