@@ -147,7 +147,7 @@ class FT_SlabOptThick(FiretaskBase):
     optional_params = ['db_file', 'low_level', 'high_level', 'conv_kind',
                        'relax_type', 'thick_min', 'thick_max', 'thick_incr',
                        'vacuum', 'in_unit_planes', 'ext_index', 'conv_thr',
-                       'parallelization', 'bulk_entry', 'slab_entry']
+                       'parallelization', 'bulk_entry', 'slab_entry', 'cluster_params']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
