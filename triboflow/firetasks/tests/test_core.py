@@ -18,17 +18,17 @@ from triboflow.firetasks.core import FT_MoveTagResults
 
 # Define input parameters
 mp_id = 'mp-126'
-collection_from = 'tasks'
-collection_to = 'PBE.bulk_data'
+collection_from = "tasks"
+collection_to = "PBE.slab_data"
 tag = True
-tag_key = 'transfer_test'
+tag_key = "transfer_test"
 db_file = None
 database_from = None
 database_to = 'tribchem'
-miller = [1, 2, 3]
+miller = [0, 1, 2]
 entry_check = None
-entry_to = ['test', 'data', 'energy']
-entry_from = ['data', 'energy']
+entry_to = [['test', 'energy'], ['test', 'energy2'], ['test', 'energy3']]
+entry_from = [['data', 'energy'], ['data', 'energy2'], ['data', 'energy']]
 override = False
 cluster_params = {}
 

@@ -126,36 +126,36 @@ class SurfEneWF:
                                      check_key='relaxed')
 
             ft_2 = FT_MoveTagResults(mp_id=mp_id,
-                                    collection_from=functional+'.slab_data',
-                                    collection_to=functional+'.slab_data',
-                                    db_file=db_file,
-                                    database_from=low_level,
-                                    database_to=high_level,
-                                    miller=miller,
-                                    entry_check=[
-                                        ['thickness', 
-                                        'data_' + str(thk), 
-                                        'calc_output']
-                                        ],
-                                    entry_to=[
-                                        ['thickness', 
+                                     collection_from=functional+'.slab_data',
+                                     collection_to=functional+'.slab_data',
+                                     db_file=db_file,
+                                     database_from=low_level,
+                                     database_to=high_level,
+                                     miller=miller,
+                                     entry_check=[
+                                         ['thickness', 
                                          'data_' + str(thk), 
-                                         'calc_output'] * 9
-                                        ],
-                                    entry_from=[
-                                        ['output', 'structure'],
-                                        ['nsites'],
-                                        ['output', 'density'],
-                                        ['output', 'energy'],
-                                        ['output', 'energy_per_atom' ],
-                                        ['output', 'bandgap'],
-                                        ['output', 'forces'],
-                                        ['output', 'stresses'],                                         
-                                        ['_id']
-                                        ],
-                                    struct_kind='slab',
-                                    override=True,
-                                    cluster_params=cluster_params)
+                                         'calc_output']
+                                         ],
+                                     entry_to=[
+                                         ['thickness', 
+                                          'data_' + str(thk), 
+                                          'calc_output'] * 9
+                                         ],
+                                     entry_from=[
+                                         ['output', 'structure'],
+                                         ['nsites'],
+                                         ['output', 'density'],
+                                         ['output', 'energy'],
+                                         ['output', 'energy_per_atom' ],
+                                         ['output', 'bandgap'],
+                                         ['output', 'forces'],
+                                         ['output', 'stresses'],                                         
+                                         ['_id']
+                                         ],
+                                     struct_kind='slab',
+                                     override=True,
+                                     cluster_params=cluster_params)
 
             fw = Firework([ft_1, ft_2],
                           spec=spec,

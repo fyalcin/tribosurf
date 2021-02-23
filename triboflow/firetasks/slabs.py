@@ -8,6 +8,7 @@ Firetasks to generate and manipulate crystalline slabs.
 The module contains the following Firetasks:
 
 ** Slab generation **
+
     - FT_GenerateSlabs
     Generate a list of slabs out of a structure provided as input and store
     them in a given location inside the database.
