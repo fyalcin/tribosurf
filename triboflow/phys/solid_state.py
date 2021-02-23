@@ -28,7 +28,7 @@ from pymatgen.core.surface import SlabGenerator
 # Functions to deal with crystalline slabs
 # ============================================================================
 
-def orient_bulk(structure, miller, thickness, primitive=False, lll_reduce=True, 
+def orient_bulk(structure, miller, thickness, primitive=False, lll_reduce=False, 
                 in_unit_planes=True):
     """
     Orient a bulk unit cell along a direction identified by Miller indexes.
@@ -36,20 +36,20 @@ def orient_bulk(structure, miller, thickness, primitive=False, lll_reduce=True,
     """
     
     # Generate the oriented bulk
-    slabgen = SlabGenerator(initial_structure = structure,
-                            miller_index = miller,
+    slabgen = SlabGenerator(initial_structure=structure,
+                            miller_index=miller,
                             primitive=primitive,
                             lll_reduce=lll_reduce,
                             in_unit_planes=in_unit_planes,
                             min_slab_size=thickness,
                             min_vacuum_size=0)
     
-    bulk_miller = slabgen.oriented_unit_cell()
+    bulk_miller = slabgen.oriented_unit_cell
 
     return bulk_miller
 
 def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
-                   center_slab=True, primitive=False, lll_reduce=True,
+                   center_slab=True, primitive=False, lll_reduce=False,
                    in_unit_planes=True,  ext_index=0, bonds=None, ftol=0.1, 
                    tol=0.1, repair=False, max_broken_bonds=0, symmetrize=False):
     """
@@ -85,8 +85,9 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
     for hkl, thk, vac in zip(miller, thickness, vacuum):
         # Case of an oriented bulk
         if thk == 0:
-            s = orient_bulk(structure, hkl, thick_bulk, in_unit_planes)
-        
+            s = orient_bulk(structure, hkl, thick_bulk, primitive, lll_reduce, 
+                            in_unit_planes)
+
         # Case of a slab
         else:
             slabgen = SlabGenerator(initial_structure=structure,
