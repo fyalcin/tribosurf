@@ -10,7 +10,7 @@ Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
 
 """
 
-from pymatgen.core.surface import Structure
+from pymatgen.core.structure import Structure
 from fireworks import Firework, Workflow, LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
 
@@ -21,16 +21,16 @@ from triboflow.utils.database import StructureNavigator
 # Define input parameters
 mp_id = 'mp-126'
 functional = 'PBE'
-miller = [1, 2, 3]
+miller = [[1, 0, 0]] * 7
 db_file = None
 high_level = 'tribchem'
 database = high_level
-thickness = 10
-thick_max = 14
+thickness = [0, 4, 6, 8, 10, 12, 14]
+thick_bulk = 4
 vacuum = 10
 ext_index = 0
 in_unit_planes = True
-slab_name = 'unrelaxed'
+entry = [['thickness', 'data_' + str(thk), 'unrelaxed'] for thk in thickness]
 
 # Call the Navigator and retrieve the bulk structure
 nav = StructureNavigator(db_file, high_level)
@@ -45,12 +45,12 @@ ft = FT_GenerateSlabs(structure=structure,
                       db_file=db_file,
                       database=database,
                       thickness=thickness,
-                      thick_bulk=thick_max,
+                      thick_bulk=thick_bulk,
                       vacuum=vacuum,
                       symmetrize=False,
                       ext_index=ext_index,
                       in_unit_planes=in_unit_planes,
-                      entry=slab_name)
+                      entry=entry)
 wf = Workflow([Firework([ft])])
 
 # Run the workflow

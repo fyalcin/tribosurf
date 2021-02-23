@@ -18,9 +18,10 @@ from triboflow.firetasks.surfene import FT_SurfaceEnergy
 
 # Define input parameters
 mp_id = 'mp-126'
-collection = "tasks"
+collection = "PBE.slab_data"
 miller = [1, 0, 0]
-entry = ['thickness', 'data_5']
+thickness = [0, 4, 6, 8, 10, 12, 14]
+entry = [['thickness', 'data_' + str(thk)] for thk in thickness]
 db_file = None
 database = "tribchem"
 
