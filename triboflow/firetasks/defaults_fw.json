@@ -62,7 +62,7 @@
       "db_file":null,
       "database":null,
       "thickness":4,
-      "thick_bulk":12,
+      "thick_bulk":4,
       "vacuum":10,
       "symmetrize":false,
       "ext_index":0,

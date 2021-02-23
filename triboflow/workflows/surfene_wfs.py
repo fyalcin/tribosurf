@@ -94,7 +94,7 @@ class SurfEneWF:
                                         db_file=db_file,
                                         database=low_level,
                                         thickness=thickness,
-                                        thick_bulk=thick_max,
+                                        thick_bulk=thick_min,
                                         vacuum=vacuum,
                                         ext_index=ext_index,
                                         in_unit_planes=in_unit_planes,
