@@ -474,7 +474,7 @@ def write_multiple_dict(data, entry, to_mongodb=True):
 # ============================================================================
 
 def retrieve_from_db(mp_id, collection, db_file=None, database=None, 
-                     miller=None, entry=None, is_slab=False, pymatgen_obj=True):
+                     miller=None, entry=None, is_slab=False, pymatgen_obj=False):
     """
     [summary]
 

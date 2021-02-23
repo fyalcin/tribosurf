@@ -12,8 +12,12 @@
       "in_unit_planes":true,
       "ext_index":0,
       "conv_thr":0.025,
+      "parallelization": "low",
       "bulk_entry":"structure_fromMP",
-      "slab_entry":null
+      "slab_entry":null,
+      "cluster_params":{
+      
+      }
    },
    "StartThickConvo":{
       "db_file":null,

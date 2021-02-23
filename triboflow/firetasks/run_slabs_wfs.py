@@ -48,7 +48,9 @@ from fireworks import explicit_serialize, FiretaskBase, FWAction
 from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.utils import (
     read_runtask_params,
-    get_one_info_from_dict
+    read_default_params,
+    get_one_info_from_dict,
+    retrieve_from_db
 )
 from triboflow.utils.errors import SlabOptThickError
 
@@ -145,7 +147,7 @@ class FT_SlabOptThick(FiretaskBase):
     optional_params = ['db_file', 'low_level', 'high_level', 'conv_kind',
                        'relax_type', 'thick_min', 'thick_max', 'thick_incr',
                        'vacuum', 'in_unit_planes', 'ext_index', 'conv_thr',
-                       'bulk_entry', 'slab_entry']
+                       'parallelization', 'bulk_entry', 'slab_entry']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -155,41 +157,88 @@ class FT_SlabOptThick(FiretaskBase):
         dfl = currentdir + '/defaults_fw.json'
         p = read_runtask_params(self, fw_spec, self.required_params, self.optional_params,
                                 default_file=dfl, default_key="SlabOptThick")
-        
-        # Retrieve the bulk information from the high level DB
-        nav_struct = StructureNavigator(p['db_file'], p['high_level'])
-        slab = nav_struct.get_slab_from_db(mp_id=p['mp_id'], 
-                                           functional=p['functional'], 
-                                           miller=p['miller'])
-        
-        # If data is saved elsewhere from standard position
-        if p['slab_entry'] is not None:
-            slab = get_one_info_from_dict(slab, p['slab_entry'])
+
+        # Check if a convergence calculation of the slab thickness is present
+        is_data, comp_params = self.is_data(p)
 
         # Start a subworkflow to converge the thickness if not already done
-        stop_convergence = slab.get('opt_thickness', None)
+        if not is_data:
+            bulk = self.get_bulk(p)
 
-        if not stop_convergence:
-            
-            # Retrieve the desired bulk structure
-            bulk = nav_struct.get_slab_from_db(mp_id=p['mp_id'], 
-                                               functional=p['functional'])
-            bulk = get_one_info_from_dict(bulk, p['bulk_entry'])
-
-            structure = Structure.from_dict(bulk.get('structure_fromMP'))
-            comp_params = slab.get('comp_params', {})
-
-            wf = self.select_slabthick_conv(structure=structure, 
-                                            comp_params=comp_params,
-                                            p=p)
+            # Create the subworkflow to run a convergence detour
+            wf = self.select_slabthick_conv(structure=bulk, fw_spec=fw_spec,
+                                            comp_params=comp_params, dfl=dfl, p=p)
 
             return FWAction(detours=wf, update_spec=fw_spec)
 
         # Continue the Workflow
         else:
             return FWAction(update_spec=fw_spec)
+    
+    def get_bulk(self, p):
+        """
+        Get the bulk structure from the database, to generate the slabs.
 
-    def select_slabthick_conv(self, structure, comp_params, p):
+        Parameters
+        ----------
+        p : dict
+            Input parameters of the Firetask.
+
+        Returns
+        -------
+        bulk : pymatgen.core.structure.Structure
+            pymatgen bulk structure
+        """
+
+        bulk = retrieve_from_db(p['mp_id'], collection=p['functional']+'.bulk_data',
+                                db_file=p['db_file'], entry=p['bulk_entry'], 
+                                is_slab=False, pymatgen_obj=True)
+        
+        return bulk
+    
+    def is_data(self, p, dfl):
+        """
+        Query the database, download the slab dictionary and check if an entry
+        for the optimal thickness already exists.
+
+        Parameters
+        ----------
+        p : dict
+            Input parameters of the Firetask.
+
+        Returns
+        -------
+        is_data : bool
+            True if a key named 'opt_thickness' is found in `entry`
+        
+        comp_params : dict
+            Computational parameters of the slab.
+
+        """
+        
+        # Retrieve the slab from the database
+        slab = retrieve_from_db(p['mp_id'], collection=p['functional']+'.slab_data',
+                                db_file=p['db_file'], miller=p['miller'], 
+                                entry=p['slab_entry'], pymatgen_obj=False)
+
+        if slab is not None:
+            # If the entry to be checked is not in first layer of the dictionary
+            if p['slab_entry'] is not None:
+                structure = get_one_info_from_dict(structure, p['slab_entry'])
+
+            # Check if an optimal thickness has been already calculated
+            is_data = structure.get('opt_thickness', None)
+
+            # Define the computational parameters of the slab
+            comp_params = slab.get('comp_params', {}) 
+
+        else:
+            is_data = False
+            comp_params = {}
+
+        return bool(is_data), comp_params
+
+    def select_slabthick_conv(self, structure, fw_spec, comp_params, dfl, p):
         """
         Select the desired subworkflow from the SlabWFs class, to converge the 
         slab thickness either by evaluating the surface energy or the lattice 
@@ -199,6 +248,11 @@ class FT_SlabOptThick(FiretaskBase):
         
         from triboflow.workflows.slabs_wfs import SlabWF
 
+        # Check for default values of comp_params and cluster_params
+        comp_params = read_default_params(dfl, 'comp_params', comp_params)
+        cluster_params = read_default_params(dfl, 'cluster_params', p['cluster_params'])
+
+        # Select the convergence function based on conv_kind
         if p['conv_kind'] == 'surfene':
             generate_wf = SlabWF.conv_slabthick_surfene
         elif p['conv_kind'] == 'alat':
@@ -207,14 +261,17 @@ class FT_SlabOptThick(FiretaskBase):
             raise SlabOptThickError("Wrong input argument for conv_kind. "
                                     "Allowed options: 'surfene', 'alat'")
 
-        wf = generate_wf(structure=structure, mp_id=p['mp_id'], 
+        # Generate the workflow
+        wf = generate_wf(structure=structure, mp_id=p['mp_id'], spec=fw_spec,
                          miller=p['miller'], functional=p['functional'], 
                          comp_params=p['comp_params'], db_file=p['db_file'],
                          low_level=p['low_level'], high_level=p['high_level'],
                          relax_type=p['relax_type'], thick_min=p['thick_min'], 
                          thick_max=p['thick_max'], thick_incr=p['thick_incr'], 
                          vacuum=p['vacuum'], in_unit_planes=p['in_unit_planes'],
-                         ext_index=p['ext_index'], conv_thr=p['conv_thr'])
+                         ext_index=p['ext_index'], conv_thr=p['conv_thr'],
+                         parallelization=p['parallelization'],
+                         cluster_params=cluster_params)
 
         return wf
 
@@ -328,23 +385,23 @@ class FT_StartThickConvo(FiretaskBase):
 
             if p['conv_kind'] == 'surfene':
                 wf = SurfEneWF.surface_energy(structure=p['structure'],
-                                            mp_id=p['mp_id'], 
-                                            miller=p['miller'], 
-                                            functional=p['functional'],
-                                            db_file=p['db_file'], 
-                                            low_level=p['low_level'],
-                                            high_level=p['high_level'],
-                                            relax_type=p['relax_type'],
-                                            comp_params=p['comp_params'],
-                                            thick_min=p['thick_min'], 
-                                            thick_max=p['thick_max'],
-                                            thick_incr=p['thick_incr'],
-                                            vacuum=p['vacuum'],
-                                            in_unit_planes=p['in_unit_planes'],
-                                            ext_index=p['ext_index'], 
-                                            parallelization=p['parallelization'],
-                                            recursion=p['recursion'],
-                                            cluster_params=p['cluster_params'])
+                                              mp_id=p['mp_id'], 
+                                              miller=p['miller'], 
+                                              functional=p['functional'],
+                                              db_file=p['db_file'], 
+                                              low_level=p['low_level'],
+                                              high_level=p['high_level'],
+                                              relax_type=p['relax_type'],
+                                              comp_params=p['comp_params'],
+                                              thick_min=p['thick_min'], 
+                                              thick_max=p['thick_max'],
+                                              thick_incr=p['thick_incr'],
+                                              vacuum=p['vacuum'],
+                                              in_unit_planes=p['in_unit_planes'],
+                                              ext_index=p['ext_index'], 
+                                              parallelization=p['parallelization'],
+                                              recursion=p['recursion'],
+                                              cluster_params=p['cluster_params'])
                 return wf
 
             else:
@@ -438,6 +495,7 @@ class FT_EndThickConvo(FiretaskBase):
         def analyze_data(self, data, index, case, p):
             """
             Analyze the data to understand if the convergence has been achieved.
+            Put it in the `high_level` db at the end of the process.
 
             Parameters
             ----------
