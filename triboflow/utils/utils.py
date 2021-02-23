@@ -25,6 +25,14 @@ The module contains the following functions:
 
     Author: Gabriele Losi (glosi000)
     Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
+    
+    - convert_dict_to_mongodb
+    
+    Author: Gabriele Losi (glosi000)
+    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
+    Credits: Code readapted from StackOverflow, Creative Commons licence 3.0
+    https://creativecommons.org/licenses/by-sa/3.0/
+    https://stackoverflow.com/questions/29267519/mongodb-update-dictionary-in-document
 
 ** Interaction with Database **:
     - retrieve_from_db
@@ -273,7 +281,65 @@ def get_multiple_info_from_dict(input_dict, entry):
     
     return info
 
-def write_one_dict(data, entry):
+def convert_dict_to_mongodb(input_dict):
+    """
+    Convert a dictionary to be suitable to the update_one method of pymongo.
+    This is necessary in order to avoid updating a dictionary by substituting
+    the existing one with the new one.
+
+    Parameters
+    ----------
+    input_dict : dict
+        Dictionary to be converted to the MongoDB style to update 
+
+    Returns
+    -------
+    output_dict : dict
+        Output dictionary which is now compliant to MongoDB. In this way you
+        can update entries containing dictionaries or nested dictionaries
+        without overwriting them.
+    
+    Examples
+    --------
+    Normally when you update nested dictionaries you substitute the first one
+    with the second, without having a "proper" updating, as you might intend.
+    
+    >>> dict1 = {'key': {'data_1': 5 }}
+    >>> dict2 = {'key': {'data_2': 2 }}
+    >>> dict2.update(dict1)
+    >>> dict2
+    {'key': {'data_1': 5}}
+    
+    If your intention was to have {'key': {'data_1': 5, 'data_2': 2}} the
+    operation failed. The same thing occur when updating a MongoDB entry.
+    To really update an existing (nested) dictionary and not overriding it run:
+
+    >>> convert_dict_to_mongodb(dict1)
+    {'key.data_1': 5}
+
+    """
+    
+    output_dict = {}
+    
+    for key, val in input_dict.items():
+        
+        if not isinstance(val, dict):
+            output_dict[key] = val
+            continue
+
+        for sub_key, sub_val in val.items():
+            new_key = '{}.{}'.format(key, sub_key)
+            output_dict[new_key] = sub_val
+            if not isinstance(sub_val, dict):
+                continue
+
+            output_dict.update(convert_dict_to_mongodb(output_dict))
+            if new_key in output_dict:
+                del output_dict[new_key]
+
+    return output_dict
+
+def write_one_dict(data, entry, to_mongodb=True):
     """
     Prepare an object by creating a dictionary with nested keys as provided by 
     entry. Useful to create a dictionary to update a Database fields.
@@ -303,6 +369,11 @@ def write_one_dict(data, entry):
                         }
                     }
 
+    to_mongodb : bool, optional
+        Decide whether to return a dictionary which is conformal to the queries
+        of MongoDB ($set), in order to really update the fields and not 
+        overwrite dictionaries.
+
     Returns
     -------
     dict
@@ -322,9 +393,13 @@ def write_one_dict(data, entry):
     else:
         WriteParamsError('Error in writing data, entry is wrong.')
     
+    # Convert the dictionary to suit MongoDB query
+    if to_mongodb:
+        d = convert_dict_to_mongodb(d)
+    
     return d
 
-def write_multiple_dict(data, entry):
+def write_multiple_dict(data, entry, to_mongodb=True):
     """
     Prepare multiple dictionaries containing the passed data. It is a wrapper of
     `write_one_dict` and works with a list of data as entry.
@@ -358,6 +433,11 @@ def write_multiple_dict(data, entry):
                         'key3': data[1]
                     }
                 ]
+    
+    to_mongodb : bool, optional
+        Decide whether to return a dictionary which is conformal to the queries
+        of MongoDB ($set), in order to really update the fields and not 
+        overwrite dictionaries.
 
     Returns
     -------
@@ -370,13 +450,16 @@ def write_multiple_dict(data, entry):
         if all([isinstance(n, list) for n in entry]) and isinstance(data, list) and len(data) == len(entry):
             d = []
             for i, n in enumerate(entry):
+                # Convert the dictionary to suit MongoDB query
+                if to_mongodb:
+                    d = convert_dict_to_mongodb(d)
                 d.append(write_one_dict(data[i], n))
 
         else:
-            d = write_one_dict(data)
+            d = write_one_dict(data, entry)
 
     else:
-        d = write_one_dict(data)
+        d = write_one_dict(data, entry)
     
     return d
 
@@ -495,7 +578,7 @@ def retrieve_from_tag(collection, tag, tag_key='task_label', entry=None,
     """
 
     # Call the navigator and retrieve the simulation data from tag
-    nav = Navigator(db_file=db_file, high_level=database)
+    nav = Navigator(db_file=db_file, high_level=database)    
     vasp_calc = nav.find_data(collection, {tag_key: tag})
     
     # Retrieve the correct dictionary and obtain the structure
