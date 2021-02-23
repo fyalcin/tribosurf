@@ -24,14 +24,17 @@ __date__ = 'February 2nd, 2021'
 
 import os
 
-import numpy as np
 from fireworks.utilities.fw_utilities import explicit_serialize
 from fireworks import FiretaskBase, FWAction
 
 from triboflow.phys.surface_energy import calculate_surface_energy
 
 from triboflow.utils.database import Navigator
-from triboflow.firetasks.slabs import read_runtask_params, get_multiple_info_from_struct_dict, write_multiple_dict_for_db
+from triboflow.utils.utils import (
+    read_runtask_params,
+    get_multiple_info_from_dict,
+    write_multiple_dict
+)
 from triboflow.utils.errors import SurfaceEnergyError
 
 currentdir = os.path.dirname(__file__)
@@ -67,39 +70,37 @@ class FT_SurfaceEnergy(FiretaskBase):
 
         return FWAction(update_spec=fw_spec)        
 
-        def get_surfene(self, p):
+    def get_surfene(self, p):
         
-            self._check_errors(p)
-                
-            # Call the navigator for retrieving the dictionary out of the DB
-            nav = Navigator(db_file=p['db_file'], high_level=p['database'])
-            dic = nav.find_data(collection=p['collection'], 
-                                filter={'mpid': p['mp_id'], 'miller': p['miller']})
+        # Check for errors
+        #self._check_errors(p)
             
-            # Extract the output dictionary containing energies and get surfene
-            output_list = get_multiple_info_from_struct_dict(dic, p['entry'])
-            surfene = calculate_surface_energy(output_list, sym_surface=True)
-
-            return surfene
+        # Call the navigator for retrieving the dictionary out of the DB
+        nav = Navigator(db_file=p['db_file'], high_level=p['database'])
+        dic = nav.find_data(collection=p['collection'], 
+                            filter={'mpid': p['mp_id'], 'miller': p['miller']})
         
-        def store_to_db(self, surfene, p):
+        # Extract the output dictionary containing energies and get surfene
+        output_list = get_multiple_info_from_dict(dic, p['entry'])
+        surfene = calculate_surface_energy(output_list, sym_surface=True)
 
-            # Extract the surface energies from the provided dictionary entry
-            entry = []
-            for n in p['entry'][1:]:
-                entry.append(n.append('surface_energy'))
-            
-            # Prepare the list of dictionaries to be stored in the database
-            info_dict = write_multiple_dict_for_db(surfene, entry)
+        return surfene
+    
+    def store_to_db(self, surfene, p):
+
+        # Extract the surface energies from the provided dictionary entry
+        entry = p['entry'][1:]
+        _ = [n.append('surface_energy') for n in entry]  # Add nested key
         
-            # Prepare the database and options where to store data
-            nav = Navigator(db_file=p['db_file'], high_level=p['database_to'])
- 
-            # Effectively store the data
-            for d in info_dict:
-                nav.update_data(p['collection'], 
-                                {'mpid': p['mp_id'], 'miller': p['miller']}, 
-                                {'$set': d})
+        # Prepare the list of dictionaries to be stored in the database      
+        info_dict = write_multiple_dict(surfene, entry)
+    
+        # Prepare the database and store the data one by one
+        nav = Navigator(db_file=p['db_file'], high_level=p['database'])
+        for d in info_dict:
+            nav.update_data(p['collection'], 
+                            {'mpid': p['mp_id'], 'miller': p['miller']}, 
+                            {'$set': d})
 
-        def _check_errors(self, p):
-            SurfaceEnergyError.check_collection(p['collection'])
+    def _check_errors(self, p):
+        SurfaceEnergyError.check_collection(p['collection'])
