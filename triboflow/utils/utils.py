@@ -452,14 +452,13 @@ def write_multiple_dict(data, entry, to_mongodb=True):
             for i, n in enumerate(entry):
                 # Convert the dictionary to suit MongoDB query
                 if to_mongodb:
-                    d = convert_dict_to_mongodb(d)
-                d.append(write_one_dict(data[i], n))
+                    d.append(write_one_dict(data[i], n, to_mongodb))
 
         else:
-            d = write_one_dict(data, entry)
+            d = write_one_dict(data, entry, to_mongodb)
 
     else:
-        d = write_one_dict(data, entry)
+        d = write_one_dict(data, entry, to_mongodb)
     
     return d
 
