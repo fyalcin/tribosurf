@@ -3,7 +3,7 @@
 """
 Created on Mon Feb 22 16:56:54 2021
 
-The the Firetasks of the `core` module.
+Test the Firetasks of the `core` module.
 
 Author: Gabriele Losi (glosi000)
 Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
