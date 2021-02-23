@@ -10,7 +10,6 @@ Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
 
 """
 
-from pymatgen.core.surface import Structure
 from fireworks import Firework, Workflow, LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
 

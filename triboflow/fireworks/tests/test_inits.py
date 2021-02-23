@@ -3,9 +3,11 @@
 """
 Created on Mon Feb  1 09:14:37 2021
 
-Test the initializing Firetasks for setting up a Workflow.
+Test the initializing Fireworks for setting up a Workflow.
 
-@author: glosi000
+Author: Gabriele Losi (glosi000)
+Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
+
 """
 
 from fireworks import LaunchPad, Workflow
