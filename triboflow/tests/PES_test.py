@@ -9,6 +9,7 @@ Created on Mon Dec 21 14:53:59 2020
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import Slab
 from fireworks import LaunchPad
+from fireworks.core.rocket_launcher import rapidfire
 from triboflow.workflows.subworkflows import calc_pes_swf
 from triboflow.utils.structure_manipulation import slab_from_structure
 from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
@@ -44,10 +45,8 @@ comp_params = {'functional': functional,
                'k_dens': 2000
                }
 
-WF = calc_pes_swf(top_slab=slab, bottom_slab=slab, comp_parameters=comp_params,
-                  file_output=True, output_dir='/home/fs71332/mwo4',
-                  remote_copy=True, server='vsc4.vsc.ac.at',  user='mwo4', 
-                  port=27)
+WF = calc_pes_swf(top_slab=slab, bottom_slab=slab, comp_parameters=comp_params)
 
 lpad = LaunchPad.auto_load()
 lpad.add_wf(WF)
+rapidfire(lpad)

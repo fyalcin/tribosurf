@@ -50,7 +50,7 @@ class FT_StartSlabRelaxSWF(FiretaskBase):
         Relaxation type for the get_custom_vasp_relax_settings helper_function.
     bulk_struct_name : str, optional
         Name of the bulk structure in the bulk database (material is
-        identified by mp_id, but there might be differnt structures of the
+        identified by mp_id, but there might be different structures of the
         same material.) Defaults to 'structure_equiVol'.
     slab_out_name : str, optional
         Name of the slab to be put in the DB (identified by mp_id and miller).
