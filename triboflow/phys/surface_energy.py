@@ -36,7 +36,7 @@ def calculate_surface_energy(output_list, sym_surface=True):
         List containing the surface energies calculated from output_list.
     """
 
-    # Take out the energy per atom of the bulk
+    # Take out the energy per atom of the bulk    
     energy_per_atom = output_list[0]['energy_per_atom']
 
     # Loop over the slab elements of output_list and calculate surface energy
@@ -44,10 +44,10 @@ def calculate_surface_energy(output_list, sym_surface=True):
     for d in output_list[1:]:
         energy = d['energy']
         nsites = d['nsites']
-        surfene.append(energy - energy_per_atom * nsites)
+        surfene = np.append(surfene, energy - energy_per_atom * nsites)
 
     # Divide the surface energies by two if the surfaces are symmetric
     if sym_surface:
         surfene /= 2.
 
-    return surfene
+    return np.array(surfene)
