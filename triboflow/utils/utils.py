@@ -18,8 +18,8 @@ The module contains the following functions:
     Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
 
 ** Manipulate dictionaries **:
-    - get_one_info_from_struct_dict
-    - get_multiple_info_from_struct_dict
+    - get_one_info_from_dict
+    - get_multiple_info_from_dict
     - write_one_dict_for_db
     - write_multiple_dict_for_db
 
@@ -59,6 +59,7 @@ __date__ = 'February 22nd, 2021'
 import json
 from uuid import uuid4
 
+import numpy as np
 from pymatgen.core.surface import Structure, Slab
 from atomate.utils.utils import env_chk
 
@@ -447,7 +448,12 @@ def write_multiple_dict(data, entry, to_mongodb=True):
 
     # Extract many info at the same time 
     if isinstance(entry, list):
-        if all([isinstance(n, list) for n in entry]) and isinstance(data, list) and len(data) == len(entry):
+        
+        bool_1 = all([isinstance(n, list) for n in entry])  # All n are lists
+        bool_2 = isinstance(data, (list, np.ndarray))  # Data is list-like
+        bool_3 = len(data) == len(entry)  # Same length
+
+        if bool_1 and bool_2 and bool_3:
             d = []
             for i, n in enumerate(entry):
                 # Convert the dictionary to suit MongoDB query
