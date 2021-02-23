@@ -50,6 +50,7 @@ from triboflow.utils.database import Navigator
 from triboflow.utils.utils import (
     read_runtask_params,
     read_default_params,
+    convert_dict_to_mongodb,
     write_multiple_dict,
     select_struct_func,
     retrieve_from_db,
@@ -193,7 +194,7 @@ class FT_MoveTagResults(FiretaskBase):
             self.store_results(info, p)
 
             # Manage stdout, save a local poscar with results
-            wf = self.user_output(vasp_calc, p)
+            wf = self.user_output(vasp_calc, p, dfl)
             if wf is not None:
                 return FWAction(detours=wf, update_spec=fw_spec)
         
@@ -234,45 +235,44 @@ class FT_MoveTagResults(FiretaskBase):
         return vasp_calc, info
     
     def store_results(self, info, p):
-
-        # Dictionaries are stored in entry_to[i]/entry_from[i]
-        entry = []
-        for n, n_t in zip(list(p['entry_to']), list(p['entry_from'])):
-            entry.append(list(n).append(list(n_t)[-1]))
         
         # Prepare the list of dictionaries to be stored in the database
-        info_dict = write_multiple_dict(info, entry)
+        info_dict = write_multiple_dict(info, p['entry_to'])  
+
+        if not isinstance(info_dict, list):
+            info_dict = [(info_dict)]
     
         # Prepare the database and options where to store data
         nav = Navigator(db_file=p['db_file'], high_level=p['database_to'])
         filter = {'mpid': p['mp_id']}
         if p['miller'] is not None:
-            filter.update({'miller': p['miller']})
-    
-        # Effectively store the data
+            filter.update({'miller': p['miller']})        
+
+        # Finally store the data
         for d in info_dict:
-            nav.update_data(p['collection_to'], filter, {'$set': d})
+            nav.update_many_data(p['collection_to'], filter, {'$set': d}, upsert=True)
     
     def user_output(self, vasp_calc, p, dfl):
 
+        # Get cluster params and set missing values
         cluster_params = p['cluster_params']
-        
-        # Set missing values in cluster parameters
         cluster_params = read_default_params(default_file=dfl, 
                                              default_key="cluster_params", 
-                                             cluster_params=cluster_params)
-
-        func = select_struct_func(p['struct_kind'])
-        structure = func.from_dict(vasp_calc['output']['structure'])
-
-        # Output to screen
-        print('')
-        print('Relaxed output structure as pymatgen.surface.Slab dictionary:')
-        pprint(structure.as_dict())
-        print('')
+                                             dict_params=cluster_params)
         
-        # handle file output:
-        if p['file_output']:
+        # Handle structure file output:
+        # BE CAREFUL: it works only with structures elements
+        if cluster_params['file_output']:
+            
+            # Recover the structure from the dictionary
+            func = select_struct_func(p['struct_kind'])
+            structure = func.from_dict(vasp_calc['output']['structure'])
+            
+            # Output to screen
+            print('')
+            print('Relaxed output structure as pymatgen.surface.Slab dictionary:')
+            pprint(structure.as_dict())
+            print('')
             
             # Define POSCAR and dictionary ouput names
             prefix = p['mp_id'] + p['struct_kind']
