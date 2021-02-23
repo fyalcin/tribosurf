@@ -17,14 +17,17 @@ NiO_struct = MPRester().get_structure_by_material_id('mp-19009')
 Fe_struct = MPRester().get_structure_by_material_id('mp-13')
 
 
-def MakeMagneticStandardStructure(struct):    
+def make_magnetic_standard_structure(struct):
+
     conv_struct = sga(struct).get_conventional_standard_structure()
     my_lattice = struct.lattice
     conv_lattice = conv_struct.lattice
-    #Get the tranisition matrix from the initial to the conventional lattice
+
+    # Get the tranisition matrix from the initial to the conventional lattice
     TM_MyToConv = np.dot(my_lattice.inv_matrix, conv_lattice.matrix)
-    #This scaling factor is not working generally! It will approach inf if one
-    #or more entries in the TM are close to 0!
+    
+    # This scaling factor is not working generally! It will approach inf if one
+    # or more entries in the TM are close to 0!
     scale_factor = 1/np.amin(np.absolute(TM_MyToConv))
     SC_matrix = TM_MyToConv*scale_factor
   
@@ -43,5 +46,5 @@ def MakeMagneticStandardStructure(struct):
                                properties={'magmom': mag_moment})
     return conv_supercell
 
-#Fe_conv = MakeMagneticStandardStructure(Fe_struct)
-NiO_conv = MakeMagneticStandardStructure(NiO_struct)
+#Fe_conv = make_magnetic_standard_structure(Fe_struct)
+NiO_conv = make_magnetic_standard_structure(NiO_struct)

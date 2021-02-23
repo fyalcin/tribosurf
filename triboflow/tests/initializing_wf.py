@@ -8,7 +8,7 @@ Created on Fri Jun 19 16:15:02 2020
 
 from fireworks import LaunchPad, Firework, Workflow
 from fireworks.core.rocket_launcher import rapidfire
-from triboflow.fireworks.common import CheckInputsFW
+from triboflow.fireworks.common import check_inputs_fw
 
 
 inputs = {'material_1': {'formula': 'C',
@@ -34,11 +34,11 @@ inputs = {'material_1': {'formula': 'C',
                               }
           }
 
-Start_WF_FW = CheckInputsFW(mat1_params = inputs['material_1'],
-                            mat2_params = inputs['material_2'],
-                            compparams = inputs['computational_params'],
-                            interface_params = inputs['interface_params'],
-                            FW_name = 'Check input parameters FW')
+Start_WF_FW = check_inputs_fw(mat1_params=inputs['material_1'],
+                              mat2_params=inputs['material_2'],
+                              compparams=inputs['computational_params'],
+                              interface_params=inputs['interface_params'],
+                              FW_name='Check input parameters FW')
 
 WF = Workflow.from_Firework(Start_WF_FW, name='Test Workflow')
 

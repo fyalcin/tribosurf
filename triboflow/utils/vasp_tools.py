@@ -4,7 +4,7 @@ import subprocess
 from pymatgen.io.vasp.inputs import Kpoints
 from pymatgen.io.vasp.sets import MPRelaxSet, MPScanRelaxSet, MPStaticSet
 
-from triboflow.utils.file_manipulation import RemoveMatchingFiles
+from triboflow.utils.file_manipulation import remove_matching_files
 
 def get_emin(potcar):
     """
@@ -36,7 +36,7 @@ def get_emin(potcar):
     os.remove('temp_potcar')
     return max(emin)
  
-def GetGeneralizedKmesh(structure, k_dist, RemoveSymm=False):
+def get_generalized_kmesh(structure, k_dist, RemoveSymm=False):
     """Get a generalized Monkhorst Pack mesh for a given structure.
     
     Prepares the necessary files (POSCAR, PRECALC, and, if the structure has
@@ -82,7 +82,8 @@ def GetGeneralizedKmesh(structure, k_dist, RemoveSymm=False):
     get_kpoints_file = subprocess.Popen('getKPoints')
     get_kpoints_file.communicate()
     KPTS = Kpoints().from_file('KPOINTS')
-    RemoveMatchingFiles(['KPOINTS*', 'POSCAR*', 'INCAR', 'PRECALC'])
+    remove_matching_files(['KPOINTS*', 'POSCAR*', 'INCAR', 'PRECALC'])
+
     return KPTS
 
 def get_custom_vasp_static_settings(structure, comp_parameters, static_type):
@@ -214,7 +215,7 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type):
         
     return vis
       
-def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
+def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
     """Make custom vasp settings for relaxations.
     
     Parameters

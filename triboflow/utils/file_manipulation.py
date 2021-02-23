@@ -1,7 +1,7 @@
 import os, glob
 from fireworks import ScriptTask, FileTransferTask
 
-def RemoveMatchingFiles(list_of_patterns):
+def remove_matching_files(list_of_patterns):
     """Remove all files matching the patterns in the directory."""
     remove_list=[]
     for pattern in list_of_patterns:
@@ -12,6 +12,32 @@ def RemoveMatchingFiles(list_of_patterns):
         for file_to_remove in remove_list:
             os.remove(file_to_remove)
         return
+
+def write_file_from_dict(Dict, Filename):
+    """
+    Takes an input dictionary 'Dict' and an output filename (or
+    path) 'Filename' as a string and writes the dictionary as
+    the output file. If a list is found as a value of the dictionary,
+    its entries are printed without colons or brakets.
+    E.g. {'ENCUT': 320, 'ALGO: 'FAST', 'MAGMOM': [3.0, -3.0]}
+    is written as:
+                ENCUT = 320
+                ALGO = Fast
+                MAGMOM = 3.0 -3.0
+    to the file.
+    """
+    Out_file = []
+    for key in Dict.keys():
+        if type(Dict[key]) is list:
+            str_list = [str(x) for x in Dict[key]]
+            value = ' '.join(str_list)
+        else:
+            value = str(Dict[key])
+        Out_file.append(str(key)+' = '+value)
+    with open(Filename, 'w') as out:
+        for line in Out_file:
+            out.write(line+'\n')
+    return
     
 def copy_output_files(file_list, output_dir, remote_copy=False,
                       server=None, user=None, port=None):

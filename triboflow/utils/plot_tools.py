@@ -8,11 +8,17 @@ Utility tools to calculate the High Simmetry (HS) points for slab and interface
 @author: gl
 """
 
+__author__ = 'Gabriele Losi'
+__copyright__ = 'Prof. M.C. Righi, University of Bologna'
+__contact__ = 'clelia.righi@unibo.it'
+__date__ = 'February 8th, 2021'
+
 import numpy as np
 import matplotlib.pyplot as plt  
 from mpl_toolkits.mplot3d import Axes3D
 from pymatgen.analysis.adsorption import plot_slab
-from triboflow.phys.high_symmetry import HS_DictConverter
+
+from triboflow.phys.high_symmetry import hs_dict_converter
 
 
 # =============================================================================
@@ -20,7 +26,7 @@ from triboflow.phys.high_symmetry import HS_DictConverter
 # =============================================================================
 
 
-def Plot_SlabHS(hs, slab, to_fig=None):
+def plot_slab_hs(hs, slab, to_fig=None):
     """
     Plot the slab, displaying the atoms and the HS sites of the surface
     
@@ -46,7 +52,7 @@ def Plot_SlabHS(hs, slab, to_fig=None):
     # Check the type of the hs points
     typ = list( set(type(k) for k in hs.values()) )[0]
     if typ == list:
-        hs = HS_DictConverter(hs, to_array=True)
+        hs = hs_dict_converter(hs, to_array=True)
     
     # Extract the lattice vector of the basal plane
     a = slab.lattice.matrix[0, :]
@@ -79,7 +85,7 @@ def Plot_SlabHS(hs, slab, to_fig=None):
     plt.show()
 
 
-def Plot_PES(data, lattice, to_fig=None):
+def plot_pes(data, lattice, to_fig=None):
     """
     Plot the PES and eventually save it
 
@@ -121,7 +127,7 @@ def Plot_PES(data, lattice, to_fig=None):
         plt.savefig('PES_' + str(to_fig) + '.png', dpi=300)
 
     
-def Plot_UniformGrid(grid, cell, n_a, n_b):
+def plot_uniform_grid(grid, cell, n_a, n_b):
     """
     Plot an uniform grid of n_aXn_b points on the planar base of a lattice 
     

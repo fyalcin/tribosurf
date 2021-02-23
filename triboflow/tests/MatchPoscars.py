@@ -10,7 +10,7 @@ Match interfaces using Slabs from POSCAR files.
 """
 
 
-def MatchTheInterface(slab_1, slab_2, inter_params={}):
+def match_the_interface(slab_1, slab_2, inter_params={}):
     
     max_area = inter_params.get('max_area', 500)
     max_missmatch = inter_params.get('max_missmatch', 0.01)
@@ -92,7 +92,7 @@ if __name__ == "__main__":
                     'max_missmatch': args.max_missmatch,
                     'r1r2_tol': args.r1r2_tol,
                     'separation': args.separation}
-    Matching_info = MatchTheInterface(slab_1, slab_2, inter_params)
+    Matching_info = match_the_interface(slab_1, slab_2, inter_params)
     if Matching_info:
         WriteOutput(Matching_info)
     

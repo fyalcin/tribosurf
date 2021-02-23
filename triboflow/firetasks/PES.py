@@ -7,6 +7,7 @@ Created on Tue Oct 13 14:52:57 2020
 """
 from operator import itemgetter
 from monty.json import jsanitize
+
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import Slab
 from pymatgen.core.operations import SymmOp
@@ -15,15 +16,16 @@ from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 from atomate.vasp.fireworks.core import OptimizeFW, ScanOptimizeFW
 from atomate.vasp.powerups import add_modify_incar
-from triboflow.phys.high_symmetry import GetSlabHS, GetInterfaceHS, \
-    PBC_HSPoints, FixHSDicts
-from triboflow.phys.potential_energy_surface import GetPES
-from triboflow.utils.plot_tools import Plot_PES
-from triboflow.utils.database import GetInterfaceFromDB, GetDB, \
-    GetHighLevelDB, ConvertImageToBytes
-from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
-from triboflow.utils.structure_manipulation import InterfaceName, \
-    CleanUpSiteProperties, StackAlignedSlabs, ReCenterAlignedSlabs
+
+from triboflow.phys.high_symmetry import get_slab_hs, get_interface_hs, \
+    pbc_hspoints, fix_hs_dicts
+from triboflow.phys.potential_energy_surface import get_pes
+from triboflow.utils.plot_tools import plot_pes
+from triboflow.utils.database import (
+    Navigator, NavigatorMP, StructureNavigator, convert_image_to_bytes)
+from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
+from triboflow.utils.structure_manipulation import interface_name, \
+    clean_up_site_properties, stack_aligned_slabs, recenter_aligned_slabs
 
 @explicit_serialize
 class FT_StartPESCalcSubWF(FiretaskBase):
@@ -56,8 +58,10 @@ class FT_StartPESCalcSubWF(FiretaskBase):
     required_params = ['mp_id_1', 'mp_id_2', 'miller_1', 'miller_2',
                        'functional']
     optional_params = ['db_file']
+
     def run_task(self, fw_spec):
-        from triboflow.workflows.subworkflows import CalcPES_SWF
+
+        from triboflow.workflows.subworkflows import calc_pes_swf
         mp_id_1 = self.get('mp_id_1')
         mp_id_2 = self.get('mp_id_2')
         miller_1 = self.get('miller_1')
@@ -67,24 +71,33 @@ class FT_StartPESCalcSubWF(FiretaskBase):
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
         
-        name = InterfaceName(mp_id_1, miller_1, mp_id_2, miller_2)
+        name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
         
-        interface_dict = GetInterfaceFromDB(name, db_file, functional)
+        nav_structure = StructureNavigator(
+            db_file=db_file, 
+            high_level='triboflow')
+        interface_dict = nav_structure.get_interface_from_db(
+            name=name,
+            functional=functional
+        )
         comp_params = interface_dict['comp_parameters']
         top_slab = Slab.from_dict(interface_dict['top_aligned'])
         bot_slab = Slab.from_dict(interface_dict['bottom_aligned'])
         already_done = interface_dict.get('relaxed_structure@min')
         
         if not already_done:
-            SWF = CalcPES_SWF(top_slab = top_slab,
-                              bottom_slab = bot_slab,
-                              interface_name = name,
-                              functional = functional,
-                              comp_parameters = comp_params,
-                              output_dir = None)
+            SWF = calc_pes_swf(top_slab=top_slab,
+                               bottom_slab=bot_slab,
+                               interface_name=name,
+                               functional=functional,
+                               comp_parameters=comp_params,
+                               output_dir=None)
+
             return FWAction(detours=SWF, update_spec=fw_spec)
+
         else:
             return FWAction(update_spec=fw_spec)
+
 
 @explicit_serialize
 class FT_ComputePES(FiretaskBase):
@@ -111,47 +124,54 @@ class FT_ComputePES(FiretaskBase):
     
     required_params = ['interface_name', 'functional', 'file_output']
     optional_params = ['db_file']
+
     def run_task(self, fw_spec):
+
         name = self.get('interface_name')
         functional = self.get('functional')
         file_output = self.get('file_output')
+    
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
         
-        inter_dict = GetInterfaceFromDB(name, db_file, functional)
+        nav_structure = StructureNavigator(
+            db_file=db_file,
+            high_level='triboflow')
+        inter_dict = nav_structure.get_interface_from_db(
+            name=name,
+            functional=functional
+        )
         struct = Structure.from_dict(inter_dict['relaxed_structure@min'])
         
-        #Copy the energies for the unique points to all points
+        # Copy the energies for the unique points to all points
         E_unique = inter_dict['PES']['high_symmetry_points']['energy_list']
         all_hs = inter_dict['PES']['high_symmetry_points']['combined_all']
         cell = struct.lattice.matrix
         
-        Interpolation, E_list, pes_data, data, to_plot = GetPES(hs_all=all_hs,
-                                                   E=E_unique,
-                                                   cell=struct.lattice.matrix,
-                                                   to_fig=False)
+        interpolation, E_list, pes_data, data, to_plot = get_pes(
+            hs_all=all_hs,
+            E=E_unique,
+            cell=struct.lattice.matrix,
+            to_fig=False)
         
         if file_output:
             data.dump('Computet_PES_data_'+name+'.dat')
             pes_data.dump('Interpolated_PES_data_'+name+'.dat')
             
-        Plot_PES(to_plot, cell*2, to_fig=name)
+        plot_pes(to_plot, cell*2, to_fig=name)
         plot_name = 'PES_' + str(name) + '.png'
-        pes_image_bytes = ConvertImageToBytes('./'+plot_name)
+        pes_image_bytes = convert_image_to_bytes('./'+plot_name)
         
-        tribo_db = GetHighLevelDB(db_file)
-        coll = tribo_db[functional+'.interface_data']
-        
-        coll.update_one({'name': name},
-                        {'$set': {'PES.rbf': jsanitize(Interpolation),
-                                  'PES.all_energies': jsanitize(E_list),
-                                  'PES.pes_data': jsanitize(pes_data),
-                                  'PES.image': pes_image_bytes}})
-        pass
-        
-        
-        
+        nav_high = Navigator(db_file=db_file, high_level='triboflow')
+        nav_high.update_data(
+            collection=functional+'.interface_data',
+            filter={'name': name},
+            new_values={'$set': {'PES.rbf': jsanitize(interpolation),
+                                 'PES.all_energies': jsanitize(E_list),
+                                 'PES.pes_data': jsanitize(pes_data),
+                                 'PES.image': pes_image_bytes}})
+
 
 @explicit_serialize
 class FT_RetrievePESEnergies(FiretaskBase):
@@ -180,53 +200,73 @@ class FT_RetrievePESEnergies(FiretaskBase):
     -------
     FWActions that produce a detour workflow with relaxations for the PES.
     """
+
     required_params = ['interface_name', 'functional', 'tag']
     optional_params = ['db_file']
+
     def run_task(self, fw_spec):
+    
         name = self.get('interface_name')
         functional = self.get('functional')
         tag = self.get('tag')
+
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
         
-        interface_dict = GetInterfaceFromDB(name, db_file, functional)
+        nav_structure = StructureNavigator(
+            db_file=db_file,
+            high_level='triboflow')
+        interface_dict = nav_structure.get_interface_from_db(
+            name=name,
+            functional=functional)
         lateral_shifts = interface_dict['PES']['high_symmetry_points']['combined_unique']
         
-        DB = GetDB(db_file)
+        nav = Navigator(db_file=db_file)
         energy_list=[]
         calc_output = {}
         for s in lateral_shifts.keys():
             label = tag + '_' + s
             x_shift = lateral_shifts.get(s)[0][0]
             y_shift = lateral_shifts.get(s)[0][1]
-            vasp_calc = DB.tasks.find_one({'task_label': label})
+            vasp_calc = nav.find_data(
+                collection=nav.db.tasks, 
+                filter={'task_label': label})
             energy = vasp_calc['output']['energy']
             struct = vasp_calc['output']['structure']
             energy_list.append([s, x_shift, y_shift, energy])
             calc_output[s] = {'energy': energy,
                               'relaxed_struct': struct,
                               'task_id': vasp_calc['_id']}
-            
+
         sorted_energy_list = sorted(energy_list, key=itemgetter(3))
         
         min_stacking = sorted_energy_list[0][0]
         max_stacking = sorted_energy_list[-1][0]
-        calc_min = DB.tasks.find_one({'task_label': tag+'_'+min_stacking})
-        calc_max = DB.tasks.find_one({'task_label': tag+'_'+max_stacking})
+        calc_min = nav.find_data(
+            collection=nav.db.tasks,
+            filter={'task_label': tag+'_'+min_stacking})
+        calc_max = nav.find_data(
+            collection=nav.db.tasks,
+            filter={'task_label': tag+'_'+max_stacking})
         struct_min = calc_min['output']['structure']
         struct_max = calc_max['output']['structure']
-        
-        tribo_db = GetHighLevelDB(db_file)
-        coll = tribo_db[functional+'.interface_data']
-        coll.update_one({'name': name},
-                        {'$set': {'relaxed_structure@min': struct_min,
-                                  'relaxed_structure@max': struct_max,
-                                  'PES.calculations': calc_output,
-                                  'PES.high_symmetry_points.energy_list': 
-                                         sorted_energy_list}})
-        pass
-        
+
+        nav_high = Navigator(db_file=db_file, high_level='triboflow')
+        nav_high.update_data(
+            collection=functional+'.interface_data',
+            filter={'name': name},
+            new_values={
+                '$set': 
+                    {'relaxed_structure@min': 
+                         struct_min,
+                     'relaxed_structure@max': 
+                         struct_max,
+                     'PES.calculations': 
+                         calc_output,
+                     'PES.high_symmetry_points.energy_list':
+                         sorted_energy_list}})
+
 
 @explicit_serialize
 class FT_FindHighSymmPoints(FiretaskBase):
@@ -259,56 +299,58 @@ class FT_FindHighSymmPoints(FiretaskBase):
     -------
     FWActions that updates the fw_spec with lateral shifts.
     """
+
     required_params = ['top_slab', 'bot_slab', 'functional', 'interface_name']
     optional_params = ['db_file']
+
     def run_task(self, fw_spec):
+    
         top_slab = self.get('top_slab')
         bot_slab = self.get('bot_slab')
         name = self.get('interface_name')
         functional = self.get('functional')
+    
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
-        
-        
-        #top slab needs to be mirrored to find the high symmetry points at the
-        #interface.
+ 
+        # Top slab needs to be mirrored to find the high symmetry points at the
+        # interface.
         mirror = SymmOp.reflection(normal=[0,0,1], origin=[0, 0, 0])
         flipped_top = top_slab.copy()
         flipped_top.apply_operation(mirror)
-        top_hsp_unique, top_hsp_all = GetSlabHS(flipped_top)
+        top_hsp_unique, top_hsp_all = get_slab_hs(flipped_top)
         
-        bottom_hsp_unique, bottom_hsp_all = GetSlabHS(bot_slab)
+        bottom_hsp_unique, bottom_hsp_all = get_slab_hs(bot_slab)
         
         cell = bot_slab.lattice.matrix
         
-        hsp_unique = GetInterfaceHS(bottom_hsp_unique, top_hsp_unique, cell)
-        hsp_all = GetInterfaceHS(bottom_hsp_all, top_hsp_all, cell)
+        hsp_unique = get_interface_hs(bottom_hsp_unique, top_hsp_unique, cell)
+        hsp_all = get_interface_hs(bottom_hsp_all, top_hsp_all, cell)
         
-        c_hsp_u, c_hsp_a = FixHSDicts(hsp_unique, hsp_all,
+        c_hsp_u, c_hsp_a = fix_hs_dicts(hsp_unique, hsp_all,
                                       top_slab, bot_slab)
         
         cell = bot_slab.lattice.matrix
            
-        b_hsp_u =  PBC_HSPoints(bottom_hsp_unique, cell)
-        b_hsp_a =  PBC_HSPoints(bottom_hsp_all, cell)
-        t_hsp_u =  PBC_HSPoints(top_hsp_unique, cell)
-        t_hsp_a =  PBC_HSPoints(top_hsp_all, cell)
+        b_hsp_u =  pbc_hspoints(bottom_hsp_unique, cell)
+        b_hsp_a =  pbc_hspoints(bottom_hsp_all, cell)
+        t_hsp_u =  pbc_hspoints(top_hsp_unique, cell)
+        t_hsp_a =  pbc_hspoints(top_hsp_all, cell)
         
-        tribo_db = GetHighLevelDB(db_file)
-        coll = tribo_db[functional+'.interface_data']
-        
-        #the upsert option ensures that an entry is created if none was present
-        coll.update_one({'name': name},
-                        {'$set': {'PES.high_symmetry_points':
-                                      {'bottom_unique': b_hsp_u,
-                                       'bottom_all': b_hsp_a,
-                                       'top_unique': t_hsp_u,
-                                       'top_all': t_hsp_a,
-                                       'combined_unique': jsanitize(c_hsp_u),
-                                       'combined_all': jsanitize(c_hsp_a)}}}, 
-                        upsert=True)
-            
+        nav_high = Navigator(db_file=db_file, high_level='triboflow')
+        nav_high.update_data(
+            collection=functional+'.interface_data',
+            filter={'name': name},
+            new_values={'$set': 
+                           {'PES.high_symmetry_points':
+                               {'bottom_unique': b_hsp_u,
+                                'bottom_all': b_hsp_a,
+                                'top_unique': t_hsp_u,
+                                'top_all': t_hsp_a,
+                                'combined_unique': jsanitize(c_hsp_u)}}},
+            upsert=True)
+
         return FWAction(update_spec=({'lateral_shifts': c_hsp_u}))
         
         
@@ -319,7 +361,7 @@ class FT_StartPESCalcs(FiretaskBase):
     
     Take a list of lateral shifts from the fw_spec and start relaxations
     for each one of them as parallel detours.
-    Heterogeneous_WF
+    heterogeneous_wf
     Parameters
     ----------
     top_slab : pymatgen.core.surface.Slab
@@ -342,16 +384,20 @@ class FT_StartPESCalcs(FiretaskBase):
     -------
     FWActions that produce a detour workflow with relaxations for the PES.
     """
+
     required_params = ['top_slab', 'bot_slab', 'functional', 'interface_name',
                        'comp_parameters', 'tag']
     optional_params = ['db_file']
+
     def run_task(self, fw_spec):
+
         top_slab = self.get('top_slab')
         bot_slab = self.get('bot_slab')
         functional = self.get('functional')
         name = self.get('interface_name')
         comp_params = self.get('comp_parameters')
         tag = self.get('tag')
+
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
@@ -361,7 +407,7 @@ class FT_StartPESCalcs(FiretaskBase):
             raise SystemExit('Lateral shifts not found in the fw_spec./n'
                              'Please check your Firework for errors!')
         
-        top_slab, bot_slab = ReCenterAlignedSlabs(top_slab, bot_slab)
+        top_slab, bot_slab = recenter_aligned_slabs(top_slab, bot_slab)
         
         # # List all sites of interface that have positive c coordinates as they
         # # are in the upper slab.
@@ -376,12 +422,12 @@ class FT_StartPESCalcs(FiretaskBase):
             x_shift = lateral_shifts.get(s)[0][0]
             y_shift = lateral_shifts.get(s)[0][1]
             #Make sure that there are no NoneTypes in the site_properties!
-            inter_struct = StackAlignedSlabs(bot_slab,
+            inter_struct = stack_aligned_slabs(bot_slab,
                                              top_slab,
                                              top_shift = [x_shift, y_shift, 0])
-            clean_struct = CleanUpSiteProperties(inter_struct)
+            clean_struct = clean_up_site_properties(inter_struct)
             
-            vis = GetCustomVaspRelaxSettings(structure=clean_struct,
+            vis = get_custom_vasp_relax_settings(structure=clean_struct,
                                              comp_parameters=comp_params,
                                              relax_type='interface_z_relax')
             if functional == 'SCAN':

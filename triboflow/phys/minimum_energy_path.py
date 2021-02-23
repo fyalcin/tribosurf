@@ -8,15 +8,21 @@ Python functions to get the Minimum Energy Path (MEP) of a PES of an interface
 @author: gl
 """
 
+__author__ = 'Gabriele Losi'
+__copyright__ = 'Prof. M.C. Righi, University of Bologna'
+__contact__ = 'clelia.righi@unibo.it'
+__date__ = 'February 8th, 2021'
+
 import numpy as np
-from triboflow.phys.shear_strength import TakeDerivative, GetShearStrength_xy
+
+from triboflow.phys.shear_strength import take_derivative, get_shear_strength_xy
 
 # =============================================================================
 # EVALUATION OF THE MEP
 # =============================================================================
 
 
-def GetMEP(lattice, rbf, theta=0., params=None):
+def get_mep(lattice, rbf, theta=0., params=None):
     """
     Calculate the Minimum Energy Path on top of the Potential Surface rbf
 
@@ -31,7 +37,7 @@ def GetMEP(lattice, rbf, theta=0., params=None):
     theta : float, optional
         Slope of the starting string with respect to the x axis. The MEP will 
         be calculated starting from this directoin. To select a meaningful
-        starting angle, run GetBSMEP first. Units are radiants.
+        starting angle, run get_bs_mep first. Units are radiants.
         The default value is 0, i.e. x-axis
         
     params : dict, optional
@@ -187,7 +193,7 @@ def GetMEP(lattice, rbf, theta=0., params=None):
     return mep, mep_convergency
 
 
-def GetBSMEP(lattice, rbf, params=None):
+def get_bs_mep(lattice, rbf, params=None):
     """
     Evaluate the best starting MEP from which start the calculation of the MEP.
 
@@ -263,7 +269,7 @@ def GetBSMEP(lattice, rbf, params=None):
     theta = 0
     i = 0
     
-    ss_x, ss_y = GetShearStrength_xy(lattice, rbf)
+    ss_x, ss_y = get_shear_strength_xy(lattice, rbf)
     data_ss.append(float(ss_x))
     data_ss.append(float(ss_y))
     data_th.append(0.)
@@ -282,7 +288,7 @@ def GetBSMEP(lattice, rbf, params=None):
             for i in range(len(x)):
                 coordx=x[i]
                 coordy=y[i]
-                zdev[i]=TakeDerivative(rbf, coordx, coordy, m, delta)        
+                zdev[i]=take_derivative(rbf, coordx, coordy, m, delta)        
             #Shear strength in GPa
             ss = np.amax(np.abs(zdev))*10.0
             

@@ -177,10 +177,11 @@ class Navigator:
         collection : str, VaspCalcDb
             Name of the collection in the database o r in the VaspCalcDb object.
         
-        Returns
-        -------
+        Return
+        ------
         collection_obj : VaspCalcDb
-            Database object containing the collection of the database.     
+            Database object containing the collection of the database.
+  
         """
 
         if isinstance(collection, str):
@@ -224,7 +225,7 @@ class Navigator:
 
         collection_obj = self.__initialize_obj_collection(collection)
 
-        log.info('Updating the collection {} withe the new data {}.'
+        log.info('Updating the collection {} with the new data {}.'
                  ''.format(collection, new_values))
         collection_obj.update_one(filter, new_values, upsert)
     
@@ -253,7 +254,7 @@ class Navigator:
 
         collection_obj = self.__initialize_obj_collection(collection)
 
-        log.info('Updating the collection {} withe the new data {}.'
+        log.info('Updating the collection {} with the new data {}.'
                  ''.format(collection, new_values))
         collection_obj.update_many(filter, new_values, upsert)
 
@@ -977,4 +978,3 @@ def image_bytes_converter(data, to_image=True):
         data_conv = convert_image_to_bytes(data)
             
     return data_conv
-

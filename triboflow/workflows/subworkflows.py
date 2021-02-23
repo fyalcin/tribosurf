@@ -6,27 +6,28 @@ Created on Wed Jun 17 15:47:39 2020
 
 from uuid import uuid4
 import numpy as np
+
 from fireworks import Workflow, Firework
-from triboflow.fireworks.common import RunPESCalcsFW, MakePESFW
+
+from triboflow.fireworks.common import run_pes_calc_fw, make_pes_fw
 from triboflow.firetasks.encut_convergence import FT_EnergyCutoffConvo
 from triboflow.firetasks.kpoint_convergence import FT_KpointsConvo
 from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \
     FT_StartSlabRelax, FT_GetRelaxedSlab
 from triboflow.firetasks.PPES import FT_DoPPESCalcs, FT_FitPPES
-from triboflow.utils.database import GetPropertyFromMP, GetDBJSON
-from triboflow.utils.structure_manipulation import InterfaceName
+from triboflow.utils.database import Navigator, NavigatorMP
 from triboflow.utils.vasp_tools import get_emin, get_custom_vasp_static_settings
 
-def CalcPES_SWF(top_slab, bottom_slab,
-                interface_name = None,
-                functional = 'PBE',
-                comp_parameters = {},
-                file_output = False,
-                output_dir = None,
-                remote_copy = False,
-                server = None, 
-                user = None, 
-                port = None):
+def calc_pes_swf(top_slab, bottom_slab,
+                 interface_name=None,
+                 functional='PBE',
+                 comp_parameters={},
+                 file_output=False,
+                 output_dir=None,
+                 remote_copy=False,
+                 server=None, 
+                 user=None, 
+                 port=None):
     """Create a subworkflow to compute the PES for an interface of two slabs.
     
     This workflow takes two matched slabs (their cells must be identical) as
@@ -44,7 +45,7 @@ def CalcPES_SWF(top_slab, bottom_slab,
     bottom_slab : pymatgen.core.surface.Slab
         Bottom slab of the interface.
     interface_name : str, optional
-        Unique name to find the interface in the databse with.
+        Unique name to find the interface in the database with.
         The default is None, which will lead to an automatic interface_name
         generation which will be printed on screen.
     bottom_mpid : str, optional
@@ -121,33 +122,33 @@ def CalcPES_SWF(top_slab, bottom_slab,
     
     tag = interface_name+'_'+str(uuid4())
     
-    FW_1 = RunPESCalcsFW(top_slab=top_slab, 
-                         bottom_slab=bottom_slab, 
-                         interface_name=interface_name,
-                         functional=functional,
-                         comp_parameters=comp_parameters,
-                         tag=tag,
-                         FW_name='Start PES calcs for '+interface_name)
+    FW_1 = run_pes_calc_fw(top_slab=top_slab, 
+                           bottom_slab=bottom_slab, 
+                           interface_name=interface_name,
+                           functional=functional,
+                           comp_parameters=comp_parameters,
+                           tag=tag,
+                           FW_name='Start PES calcs for '+interface_name)
     
-    FW_2 = MakePESFW(interface_name=interface_name,
-                     functional=functional,
-                     tag=tag,
-                     file_output=file_output,
-                     output_dir=output_dir,
-                     remote_copy = remote_copy,
-                     server = server, 
-                     user = user, 
-                     port = port,
-                     FW_name='Parse PES calcs for '+interface_name)
+    FW_2 = make_pes_fw(interface_name=interface_name,
+                       functional=functional,
+                       tag=tag,
+                       file_output=file_output,
+                       output_dir=output_dir,
+                       remote_copy=remote_copy,
+                       server=server, 
+                       user=user, 
+                       port=port,
+                       FW_name='Parse PES calcs for '+interface_name)
     
     SWF = Workflow([FW_1, FW_2], {FW_1: [FW_2]},
-                   name = 'Calc PES for '+interface_name+' SWF')
+                   name='Calc PES for '+interface_name+' SWF')
     return SWF
     
-def CalcPPES_SWF(interface_name, functional, distance_list = [-0.5, -0.25, 0.0,
-                                0.25, 0.5, 2.5, 3.0, 4.0, 5.0, 7.5],
-                 out_name = 'PPES@minimum', structure_name = 'minimum_relaxed',
-                 spec = {}):
+def calc_ppes_swf(interface_name, functional, distance_list=[-0.5, -0.25, 0.0, 
+                  0.25, 0.5, 2.5, 3.0, 4.0, 5.0, 7.5],
+                  out_name='PPES@minimum', structure_name='minimum_relaxed',
+                  spec={}):
     """
     Generate a subworkflow that calculates a PPES using static calculations.
     
@@ -203,24 +204,24 @@ def CalcPPES_SWF(interface_name, functional, distance_list = [-0.5, -0.25, 0.0,
                    name = 'Calc PPES for '+interface_name+' SWF')
     return SWF
 
-def MakeAndRelaxSlab_SWF(bulk_structure,
-                         miller_index,
-                         flag,
-                         comp_parameters = {},
-                         functional = 'PBE',
-                         min_thickness = 10.0,
-                         min_vacuum = 25.0,
-                         relax_type = 'slab_pos_relax',
-                         slab_struct_name = 'unrelaxed_slab',
-                         out_struct_name = 'relaxed_slab',
-                         spec = {},
-                         file_output = False,
-                         output_dir = None,
-                         remote_copy = False,
-                         server = None, 
-                         user = None, 
-                         port = None,
-                         print_help = True):
+def make_and_relax_slab_swf(bulk_structure,
+                            miller_index,
+                            flag,
+                            comp_parameters={},
+                            functional='PBE',
+                            min_thickness=10.0,
+                            min_vacuum=25.0,
+                            relax_type='slab_pos_relax',
+                            slab_struct_name='unrelaxed_slab',
+                            out_struct_name='relaxed_slab',
+                            spec={},
+                            file_output=False,
+                            output_dir=None,
+                            remote_copy=False,
+                            server=None, 
+                            user=None, 
+                            port=None,
+                            print_help=True):
     """
     Make and relax a slab.
 
@@ -245,7 +246,7 @@ def MakeAndRelaxSlab_SWF(bulk_structure,
     min_vacuum : float, optional
         Minimal thickness of the vacuum layer in Angstrom. The default is 25.0.
     relax_type : str, optional
-        Which type of relaxation to run. See GetCustomVaspRelaxSettings from
+        Which type of relaxation to run. See get_custom_vasp_relax_settings from
         triboflow.utils.vasp_tools. The default is 'slab_pos_relax'.
     slab_struct_name : str, optional
         Name of the unrelaxed slab in the high-level database.
@@ -289,7 +290,10 @@ def MakeAndRelaxSlab_SWF(bulk_structure,
     formula = bulk_structure.composition.reduced_formula
     
     if flag.startswith('mp-') and flag[3:].isdigit():
-        formula_from_flag = GetPropertyFromMP(flag, 'pretty_formula')
+        nav_mp = NavigatorMP()
+        formula_from_flag = nav_mp.get_property_from_mp(
+            mp_id=flag,
+            properties=['pretty_formula'])
         if not formula_from_flag == formula:
             raise SystemExit('The chemical formula of your structure ({}) '
                              'does not match the chemical formula of the flag '
@@ -313,7 +317,8 @@ def MakeAndRelaxSlab_SWF(bulk_structure,
               '    "k_dens": <int>}\n')
     
     if print_help:
-        db_file = GetDBJSON()
+        nav = Navigator()
+        db_file = nav.path
         print('Once you workflow has finished you can access the '
               'results from the database using this code:\n\n'
               'import pprint\n'
@@ -325,57 +330,57 @@ def MakeAndRelaxSlab_SWF(bulk_structure,
             
     FTs = []
     
-    FTs.append(FT_MakeSlabInDB(bulk_structure = bulk_structure,
-                               miller = miller,
-                               flag = flag,
-                               functional = functional,
-                               min_thickness = min_thickness,
-                               min_vacuum = min_vacuum))
+    FTs.append(FT_MakeSlabInDB(bulk_structure=bulk_structure,
+                               miller=miller,
+                               flag=flag,
+                               functional=functional,
+                               min_thickness=min_thickness,
+                               min_vacuum=min_vacuum))
     
-    FTs.append(FT_StartSlabRelax(flag = flag, miller = miller,
-                                 functional = functional, tag = tag,
-                                 comp_parameters = comp_parameters,
-                                 slab_struct_name = slab_struct_name,
-                                 relax_type = relax_type))
+    FTs.append(FT_StartSlabRelax(flag=flag, miller=miller,
+                                 functional=functional, tag=tag,
+                                 comp_parameters=comp_parameters,
+                                 slab_struct_name=slab_struct_name,
+                                 relax_type=relax_type))
     
-    FW = Firework(FTs, spec = spec,
-                  name = 'Make and relax '+formula+miller_str+' slab')
+    FW = Firework(FTs, spec=spec,
+                  name='Make and relax '+formula+miller_str+' slab')
     
-    FW2 = Firework(FT_GetRelaxedSlab(flag = flag,
-                                     miller = miller,
-                                     functional = functional,
-                                     tag = tag,
-                                     struct_out_name = out_struct_name,
-                                     file_output = file_output,
-                                     output_dir = output_dir,
-                                     remote_copy = remote_copy,
-                                     server = server, 
-                                     user = user, 
-                                     port = port),
-                   spec = spec,
-                   name = 'Put relaxed '+formula+miller_str+' slab in DB')
+    FW2 = Firework(FT_GetRelaxedSlab(flag=flag,
+                                     miller=miller,
+                                     functional=functional,
+                                     tag=tag,
+                                     struct_out_name=out_struct_name,
+                                     file_output=file_output,
+                                     output_dir=output_dir,
+                                     remote_copy=remote_copy,
+                                     server=server, 
+                                     user=user, 
+                                     port=port),
+                   spec=spec,
+                   name='Put relaxed '+formula+miller_str+' slab in DB')
     
     SWF = Workflow([FW, FW2], {FW: [FW2]},
-                   name = 'Make and relax '+formula+miller_str+' SWF')
+                   name='Make and relax '+formula+miller_str+' SWF')
     return SWF
 
 
-def ConvergeKpoints_SWF(structure,
-                        flag,
-                        comp_parameters = {},
-                        spec = {},
-                        functional = 'PBE',
-                        k_dens_start=500,
-                        k_dens_incr=50,
-                        n_converge=3,
-                        db_file=None,
-                        file_output = False,
-                        output_dir = None,
-                        remote_copy = False,
-                        server = None, 
-                        user = None, 
-                        port = None,
-                        print_help = True):
+def converge_kpoints_swf(structure,
+                         flag,
+                         comp_parameters={},
+                         spec={},
+                         functional='PBE',
+                         k_dens_start=500,
+                         k_dens_incr=50,
+                         n_converge=3,
+                         db_file=None,
+                         file_output=False,
+                         output_dir=None,
+                         remote_copy=False,
+                         server=None, 
+                         user=None, 
+                         port=None,
+                         print_help=True):
     """Subworkflows that converges the the k-mesh density via total energy.
     
     Takes a given structure, computational parameters (which includes the
@@ -446,7 +451,11 @@ def ConvergeKpoints_SWF(structure,
     
     if flag.startswith('mp-') and flag[3:].isdigit():
         formula_from_struct = structure.composition.reduced_formula
-        formula_from_flag = GetPropertyFromMP(flag, 'pretty_formula')
+        nav_mp = NavigatorMP()
+        formula_from_flag = nav_mp.get_property_from_mp(
+            mp_id=flag,
+            properties=['pretty_formula'])
+
         if not formula_from_flag == formula_from_struct:
             raise SystemExit('The chemical formula of your structure ({}) '
                              'does not match the chemical formula of the flag '
@@ -468,7 +477,8 @@ def ConvergeKpoints_SWF(structure,
               '    "encut": <int>}\n')
     
     if print_help:
-        db_file = GetDBJSON()
+        nav = Navigator()
+        db_file = nav.path
         print('Once you workflow has finished you can access the '
               'results from the database using this code:\n\n'
               'import pprint\n'
@@ -478,44 +488,45 @@ def ConvergeKpoints_SWF(structure,
     
     tag = "Kpoints group for {} - {}".format(formula, str(uuid4()))
         
-    FT_KptsConvo = FT_KpointsConvo(structure = structure,
-                                   comp_params = comp_parameters,
-                                   tag = tag,
-                                   flag = flag,
-                                   functional = functional,
-                                   db_file = db_file,
-                                   k_dens_incr = k_dens_incr,
-                                   k_dens_start = k_dens_start,
-                                   n_converge = n_converge,
-                                   file_output = file_output,
-                                   output_dir = output_dir,
-                                   remote_copy = remote_copy,
-                                   server = server,
-                                   user = user,
-                                   port = port)
+    FT_KptsConvo = FT_KpointsConvo(structure=structure,
+                                   comp_params=comp_parameters,
+                                   tag=tag,
+                                   flag=flag,
+                                   functional=functional,
+                                   db_file=db_file,
+                                   k_dens_incr=k_dens_incr,
+                                   k_dens_start=k_dens_start,
+                                   n_converge=n_converge,
+                                   file_output=file_output,
+                                   output_dir=output_dir,
+                                   remote_copy=remote_copy,
+                                   server=server,
+                                   user=user,
+                                   port=port)
     
     FW_CE = Firework(FT_KptsConvo, spec=spec,
                      name='Kpoint Convergence')
     WF = Workflow([FW_CE], name=name)
+
     return WF
 
-def ConvergeEncut_SWF(structure, 
-                      flag, 
-                      comp_parameters={}, 
-                      spec={},
-                      functional='PBE', 
-                      deformations=None, 
-                      encut_start=None,
-                      encut_incr=25, 
-                      n_converge=3, 
-                      db_file=None,
-                      file_output = False,
-                      output_dir = None,
-                      remote_copy = False,
-                      server = None, 
-                      user = None, 
-                      port = None,
-                      print_help = True):
+def converge_encut_swf(structure, 
+                       flag, 
+                       comp_parameters={}, 
+                       spec={},
+                       functional='PBE', 
+                       deformations=None, 
+                       encut_start=None,
+                       encut_incr=25, 
+                       n_converge=3, 
+                       db_file=None,
+                       file_output=False,
+                       output_dir=None,
+                       remote_copy=False,
+                       server=None, 
+                       user=None, 
+                       port=None,
+                       print_help=True):
     """Subworkflows that converges the Encut using a fit to an BM-EOS.
     
     Takes a given structure, computational parameters, and a optional list
@@ -531,7 +542,7 @@ def ConvergeEncut_SWF(structure,
     structure : pymatgen.core.structure.Structure
         The structure for which to converge the energy cutoff parameter.
     flag : str
-        An identifyer to find the results in the database. It is strongly
+        An identifier to find the results in the database. It is strongly
         suggested to use the proper Materials-ID from the MaterialsProject
         if it is known for the specific input structure. Otherwise use something
         unique which you can find again.
@@ -590,7 +601,11 @@ def ConvergeEncut_SWF(structure,
         
     if flag.startswith('mp-') and flag[3:].isdigit():
         formula_from_struct = structure.composition.reduced_formula
-        formula_from_flag = GetPropertyFromMP(flag, 'pretty_formula')
+        nav_mp = NavigatorMP()
+        formula_from_flag = nav_mp.get_property_from_mp(
+            mp_id=flag, 
+            properties=['pretty_formula'])
+
         if not formula_from_flag == formula_from_struct:
             raise SystemExit('The chemical formula of your structure ({}) '
                              'does not match the chemical formula of the flag '
@@ -599,8 +614,8 @@ def ConvergeEncut_SWF(structure,
                                  formula_from_struct, formula_from_flag))
     
     if not encut_start:
-        #Get the largest EMIN value of the potcar and round up to the
-        #next whole 25.
+        # Get the largest EMIN value of the potcar and round up to the
+        # next whole 25.
         vis = get_custom_vasp_static_settings(structure, comp_parameters,
                                               'bulk_from_scratch')
         emin = get_emin(vis.potcar)
@@ -620,7 +635,8 @@ def ConvergeEncut_SWF(structure,
               '    "k_dens": <int>}\n')
     
     if print_help:
-        db_file = GetDBJSON()
+        nav = Navigator()
+        db_file = nav.path
         print('Once you workflow has finished you can access the '
               'results from the database using this code:\n\n'
               'import pprint\n'
@@ -628,24 +644,25 @@ def ConvergeEncut_SWF(structure,
               'results = GetBulkFromDB("{}", "{}", "{}")\n'
               'pprint.pprint(results)\n'.format(flag, db_file, functional))
     
-    FT_EncutConvo = FT_EnergyCutoffConvo(structure = structure,
-                                         comp_params = comp_parameters,
-                                         tag = tag,
-                                         flag = flag,
-                                         functional = functional,
-                                         deformations = deformations,
-                                         db_file = db_file,
-                                         encut_incr = encut_incr,
-                                         encut_start = encut_start, 
-                                         n_converge = n_converge,
-                                         file_output = file_output,
-                                         output_dir = output_dir,
-                                         remote_copy = remote_copy,
-                                         server = server, 
-                                         user = user, 
-                                         port = port)        
+    FT_EncutConvo = FT_EnergyCutoffConvo(structure=structure,
+                                         comp_params=comp_parameters,
+                                         tag=tag,
+                                         flag=flag,
+                                         functional=functional,
+                                         deformations=deformations,
+                                         db_file=db_file,
+                                         encut_incr=encut_incr,
+                                         encut_start=encut_start, 
+                                         n_converge=n_converge,
+                                         file_output=file_output,
+                                         output_dir=output_dir,
+                                         remote_copy=remote_copy,
+                                         server=server, 
+                                         user=user, 
+                                         port=port)        
     
     FW_CE = Firework(FT_EncutConvo, spec=spec,
                      name='Encut Convergence')
     WF = Workflow([FW_CE], name=name)
+
     return WF

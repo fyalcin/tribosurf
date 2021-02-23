@@ -22,7 +22,7 @@ from pathlib import Path, PurePosixPath
 levels = {'DEBUG': 10, 'INFO': 20, 'WARNING': 30, 
           'ERROR': 40, 'CRITICAL': 50}
 log_format = '%(process)d - %(asctime)s - %(levelname)s - %(message)s'
-currentdir = os.path.dirname(__file__)
+
 
 class LoggingBase:
     """
@@ -312,9 +312,8 @@ class LoggingBase:
             Dictionary containing the configurations.
         """
 
-        #project_folder = os.getcwd()
-        #config_path = project_folder + '/triboflow/core/config.json' 
-        config_path = currentdir + '/config.json'
+        project_folder = os.path.dirname(__file__)
+        config_path = project_folder + '/config.json' 
         with open(config_path, 'r') as config:
             config = json.load(config)
         
@@ -334,15 +333,12 @@ class LoggingBase:
             The path to log folder.
         """
         
-        #project_folder = os.getcwd()
-        
+        project_folder = os.path.dirname(__file__)
         # PurePosixPath gets the first level parten directory
-        #log_folder_object = PurePosixPath(project_folder)
-        #log_folder = str(log_folder_object.parent) + '/log/'
-        #log_path = Path(log_folder)
-        log_path = Path(currentdir + '/../../../')
-        log_folder = currentdir + '/../../../' + 'log/'
-        
+        log_folder_object = PurePosixPath(project_folder)
+        log_folder = str(log_folder_object.parent.parent.parent) + '/log/'
+        log_path = Path(log_folder)
+
         if not log_path.is_dir():
             print("WARNING: There is no folder for log files.")
             print("Creating a new log folder in " + log_folder)

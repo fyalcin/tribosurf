@@ -8,10 +8,15 @@ Utility tools to calculate the High Simmetry (HS) points for slab and interface
 @author: gl
 """
 
+__author__ = 'Gabriele Losi'
+__copyright__ = 'Prof. M.C. Righi, University of Bologna'
+__contact__ = 'clelia.righi@unibo.it'
+__date__ = 'February 8th, 2021'
+
 import numpy as np
 from ase import Atoms
-from triboflow.phys.high_symmetry import HS_DictConverter
-from triboflow.utils.plot_tools import Plot_UniformGrid
+from triboflow.phys.high_symmetry import hs_dict_converter
+from triboflow.utils.plot_tools import plot_uniform_grid
 
 
 # =============================================================================
@@ -19,7 +24,7 @@ from triboflow.utils.plot_tools import Plot_UniformGrid
 # =============================================================================
 
     
-def PBC_Coordinates(data, cell, to_array=True, scaled_positions=False):
+def pbc_coordinates(data, cell, to_array=True, scaled_positions=False):
     """
     Apply Periodic Boundary Conditions to a set of atoms (data) in a given 
     lattice cell (cell). PBC are applied by creating a "fake" molecule.
@@ -65,7 +70,7 @@ def PBC_Coordinates(data, cell, to_array=True, scaled_positions=False):
 # =============================================================================
 
 
-def ReplicatePoints(data, cell, replicate_of=(1, 1)):
+def replicate_points(data, cell, replicate_of=(1, 1)):
     """ 
     Replicate a set of points or atomic sites in a (n,m)-size lattice cell.
     Useful to replicate data to interpolate the PES.
@@ -111,7 +116,7 @@ def ReplicatePoints(data, cell, replicate_of=(1, 1)):
         return coordinates_new
 
 
-def GenerateUniformGrid(cell, density=1, pts_a=None, to_plot=False):
+def generate_uniform_grid(cell, density=1, pts_a=None, to_plot=False):
     """
     Generate a 2D-uniform grid of points with a given density on the
     basal lattice plane of a cell (a X b), i.e. lattice[0,:] X lattice[1,:].
@@ -184,7 +189,7 @@ def GenerateUniformGrid(cell, density=1, pts_a=None, to_plot=False):
             matrix[k, 2] = i*dist_a_z + j*dist_b_z
             k += 1
     if to_plot:
-        Plot_UniformGrid(matrix, cell, n_a, n_b)
+        plot_uniform_grid(matrix, cell, n_a, n_b)
 
     return matrix
 
@@ -194,7 +199,7 @@ def GenerateUniformGrid(cell, density=1, pts_a=None, to_plot=False):
 # =============================================================================
 
 
-def Orthorombize(data, cell, return_3x3=True):
+def orthorombize(data, cell, return_3x3=True):
     """
     Take the replicated points of the pes and cut them in a squared shape.
     TODO : Improve the code and VECTORIZE
