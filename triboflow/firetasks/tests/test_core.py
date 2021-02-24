@@ -35,6 +35,12 @@ cluster_params = {}
 
 # Initialize the collections for the tests
 nav = Navigator(db_file=db_file)
+data = {'test': 
+           {'energy1': 1,
+            'energy2': 2,
+            'energy3': 3,
+            }
+}
 nav.insert_data(collection='tasks', data={'energy': 100})
 
 # Instantiate the Firetask and create a WF
