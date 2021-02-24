@@ -65,16 +65,27 @@ def Plot_SlabHS(hs, slab, to_fig=None):
     for k in hs.keys():
         data = hs[k]
         if len(data.shape) == 1:
-            plt.plot(data[0], data[1], marker='x', markersize=10, mew=3, 
+            plt.plot(data[0], data[1], marker='o', markersize=12, mew=3, 
                      linestyle='', zorder=10000, label=k)     
         else:
-            plt.plot(data[:,0], data[:,1], marker='x', markersize=7.5, mew=3, 
+            plt.plot(data[:,0], data[:,1], marker='o', markersize=12, mew=3, 
                      linestyle='', zorder=10000, label=k)
  
     plt.legend(bbox_to_anchor=(1.025, 1), loc='upper left')
     
+    plt.rcParams.update({'font.size': 18})
+    plt.tick_params(
+    axis='both',          # changes apply to the x-axis
+    which='both',      # both major and minor ticks are affected
+    bottom=False,      # ticks along the bottom edge are off
+    top=False,         # ticks along the top edge are off
+    left=False,
+    right=False,
+    labelbottom=False,
+    labelleft=False) # labels along the bottom edge are off
+    
     if to_fig != None:
-        plt.savefig(to_fig+'.pdf', dpi=300)
+        plt.savefig(to_fig+'.png', dpi=300)
     
     plt.show()
 

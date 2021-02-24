@@ -289,8 +289,6 @@ class FT_FindHighSymmPoints(FiretaskBase):
         
         c_hsp_u, c_hsp_a = FixHSDicts(hsp_unique, hsp_all,
                                       top_slab, bot_slab)
-        
-        cell = bot_slab.lattice.matrix
            
         b_hsp_u =  PBC_HSPoints(bottom_hsp_unique, cell)
         b_hsp_a =  PBC_HSPoints(bottom_hsp_all, cell)
