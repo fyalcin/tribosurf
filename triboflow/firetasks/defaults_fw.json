@@ -88,7 +88,7 @@
       "database_from":null,
       "database_to":"triboflow",
       "miller":null,
-      "entry_check":null,
+      "check_entry":null,
       "entry_to":[
          [
             "calc_output"

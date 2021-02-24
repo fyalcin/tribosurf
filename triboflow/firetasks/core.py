@@ -261,13 +261,78 @@ class FT_RelaxStructure(FiretaskBase):
 @explicit_serialize
 class FT_MoveTagResults(FiretaskBase):
     """
-    Firetask description...
+    Firetask to move some generic data from a certain location of the database 
+    to another one. In principle this Firetask could be used in a very general
+    way. The most common usage is to locate the results of an Atomate Workflow
+    in the low level database and move output data of interest to the high level
+    database of interest. 
+    
+    The Firetask does the following steps:
+
+    1 - If `check_key` is not None, a control is done to understand if data is 
+    already present and eventually stop the transfer to avoid overriding.
+    The location of the data in the db is identified by means of: `db_file`, 
+    `database_to`, `collection_to`. The MongoDB field is identified with `mp_id`
+    (and `miller`) and data is retrieved. If data_dict['check_key']: stop.
+
+    2 - The field containing the data of interest is extracted. The query is 
+    done on: `db_file`, `database_from`, `collection_from`. The correct field
+    is identified using the filter:
+        {
+            `tag_key`: `tag`
+        }
+
+    3 - Once the field dictionary has been retrieved, the data to be transferred
+    is identied by `entry_from`, which could be: str, list, list of lists.
+    To transfer more data it is necessary to use lists of lists, where each
+    list contains the nested keys within the extracted dictionary containing 
+    the data that I want to transfer.
+
+    4 - The selected data is stored in the destination database, the location is
+    identified by: `db_file`, `database_to`, `collection_to`, `entry_to`.
+    `entry_to` can be again, str, list or list of lists. To identify a single 
+    element it is necessary to use str or list, the latter in the case of a
+    data value nested within the source or destination dictionary. However, if
+    you want to transfer more data, it is mandatory to use list of lists, and
+    in that case len(`entry_from`) == len(`entry_to`).
+    Warning: The Firetask does not cancel the source data!
+
+    Examples
+    --------
+    Here is a simple example explaining how MoveTagResults logically works.
+
+    - Information concerning the source data and location:
+        db_file = None
+        database_from = "FireWorks"
+        collection_from = "coll.tasks"
+        entry_from = [['test', 'energy'], ['test', 'energy2']]
+
+    - Information concerning the source tag:
+        tag = True
+        tag_key = "transfer_test"
+
+    - Information concerning the destination location:
+        db_file = None
+        database_to = "tribchem"
+        collection_to = "PBE.slab_data"
+        entry_from = [['energy'], ['data_back', 'energy2']]
+        check_key = ''
+
+    From these 
+{
+    "_id" : ...,
+    "transfer_test" : true,
+    "test" : {
+        "energy" : 10,
+        "energy2" : 50
+    }
+}
     
     """
 
     required_params = ['mp_id', 'collection_from', 'collection_to', 'tag']
     optional_params = ['db_file', 'database_from', 'database_to', 'miller',
-                       'entry_check', 'entry_to', 'entry_from', 'struct_kind', 
+                       'check_entry', 'entry_to', 'entry_from', 'struct_kind', 
                        'override', 'tag_key', 'cluster_params']
 
     def run_task(self, fw_spec):
@@ -304,19 +369,22 @@ class FT_MoveTagResults(FiretaskBase):
         
         # Check if collection does exist
         MoveTagResultsError.check_collection(p['collection_to'])
-
-        if p['entry_check'] is not None:
+        
+        if p['check_entry'] is not None:
             # Retrieve the structure from the Database
-            structure = retrieve_from_db(db_file=p['db_file'], 
-                                         database=p['database'], 
-                                         collection=p['collection'], 
-                                         mp_id=p['mp_id'],
-                                         miller=p['miller'],
-                                         entry=p['entry_check'],
-                                         pymatgen_obj=False)
+            check_dict = retrieve_from_db(db_file=p['db_file'], 
+                                          database=p['database_to'], 
+                                          collection=p['collection_to'], 
+                                          mp_id=p['mp_id'],
+                                          miller=p['miller'],
+                                          entry=p['check_entry'],
+                                          pymatgen_obj=False)
+
             # Check if the calculation is already done
-            is_done = False if (structure is None or not bool(structure)) else False
-            
+            is_done = True
+            if check_dict is None or check_dict == {}:
+                is_done = False
+                
         else:
             is_done = False
 
@@ -349,7 +417,7 @@ class FT_MoveTagResults(FiretaskBase):
 
         # Finally store the data
         for d in info_dict:
-            nav.update_many_data(p['collection_to'], filter, {'$set': d}, upsert=True)
+            nav.update_data(p['collection_to'], filter, {'$set': d}, upsert=True)
     
     def user_output(self, vasp_calc, p, dfl):
 
