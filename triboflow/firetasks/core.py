@@ -57,7 +57,7 @@ from triboflow.utils.utils import (
     retrieve_from_tag
 
 )
-from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
+from triboflow.utils.vasp_tools import get_custom_vasp_static_settings
 from triboflow.utils.file_manipulation import copy_output_files
 from triboflow.utils.errors import RelaxStructureError, MoveTagResultsError
 
