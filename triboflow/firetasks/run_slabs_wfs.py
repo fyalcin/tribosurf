@@ -99,7 +99,7 @@ class FT_SlabOptThick(FiretaskBase):
 
     relax_type : str, optional
         The type of relaxation to be performed during the simulation, to be feed
-        to GetCustomVaspRelaxSettings. The default is 'slab_pos_relax'.
+        to `get_custom_vasp_relax_settings`. The default is 'slab_pos_relax'.
 
     thick_min : int, optional
         Number of atomic layers for the slab to be used as starting point. In
@@ -212,7 +212,7 @@ class FT_SlabOptThick(FiretaskBase):
             True if a key named 'opt_thickness' is found in `entry`
         
         comp_params : dict
-            Computational parameters of the slab.
+            Computational parameters to simulate the slab.
 
         """
         

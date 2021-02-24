@@ -71,11 +71,67 @@ currentdir = os.path.dirname(__file__)
 @explicit_serialize
 class FT_RelaxStructure(FiretaskBase):
     """
-    Retrieve a structure based on mp_id and entry out of a collection found in
-    db_file and database. The slab is relaxed following the 'relax_type' procedure
-    using an Atomate workflow. The result is stored in the same database with 
-    a tag that can be provided by the user.
+    Retrieve a structure based on `mp_id` (and `miller`) from a location in the
+    database, identified by: `db_file`, `database`, `collection`, `entry`. 
+    The structure is converged setting up a VASP calculation based on Atomate
+    workflows. The result is stored in the same database location and can be 
+    identified by a tag object, provided by the user, associated to a 
+    'task_label' entry. The type of the simulation is identified by 'relax_type'. 
+
+    Parameters
+    ----------
+    mp_id : str
+        MP-ID of the structure from the MP database, used to identify the
+        structures in local databases.
+        
+    functional : str
+        Functional for the pseudopotential to be adopted.
+
+    collection : str
+        Collection where the structure is present. The default collections 
+        used in the "tribchem" database are identified as functional+string, 
+        where string is usually: '.bulk_data', 'slab_data', 'interface_name'.
+
+    entry : str or list
+        Location of the structure to be retrieved from database and collection.
+
+    tag : str (any python object)
+        Defined by user, it is automatically associated from Atomate workflows 
+        to an entry, with key 'task_label', in the first layer of the db field 
+        containing the output of the VASP simulations. The results are stored in
+        the Atomate database. Tag can be used to keep track of where the DFT 
+        calculation results have been stored in the database. In principle it 
+        can be any python object.
+
+    db_file : str or None
+        Path to the location of the database. If nothing is provided it will be
+        searched by env_check from Atomate. The default is None.
     
+    database : str, optional
+        Name of the database where the structure will be retrieved. 
+        The default is "tribchem".
+
+    relax_type : str, optional
+        The type of relaxation to be performed during the simulation, to be feed
+        to `get_custom_vasp_relax_settings`. The default is 'slab_pos_relax'.
+
+    comp_params : dict, optional
+        Computational parameters to simulate the structure with DFT. If an empty 
+        dictionary is passed, defaults are used. The default is {}.
+
+    miller : list of int, optional
+        Miller indexes (h, k, l) used to identify unequivocally a slab within
+        the database. If nothing is passed, the material will be only identified
+        by means of `mp_id`. The default is None.
+    
+    check_key : str or list, optional
+        Check if a given data is already present within a database location, to
+        understand if the DFT simulation has been already done. The location is
+        identified by db_file, database, collection, entry. Once the data 
+        corresponding to entry is extracted, if data['check_key'] does 
+        exist then the DFT simulation is not done. If it is None, the simulation
+        will be always started. The default is None.
+
     """
 
     required_params = ['mp_id', 'functional', 'collection', 'entry', 'tag']
@@ -108,6 +164,29 @@ class FT_RelaxStructure(FiretaskBase):
             return FWAction(update_spec=fw_spec)
 
     def getcheck_struct(self, p, pymatgen_obj=False):
+        """
+        Retrieve a structure from the database and eventually check if a DFT
+        simulation has been already done
+
+        Parameters
+        ----------
+        p : dict
+            All the input parameters of the Firetasks, placed in a dictionary.
+
+        pymatgen_obj : bool, optional
+            Decide whether to directly convert the dictionary extracted to the
+            database to a structure or not. The default is False.
+
+        Returns
+        -------
+        structure : dict or pymatgen structure
+            Dictionary containing the structure.
+        
+        is_done : bool
+            If a simulation output is already present in the database. If it
+            is True, the calculation will not be performed.
+
+        """
         
         # Check if collection does exist
         RelaxStructureError.check_collection(p['collection'])
@@ -129,6 +208,26 @@ class FT_RelaxStructure(FiretaskBase):
         return structure, is_done      
 
     def run_relax_detour(self, structure, p, dfl):
+        """
+        Set necessary VASP parameters and create an Atomate workflow to start a 
+        detour and perform a DFT simulation on the given structure structure.
+
+        Parameters
+        ----------
+        structure : pymatgen structure
+            Crystalline atomic structure to perform a Kohn-Sham minimization.
+
+        p : dict
+            All the input parameters of the Firetasks, placed in a dictionary.
+
+        dfl : str
+            Path to location of defaults, set missing computational parameters.
+
+        Returns
+        -------
+        wf : Fireworks.Workflow
+            Workflow to start a VASP simulation on your structure.
+        """
 
         # Check tag and computational parameters
         tag = p['tag']
