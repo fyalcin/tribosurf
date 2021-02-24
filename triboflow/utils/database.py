@@ -289,7 +289,7 @@ class Navigator:
                     log.warning(message)
                 else:
                     log.warning('{} already exist in {} collection.'
-                                'Use the duplicates flag for saving multiple '
+                                ' Use the duplicates flag for saving multiple '
                                 'times the same document.'
                                 ''.format(data, collection))
                 return
@@ -481,6 +481,35 @@ class Navigator:
         else:
             log.critical('The current date is wrong!!! '
                          'No entries in the database have been removed.')
+
+class TableTestNavigator(Navigator):
+    """
+    Child class of Navigator which create a database for only for tests named
+    'test'. 
+
+    Methods
+    -------
+    create_collection(collection_name, data)
+        Create a collection with default values and fields.
+    """
+
+    def __init__(self, db_file):
+        super().__init__(db_file=db_file, high_level='test')
+
+    def create_collection(self, collection_name, data):
+        """
+        Create a collection with default values and fields.
+
+        Parameters
+        ----------
+        collection_name : str
+            Name of the collection.
+        data : dict
+            Data to add in the database.
+
+        """
+        self.insert_data(collection=collection_name, data=data)
+
 
 
 class StructureNavigator(Navigator):

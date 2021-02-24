@@ -14,6 +14,7 @@ from fireworks import Firework, Workflow, LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
 
 from triboflow.firetasks.core import FT_MoveTagResults
+from triboflow.utils.database import Navigator
 
 
 # Define input parameters
@@ -24,13 +25,23 @@ tag = True
 tag_key = "transfer_test"
 db_file = None
 database_from = None
-database_to = 'tribchem'
+database_to = 'test'
 miller = [0, 1, 2]
 check_entry = None
 entry_to = [['test', 'energy'], ['test', 'energy2']]
 entry_from = [['data', 'energy'], ['data', 'energy2']]
 override = False
 cluster_params = {}
+
+# Initialize the collections for the tests
+nav = Navigator(db_file=db_file)
+data = {'test': 
+           {'energy1': 1,
+            'energy2': 2,
+            'energy3': 3,
+            }
+}
+nav.insert_data(collection='tasks', data={'energy': 100})
 
 # Instantiate the Firetask and create a WF
 ft = FT_MoveTagResults(mp_id=mp_id,
