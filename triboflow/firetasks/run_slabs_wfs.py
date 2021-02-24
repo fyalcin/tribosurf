@@ -243,7 +243,32 @@ class FT_SlabOptThick(FiretaskBase):
         Select the desired subworkflow from the SlabWFs class, to converge the 
         slab thickness either by evaluating the surface energy or the lattice 
         parameter.
+
+        Parameters
+        ----------
+        structure : pymatgen.core.structure.Structure
+            Bulk structure to construct the slabs from.
         
+        fw_spec : dict
+            Spec of the dictionary, contains information to bootstrap job.
+            It is not so relevant in the present workflow, however it might be 
+            important in future workflows containing the SlabThickOpt Firetask
+            to keep information through this convergence process.
+        
+        comp_params : dict
+            Computational parameters of the slab.
+        
+        dfl : str
+            Path to the JSON file containing default values for the workflows.
+        
+        p : dict
+            Input parameters of the Firetask.
+
+        Returns
+        -------
+        wf : Firework.Workflow
+            Workflow object to start a convergence process as a detour.
+
         """
         
         from triboflow.workflows.slabs_wfs import SlabWF
@@ -465,6 +490,21 @@ class FT_EndThickConvo(FiretaskBase):
         def get_data(self, case, p):
             """
             Extract the surface energies from the high level DB.
+
+            case : str
+                Dictionary key to identify the type of data to be read from 
+                'calc_output' in the nested entry of the pymongo field.
+
+            p : dict
+                Dictionary with the input parameters of the Firetask.
+
+            Returns
+            -------
+            data : list of floats
+                Contains all the `case` data calculated for various thicknesses.
+            
+            index : list of index
+                Contains the index referring to the different thicknesses.
 
             """
 
