@@ -168,6 +168,7 @@ def read_default_params(default_file, default_key, dict_params):
     ------
     ReadParamsError
         When unknown keys are present ind `dict_params`.
+
     """
 
     # Read the JSON file with defaults and extract the corresponding key
@@ -217,6 +218,7 @@ def get_one_info_from_dict(input_dict, entry):
     -------
     dict
         Subdictionary containing the desired information.
+
     """
 
     # Simply read a dictionary key
@@ -379,6 +381,7 @@ def write_one_dict(data, entry, to_mongodb=True):
     -------
     dict
         Dictionary containing the data.
+
     """
 
     # Simply write a dictionary with a single key
@@ -444,6 +447,7 @@ def write_multiple_dict(data, entry, to_mongodb=True):
     -------
     dict or list of dicts
         Dictionaries containing the data.
+
     """
 
     # Extract many info at the same time 
@@ -476,7 +480,10 @@ def write_multiple_dict(data, entry, to_mongodb=True):
 def retrieve_from_db(mp_id, collection, db_file=None, database=None, 
                      miller=None, entry=None, is_slab=False, pymatgen_obj=False):
     """
-    [summary]
+    Retrieve data from a selected database and collection. By specifing an entry
+    you can extract specific data, even from nested data in the field dictionary.
+    If pymatgen_obj is True, it is assumed that the object present in `entry` is
+    a pymatgen structure, thus having a `from_dict` method.
 
     Parameters
     ----------
@@ -505,7 +512,7 @@ def retrieve_from_db(mp_id, collection, db_file=None, database=None,
     is_slab : bool, optional
         Recognize the type of structure to convert a Structure or Slab
         dictionary back to a pymatgen object, by applying the `.from_dict`
-        method. Meaninful only when `pymatgen_obj=True`. The default is False.
+        method. Meaningful only when `pymatgen_obj=True`. The default is False.
 
     pymatgen_obj : bool, optional
         Decide to return a pymatgen object or a dictionary. The default is 
@@ -513,8 +520,10 @@ def retrieve_from_db(mp_id, collection, db_file=None, database=None,
 
     Returns
     -------
-    [type]
-        [description]
+    structure : any python object
+        Data extracted from the field of the database. It can be a pymatgen
+        structure.
+
     """
 
     # Call the navigator for retrieving structure
@@ -569,7 +578,7 @@ def retrieve_from_tag(collection, tag, tag_key='task_label', entry=None,
         'localhost' on the hosting machine. The default is None.
 
     database : str or None, optional
-        Database toquery. The default is None.
+        Database to query. The default is None.
 
     Returns
     -------
@@ -600,7 +609,7 @@ def retrieve_from_tag(collection, tag, tag_key='task_label', entry=None,
 
 def create_tags(prefix):
     """
-    Create a tag out of a prefix.
+    Generate a tag out of a prefix.
 
     """
 
