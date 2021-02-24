@@ -14,6 +14,7 @@ from fireworks import Firework, Workflow, LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
 
 from triboflow.firetasks.core import FT_MoveTagResults
+from triboflow.utils.database import TableTestNavigator
 
 
 # Define input parameters
@@ -31,6 +32,10 @@ entry_to = [['test', 'energy'], ['test', 'energy2'], ['test', 'energy3']]
 entry_from = [['data', 'energy'], ['data', 'energy2'], ['data', 'energy']]
 override = False
 cluster_params = {}
+
+# Initialize the collections for the tests
+nav_test = TableTestNavigator(db_file=db_file)
+nav_test.create_collection('PBE.slab_data', {'energy': 100})
 
 # Instantiate the Firetask and create a WF
 ft = FT_MoveTagResults(mp_id=mp_id,
