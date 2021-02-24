@@ -137,7 +137,7 @@ class FT_RelaxStructure(FiretaskBase):
             comp_params = read_default_params(dfl, 'comp_params', comp_params)
         
         # Set options for vasp
-        vis = GetCustomVaspRelaxSettings(structure, comp_params, p['relax_type'])
+        vis = get_custom_vasp_static_settings(structure, comp_params, p['relax_type'])
         
         # Create the Firework to run perform the simulation
         if p['functional'] == 'SCAN':
