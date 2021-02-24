@@ -56,7 +56,7 @@ def Plot_SlabHS(hs, slab, to_fig=None):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     
-    plot_slab(slab, ax, scale=0.8, repeat=3, window=1.25, 
+    plot_slab(slab, ax, scale=0.8, repeat=3, window=2.25, 
               draw_unit_cell=True, decay=0.2, adsorption_sites=False)
     ax.set(xlim = ( -0.1*(a[0] + b[0]), 1.1*(a[0] + b[0]) ), 
            ylim = ( -0.1*(a[1] + b[1]), 1.1*(a[1] + b[1]) ))
@@ -85,7 +85,7 @@ def Plot_SlabHS(hs, slab, to_fig=None):
     labelleft=False) # labels along the bottom edge are off
     
     if to_fig != None:
-        plt.savefig(to_fig+'.png', dpi=300)
+        plt.savefig(to_fig+'.png', dpi=300, bbox_inches='tight')
     
     plt.show()
 
