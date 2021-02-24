@@ -35,12 +35,9 @@ cluster_params = {}
 
 # Initialize the collections for the tests
 nav = Navigator(db_file=db_file)
-nav.insert_data(collection=collection_from, data={'transfer_test': True})
-data = {'data': 
-           {'energy': 1,
-            'energy2': 2,
-            'energy3': 3,
-            }
+data = {'transfer_test': True, 
+        'data': {'energy': 1,
+                 'energy2': 2}
 }
 nav.insert_data(collection=collection_from, data=data)
 
