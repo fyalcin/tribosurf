@@ -312,22 +312,50 @@ class FT_MoveTagResults(FiretaskBase):
         tag_key = "transfer_test"
 
     - Information concerning the destination location:
+        mp_id = 'mp-126'
         db_file = None
         database_to = "tribchem"
         collection_to = "PBE.slab_data"
-        entry_from = [['energy'], ['data_back', 'energy2']]
-        check_key = ''
+        entry_to = [['energy'], ['data_back', 'energy2']]
+        check_key = 'is_done'
 
-    From these 
-{
-    "_id" : ...,
-    "transfer_test" : true,
-    "test" : {
-        "energy" : 10,
-        "energy2" : 50
+    a) The source field would be something like that:
+    {
+        "_id" : ...,
+        "transfer_test" : true,
+        "test" : {
+            "energy" : 10,
+            "energy2" : 50
+        }
     }
-}
-    
+
+    b) The destination field would be something like that:
+     {
+        "_id" : ...,
+        "mp_id" : "mp-126"
+    }
+
+    Running the Firetasks you would:
+
+    1. Check b-field to see if a key named 'check_key' is present. It is not, so
+       the process will continue.
+    2. Identify univocally the a-field to be the correct source containing the 7
+       data of interest. This is done matching tag_key and key with the entry
+       of the field dictionary: 'transfer_test'.
+    3. Extract both energy and energy2 values from the a-field.
+    4. Find the exact destination location with a filter based on mp_id and 
+       place there, following the path provided by 'entry_to'.
+
+    In the end, the b-field becomes:
+     {
+        "_id" : ...,
+        "mp_id": "mp-126",
+        "energy" : 10,
+        "data_back" : {
+            "energy2" : 50,
+        }
+    }   
+
     """
 
     required_params = ['mp_id', 'collection_from', 'collection_to', 'tag']
@@ -366,6 +394,22 @@ class FT_MoveTagResults(FiretaskBase):
             return FWAction(update_spec=fw_spec)
     
     def check_struct(self, p):
+        """
+        Check if there exists an entry called 'check_entry' in the destination
+        field. If it is found the transfer is stopped.
+
+        Parameters
+        ----------
+        p : dict
+            All the input parameters of the Firetasks, placed in a dictionary.
+
+        Returns
+        -------
+        is_done : bool
+            If a simulation output is already present in the database. If it
+            is True, the calculation will not be performed.
+
+        """
         
         # Check if collection does exist
         MoveTagResultsError.check_collection(p['collection_to'])
@@ -391,6 +435,11 @@ class FT_MoveTagResults(FiretaskBase):
         return is_done
     
     def get_results_from_tag(self, p):
+        """
+        Identify the correct field in `collection_from` by using tags and extract
+        the output data of interests with `entry_from`.
+
+        """
         
         # Retrieve the vasp_calc_output and the info
         vasp_calc, info = retrieve_from_tag(db_file=p['db_file'],
@@ -402,6 +451,10 @@ class FT_MoveTagResults(FiretaskBase):
         return vasp_calc, info
     
     def store_results(self, info, p):
+        """
+        Store the results to the destination database and collection.
+        
+        """
         
         # Prepare the list of dictionaries to be stored in the database
         info_dict = write_multiple_dict(info, p['entry_to'])  
