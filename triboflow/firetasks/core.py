@@ -103,7 +103,7 @@ class FT_RelaxStructure(FiretaskBase):
         calculation results have been stored in the database. In principle it 
         can be any python object.
 
-    db_file : str or None
+    db_file : str or None, optional
         Path to the location of the database. If nothing is provided it will be
         searched by env_check from Atomate. The default is None.
     
