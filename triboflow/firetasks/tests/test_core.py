@@ -27,9 +27,9 @@ db_file = None
 database_from = None
 database_to = 'test'
 miller = [0, 1, 2]
-entry_check = None
-entry_to = [['test', 'energy'], ['test', 'energy2'], ['test', 'energy3']]
-entry_from = [['data', 'energy'], ['data', 'energy2'], ['data', 'energy']]
+check_entry = None
+entry_to = [['test', 'energy'], ['test', 'energy2']]
+entry_from = [['data', 'energy'], ['data', 'energy2']]
 override = False
 cluster_params = {}
 
@@ -54,7 +54,7 @@ ft = FT_MoveTagResults(mp_id=mp_id,
                        database_from=database_from,
                        database_to=database_to,
                        miller=miller,
-                       entry_check=entry_check,
+                       check_entry=check_entry,
                        entry_to=entry_to,
                        entry_from=entry_from,
                        override=override,

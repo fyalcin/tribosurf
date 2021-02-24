@@ -71,11 +71,67 @@ currentdir = os.path.dirname(__file__)
 @explicit_serialize
 class FT_RelaxStructure(FiretaskBase):
     """
-    Retrieve a structure based on mp_id and entry out of a collection found in
-    db_file and database. The slab is relaxed following the 'relax_type' procedure
-    using an Atomate workflow. The result is stored in the same database with 
-    a tag that can be provided by the user.
+    Retrieve a structure based on `mp_id` (and `miller`) from a location in the
+    database, identified by: `db_file`, `database`, `collection`, `entry`. 
+    The structure is converged setting up a VASP calculation based on Atomate
+    workflows. The result is stored in the same database location and can be 
+    identified by a tag object, provided by the user, associated to a 
+    'task_label' entry. The type of the simulation is identified by 'relax_type'. 
+
+    Parameters
+    ----------
+    mp_id : str
+        MP-ID of the structure from the MP database, used to identify the
+        structures in local databases.
+        
+    functional : str
+        Functional for the pseudopotential to be adopted.
+
+    collection : str
+        Collection where the structure is present. The default collections 
+        used in the "tribchem" database are identified as functional+string, 
+        where string is usually: '.bulk_data', 'slab_data', 'interface_name'.
+
+    entry : str or list
+        Location of the structure to be retrieved from database and collection.
+
+    tag : str (any python object)
+        Defined by user, it is automatically associated from Atomate workflows 
+        to an entry, with key 'task_label', in the first layer of the db field 
+        containing the output of the VASP simulations. The results are stored in
+        the Atomate database. Tag can be used to keep track of where the DFT 
+        calculation results have been stored in the database. In principle it 
+        can be any python object.
+
+    db_file : str or None
+        Path to the location of the database. If nothing is provided it will be
+        searched by env_check from Atomate. The default is None.
     
+    database : str, optional
+        Name of the database where the structure will be retrieved. 
+        The default is "tribchem".
+
+    relax_type : str, optional
+        The type of relaxation to be performed during the simulation, to be feed
+        to `get_custom_vasp_relax_settings`. The default is 'slab_pos_relax'.
+
+    comp_params : dict, optional
+        Computational parameters to simulate the structure with DFT. If an empty 
+        dictionary is passed, defaults are used. The default is {}.
+
+    miller : list of int, optional
+        Miller indexes (h, k, l) used to identify unequivocally a slab within
+        the database. If nothing is passed, the material will be only identified
+        by means of `mp_id`. The default is None.
+    
+    check_key : str or list, optional
+        Check if a given data is already present within a database location, to
+        understand if the DFT simulation has been already done. The location is
+        identified by db_file, database, collection, entry. Once the data 
+        corresponding to entry is extracted, if data['check_key'] does 
+        exist then the DFT simulation is not done. If it is None, the simulation
+        will be always started. The default is None.
+
     """
 
     required_params = ['mp_id', 'functional', 'collection', 'entry', 'tag']
@@ -108,6 +164,29 @@ class FT_RelaxStructure(FiretaskBase):
             return FWAction(update_spec=fw_spec)
 
     def getcheck_struct(self, p, pymatgen_obj=False):
+        """
+        Retrieve a structure from the database and eventually check if a DFT
+        simulation has been already done
+
+        Parameters
+        ----------
+        p : dict
+            All the input parameters of the Firetasks, placed in a dictionary.
+
+        pymatgen_obj : bool, optional
+            Decide whether to directly convert the dictionary extracted to the
+            database to a structure or not. The default is False.
+
+        Returns
+        -------
+        structure : dict or pymatgen structure
+            Dictionary containing the structure.
+        
+        is_done : bool
+            If a simulation output is already present in the database. If it
+            is True, the calculation will not be performed.
+
+        """
         
         # Check if collection does exist
         RelaxStructureError.check_collection(p['collection'])
@@ -129,6 +208,26 @@ class FT_RelaxStructure(FiretaskBase):
         return structure, is_done      
 
     def run_relax_detour(self, structure, p, dfl):
+        """
+        Set necessary VASP parameters and create an Atomate workflow to start a 
+        detour and perform a DFT simulation on the given structure structure.
+
+        Parameters
+        ----------
+        structure : pymatgen structure
+            Crystalline atomic structure to perform a Kohn-Sham minimization.
+
+        p : dict
+            All the input parameters of the Firetasks, placed in a dictionary.
+
+        dfl : str
+            Path to location of defaults, set missing computational parameters.
+
+        Returns
+        -------
+        wf : Fireworks.Workflow
+            Workflow to start a VASP simulation on your structure.
+        """
 
         # Check tag and computational parameters
         tag = p['tag']
@@ -162,13 +261,78 @@ class FT_RelaxStructure(FiretaskBase):
 @explicit_serialize
 class FT_MoveTagResults(FiretaskBase):
     """
-    Firetask description...
+    Firetask to move some generic data from a certain location of the database 
+    to another one. In principle this Firetask could be used in a very general
+    way. The most common usage is to locate the results of an Atomate Workflow
+    in the low level database and move output data of interest to the high level
+    database of interest. 
+    
+    The Firetask does the following steps:
+
+    1 - If `check_key` is not None, a control is done to understand if data is 
+    already present and eventually stop the transfer to avoid overriding.
+    The location of the data in the db is identified by means of: `db_file`, 
+    `database_to`, `collection_to`. The MongoDB field is identified with `mp_id`
+    (and `miller`) and data is retrieved. If data_dict['check_key']: stop.
+
+    2 - The field containing the data of interest is extracted. The query is 
+    done on: `db_file`, `database_from`, `collection_from`. The correct field
+    is identified using the filter:
+        {
+            `tag_key`: `tag`
+        }
+
+    3 - Once the field dictionary has been retrieved, the data to be transferred
+    is identied by `entry_from`, which could be: str, list, list of lists.
+    To transfer more data it is necessary to use lists of lists, where each
+    list contains the nested keys within the extracted dictionary containing 
+    the data that I want to transfer.
+
+    4 - The selected data is stored in the destination database, the location is
+    identified by: `db_file`, `database_to`, `collection_to`, `entry_to`.
+    `entry_to` can be again, str, list or list of lists. To identify a single 
+    element it is necessary to use str or list, the latter in the case of a
+    data value nested within the source or destination dictionary. However, if
+    you want to transfer more data, it is mandatory to use list of lists, and
+    in that case len(`entry_from`) == len(`entry_to`).
+    Warning: The Firetask does not cancel the source data!
+
+    Examples
+    --------
+    Here is a simple example explaining how MoveTagResults logically works.
+
+    - Information concerning the source data and location:
+        db_file = None
+        database_from = "FireWorks"
+        collection_from = "coll.tasks"
+        entry_from = [['test', 'energy'], ['test', 'energy2']]
+
+    - Information concerning the source tag:
+        tag = True
+        tag_key = "transfer_test"
+
+    - Information concerning the destination location:
+        db_file = None
+        database_to = "tribchem"
+        collection_to = "PBE.slab_data"
+        entry_from = [['energy'], ['data_back', 'energy2']]
+        check_key = ''
+
+    From these 
+{
+    "_id" : ...,
+    "transfer_test" : true,
+    "test" : {
+        "energy" : 10,
+        "energy2" : 50
+    }
+}
     
     """
 
     required_params = ['mp_id', 'collection_from', 'collection_to', 'tag']
     optional_params = ['db_file', 'database_from', 'database_to', 'miller',
-                       'entry_check', 'entry_to', 'entry_from', 'struct_kind', 
+                       'check_entry', 'entry_to', 'entry_from', 'struct_kind', 
                        'override', 'tag_key', 'cluster_params']
 
     def run_task(self, fw_spec):
@@ -205,19 +369,22 @@ class FT_MoveTagResults(FiretaskBase):
         
         # Check if collection does exist
         MoveTagResultsError.check_collection(p['collection_to'])
-
-        if p['entry_check'] is not None:
+        
+        if p['check_entry'] is not None:
             # Retrieve the structure from the Database
-            structure = retrieve_from_db(db_file=p['db_file'], 
-                                         database=p['database'], 
-                                         collection=p['collection'], 
-                                         mp_id=p['mp_id'],
-                                         miller=p['miller'],
-                                         entry=p['entry_check'],
-                                         pymatgen_obj=False)
+            check_dict = retrieve_from_db(db_file=p['db_file'], 
+                                          database=p['database_to'], 
+                                          collection=p['collection_to'], 
+                                          mp_id=p['mp_id'],
+                                          miller=p['miller'],
+                                          entry=p['check_entry'],
+                                          pymatgen_obj=False)
+
             # Check if the calculation is already done
-            is_done = False if (structure is None or not bool(structure)) else False
-            
+            is_done = True
+            if check_dict is None or check_dict == {}:
+                is_done = False
+                
         else:
             is_done = False
 
@@ -250,7 +417,7 @@ class FT_MoveTagResults(FiretaskBase):
 
         # Finally store the data
         for d in info_dict:
-            nav.update_many_data(p['collection_to'], filter, {'$set': d}, upsert=True)
+            nav.update_data(p['collection_to'], filter, {'$set': d}, upsert=True)
     
     def user_output(self, vasp_calc, p, dfl):
 
