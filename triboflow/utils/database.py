@@ -485,7 +485,7 @@ class Navigator:
 class TableTestNavigator(Navigator):
     """
     Child class of Navigator which create a database for only for tests named
-    'tests'. 
+    'test'. 
 
     Methods
     -------
@@ -494,7 +494,7 @@ class TableTestNavigator(Navigator):
     """
 
     def __init__(self, db_file):
-        super().__init__(db_file=db_file, high_level='tests')
+        super().__init__(db_file=db_file, high_level='test')
 
     def create_collection(self, collection_name, data):
         """
