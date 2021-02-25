@@ -18,8 +18,8 @@ from triboflow.firetasks.core import FT_RelaxStructure
 from triboflow.utils.database import Navigator, NavigatorMP
 
 # Retriving the bulk structure from MP database and save it in our test database
-chem_formula='Hf'
-mp_id = 'mp-103'
+chem_formula='Si'
+mp_id = 'mp-149'
 
 nav_mp = NavigatorMP()
 structure, mp_id = nav_mp.get_low_energy_structure(chem_formula=chem_formula, 
