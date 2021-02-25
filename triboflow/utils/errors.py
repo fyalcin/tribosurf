@@ -96,10 +96,9 @@ class RelaxStructureError(GeneralErrorFT):
     @staticmethod
     def is_data(structure, mp_id, functional):
         if structure is None:
-            formula = structure.composition.reduced_formula
-            raise RelaxStructureError('No entry found in DB {} for a '
+            raise RelaxStructureError('No entry found in DB for a '
                                       'structure with mpid: {}, functional: {}'
-                                      .format(formula, mp_id, functional))
+                                      .format(mp_id, functional))
 
 class MoveTagResultsError(GeneralErrorFT):
     """ Errors when moving data between two different db_file/database/collection.

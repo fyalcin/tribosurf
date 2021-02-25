@@ -57,7 +57,7 @@ from triboflow.utils.utils import (
     retrieve_from_tag
 
 )
-from triboflow.utils.vasp_tools import get_custom_vasp_static_settings
+from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
 from triboflow.utils.file_manipulation import copy_output_files
 from triboflow.utils.errors import RelaxStructureError, MoveTagResultsError
 
@@ -136,7 +136,7 @@ class FT_RelaxStructure(FiretaskBase):
 
     required_params = ['mp_id', 'functional', 'collection', 'entry', 'tag']
     optional_params = ['db_file', 'database', 'relax_type', 'comp_params', 
-                       'miller', 'check_key']
+                       'miller', 'struct_kind', 'check_key']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -202,8 +202,12 @@ class FT_RelaxStructure(FiretaskBase):
         RelaxStructureError.is_data(structure, p['mp_id'], p['functional'])
 
         # Check if the calculation is already done, searching for given keys
+        is_done = False
         if p['check_key'] is not None:
             is_done = True if p['check_key'] in structure.keys() else False
+
+        func = select_struct_func(p['struct_kind'])
+        structure = func.from_dict(structure)
 
         return structure, is_done      
 
@@ -236,7 +240,7 @@ class FT_RelaxStructure(FiretaskBase):
             comp_params = read_default_params(dfl, 'comp_params', comp_params)
         
         # Set options for vasp
-        vis = get_custom_vasp_static_settings(structure, comp_params, p['relax_type'])
+        vis = get_custom_vasp_relax_settings(structure, comp_params, p['relax_type'])
         
         # Create the Firework to run perform the simulation
         if p['functional'] == 'SCAN':
