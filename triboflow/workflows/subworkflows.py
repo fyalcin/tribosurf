@@ -98,8 +98,9 @@ def CalcPES_SWF(top_slab, bottom_slab,
     if not interface_name:
         mt = ''.join(str(s) for s in top_miller)
         mb = ''.join(str(s) for s in bot_miller)
-        interface_name = (top_slab.formula+'_'+mt+'_'+
-                          bottom_slab.formula+'_'+mb+'_AutoGen')
+        interface_name = (top_slab.composition.reduced_formula+'_'+mt+'_'+
+                          bottom_slab.composition.reduced_formula+'_'+mb+
+                          '_AutoGen')
         print('\nYour interface name has been automatically generated to be:'
               '\n {}'.format(interface_name))
         
