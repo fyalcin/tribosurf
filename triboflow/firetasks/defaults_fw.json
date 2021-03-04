@@ -81,7 +81,8 @@
          
       },
       "miller":null,
-      "check_key":null
+      "check_key":null,
+      "struct_kind":"bulk"
    },
    "MoveTagResults":{
       "db_file":null,

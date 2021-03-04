@@ -35,13 +35,11 @@ cluster_params = {}
 
 # Initialize the collections for the tests
 nav = Navigator(db_file=db_file)
-data = {'test': 
-           {'energy1': 1,
-            'energy2': 2,
-            'energy3': 3,
-            }
+data = {'transfer_test': True, 
+        'data': {'energy': 1,
+                 'energy2': 2}
 }
-nav.insert_data(collection='tasks', data={'energy': 100})
+nav.insert_data(collection=collection_from, data=data)
 
 # Instantiate the Firetask and create a WF
 ft = FT_MoveTagResults(mp_id=mp_id,
