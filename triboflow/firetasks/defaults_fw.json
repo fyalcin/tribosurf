@@ -12,7 +12,7 @@
       "in_unit_planes":true,
       "ext_index":0,
       "conv_thr":0.025,
-      "parallelization": "low",
+      "parallelization":null,
       "bulk_entry":"structure_fromMP",
       "slab_entry":null,
       "cluster_params":{
@@ -34,7 +34,7 @@
       "vacuum":10,
       "in_unit_planes":true,
       "ext_index":0,
-      "parallelization":"low",
+      "parallelization":null,
       "recursion":false,
       "cluster_params":{
          
@@ -57,7 +57,7 @@
       "in_unit_planes":true,
       "ext_index":0,
       "conv_thr":0.025,
-      "parallelization":"low",
+      "parallelization":null,
       "cluster_params":{
          
       }

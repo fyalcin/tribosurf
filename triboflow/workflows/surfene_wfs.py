@@ -50,7 +50,7 @@ class SurfEneWF:
                             db_file=None, low_level=None, high_level='triboflow',
                             relax_type='slab_pos_relax', comp_params={}, thick_min=4, 
                             thick_max=12, thick_incr=2, vacuum=10, in_unit_planes=True, 
-                            ext_index=0, cluster_params={}, parallelization='low', 
+                            ext_index=0, cluster_params={}, parallelization=None,
                             recursion=False):
         """
         Description of the method...
@@ -61,7 +61,7 @@ class SurfEneWF:
         # =====================================================================
 
         # Define the thicknesses to create and simulate the slabs
-        if parallelization == 'low':
+        if parallelization == 'low' or parallelization is None:
             if recursion:
                 thickness = [thick_min]
             else:
@@ -71,13 +71,17 @@ class SurfEneWF:
             try:
                 thickness = np.arange(thick_min, thick_max, thick_incr)
                 thickness = thickness.tolist()
-                assert len(thickness)>0
+                
+                # If the array length is zero, the thick values are not well set
+                assert len(thickness) > 0
+
+                thickness = [0] + thickness + [thick_max]
 
             except: SubWFError("Thickness parameters are not defined correctly")
         
         else:
             raise SubWFError("The value passed as parallelization is not known "
-                              "Allowed value: 'low', 'high'")
+                              "Allowed value: None, 'low', 'high'")
 
         # Create the dictionary key where the unrelaxed slab will be saved
         formula = structure.composition.reduced_formula
@@ -186,12 +190,28 @@ class SurfEneWF:
         # ==================================================       
 
         # Build the workflow list and the links between elements
-        wf_list = [fw_gen_slabs, ]
-        links = {fw_gen_slabs: fw_relax_slabs}
-        for fw in fw_relax_slabs:
-            wf_list.append(fw)
-            links.update({fw: [fw_surfene]})
-        wf_list.append(fw_surfene)
+
+        wf_list = [fw_gen_slabs]
+
+        # Case of parallelization = None, make serial calculations
+        if parallelization is None and not recursion:
+            links = {fw_gen_slabs: fw_relax_slabs[0]}
+            
+            for n, fw in enumerate(fw_relax_slabs):
+                wf_list.append(fw)
+                if n < len(fw_relax_slabs) - 1:
+                    links.update({fw: fw_relax_slabs[n+1]})
+            
+            links.update({fw_relax_slabs[-1]: fw_surfene})
+        
+        # Other cases or when recursion is True (one element)
+        else:
+            links = {fw_gen_slabs: fw_relax_slabs}
+            for fw in fw_relax_slabs:
+                wf_list.append(fw)
+                links.update({fw: [fw_surfene]})
+        
+        wf_list.append(fw_surfene) 
 
         wf = Workflow(wf_list, links, name="Converge surface energy WF")
 

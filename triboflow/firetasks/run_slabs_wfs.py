@@ -569,7 +569,7 @@ class FT_EndThickConvo(FiretaskBase):
             # at the beginning (bulk, min, max), and if convergence is not 
             # achieved, then a calculation is done one by one until convergence
             # is not attained or you go above max
-            if p['parallelization'] == 'low':
+            if p['parallelization'] in [None, 'low']:
                 
                 # If length>1, then a material has converged other than max
                 if len(index_converged > 1):
