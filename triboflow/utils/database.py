@@ -10,12 +10,14 @@ Classes to manage data from local and online DataBases at a high level.
 
 __author__ = 'Omar Chehaimi'
 __credits__ = 'This module is based on the Triboflow package, Michael Wolloch'
-__copyright__ = 'Prof. M.C. Righi, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 1st, 2021'
 
 import io
 import os
+from pathlib import Path, PurePosixPath
+import pickle
 from datetime import datetime
 from pathlib import Path, PurePosixPath
 import pymongo
@@ -785,8 +787,14 @@ class NavigatorMP:
 
     Methods
     -------
-    get_low_energy_structure(chem_formula, mp_id, print_info)
+    __get_low_energy_structure(chem_formula, mp_id, print_info)
         Get the low energy structure from the Materials Project database.
+    get_low_energy_structure(chem_formula, mp_id, print_info)    
+        Retrive the structure correspoding to the lowest energy.
+    __save_struct_object(structure, mp_id, path)
+        Save the structure object in the specified path.
+    __get_struct_object(struct_path):
+        Load the structure object in the specified path.
     get_property_from_mp(mp_id, prop)
         Get the searched property from the Materials Project database.
 
@@ -822,8 +830,8 @@ class NavigatorMP:
                                    ' database.'.format(chem_formula))
         return mp_id[0]['material_id']
 
-    def get_low_energy_structure(self, chem_formula, mp_id=None, 
-                                 print_info=False):
+    def __get_low_energy_structure(self, chem_formula, mp_id=None, 
+                                   print_info=False):
         """
         Search MaterialsProjects for structure.
 
@@ -851,7 +859,7 @@ class NavigatorMP:
             Tuple containing several information about the desired structure.
 
         mp_id : str
-            Materials Project ID for the given chemical formula.)
+            Materials Project ID for the given chemical formula.
 
         Examples
         --------
@@ -887,6 +895,129 @@ class NavigatorMP:
                 struct = self.__mpr.get_structure_by_material_id(mp_id)
 
                 return struct, mp_id
+
+    def get_low_energy_structure(self, chem_formula, mp_id=None, 
+                                 print_info=False):
+        """
+        Retrive the structure correspoding to the lowest energy. If the mp_id is
+        provided, before request to the Materials Project server it firstly 
+        check if the structure has been already saved in the 
+        /structures/mp_structures folder 
+        as a pymatgen.core.structure.Structure object.
+
+        The convention name for the object is to name the file using the
+        corresponding mp_id: e.g. for the aluminum (Al) the file name will be 
+        mp-134.
+
+        Parameters
+        ---------- 
+        chem_formula : str
+            Chemical formula of the structure.
+            e.g.: NaCl, Fe2O3, SiO, FeCW.
+        mp_id : str or None, optional
+            Materials Project ID of the desired structure. The default is None.
+            e.g.: 'mp-990448'.       
+        print_info : bool or None, optional
+            Whether to print some information about the collected structure.
+            The default is False
+             
+        Returns
+        -------
+        struct : pymatgen.core.structure.Structure
+            Struct object.
+
+        mp_id : str
+            Materials Project ID for the given chemical formula.
+  
+        """
+        project_folder = os.path.dirname(__file__)
+        # PurePosixPath gets the first level parten directory
+        struct_folder_object = PurePosixPath(project_folder)
+        struct_folder = str(struct_folder_object.parent.parent.parent) \
+            + '/structures/mp_structures/'
+        struct_path = Path(struct_folder)
+
+        if not struct_path.is_dir():
+            print("WARNING: There is no folder for structures files.")
+            print("Creating a new mp_structures folder in " + struct_folder)
+            struct_folder = PurePosixPath(struct_folder)
+            os.mkdir(struct_folder.parent)
+            os.mkdir(struct_folder)
+            struct_path = Path(struct_folder)
+            if not struct_path.is_dir():
+                raise RuntimeError('The creation of struct path has failed!')
+        struct_path = str(struct_path)
+
+        if mp_id is None:
+            struct, mp_id = self.__get_low_energy_structure(
+                chem_formula=chem_formula, 
+                mp_id=mp_id,
+                print_info=print_info)
+
+            self.__save_struct_object(
+                structure=struct, 
+                mp_id=mp_id, 
+                path=struct_path)
+        else:
+            files = os.listdir(struct_path)
+            found = False
+            for file in files:
+                if file == mp_id:
+                    struct = self.__get_struct_object(struct_path+'/'+file)
+                    found = True
+                    break
+
+            # If nothing has been found then do the query and save
+            if not found:
+                struct, mp_id = self.__get_low_energy_structure(
+                    chem_formula=chem_formula, 
+                    mp_id=mp_id,
+                    print_info=print_info)
+
+                self.__save_struct_object(
+                    structure=struct, 
+                    mp_id=mp_id, 
+                    path=struct_path)
+        
+        return struct, mp_id
+            
+    def __save_struct_object(self, structure, mp_id, path):
+        """
+        Save the structure object in the specified path.
+
+        Parameters
+        ----------
+        structure : pymatgen.core.structure.Structure
+            Struct object.
+        mp_id : str
+            Materials Project id corresponding to the structure.
+        path : str
+            Path to save the structure.
+
+        """
+
+        with open(path+'/'+mp_id, 'wb') as struct_out:
+            pickle.dump(structure, struct_out, pickle.HIGHEST_PROTOCOL)
+    
+    def __get_struct_object(self, struct_path):
+        """
+        Load the structure object in the specified path.
+
+        Parameters
+        ----------
+        struct_path : str
+            Location where to retrive the saved structure.
+        
+        Returns
+        -------
+        pymatgen.core.structure.Structure
+            The searched structure.
+
+        """
+
+        with open(struct_path, 'rb') as structure:
+            return pickle.load(structure)
+        
 
     def get_property_from_mp(self, mp_id, properties):
         """
