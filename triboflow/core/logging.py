@@ -9,7 +9,7 @@ Simple logger.
 """
 
 __author__ = 'Omar Chehaimi'
-__copyright__ = 'Prof. M.C. Righi, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 2nd, 2021'
 
@@ -344,7 +344,6 @@ class LoggingBase:
             print("Creating a new log folder in " + log_folder)
             os.mkdir(log_folder)
             log_path = Path(log_folder)
-            print(type(log_path))
             if not log_path.is_dir():
                 raise RuntimeError('The creation of log path has failed!')
 

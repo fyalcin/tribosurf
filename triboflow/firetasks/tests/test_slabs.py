@@ -10,6 +10,11 @@ Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
 
 """
 
+__author__ = 'Gabriele Losi'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
+__contact__ = 'clelia.righi@unibo.it'
+__date__ = 'February 22nd, 2021'
+
 from pymatgen.core.structure import Structure
 from fireworks import Firework, Workflow, LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
