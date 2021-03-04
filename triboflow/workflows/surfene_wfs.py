@@ -29,11 +29,8 @@ import numpy as np
 from fireworks import Workflow, Firework
 
 from triboflow.utils.utils import create_tags, get_miller_str
-from triboflow.firetasks.slabs import (
-    FT_GenerateSlabs, 
-    FT_RelaxStructure, 
-    FT_MoveTagResults
-)
+from triboflow.firetasks.slabs import FT_GenerateSlabs
+from triboflow.firetasks.core import FT_RelaxStructure, FT_MoveTagResults
 from triboflow.firetasks.surfene import FT_SurfaceEnergy
 from triboflow.utils.errors import SubWFError
 
