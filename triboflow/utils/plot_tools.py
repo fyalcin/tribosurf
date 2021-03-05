@@ -90,7 +90,7 @@ def Plot_SlabHS(hs, slab, to_fig=None):
     plt.show()
 
 
-def Plot_PES(data, lattice, to_fig=None):
+def Plot_PES(data, lattice, to_fig=None, vmin=None, vmax=None):
     """
     Plot the PES and eventually save it
 
@@ -103,14 +103,15 @@ def Plot_PES(data, lattice, to_fig=None):
     E = data[2]
 
     fact=1.
-    level= 43
+    n = 51
+    levels = np.linspace(vmin, vmax, n+1)
     fig = plt.figure(figsize=(7, 7), dpi=100)
     ax = fig.add_subplot(111)
     ax.set_aspect('equal')
     anglerot='vertical'
     shrin=1.
     #zt1=plt.contourf(x, y, E, level, extent=(-fact*a, fact*a, -fact*b, fact*b), cmap=plt.cm.RdYlBu_r)
-    zt1=plt.contourf(x, y, E, level, cmap=plt.cm.RdYlBu_r)
+    zt1=plt.contourf(x, y, E, levels, cmap=plt.cm.RdYlBu_r)
     cbar1=plt.colorbar(zt1,ax=ax,orientation=anglerot,shrink=shrin)
     cbar1.set_label(r'$E_{adh} (J/m^2)$', rotation=270, labelpad=20,fontsize=15,family='serif')
 
