@@ -130,7 +130,7 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
     uis['SIGMA'] = 0.05
     uis['ISMEAR'] = -5
     uis['EDIFF'] = 1.0e-6
-    uis['SYMPREC'] = 1e-06
+    #uis['SYMPREC'] = 1e-06
     
     if static_type.endswith('from_scratch'):
         uis['ICHARG'] = 2
@@ -170,8 +170,8 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
         if comp_parameters['use_vdw']:
             if comp_parameters['functional'] == 'SCAN':
                 vdw = 'rVV10'
-                uis['LUSE_VDW'] = '.TRUE.'
-                uis['BPARAM'] = 15.7
+                #uis['LUSE_VDW'] = '.TRUE.'
+                #uis['BPARAM'] = 15.7
             else:
                 vdw = 'optB86b'
         else:
@@ -269,7 +269,7 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
     uis['NELMIN'] = 5
     uis['EDIFF'] = 0.5E-5
     uis['LAECHG'] = '.FALSE.'
-    uis['SYMPREC'] = 1e-06
+    #uis['SYMPREC'] = 1e-06
     
     if structure.num_sites < 20:
         uis['LREAL'] = '.FALSE.'
@@ -281,8 +281,10 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
     
     if relax_type.startswith('slab_') or relax_type.startswith('interface_'):
         uis['NELMDL'] = -15
-        uis['EDIFFG'] = -0.02
+        uis['EDIFFG'] = -0.015
         uis['NELM'] = 200
+        #Use a slightly slower but more stable algorithm for the electrons
+        uis['ALGO'] = 'Normal'
         # Turn on linear mixing
         # uis['AMIX'] = 0.2
         # uis['BMIX'] = 0.0001
@@ -292,6 +294,7 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
     else:
         uis['NELMDL'] = -6
         uis['EDIFFG'] = -0.01
+        uis['NELM'] = 100
     
     if relax_type.endswith('full_relax'):
         uis['ISIF'] = 3
@@ -321,7 +324,7 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
     if 'is_metal' in comp_parameters:
         if comp_parameters['is_metal']:
             uis['SIGMA'] = 0.2
-            uis['ISMEAR'] = 2
+            uis['ISMEAR'] = 1
         else:
             uis['SIGMA'] = 0.05
             uis['ISMEAR'] = -5
