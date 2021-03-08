@@ -9,7 +9,9 @@ Utility tools to calculate the High Simmetry (HS) points for slab and interface
 """
 
 import numpy as np
-import matplotlib.pyplot as plt  
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from pymatgen.analysis.adsorption import plot_slab
 from triboflow.phys.high_symmetry import HS_DictConverter
