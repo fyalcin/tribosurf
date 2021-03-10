@@ -170,8 +170,6 @@ def GetCustomVaspStaticSettings(structure, comp_parameters, static_type):
         if comp_parameters['use_vdw']:
             if comp_parameters['functional'] == 'SCAN':
                 vdw = 'rVV10'
-                #uis['LUSE_VDW'] = '.TRUE.'
-                #uis['BPARAM'] = 15.7
             else:
                 vdw = 'optB86b'
         else:
