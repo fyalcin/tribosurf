@@ -83,7 +83,7 @@ class SurfEneWF:
         # Create the dictionary key where the unrelaxed slab will be saved
         formula = structure.composition.reduced_formula
         miller_str = get_miller_str(miller)
-        slab_entry = [[formula + 'slab_' + miller_str + '_' + str(t), 
+        slab_entry = [[formula + '_slab_' + miller_str + '_' + str(t), 
                        'unrelaxed'] for t in thickness]
 
         # Generate the slabs and store them in the low level database, under
@@ -109,7 +109,7 @@ class SurfEneWF:
         # ==================================================
 
         # Create the tags to store the calculation of the slabs
-        tags = create_tags(slab_entry)
+        tags = create_tags([n[0] for n in slab_entry])
 
         # Create the Firetasks to relax the structures
         fw_relax_slabs = []
@@ -133,14 +133,15 @@ class SurfEneWF:
                                      database_from=low_level,
                                      database_to=high_level,
                                      miller=miller,
-                                     entry_check=[
+                                     tag=t,
+                                     check_entry=[
                                          ['thickness', 
-                                         'data_' + str(thk), 
+                                         'data_' + str(t), 
                                          'calc_output']
                                          ],
                                      entry_to=[
                                          ['thickness', 
-                                          'data_' + str(thk), 
+                                          'data_' + str(t), 
                                           'calc_output'] * 9
                                          ],
                                      entry_from=[
@@ -160,7 +161,7 @@ class SurfEneWF:
 
             fw = Firework([ft_1, ft_2],
                           spec=spec,
-                          name='Relax and store in DB, slab: ' + n)
+                          name='Relax and store in DB, slab: ' + n[0])
             fw_relax_slabs.append(fw)
 
         # Define the third Firework(s)
@@ -184,7 +185,7 @@ class SurfEneWF:
                               name='Calculate the Surface Energies')
 
         # Define and return the Workflow
-        # ==================================================       
+        # ==================================================
 
         # Build the workflow list and the links between elements
 

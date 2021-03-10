@@ -287,7 +287,7 @@ class FT_MoveTagResults(FiretaskBase):
         }
 
     3 - Once the field dictionary has been retrieved, the data to be transferred
-    is identied by `entry_from`, which could be: str, list, list of lists.
+    is identified by `entry_from`, which could be: str, list, list of lists.
     To transfer more data it is necessary to use lists of lists, where each
     list contains the nested keys within the extracted dictionary containing 
     the data that I want to transfer.

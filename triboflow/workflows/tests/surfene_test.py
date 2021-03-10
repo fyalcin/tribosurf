@@ -25,13 +25,25 @@ from triboflow.utils.database import NavigatorMP
 from triboflow.workflows.surfene_wfs import SurfEneWF
 
 # Get the bulk
-formula = 'Al'
-mpid = 'mp-134'
+formula = 'Cu'
+mid = 'mp-30'
 nav_mp = NavigatorMP()
 
-structure, mpid = nav_mp.get_low_energy_structure(
+structure, mid = nav_mp.get_low_energy_structure(
     chem_formula=formula, 
-    mp_id=mpid)
+    mp_id=mid)
 
 # Surface generation tests
-#wf = SurfEneWF.conv_surface_energy()
+wf = SurfEneWF.conv_surface_energy(
+    structure=structure, 
+    mp_id=mid, 
+    miller=[1, 0, 0],
+    thick_min=1, 
+    thick_max=1,
+    thick_incr=1)
+
+# Launch the calculation
+lpad = LaunchPad.auto_load()
+lpad.add_wf(wf)
+rapidfire(lpad)
+# To check if the bulk is properly oriented

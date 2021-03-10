@@ -75,11 +75,11 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
         vacuum = [vacuum]
     
     # Manage the length of the lists
-    n = len(miller)
+    n = len(thickness)
     if len(vacuum) != n:
         vacuum *= n
-    if len(thickness) != n:
-        thickness *= n
+    if len(miller) != n:
+        miller *= n
 
     slabs = []
     for hkl, thk, vac in zip(miller, thickness, vacuum):
