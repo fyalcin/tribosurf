@@ -368,6 +368,7 @@ def GetCustomVaspRelaxSettings(structure, comp_parameters, relax_type):
                     uis['SIGMA'] = 0.1
                     uis['ISMEAR'] = 0
             uis['METAGGA'] = 'SCAN'
+            uis['ALGO'] = 'All'
             uis['LELF'] = False #otherwise KPAR >1 crashes
             vis = MPScanRelaxSet(structure, user_incar_settings = uis,
                                 vdw = vdw, user_kpoints_settings = uks,
