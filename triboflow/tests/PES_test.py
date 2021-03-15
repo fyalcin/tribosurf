@@ -18,6 +18,7 @@ nav = Navigator()
 db_file = nav.path
 functional = "SCAN"
 
+# TODO: TO REFACTOR
 # Test Ag111Ag111 interface
 # mpid = "mp-124"
 # miller = [1,1,1]
@@ -32,10 +33,10 @@ functional = "SCAN"
 # comp_params = slab_dict['comp_parameters']
 
 #Test Au111_C001 interface
-int_dict = GetInterfaceFromDB('Au111_C001_mp-66_mp-81', db_file, functional)
-top_slab = Slab.from_dict(int_dict['top_aligned'])
-bottom_slab = Slab.from_dict(int_dict['bottom_aligned'])
-comp_params = int_dict['comp_parameters']
+# int_dict = GetInterfaceFromDB('Au111_C001_mp-66_mp-81', db_file, functional)
+# top_slab = Slab.from_dict(int_dict['top_aligned'])
+# bottom_slab = Slab.from_dict(int_dict['bottom_aligned'])
+# comp_params = int_dict['comp_parameters']
 
 #Test GrapheneGraphene interface
 # struct, mpid = GetLowEnergyStructure('C', 'mp-1040425')
@@ -48,11 +49,11 @@ comp_params = int_dict['comp_parameters']
 #                'k_dens': 2000
 #                }
 
-WF = CalcPES_SWF(top_slab=top_slab, bottom_slab=bottom_slab, top_mpid='mp-66',
-                 bottom_mpid='mp-81',comp_parameters=comp_params,
-                 file_output=True, output_dir = '/home/fs71332/mwo4',
-                 remote_copy = True, server = 'vsc4.vsc.ac.at',  user = 'mwo4', 
-                 port = 27)
+# WF = CalcPES_SWF(top_slab=top_slab, bottom_slab=bottom_slab, top_mpid='mp-66',
+#                  bottom_mpid='mp-81',comp_parameters=comp_params,
+#                  file_output=True, output_dir = '/home/fs71332/mwo4',
+#                  remote_copy = True, server = 'vsc4.vsc.ac.at',  user = 'mwo4', 
+#                  port = 27)
 
 #lpad = LaunchPad.auto_load()
 #lpad.add_wf(WF)
