@@ -46,4 +46,3 @@ wf = SurfEneWF.conv_surface_energy(
 lpad = LaunchPad.auto_load()
 lpad.add_wf(wf)
 rapidfire(lpad)
-# To check if the bulk is properly oriented
