@@ -14,14 +14,14 @@ from triboflow.workflows.main import heterogeneous_wf
 inputs = {'material_1': {'formula': 'MgO',
                          'miller': '001',
                          'mp_id': 'mp-1918',
-                         'min_vacuum': 25,
+                         'min_vacuum': 15,
                          'min_thickness': 6
                          },
-          'material_2': {'formula': 'FeRh',
+          'material_2': {'formula': 'FePt',
                          'miller': '001',
-                         'mp_id': 'mp-1265',
-                         'min_vacuum': 25,
-                         'min_thickness': 6
+                         'mp_id': 'mp-2260',
+                         'min_vacuum': 15,
+                         'min_thickness': 5
                          },
           'computational_params':{'functional': 'PBE',
                                   'energy_tolerance': 0.001,

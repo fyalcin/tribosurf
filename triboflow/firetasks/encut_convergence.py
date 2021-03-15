@@ -182,7 +182,7 @@ class FT_EnergyCutoffConvo(FiretaskBase):
         
         # Get the data arrays from the database (returns None when not there)
         nav = Navigator(db_file=db_file)
-        data = nav.find_data(collection='BM_data_sharing', data={'tag': tag})
+        data = nav.find_data(collection='BM_data_sharing', filter={'tag': tag})
 
         if data:
             BM_list = data.get('BM_list')

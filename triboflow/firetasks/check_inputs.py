@@ -115,7 +115,7 @@ class FT_MakeInterfaceInDB(FiretaskBase):
 
         if nav_high.find_data(
                collection=functional+'.interface_data', 
-               data={'name': name}):
+               filter={'name': name}):
 
             print('{} interface can not be added to {}.interface_data '
                   'collection because an interface with that name is already '
@@ -155,9 +155,9 @@ class FT_MakeSlabInDB(FiretaskBase):
         bandgap = nav_mp.get_property_from_mp(
             mp_id=mp_id, 
             properties=['band_gap'])
-        bandgap = bandgap['bandgap']
+        bandgap = bandgap['band_gap']
 
-        if bandgap > 0.5:
+        if bandgap > 0.3:
             comp_data['is_metal'] = False
         else:
             comp_data['is_metal'] = True
@@ -212,9 +212,9 @@ class FT_MakeBulkInDB(FiretaskBase):
         bandgap = nav_mp.get_property_from_mp(
             mp_id=mp_id, 
             properties=['band_gap'])
-        bandgap = bandgap['bandgap']
+        bandgap = bandgap['band_gap']
 
-        if bandgap > 0.2:
+        if bandgap > 0.3:
             comp_data['is_metal'] = False
         else:
             comp_data['is_metal'] = True
@@ -232,11 +232,11 @@ class FT_MakeBulkInDB(FiretaskBase):
         else:
             nav_high.insert_data(
                 collection=functional+'.bulk_data',
-                data={{'mpid': mp_id,
+                data={'mpid': mp_id,
                         'formula': data['formula'],
                         'structure_fromMP': struct.as_dict(),
                         'primitive_structure': prim_struct.as_dict(),
-                        'comp_parameters': comp_data}})
+                        'comp_parameters': comp_data})
             return
         
     

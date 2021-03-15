@@ -605,6 +605,7 @@ def converge_encut_swf(structure,
         formula_from_flag = nav_mp.get_property_from_mp(
             mp_id=flag, 
             properties=['pretty_formula'])
+        formula_from_flag = formula_from_flag['pretty_formula']
 
         if not formula_from_flag == formula_from_struct:
             raise SystemExit('The chemical formula of your structure ({}) '
