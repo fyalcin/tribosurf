@@ -1,0 +1,11 @@
+{
+    "logging": {
+        "save_log": true,
+        "console_logging_level": 10,
+        "file_logging_level": 10,
+        "database_logging_level": 10
+    },
+    "database_path": "",
+    "workflow": {},
+    "physics": {}
+}

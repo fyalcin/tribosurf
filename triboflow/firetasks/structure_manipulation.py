@@ -5,6 +5,7 @@ Created on Wed Jun 17 15:59:59 2020
 """
 import monty
 from pprint import pprint, pformat
+
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import Slab
 from pymatgen.core.surface import SlabGenerator
@@ -14,15 +15,16 @@ from fireworks import FWAction, FiretaskBase, Firework, Workflow, FileWriteTask
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 from atomate.vasp.powerups import add_modify_incar
-from mpinterfaces.transformations import get_aligned_lattices, \
-    get_interface#generate_all_configs
+from mpinterfaces.transformations import (
+    get_aligned_lattices, get_interface) # generate_all_configs
+
 from triboflow.workflows.base import dynamic_relax_swf
-from triboflow.utils.database import GetSlabFromDB, GetHighLevelDB, GetDB, \
-    GetBulkFromDB
-from triboflow.utils.vasp_tools import GetCustomVaspRelaxSettings
-from triboflow.utils.structure_manipulation import InterfaceName, \
-    SlabFromStructure, ReCenterAlignedSlabs, StackAlignedSlabs
-from triboflow.utils.file_manipulation import CopyOutputFiles
+from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
+from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
+from triboflow.utils.structure_manipulation import (
+    interface_name, slab_from_structure, recenter_aligned_slabs, 
+    stack_aligned_slabs)
+from triboflow.utils.file_manipulation import copy_output_files
 
 
 
@@ -46,10 +48,10 @@ class FT_StartSlabRelaxSWF(FiretaskBase):
         Name of the slab to be put in the DB (identified by mp_id and miller).
         Defaults to 'unrelaxed_slab'.
     relax_type : str
-        Relaxation type for the GetCustomVaspRelaxSettings helper_function.
+        Relaxation type for the get_custom_vasp_relax_settings helper_function.
     bulk_struct_name : str, optional
         Name of the bulk structure in the bulk database (material is
-        identified by mp_id, but there might be differnt structures of the
+        identified by mp_id, but there might be different structures of the
         same material.) Defaults to 'structure_equiVol'.
     slab_out_name : str, optional
         Name of the slab to be put in the DB (identified by mp_id and miller).
@@ -63,8 +65,10 @@ class FT_StartSlabRelaxSWF(FiretaskBase):
     required_params = ['mp_id', 'miller', 'functional']
     optional_params = ['db_file', 'slab_struct_name', 'relax_type',
                        'bulk_struct_name', 'slab_out_name']
+
     def run_task(self, fw_spec):
-        from triboflow.workflows.subworkflows import MakeAndRelaxSlab_SWF
+        from triboflow.workflows.subworkflows import make_and_relax_slab_swf
+
         mp_id = self.get('mp_id')
         if type(self['miller']) == str:
             miller = [int(k) for k in list(self['miller'])]
@@ -72,36 +76,48 @@ class FT_StartSlabRelaxSWF(FiretaskBase):
         else:
             miller = self['miller']
             miller_str = ''.join(str(s) for s in self['miller'])
+
         functional = self.get('functional')
+
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
+
         slab_name = self.get('slab_struct_name', 'unrelaxed_slab')
         relax_type = self.get('relax_type', 'slab_pos_relax')
         bulk_name = self.get('bulk_struct_name', 'structure_equiVol')
         slab_out_name = self.get('slab_out_name', 'relaxed_slab')
         
-        data = GetBulkFromDB(mp_id, db_file, functional)
+        nav_structure = StructureNavigator(
+            db_file=db_file,
+            high_level='triboflow')
+
+        data = nav_structure.get_bulk_from_db(
+            mp_id=mp_id,
+            functional=functional)
         bulk_struct = Structure.from_dict(data[bulk_name])
         
-        slab_data = GetSlabFromDB(mp_id, db_file, miller, functional)
+        slab_data = nav_structure.get_slab_from_db(
+            mp_id=mp_id,
+            functional=functional,
+            miller=miller)
         comp_params = slab_data.get('comp_parameters')
         min_thickness = slab_data.get('min_thickness', 10)
         min_vacuum = slab_data.get('min_vacuum', 25)
         
-        WF = MakeAndRelaxSlab_SWF(bulk_structure = bulk_struct,
-                                  miller_index = miller,
-                                  flag = mp_id,
-                                  comp_parameters = comp_params,
-                                  functional = functional,
-                                  min_thickness = min_thickness,
-                                  min_vacuum = min_vacuum,
-                                  relax_type = relax_type,
-                                  slab_struct_name = slab_name,
-                                  out_struct_name = slab_out_name,
-                                  print_help = False)
+        WF = make_and_relax_slab_swf(bulk_structure=bulk_struct,
+                                     miller_index=miller,
+                                     flag=mp_id,
+                                     comp_parameters=comp_params,
+                                     functional=functional,
+                                     min_thickness=min_thickness,
+                                     min_vacuum=min_vacuum,
+                                     relax_type=relax_type,
+                                     slab_struct_name=slab_name,
+                                     out_struct_name=slab_out_name,
+                                     print_help=False)
         
-        return FWAction(detours = WF)
+        return FWAction(detours=WF)
     
 @explicit_serialize
 class FT_GetRelaxedSlab(FiretaskBase):
@@ -154,7 +170,9 @@ class FT_GetRelaxedSlab(FiretaskBase):
     required_params = ['flag', 'miller', 'functional', 'tag']
     optional_params = ['db_file', 'struct_out_name', 'file_output',
                        'output_dir', 'remote_copy', 'server', 'user', 'port']
+
     def run_task(self, fw_spec):
+
         flag = self.get('flag')
         if type(self['miller']) == str:
             miller = [int(k) for k in list(self['miller'])]
@@ -162,10 +180,13 @@ class FT_GetRelaxedSlab(FiretaskBase):
         else:
             miller = self['miller']
             miller_str = ''.join(str(s) for s in self['miller'])
+
         functional = self.get('functional')
+
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
+
         out_name = self.get('struct_out_name', 'relaxed_slab')
         file_output = self.get('file_output', False)
         output_dir = self.get('output_dir', None)
@@ -175,12 +196,20 @@ class FT_GetRelaxedSlab(FiretaskBase):
         port = self.get('port', None)
         
         # Check if a relaxed slab is already in the DB entry
-        slab_data = GetSlabFromDB(flag, db_file, miller, functional)
+        nav_structure = StructureNavigator(
+            db_file=db_file,
+            high_level='triboflow')
+        slab_data = nav_structure.get_slab_from_db(
+            mp_id=flag,
+            functional=functional,
+            miller=miller)
         
         if out_name not in slab_data:
-            #Get results from OptimizeFW
-            DB = GetDB(db_file)
-            vasp_calc = DB.tasks.find_one({'task_label': self['tag']})
+            # Get results from OptimizeFW
+            nav = Navigator(db_file=db_file)
+            vasp_calc = nav.find_data(
+                collection=nav.db.tasks, 
+                filter={'task_label': self['tag']})
             relaxed_slab = Structure.from_dict(vasp_calc['output']['structure'])
             slab = Slab(relaxed_slab.lattice,
                         relaxed_slab.species_and_occu,
@@ -190,13 +219,18 @@ class FT_GetRelaxedSlab(FiretaskBase):
                         shift=0,
                         scale_factor=[[1,0,0], [0,1,0], [0,0,1]],
                         site_properties=relaxed_slab.site_properties)
-            db = GetHighLevelDB(db_file)
-            coll = db[functional+'.slab_data']
-            coll.update_one({'mpid': flag, 'miller': miller},
-                            {'$set': {out_name: slab.as_dict()}})
+            
+            nav_high = Navigator(db_file=db_file, high_level='triboflow')
+            nav_high.update_data(
+                collection=functional+'.slab_data',
+                filter={'mpid': flag, 'miller': miller},
+                new_values={'$set': {out_name: slab.as_dict()}})
         else:
-            DB = GetDB(db_file)
-            vasp_calc = DB.tasks.find_one({'task_label': self['tag']})
+            nav = Navigator(db_file=db_file)
+            vasp_calc = nav.find_data(
+                collection=nav.db.tasks,
+                filter={'task_label': self['tag']})
+
             if  vasp_calc:
                 relaxed_slab = Structure.from_dict(vasp_calc['output']['structure'])
                 slab = Slab(relaxed_slab.lattice,
@@ -229,23 +263,24 @@ class FT_GetRelaxedSlab(FiretaskBase):
             poscar_str = Poscar(slab).get_string()
             poscar_name = flag+'_Relaxed_slab_POSCAR.vasp'
             slab_name = flag+'_Relaxed_slab_dict.txt'
-            write_FT = FileWriteTask(files_to_write=
-                                     [{'filename': poscar_name,
-                                       'contents': poscar_str},
-                                      {'filename': slab_name,
-                                       'contents': pformat(slab.as_dict())}])
-            copy_FT = CopyOutputFiles(file_list = [poscar_name, slab_name],
-                                      output_dir = output_dir,
-                                      remote_copy = remote_copy,
-                                      server = server,
-                                      user = server,
-                                      port = port)
+            write_FT = FileWriteTask(
+                files_to_write=[{'filename': poscar_name,
+                                 'contents': poscar_str},
+                                {'filename': slab_name,
+                                 'contents': pformat(slab.as_dict())}])
+            copy_FT = copy_output_files(file_list=[poscar_name, slab_name],
+                                        output_dir=output_dir,
+                                        remote_copy=remote_copy,
+                                        server=server,
+                                        user=server,
+                                        port=port)
             FW = Firework([write_FT, copy_FT],
-                          name = 'Copy SlabRelax SWF results')
-            WF = Workflow.from_Firework(FW, name = 'Copy SlabRelax SWF results')
-            return FWAction(update_spec = fw_spec, detours = WF)
+                          name='Copy SlabRelax SWF results')
+            WF = Workflow.from_Firework(FW, name='Copy SlabRelax SWF results')
+
+            return FWAction(update_spec=fw_spec, detours=WF)
         else:  
-            return FWAction(update_spec = fw_spec)
+            return FWAction(update_spec=fw_spec)
 
             
 @explicit_serialize
@@ -276,7 +311,7 @@ class FT_StartSlabRelax(FiretaskBase):
         Name of the slab to be put in the DB (identified by mp_id and miller).
         Defaults to 'unrelaxed_slab'.
     relax_type : str
-        Relaxation type for the GetCustomVaspRelaxSettings helper_function.
+        Relaxation type for the get_custom_vasp_relax_settings helper_function.
     
     Returns
     -------
@@ -286,7 +321,9 @@ class FT_StartSlabRelax(FiretaskBase):
     required_params = ['flag', 'miller', 'functional', 'tag']
     optional_params = ['db_file', 'comp_parameters', 'slab_struct_name',
                        'relax_type']
+
     def run_task(self, fw_spec):
+
         flag = self.get('flag')
         if type(self['miller']) == str:
             miller = [int(k) for k in list(self['miller'])]
@@ -294,24 +331,33 @@ class FT_StartSlabRelax(FiretaskBase):
         else:
             miller = self['miller']
             miller_str = ''.join(str(s) for s in self['miller'])
+
         functional = self.get('functional')
+
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
+
         comp_params = self.get('comp_parameters', {})
         slab_name = self.get('slab_struct_name', 'unrelaxed_slab')
         tag = self.get('tag')
         relax_type = self.get('relax_type', 'slab_pos_relax')
         
-        slab_data = GetSlabFromDB(flag, db_file, miller, functional)
+        nav_structure = StructureNavigator(
+            db_file=db_file, 
+            high_level='triboflow')
+        slab_data = nav_structure.get_slab_from_db(
+            mpi_id=flag,
+            functional=functional,
+            miller=miller)
         
         slab_to_relax = Slab.from_dict(slab_data.get(slab_name))
         formula = slab_to_relax.composition.reduced_formula
         
         # Check if a relaxed slab is already in the DB entry
         if 'relaxed_slab' not in slab_data:
-            vis = GetCustomVaspRelaxSettings(slab_to_relax, comp_params,
-                                             relax_type)
+            vis = get_custom_vasp_relax_settings(slab_to_relax, comp_params,
+                                                 relax_type)
             inputs = [[slab_to_relax, vis, tag]]
             wf_name = formula+miller_str+'_'+relax_type
             WF = dynamic_relax_swf(inputs_list=inputs,
@@ -368,25 +414,33 @@ class FT_MakeSlabInDB(FiretaskBase):
             miller = self['miller']
         flag = self.get('flag')
         functional = self.get('functional')
+
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
+
         slab_name = self.get('slab_struct_name', 'unrelaxed_slab')
         min_thickness = self.get('min_thickness', 10)
         min_vacuum = self.get('min_vacuum', 25)
         
-        #slab_data = GetSlabFromDB(flag, db_file, miller, functional)
+        # nav_structure = StructureNavigator(
+        #     db_file=db_file,
+        #     high_level='triboflow')
+        # slab_data = nav_structure.get_slab_from_db(
+        #     mp_id=flag, 
+        #     functional=functional,
+        #     miller=miller)
         
         bulk_conv = SpacegroupAnalyzer(bulk_prim).get_conventional_standard_structure()
         
-        SG = SlabGenerator(initial_structure = bulk_conv,
-                           miller_index = miller,
-                           center_slab = True,
-                           primitive = True,
-                           lll_reduce = True,
+        SG = SlabGenerator(initial_structure=bulk_conv,
+                           miller_index=miller,
+                           center_slab=True,
+                           primitive=True,
+                           lll_reduce=True,
                            max_normal_search=max([abs(l) for l in miller]),
-                           min_slab_size = min_thickness,
-                           min_vacuum_size = min_vacuum)
+                           min_slab_size=min_thickness,
+                           min_vacuum_size=min_vacuum)
         
 # =============================================================================
 # Here we need to do more Work! Now the first slab in the list is taken,
@@ -397,18 +451,15 @@ class FT_MakeSlabInDB(FiretaskBase):
         slab = SG.get_slabs(bonds=None, ftol=0.1, tol=0.1, max_broken_bonds=0,
                             symmetrize=False, repair=False)[0]
         
-        db = GetHighLevelDB(db_file)
-        coll = db[functional+'.slab_data']
-        
+        nav_high = Navigator(db_file=db_file, high_level='triboflow')
         slab_dict = monty.json.jsanitize(slab.as_dict(), allow_bson=True)
-        
-        coll.update_one({'mpid': flag, 'miller': miller},
-                        {'$set': {'unrelaxed_slab': slab_dict}},
-                        upsert=True)
-        
-        
-        return 
+        nav_high.update_data(
+            collection=functional+'.slab_data',
+            filter={'mpid': flag, 'miller': miller},
+            new_values={'$set': {'unrelaxed_slab': slab_dict}},
+            upsert=True)
 
+        return
 
 
 @explicit_serialize
@@ -459,24 +510,34 @@ class FT_MakeHeteroStructure(FiretaskBase):
         else:
             miller_2 = self['miller_2']
         functional = self.get('functional')
+
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
-            
-        db = GetHighLevelDB(db_file)
-        slab_col = db[functional+'.slab_data']
-        inter_col = db[functional+'.interface_data']
+
+        nav_high = Navigator(db_file=db_file, high_level='triboflow')
+        interface_name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
+        inter_data = nav_high.find_data(
+            collection=functional+'.interface_data',
+            filter={'name': interface_name})
         
-        interface_name = InterfaceName(mp_id_1, miller_1, mp_id_2, miller_2)
-        
-        inter_data = inter_col.find_one({'name': interface_name})
         inter_params = inter_data['interface_parameters']
         comp_params = inter_data['comp_parameters']
-        
+
         if not inter_data.get('unrelaxed_structure'):
-           
-            slab_1_dict = GetSlabFromDB(mp_id_1, db_file, miller_1, functional)
-            slab_2_dict = GetSlabFromDB(mp_id_2, db_file, miller_2, functional)
+            
+            nav_structure = StructureNavigator(
+                db_file=db_file, 
+                high_level='triboflow')
+            slab_1_dict = nav_structure.get_slab_from_db(
+                mp_id=mp_id_1,
+                functional=functional,
+                miller=miller_1)
+            slab_2_dict = nav_structure.get_slab_from_db(
+                mp_id=mp_id_2,
+                functional=functional,
+                miller=miller_2)
+
             slab_1 = Slab.from_dict(slab_1_dict['relaxed_slab'])
             slab_2 = Slab.from_dict(slab_2_dict['relaxed_slab'])
             
@@ -497,10 +558,10 @@ class FT_MakeHeteroStructure(FiretaskBase):
             bottom_aligned, top_aligned = get_aligned_lattices(
                 slab_1,
                 slab_2,
-                max_area = inter_params['max_area'],
-                max_mismatch = inter_params['max_mismatch'],
-                max_angle_diff = inter_params['max_angle_diff'],
-                r1r2_tol = inter_params['r1r2_tol'])
+                max_area=inter_params['max_area'],
+                max_mismatch=inter_params['max_mismatch'],
+                max_angle_diff=inter_params['max_angle_diff'],
+                r1r2_tol=inter_params['r1r2_tol'])
         
             if bottom_aligned:
 # ============================================================================
@@ -515,58 +576,71 @@ class FT_MakeHeteroStructure(FiretaskBase):
 #       generate_all_configs any more, and only one Interface is returned... 
 # ============================================================================
 # ============================================================================
-                #hetero_interfaces = generate_all_configs(top_aligned,
-                hetero_interfaces = get_interface(bottom_aligned,
-                                                  top_aligned,
-                                                  nlayers_2d = 1,
-                                                  nlayers_substrate = 1,
-                            separation = inter_params['interface_distance'])
+                # hetero_interfaces = generate_all_configs(top_aligned,
+                hetero_interfaces = get_interface(
+                    bottom_aligned,
+                    top_aligned,
+                    nlayers_2d=1,
+                    nlayers_substrate=1,
+                    separation=inter_params['interface_distance'])
         
-                #inter_slab = hetero_interfaces[0]
+                # inter_slab = hetero_interfaces[0]
                 inter_slab = hetero_interfaces
                 
-                bottom_aligned = SlabFromStructure(miller_1, bottom_aligned)
-                top_aligned = SlabFromStructure(miller_2, top_aligned)
+                bottom_aligned = slab_from_structure(miller_1, bottom_aligned)
+                top_aligned = slab_from_structure(miller_2, top_aligned)
                 
-                #Center the top and bottom slabs around 0 and combine them
-                #again to an interface:
-                top_align, bot_align = ReCenterAlignedSlabs(top_aligned,
-                                                            bottom_aligned,
-                                        d = inter_params['interface_distance'])
-                interface = StackAlignedSlabs(bot_align, top_align)
+                # Center the top and bottom slabs around 0 and combine them
+                # again to an interface:
+                top_align, bot_align = recenter_aligned_slabs(
+                    top_aligned,
+                    bottom_aligned,
+                    d=inter_params['interface_distance'])
+                interface = stack_aligned_slabs(bot_align, top_align)
                 
                 inter_dict = interface.as_dict()
                 bottom_dict = bot_align.as_dict()
                 top_dict = top_align.as_dict()
-                inter_col.update_one({'name': interface_name},
-                                 {'$set': {'unrelaxed_structure': inter_dict,
-                                           'bottom_aligned': bottom_dict,
-                                           'top_aligned': top_dict}})
+
+                nav_high.update_data(
+                    collection=functional+'.interface_data',
+                    filter={'name': interface_name},
+                    new_values={'$set': {'unrelaxed_structure': inter_dict,
+                                         'bottom_aligned': bottom_dict,
+                                         'top_aligned': top_dict}})
             
             else:
-                f = 1.05 # factor with wich to multiply the missmatch criteria
+
+                f = 1.05 # factor with which to multiply the missmatch criteria
             
-                new_params = {'max_area': inter_params['max_area'] * f,
+                new_params = {
+                    'max_area': inter_params['max_area'] * f,
                     'max_mismatch': inter_params['max_mismatch'] * f,
                     'max_angle_diff': inter_params['max_angle_diff'] * f,
                     'r1r2_tol': inter_params['r1r2_tol'] * f,
                     'interface_distance': inter_params['interface_distance']}
             
                 if not inter_data.get('original_interface_params'):
-                    inter_col.update_one({'name': interface_name},
-                        {'$set': {'original_interface_params': inter_params}})
-                    
-                inter_col.update_one({'name': interface_name},
-                        {'$set': {'interface_parameters': new_params}})
-            
-            
-            
-                new_fw = Firework(FT_MakeHeteroStructure(mp_id_1 = mp_id_1,
-                                                         miller_1 = miller_1,
-                                                         mp_id_2 = mp_id_2,
-                                                         miller_2 = miller_2,
-                                                         db_file = db_file))
-                return FWAction(detours = new_fw)
+
+                    nav_high.update_data(
+                        collection=functional+'.interface_data',
+                        filter={'name': interface_name},
+                        new_values={'$set': 
+                                       {'original_interface_params': 
+                                            inter_params}})
+
+                nav_high.update_data(
+                    collection=functional+'.interface_data',
+                    filter={'name': interface_name},
+                    new_values={'$set': {'interface_parameters': new_params}})
+
+                new_fw = Firework(FT_MakeHeteroStructure(mp_id_1=mp_id_1,
+                                                         miller_1=miller_1,
+                                                         mp_id_2=mp_id_2,
+                                                         miller_2=miller_2,
+                                                         db_file=db_file))
+                
+                return FWAction(detours=new_fw)
 
 
 
@@ -590,7 +664,7 @@ class FT_AddSelectiveDynamics(FiretaskBase):
     
     """
     
-    _fw_name = 'Add selctive dynamics'
+    _fw_name = 'Add selective dynamics'
     required_params = ['structure']
     optional_params = ['selective_dynamics_array']
 
@@ -613,7 +687,5 @@ class FT_AddSelectiveDynamics(FiretaskBase):
         poscar.write_file('POSCAR')
         
         spec = fw_spec
-        return FWAction(update_spec = spec) 
 
-
-
+        return FWAction(update_spec = spec)

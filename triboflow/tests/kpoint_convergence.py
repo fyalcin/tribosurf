@@ -9,7 +9,7 @@ Created on Fri Jun 19 16:15:02 2020
 from pymatgen.core.structure import Structure
 from fireworks import LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
-from triboflow.workflows.subworkflows import ConvergeKpoints_SWF
+from triboflow.workflows.subworkflows import converge_kpoints_swf
 from triboflow.utils.database import GetBulkFromDB
 
 
@@ -24,9 +24,9 @@ comp_parameters = data['comp_parameters']
 
 comp_parameters['encut'] = 500
 
-WF = ConvergeKpoints_SWF(struct, comp_parameters, {}, data['mpid'],
-                         comp_parameters['functional'], k_dens_start=500,
-                         k_dens_incr=50)
+WF = converge_kpoints_swf(struct, comp_parameters, {}, data['mpid'],
+                          comp_parameters['functional'], k_dens_start=500,
+                          k_dens_incr=50)
 
 #mod_WF = add_modify_incar(WF, modify_incar_params={'incar_update': uis})
 

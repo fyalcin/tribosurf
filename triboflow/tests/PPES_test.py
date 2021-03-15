@@ -7,18 +7,18 @@ Created on Fri Jun 19 16:15:02 2020
 """
 from fireworks import LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
-from triboflow.workflows.subworkflows import CalcPPES_SWF
+from triboflow.workflows.subworkflows import calc_ppes_swf
 
 
 
 db_file = '/home/mwo/FireWorks/config/db.json'
 
 
-WF = CalcPPES_SWF(interface_name='C001_Ni111_mp-23_mp-48',
-                  functional='PBE',
-                  structure_name='unrelaxed_structure',
-                  out_name='test_PPES',
-                  distance_list = [-0.5, -0.25, 0.0, 0.25, 0.5, 1.0, 3.0, 10.0])
+WF = calc_ppes_swf(interface_name='C001_Ni111_mp-23_mp-48',
+                   functional='PBE',
+                   structure_name='unrelaxed_structure',
+                   out_name='test_PPES',
+                   distance_list = [-0.5, -0.25, 0.0, 0.25, 0.5, 1.0, 3.0, 10.0])
 
 
 lpad = LaunchPad.auto_load()

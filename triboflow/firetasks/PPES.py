@@ -8,16 +8,17 @@ Created on Fri Aug 28 16:10:28 2020
 
 import numpy as np
 from scipy.optimize import curve_fit
+
 from pymatgen.core.structure import Structure
 from fireworks import FWAction, FiretaskBase, Workflow
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 from atomate.vasp.fireworks.core import StaticFW
 from atomate.vasp.powerups import add_modify_incar
-from triboflow.utils.database import GetInterfaceFromDB, GetDB, \
-    GetHighLevelDB
-from triboflow.utils.vasp_tools import GetCustomVaspStaticSettings
-from triboflow.utils.structure_manipulation import CleanUpSiteProperties
+
+from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
+from triboflow.utils.vasp_tools import get_custom_vasp_static_settings
+from triboflow.utils.structure_manipulation import clean_up_site_properties
 
 
 @explicit_serialize
@@ -54,22 +55,32 @@ class FT_StartPPESWF(FiretaskBase):
         Subworkflow to calculate the PPES for a certain interface.
 
     """
+
     required_params = ['interface_name', 'functional', 'distance_list']
     optional_params = ['db_file', 'structure_name', 'out_name']
+
     def run_task(self, fw_spec):
-        from triboflow.workflows.subworkflows import CalcPPES_SWF
+        from triboflow.workflows.subworkflows import calc_ppes_swf
+
         name = self.get('interface_name')
         functional = self.get('functional')
         tag = self.get('tag')
+
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
+
         structure_name = self.get('structure_name', 'minimum_relaxed')
         out_name = self.get('out_name', 'PPES@minimum')
         
         d_list = self.get('distance_list')
-        
-        interface_dict = GetInterfaceFromDB(name, db_file, functional)
+
+        nav_structure = StructureNavigator(
+            db_file=db_file, 
+            high_level='triboflow')
+        interface_dict = nav_structure.get_interface_from_db(
+            name=name, 
+            functional=functional)
         
         calc_PPES = True
         if interface_dict.get('PPES') is not None:
@@ -80,12 +91,13 @@ class FT_StartPPESWF(FiretaskBase):
                 calc_PPES = False
                 
         if calc_PPES:
-            SWF = CalcPPES_SWF(interface_name = name,
-                               functional = functional,
-                               distance_list = d_list,
-                               out_name = out_name,
-                               structure_name = structure_name,
-                               spec = fw_spec)
+            SWF = calc_ppes_swf(interface_name=name,
+                                functional=functional,
+                                distance_list=d_list,
+                                out_name=out_name,
+                                structure_name=structure_name,
+                                spec=fw_spec)
+
             return FWAction(additions=SWF, update_spec=fw_spec)
         else:
             return FWAction(update_spec=fw_spec)
@@ -123,12 +135,15 @@ class FT_DoPPESCalcs(FiretaskBase):
     -------
     FWActions that produce a detour workflow with static PPES calculations.
     """
+
     required_params = ['interface_name', 'functional', 'tag', 'distance_list']
     optional_params = ['db_file', 'structure_name', 'out_name']
+
     def run_task(self, fw_spec):
         name = self.get('interface_name')
         functional = self.get('functional')
         tag = self.get('tag')
+
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
@@ -136,7 +151,12 @@ class FT_DoPPESCalcs(FiretaskBase):
         
         d_list = self.get('distance_list')
         
-        interface_dict = GetInterfaceFromDB(name, db_file, functional)            
+        nav_structure = StructureNavigator(
+            db_file=db_file,
+            high_level='triboflow')
+        interface_dict = nav_structure.get_interface_from_db(
+            name=name,
+            functional=functional)            
         
         comp_params = interface_dict['comp_parameters']
         struct = Structure.from_dict(interface_dict[structure_name])
@@ -148,17 +168,18 @@ class FT_DoPPESCalcs(FiretaskBase):
         FW_list=[]
         for d in d_list:
             label = tag + '_PPES_' + str(d)
-            #Make sure that there are no NoneTypes in the site_properties!
-            struct_d = CleanUpSiteProperties(struct.copy())
+            # Make sure that there are no NoneTypes in the site_properties!
+            struct_d = clean_up_site_properties(struct.copy())
             struct_d.translate_sites(indices=sites_to_shift,
                                      vector=[0,0,d],
-                                     frac_coords=False, to_unit_cell=False)
+                                     frac_coords=False, 
+                                     to_unit_cell=False)
             
-            vis = GetCustomVaspStaticSettings(struct_d, comp_params,
-                                              'slab_from_scratch')
+            vis = get_custom_vasp_static_settings(struct_d, comp_params,
+                                                  'slab_from_scratch')
                            
             FW = StaticFW(structure=struct_d, vasp_input_set=vis,
-                                  name=label)
+                          name=label)
             FW_list.append(FW)
             
         
@@ -194,46 +215,51 @@ class FT_FitPPES(FiretaskBase):
         'PPES@minimum'.
         
     """
+
     required_params = ['interface_name', 'functional', 'tag', 'distance_list']
     optional_params = ['db_file', 'out_name']
+
     def run_task(self, fw_spec):
+
         name = self.get('interface_name')
         functional = self.get('functional')
         tag = self.get('tag')
+
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
         out_name = self.get('out_name', 'PPES@minimum')
         d_list = self.get('distance_list')
         
-        
-        DB = GetDB(db_file)
+        nav = Navigator(db_file=db_file)
         
         d_E_array=[]
         for d in d_list:
             calc_label = tag + '_PPES_' + str(d)
-            #Get energy from vasp run for this distance
-            vasp_calc = DB.tasks.find_one({'task_label': calc_label})
+            # Get energy from vasp run for this distance
+            vasp_calc = nav.find_data(
+                collection=nav.db.tasks,
+                filter={'task_label': calc_label})
             energy = vasp_calc['output']['energy']
             d_E_array.append([d, energy])
-        
-        tribo_db = GetHighLevelDB(db_file)
-        coll = tribo_db[functional+'.interface_data']
-        
-        
+
         popt, perr = PPES_UBER(distance_energy_array=d_E_array)
-        coll.update_one({'name': name},
-                        {'$set': {'PPES':
-                                    {out_name: 
-                                    {'distance_Energy_array': d_E_array,
-                                     'UBER': {'G': popt[0],
-                                              'l': popt[1],
-                                              'sigma_G': perr[0],
-                                              'sigma_l': perr[1]}}}}})
-        
+
+        nav_high = Navigator(db_file=db_file, high_level='triboflow')
+
+        nav_high.update_data(
+            collection=functional+'.interface_data', 
+            filter={'name': name},
+            new_values={'$set': 
+                           {'PPES':
+                               {out_name: 
+                                   {'distance_Energy_array': d_E_array,
+                                    'UBER': {'G': popt[0],
+                                             'l': popt[1],
+                                             'sigma_G': perr[0],
+                                             'sigma_l': perr[1]}}}}})
                 
-        
-            
+                
 def UBER(x, G, l):
     """
     Define the UBER function.

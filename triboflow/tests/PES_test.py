@@ -9,20 +9,27 @@ Created on Mon Dec 21 14:53:59 2020
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import Slab
 from fireworks import LaunchPad
-from triboflow.workflows.subworkflows import CalcPES_SWF
-from triboflow.utils.structure_manipulation import SlabFromStructure
-from triboflow.utils.database import GetDBJSON, GetSlabFromDB, \
-    GetLowEnergyStructure, GetInterfaceFromDB
+from fireworks.core.rocket_launcher import rapidfire
+from triboflow.workflows.subworkflows import calc_pes_swf
+from triboflow.utils.structure_manipulation import slab_from_structure
+from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
 
-db_file = GetDBJSON()
+nav = Navigator()
+db_file = nav.path
 functional = "SCAN"
 
-#Test Ag111Ag111 interface
+# Test Ag111Ag111 interface
 # mpid = "mp-124"
 # miller = [1,1,1]
-# Slab_dict = GetSlabFromDB(mpid, db_file, miller, functional)
-# slab = Slab.from_dict(Slab_dict['relaxed_slab'])
-# comp_params = Slab_dict['comp_parameters']
+# nav_structure = StructureNavigator(
+#     db_file=db_file, 
+#     high_level='triboflow')
+# slab_dict = nav_structure.get_slab_from_db(
+#     mp_id=mpid,
+#     functional=functional,
+#     miller=miller)
+# slab = Slab.from_dict(slab_dict['relaxed_slab'])
+# comp_params = slab_dict['comp_parameters']
 
 #Test Au111_C001 interface
 int_dict = GetInterfaceFromDB('Au111_C001_mp-66_mp-81', db_file, functional)
@@ -49,3 +56,22 @@ WF = CalcPES_SWF(top_slab=top_slab, bottom_slab=bottom_slab, top_mpid='mp-66',
 
 #lpad = LaunchPad.auto_load()
 #lpad.add_wf(WF)
+# Test GrapheneGraphene interface
+nav_mp = NavigatorMP()
+struct, mpid = nav_mp.get_low_energy_structure(
+    chem_formula='C',
+    mp_id='mp-1040425')
+slab = slab_from_structure([0,0,1], struct)
+comp_params = {'functional': functional,
+               'use_vdw': True,
+               'use_spin': True,
+               'encut': 500,
+               'is_metal': True,
+               'k_dens': 2000
+               }
+
+WF = calc_pes_swf(top_slab=slab, bottom_slab=slab, comp_parameters=comp_params)
+
+lpad = LaunchPad.auto_load()
+lpad.add_wf(WF)
+rapidfire(lpad)

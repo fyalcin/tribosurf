@@ -1,7 +1,7 @@
 from pymatgen.core.sites import PeriodicSite
 
 
-def StackAlignedSlabs(bottom_slab, top_slab, top_shift=[0,0,0]):
+def stack_aligned_slabs(bottom_slab, top_slab, top_shift=[0,0,0]):
     """
     Combine slabs that are centered around 0 into a single structure.
     
@@ -39,7 +39,7 @@ def StackAlignedSlabs(bottom_slab, top_slab, top_shift=[0,0,0]):
     
     return interface
 
-def ReCenterAlignedSlabs(top_slab, bottom_slab, d=2.5):
+def recenter_aligned_slabs(top_slab, bottom_slab, d=2.5):
     """
     Center two slabs around z=0 and give them the distance d.
 

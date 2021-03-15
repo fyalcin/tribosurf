@@ -8,10 +8,16 @@ Python functions to get the Potential Energy Surface (PES) of an interface
 @author: gl
 """
 
+__author__ = 'Gabriele Losi'
+__copyright__ = 'Prof. M.C. Righi, University of Bologna'
+__contact__ = 'clelia.righi@unibo.it'
+__date__ = 'February 8th, 2021'
+
 import numpy as np
 from scipy.interpolate import Rbf
-from triboflow.utils.phys_tools import ReplicatePoints, GenerateUniformGrid, \
-    Orthorombize, PBC_Coordinates
+
+from triboflow.utils.phys_tools import replicate_points, generate_uniform_grid,\
+    orthorombize, pbc_coordinates
 
 
 # =============================================================================
@@ -19,8 +25,8 @@ from triboflow.utils.phys_tools import ReplicatePoints, GenerateUniformGrid, \
 # =============================================================================
 
 
-def GetPES(hs_all, E, cell, to_fig=None, point_density=20):
-    """Interpolate the PES using a list of high symetry points and energies.
+def get_pes(hs_all, E, cell, to_fig=None, point_density=20):
+    """Interpolate the PES using a list of high symmetry points and energies.
     
     Main function to get the Potential Energy Surface (PES) for an interface. 
     The points are replicated to span a 3x3 lattice cell and are interpolated
@@ -29,6 +35,7 @@ def GetPES(hs_all, E, cell, to_fig=None, point_density=20):
     is 0. Furthermore it is made sure that the lateral point are inside the
     unit cell before they are replicated.
     
+    Parameters
     ----------        
     hs : dict
         Unfolded HS points of the interface, covering all the surface.
@@ -69,14 +76,14 @@ def GetPES(hs_all, E, cell, to_fig=None, point_density=20):
     """
     
     # Unfold the PES points
-    E_list, data = UnfoldPES(hs_all, E)
+    E_list, data = unfold_pes(hs_all, E)
     
     #making sure points are not represented twice by ensuring rows in data are unique
-    data = RemoveDuplicates(data)
+    data = remove_duplicates(data)
     #print(len(data))
     
     #make sure that the x and y coordinates are inside the unit cell.
-    # x_y_insideCell = PBC_Coordinates(data[:, :2],
+    # x_y_insideCell = pbc_coordinates(data[:, :2],
     #                                  cell,
     #                                  to_array=True)
     # data[:, :2] = x_y_insideCell
@@ -85,12 +92,12 @@ def GetPES(hs_all, E, cell, to_fig=None, point_density=20):
     data[:,2] = (data[:,2]-min(data[:,2]))
     
     # Interpolate the data with Radial Basis Function
-    data_rep = ReplicatePoints(data, cell, replicate_of=(3, 3) )
+    data_rep = replicate_points(data, cell, replicate_of=(3, 3) )
     rbf = Rbf(data_rep[:, 0], data_rep[:, 1], data_rep[:, 2], function='cubic')
     
     # Calculate the PES on a very dense and uniform grid. Useful for further 
     # analysis (MEP, shear strength) and to plot the PES
-    coordinates = GenerateUniformGrid(cell*2, density=point_density)
+    coordinates = generate_uniform_grid(cell*2, density=point_density)
     E_new = rbf(coordinates[:, 0], coordinates[:, 1])
     pes_data = np.column_stack([coordinates[:, :2], E_new])
     
@@ -116,7 +123,7 @@ def GetPES(hs_all, E, cell, to_fig=None, point_density=20):
 # UTILITY FOR THE PES
 # =============================================================================
 
-def RemoveDuplicates(data, rounding_decimal=5):
+def remove_duplicates(data, rounding_decimal=5):
         
     xy = np.round(data[:, :2], decimals=rounding_decimal)
     E_dict = {}
@@ -132,12 +139,8 @@ def RemoveDuplicates(data, rounding_decimal=5):
         E.append([E_dict[str(i)]])
     
     return np.hstack((xy_unique, np.array(E)))
-    
-    
-        
 
-
-def UnfoldPES(hs_all, E_unique):
+def unfold_pes(hs_all, E_unique):
     """
     Unfold the energies calculated for the unique HS points of an interface,
     associating them to the replicated HS points covering the whole surface
@@ -206,7 +209,6 @@ def UnfoldPES(hs_all, E_unique):
     
     return E_list, E_array
 
-
 def plot_pes(data, lattice, to_fig=None):
     """
     Plot the PES and eventually save it
@@ -258,4 +260,4 @@ def plot_pes(data, lattice, to_fig=None):
 if __name__ == '__main__':
     print('Testing the creation of a uniform grid for the PES\n')
     vectors = np.array([[3, 0, 0], [0.8, 4, 0.3]])
-    a = GenerateUniformGrid(vectors, density=1, pts_a=5, to_plot=True)
+    a = generate_uniform_grid(vectors, density=1, pts_a=5, to_plot=True)

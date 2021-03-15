@@ -1,4 +1,4 @@
-def IsListConverged(input_list, tol, n=3):
+def is_list_converged(input_list, tol, n=3):
     """Check if the last n values of an array are within tol of each other.
     
 
