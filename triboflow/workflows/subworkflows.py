@@ -294,6 +294,7 @@ def make_and_relax_slab_swf(bulk_structure,
         formula_from_flag = nav_mp.get_property_from_mp(
             mp_id=flag,
             properties=['pretty_formula'])
+        formula_from_flag = formula_from_flag['pretty_formula']
         if not formula_from_flag == formula:
             raise SystemExit('The chemical formula of your structure ({}) '
                              'does not match the chemical formula of the flag '
@@ -455,6 +456,7 @@ def converge_kpoints_swf(structure,
         formula_from_flag = nav_mp.get_property_from_mp(
             mp_id=flag,
             properties=['pretty_formula'])
+        formula_from_flag = formula_from_flag['pretty_formula']
 
         if not formula_from_flag == formula_from_struct:
             raise SystemExit('The chemical formula of your structure ({}) '

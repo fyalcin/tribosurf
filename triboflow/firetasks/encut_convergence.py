@@ -93,7 +93,7 @@ class FT_UpdateBMLists(FiretaskBase):
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
         
-        nav_structure = StructureNavigator(db_file=db_file, high_level='triboflow')
+        nav_structure = StructureNavigator(db_file=db_file, high_level=None)
         results = nav_structure.get_last_bmd_data_from_db(formula=formula)
         
         BM = results['bulk_modulus']

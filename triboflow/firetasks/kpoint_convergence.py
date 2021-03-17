@@ -106,7 +106,7 @@ class FT_UpdateELists(FiretaskBase):
         nav = Navigator(db_file=db_file)
         # Get energy from last vasp run
         vasp_calc = nav.find_data(
-            collection=nav.db.task, 
+            collection='tasks', 
             filter={'task_label': calc_label})
         energy = vasp_calc['output']['energy']
         
@@ -278,7 +278,7 @@ class FT_KpointsConvo(FiretaskBase):
 
                 nav_high = Navigator(db_file=db_file, high_level='triboflow')
                 nav_high.update_data(
-                    collection='functional+'.bulk_data,
+                    collection=functional+'.bulk_data',
                     filter={'mpid': flag},
                     new_values={'$set': out_dict},
                     upsert=True)

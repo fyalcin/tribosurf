@@ -208,7 +208,7 @@ class FT_GetRelaxedSlab(FiretaskBase):
             # Get results from OptimizeFW
             nav = Navigator(db_file=db_file)
             vasp_calc = nav.find_data(
-                collection=nav.db.tasks, 
+                collection='tasks', 
                 filter={'task_label': self['tag']})
             relaxed_slab = Structure.from_dict(vasp_calc['output']['structure'])
             slab = Slab(relaxed_slab.lattice,
@@ -228,7 +228,7 @@ class FT_GetRelaxedSlab(FiretaskBase):
         else:
             nav = Navigator(db_file=db_file)
             vasp_calc = nav.find_data(
-                collection=nav.db.tasks,
+                collection='tasks',
                 filter={'task_label': self['tag']})
 
             if  vasp_calc:
@@ -347,7 +347,7 @@ class FT_StartSlabRelax(FiretaskBase):
             db_file=db_file, 
             high_level='triboflow')
         slab_data = nav_structure.get_slab_from_db(
-            mpi_id=flag,
+            mp_id=flag,
             functional=functional,
             miller=miller)
         
@@ -516,10 +516,10 @@ class FT_MakeHeteroStructure(FiretaskBase):
             db_file = env_chk('>>db_file<<', fw_spec)
 
         nav_high = Navigator(db_file=db_file, high_level='triboflow')
-        interface_name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
+        inter_name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
         inter_data = nav_high.find_data(
             collection=functional+'.interface_data',
-            filter={'name': interface_name})
+            filter={'name': inter_name})
         
         inter_params = inter_data['interface_parameters']
         comp_params = inter_data['comp_parameters']
@@ -604,7 +604,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
 
                 nav_high.update_data(
                     collection=functional+'.interface_data',
-                    filter={'name': interface_name},
+                    filter={'name': inter_name},
                     new_values={'$set': {'unrelaxed_structure': inter_dict,
                                          'bottom_aligned': bottom_dict,
                                          'top_aligned': top_dict}})

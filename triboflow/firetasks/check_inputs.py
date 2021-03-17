@@ -44,7 +44,7 @@ class FT_UpdateCompParams(FiretaskBase):
             high_level='triboflow')
         bulk_1 = nav_structure.get_bulk_from_db(
             mp_id=mp_id_1, 
-            function=functional)
+            functional=functional)
         bulk_2 = nav_structure.get_bulk_from_db(
             mp_id=mp_id_2,
             functional=functional
