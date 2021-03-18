@@ -610,14 +610,14 @@ class FT_EndThickConvo(FiretaskBase):
 
             nav = Navigator(db_file=p['db_file'], high_level=p['high_level'])
             out_dict = nav.find_data(collection=p['functional'] + '.slab_data', 
-                                     filter={'mpid': p['mp_id'], 'miller': p['miller']})
+                                     fltr={'mpid': p['mp_id'], 'miller': p['miller']})
             
             # Extract the data to be saved elsewhere
             entry = ['thickness', 'data_' + str(index), 'calc_output']
             store_dict = get_one_info_from_dict(out_dict, entry)
 
             nav.update_data(collection=p['functional'] + '.slab_data', 
-                            filter={'mpid': p['mp_id'], 'miller': p['miller']},
+                            fltr={'mpid': p['mp_id'], 'miller': p['miller']},
                             new_values={'$set': {'calc_output': store_dict}})
 
         def call_recursion(self, fw_spec, p):

@@ -281,7 +281,7 @@ class FT_MoveTagResults(FiretaskBase):
 
     2 - The field containing the data of interest is extracted. The query is 
     done on: `db_file`, `database_from`, `collection_from`. The correct field
-    is identified using the filter:
+    is identified using the fltr:
         {
             `tag_key`: `tag`
         }
@@ -347,7 +347,7 @@ class FT_MoveTagResults(FiretaskBase):
        data of interest. This is done matching tag_key and key with the entry
        of the field dictionary: 'transfer_test'.
     3. Extract both energy and energy2 values from the a-field.
-    4. Find the exact destination location with a filter based on mp_id and 
+    4. Find the exact destination location with a fltr based on mp_id and 
        place there, following the path provided by 'entry_to'.
 
     In the end, the b-field becomes:
@@ -468,13 +468,13 @@ class FT_MoveTagResults(FiretaskBase):
     
         # Prepare the database and options where to store data
         nav = Navigator(db_file=p['db_file'], high_level=p['database_to'])
-        filter = {'mpid': p['mp_id']}
+        fltr = {'mpid': p['mp_id']}
         if p['miller'] is not None:
-            filter.update({'miller': p['miller']})        
+            fltr.update({'miller': p['miller']})        
 
         # Finally store the data
         for d in info_dict:
-            nav.update_data(p['collection_to'], filter, {'$set': d}, upsert=True)
+            nav.update_data(p['collection_to'], fltr, {'$set': d}, upsert=True)
     
     def user_output(self, vasp_calc, p, dfl):
 

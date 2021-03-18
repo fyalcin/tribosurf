@@ -82,11 +82,11 @@ class Navigator:
     __initialize_obj_collection(collection)
         Initialize a MongoDB object collection.
     
-    update_data(collection, filter, new_values, )
-        Update a single document matching the filter with the new value.
+    update_data(collection, fltr, new_values, )
+        Update a single document matching the filter (fltr) with the new value.
     
-    update_many_data(collection, filter, new_values, upsert)
-        Update many documents that match the filter with the new values.
+    update_many_data(collection, fltr, new_values, upsert)
+        Update many documents that match the filter (fltr) with the new values.
     
     insert_data(collection, data, duplicates, message)
         Insert a single document in the collection.
@@ -94,17 +94,17 @@ class Navigator:
     insert_many_data(collection, data, duplicates)
         Insert an iterable of documents in the collection.
 
-    find_data(collection, filter)
-        Get a single document in the collection that matches the filter.
+    find_data(collection, fltr)
+        Get a single document in the collection that matches the filter (fltr).
     
-    find_many_data(collection, filter)
-       Get all the documents in the collection that match the filter.
+    find_many_data(collection, fltr)
+       Get all the documents in the collection that match the filter (fltr).
     
-    delete_data(collection, filter)
-        Delate a single document that matches the filter.
+    delete_data(collection, fltr)
+        Delate a single document that matches the filter (fltr).
     
-    delete_many_data(collection, filter)
-        Delate one or more documents that match the filter.
+    delete_many_data(collection, fltr)
+        Delate one or more documents that match the filter (fltr).
     
     drop_data(Drop all the documents in the collection.)
         Drop all the documents in the collection.
@@ -197,9 +197,9 @@ class Navigator:
         
         return collection_obj
 
-    def update_data(self, collection, filter, new_values, upsert=False):
+    def update_data(self, collection, fltr, new_values, upsert=False):
         """
-        Update a single document matching the filter with the new value.
+        Update a single document matching the filter (fltr) with the new value.
 
         https://pymongo.readthedocs.io/en/stable/api/pymongo/collection.html#pymongo.collection.Collection.update_one
 
@@ -208,7 +208,7 @@ class Navigator:
         collection : str, VaspCalcDb
             Name of the collection in the database or in the VaspCalcDb object.
 
-        filter : dict
+        fltr : dict
             Dictionary containing the document to update.
 
         new_values : dict
@@ -221,7 +221,7 @@ class Navigator:
         
         upsert : bool
             PyMongo parameter for the update_one function. If True update_one 
-            performs an insertion if no documents match the filter.
+            performs an insertion if no documents match the filter (fltr).
 
         """
 
@@ -229,11 +229,11 @@ class Navigator:
 
         log.info('Updating the collection {} with the new data {}.'
                  ''.format(collection, new_values))
-        collection_obj.update_one(filter, new_values, upsert)
+        collection_obj.update_one(fltr, new_values, upsert)
     
-    def update_many_data(self, collection, filter, new_values, upsert=False):
+    def update_many_data(self, collection, fltr, new_values, upsert=False):
         """
-        Update many documents that match the filter with the new values.
+        Update many documents that match the filter (fltr) with the new values.
 
         https://pymongo.readthedocs.io/en/stable/api/pymongo/collection.html#pymongo.collection.Collection.update_many
 
@@ -242,7 +242,7 @@ class Navigator:
         collection : str, VaspCalcDb
             Name of the collection in the database or in the VaspCalcDb object.
         
-        filter : dict
+        fltr : dict
             Dictionary containing the documents to update.
 
         new_values : dict
@@ -250,7 +250,7 @@ class Navigator:
         
         upsert : bool
             PyMongo parameter for the update_one function. If True update_one 
-            performs an insertion if no documents match the filter.
+            performs an insertion if no documents match the filter (fltr).
 
         """
 
@@ -258,7 +258,7 @@ class Navigator:
 
         log.info('Updating the collection {} with the new data {}.'
                  ''.format(collection, new_values))
-        collection_obj.update_many(filter, new_values, upsert)
+        collection_obj.update_many(fltr, new_values, upsert)
 
     def insert_data(self, collection, data, duplicates=False, message=None):
         """
@@ -346,9 +346,9 @@ class Navigator:
         log.info('Writing {} in the collection {}.'.format(data, collection))
         collection_obj.insert_many(data)
 
-    def find_data(self, collection, filter):
+    def find_data(self, collection, fltr):
         """
-        Get a single document in the collection that matches the filter.
+        Get a single document in the collection that matches the filter (fltr).
 
         https://pymongo.readthedocs.io/en/stable/api/pymongo/collection.html#pymongo.collection.Collection.find_one
 
@@ -357,9 +357,9 @@ class Navigator:
         collection : str, VaspCalcDb
             Name of the collection in the database or VaspCalcDb object.
 
-        filter : dict, optional
+        fltr : dict, optional
             Dictionary containing the name of the document to find.
-            If filter is empty all the documents in the collection are returned.
+            If fltr is empty all the documents in the collection are returned.
 
         Returns
         -------
@@ -371,18 +371,18 @@ class Navigator:
 
         collection_obj = self.__initialize_obj_collection(collection)
 
-        data = collection_obj.find_one(filter)
+        data = collection_obj.find_one(fltr)
 
         if not data:
-            log.warning('There are no data for {}.'.format(filter))
+            log.warning('There are no data for {}.'.format(fltr))
             return data
 
-        log.info('{} has been found in {}.'. format(filter, collection))
+        log.info('{} has been found in {}.'. format(fltr, collection))
         return data
 
-    def find_many_data(self, collection, filter):
+    def find_many_data(self, collection, fltr):
         """
-        Get all the documents in the collection that match the filter.
+        Get all the documents in the collection that match the filter (fltr).
 
         https://pymongo.readthedocs.io/en/stable/api/pymongo/collection.html#pymongo.collection.Collection.find
 
@@ -392,9 +392,9 @@ class Navigator:
         collection : str, VaspCalcDb
             Name of the collection in the database or VaspCalcDb object. 
 
-        filter : dict, optional
+        fltr : dict, optional
             Dictionary containing the name of the document to find.
-            If filter is empty all the documents in the collection are returned.
+            If fltr is empty all the documents in the collection are returned.
 
         Returns
         -------
@@ -406,18 +406,18 @@ class Navigator:
 
         collection_obj = self.__initialize_obj_collection(collection)
 
-        data = collection_obj.find(filter)
+        data = collection_obj.find(fltr)
 
         if not data:
-            log.warning('There are no data for {}.'.format(filter))
+            log.warning('There are no data for {}.'.format(fltr))
             return data
 
-        log.info('{} has been found in {}.'. format(filter, collection))
+        log.info('{} has been found in {}.'. format(fltr, collection))
         return data
 
-    def delete_data(self, collection, filter):
+    def delete_data(self, collection, fltr):
         """
-        Delate a single document that matches the filter.
+        Delate a single document that matches the filter (fltr).
 
         https://pymongo.readthedocs.io/en/stable/api/pymongo/collection.html#pymongo.collection.Collection.delete_one
 
@@ -426,7 +426,7 @@ class Navigator:
         collection : str, VaspCalcDb
             Name of the collection in the database or VaspCalcDb object.
 
-        filter : dict
+        fltr : dict
             Document to be removed.
 
         """
@@ -434,12 +434,12 @@ class Navigator:
         collection_obj = self.__initialize_obj_collection(collection)
 
         log.info('Deleting {} from the collection {}.'
-                 ''.format(filter, collection))
-        collection_obj.delete_one(filter)
+                 ''.format(fltr, collection))
+        collection_obj.delete_one(fltr)
 
-    def delete_many_data(self, collection, filter):
+    def delete_many_data(self, collection, fltr):
         """
-        Delate one or more documents that match the filter.
+        Delate one or more documents that match the filter (fltr).
 
         https://pymongo.readthedocs.io/en/stable/api/pymongo/collection.html#pymongo.collection.Collection.delete_many
 
@@ -448,14 +448,14 @@ class Navigator:
         collection : str, VaspCalcDb
             Name of the collection in the database or VaspCalcDb object.
 
-        filter : dict
+        fltr : dict
             Documents to be removed.
 
         """
 
         collection_obj = self.__initialize_obj_collection(collection)
 
-        collection_obj.delete_many(filter)
+        collection_obj.delete_many(fltr)
 
     def drop_data(self, collection):
         """
@@ -471,7 +471,7 @@ class Navigator:
         """
         log.critical('This will drop all entries {} from the database. '
                      'Write the current date (YYYY-mm-dd, e.g. 2021-02-01) '
-                     'to confirm: '.format(filter))
+                     'to confirm: ')
         user_date = input()
         current_date = datetime.today().strftime("%Y-%m-%d")
 

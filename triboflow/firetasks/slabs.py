@@ -113,6 +113,6 @@ class FT_GenerateSlabs(FiretaskBase):
             # Clean the data and create a dictionary with the given path
             update_data = write_one_dict(s.as_dict(), en)
             nav.update_data(collection=p['collection'], 
-                            filter={'mpid': p['mp_id'], 'miller': hkl},
+                            fltr={'mpid': p['mp_id'], 'miller': hkl},
                             new_values={'$set': update_data},
                             upsert=True)

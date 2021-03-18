@@ -107,13 +107,13 @@ class FT_UpdateELists(FiretaskBase):
         # Get energy from last vasp run
         vasp_calc = nav.find_data(
             collection='tasks', 
-            filter={'task_label': calc_label})
+            fltr={'task_label': calc_label})
         energy = vasp_calc['output']['energy']
         
         # Update data array in the database
         nav.update_data(
             collection='kpoints_data_sharing',
-            filter={'tag': tag},
+            fltr={'tag': tag},
             new_values={'$push': {'E_list': energy}})
 
 
@@ -187,7 +187,7 @@ class FT_KpointsConvo(FiretaskBase):
         nav = Navigator(db_file=db_file)
         data = nav.find_data(
             collection='kpoints_data_sharing',
-            filter={'tag': tag}
+            fltr={'tag': tag}
         )
 
         if data:
@@ -279,13 +279,13 @@ class FT_KpointsConvo(FiretaskBase):
                 nav_high = Navigator(db_file=db_file, high_level='triboflow')
                 nav_high.update_data(
                     collection=functional+'.bulk_data',
-                    filter={'mpid': flag},
+                    fltr={'mpid': flag},
                     new_values={'$set': out_dict},
                     upsert=True)
 
                 nav.update_data(
                     collection='kpoints_data_sharing',
-                    filter={'tag': tag},
+                    fltr={'tag': tag},
                     new_values={'$set': {'final_k_dens': final_k_dens,
                                          'final_energy': final_E,
                                          'energy_list': E_list,
@@ -367,7 +367,7 @@ class FT_KpointsConvo(FiretaskBase):
                 # Update Database entry for Encut list
                 nav.update_data(
                     collection='kpoints_data_sharing',
-                    filter={'tag': tag},
+                    fltr={'tag': tag},
                     new_values={'$push': {'k_dens_list': k_dens,
                                           'k-meshes': kpoints.as_dict()},
                                 '$set': {'last_mesh': kpoints.kpts}})

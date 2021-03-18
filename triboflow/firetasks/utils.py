@@ -84,7 +84,7 @@ class FT_ChooseCompParams(FiretaskBase):
             high_level='triboflow')
         nav_high.update_data(
             collection=functional+'.interface_data', 
-            filter={'name': name},
+            fltr={'name': name},
             new_values={'$set': {'comp_parameters.k_dens': k_dens,
                                  'comp_parameters.encut': encut,
                                  'comp_parameters.is_metal': metal}})

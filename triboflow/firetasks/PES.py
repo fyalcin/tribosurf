@@ -168,7 +168,7 @@ class FT_ComputePES(FiretaskBase):
         nav_high = Navigator(db_file=db_file, high_level='triboflow')
         nav_high.update_data(
             collection=functional+'.interface_data',
-            filter={'name': name},
+            fltr={'name': name},
             new_values={'$set': {'PES.rbf': jsanitize(interpolation),
                                  'PES.all_energies': jsanitize(E_list),
                                  'PES.pes_data': jsanitize(pes_data),
@@ -233,7 +233,7 @@ class FT_RetrievePESEnergies(FiretaskBase):
             y_shift = lateral_shifts.get(s)[0][1]
             vasp_calc = nav.find_data(
                 collection=nav.db.tasks, 
-                filter={'task_label': label})
+                fltr={'task_label': label})
             energy = vasp_calc['output']['energy']
             struct = vasp_calc['output']['structure']
             energy_list.append([s, x_shift, y_shift, energy])
@@ -247,17 +247,17 @@ class FT_RetrievePESEnergies(FiretaskBase):
         max_stacking = sorted_energy_list[-1][0]
         calc_min = nav.find_data(
             collection=nav.db.tasks,
-            filter={'task_label': tag+'_'+min_stacking})
+            fltr={'task_label': tag+'_'+min_stacking})
         calc_max = nav.find_data(
             collection=nav.db.tasks,
-            filter={'task_label': tag+'_'+max_stacking})
+            fltr={'task_label': tag+'_'+max_stacking})
         struct_min = calc_min['output']['structure']
         struct_max = calc_max['output']['structure']
 
         nav_high = Navigator(db_file=db_file, high_level='triboflow')
         nav_high.update_data(
             collection=functional+'.interface_data',
-            filter={'name': name},
+            fltr={'name': name},
             new_values={
                 '$set': 
                     {'relaxed_structure@min': 
@@ -341,7 +341,7 @@ class FT_FindHighSymmPoints(FiretaskBase):
         nav_high = Navigator(db_file=db_file, high_level='triboflow')
         nav_high.update_data(
             collection=functional+'.interface_data',
-            filter={'name': name},
+            fltr={'name': name},
             new_values={'$set': 
                            {'PES.high_symmetry_points':
                                {'bottom_unique': b_hsp_u,

@@ -63,19 +63,19 @@ class FT_UpdateCompParams(FiretaskBase):
         nav_high = Navigator(db_file=db_file, high_level='triboflow')
         nav_high.update_data(
             collection=functional+'.slab_data',
-            filter={'mpid': mp_id_1, 'miller': miller_1},
+            fltr={'mpid': mp_id_1, 'miller': miller_1},
             new_values={'$set': {'comp_parameters.encut': encut_1,
                                  'comp_parameters.k_dens': k_dens_1}})
         nav_high.update_data(
             collection=functional+'.slab_data',
-            filter={'mpid': mp_id_2, 'miller': miller_2},
+            fltr={'mpid': mp_id_2, 'miller': miller_2},
             new_values={'$set': {'comp_parameters.encut': encut_2,
                                  'comp_parameters.k_dens': k_dens_2}})
 
         inter_name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
         nav_high.update_data(
             collection=functional+'.interface_data',
-            filter={'name': inter_name},
+            fltr={'name': inter_name},
             new_values={'$set': {'comp_parameters.encut': encut_inter,
                                  'comp_parameters.k_dens': k_dens_inter,
                                  'comp_parameters.is_metal': metal_inter}})
@@ -115,7 +115,7 @@ class FT_MakeInterfaceInDB(FiretaskBase):
 
         if nav_high.find_data(
                collection=functional+'.interface_data', 
-               filter={'name': name}):
+               fltr={'name': name}):
 
             print('{} interface can not be added to {}.interface_data '
                   'collection because an interface with that name is already '
@@ -166,7 +166,7 @@ class FT_MakeSlabInDB(FiretaskBase):
 
         if nav_high.find_data(
             collection=functional+'.slab_data',
-            filter={'mpid': mp_id, 'miller': data['miller']}):
+            fltr={'mpid': mp_id, 'miller': data['miller']}):
 
             print('{}-{} slab can not be added to {}.slab_data collection'
                   'because a material with MP-ID {} is already present.'
@@ -223,7 +223,7 @@ class FT_MakeBulkInDB(FiretaskBase):
 
         if nav_high.find_data(
             collection=functional+'.bulk_data',
-            filter={'mpid': mp_id}):
+            fltr={'mpid': mp_id}):
 
             print('{} bulk can not be added to bulk_data collection because a'
                   'material with MP-ID {} is already present in the {} '

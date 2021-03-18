@@ -23,7 +23,7 @@ db_file = '/fs/home/wolloch/git_test/config/db.json'
 nav_high = Navigator(db_file=db_file, high_level='triboflow')
 fe_dict = nav_high.find_data(
     collection=nav_high.db.PBE.bulk_data,
-    filter={'formula': 'Fe'})
+    fltr={'formula': 'Fe'})
 fe_bulk=Structure.from_dict(fe_dict.get('structure_equiVol'))
 bulk_conv = SpacegroupAnalyzer(fe_bulk).get_conventional_standard_structure()
 
@@ -101,13 +101,13 @@ fe_flipped_ni_ads.to(fmt='poscar', filename='fe_flipped_ni_ads.vasp')
 # Finally look at relaxed and unrelaxed slabs and see if there is a difference
 Au_dict = nav_high.find_data(
     collection=nav_high.db.PBE.slab_data,
-    filter={'formula': 'Au'})
+    fltr={'formula': 'Au'})
 au_relaxed = Structure.from_dict(Au_dict.get('relaxed_slab'))
 au_unrelaxed = Structure.from_dict(Au_dict.get('unrelaxed_slab'))
 
 Fe_dict = nav_high.find_data(
     collection=nav_high.db.PBE.slab_data,
-    filter={'formula': 'Fe', 'miller': [1,1,0]})
+    fltr={'formula': 'Fe', 'miller': [1,1,0]})
 fe_unrelaxed = Structure.from_dict(Fe_dict.get('unrelaxed_slab'))
 fe_relaxed = Structure.from_dict(Fe_dict.get('relaxed_slab'))
 

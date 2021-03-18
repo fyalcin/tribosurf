@@ -209,7 +209,7 @@ class FT_GetRelaxedSlab(FiretaskBase):
             nav = Navigator(db_file=db_file)
             vasp_calc = nav.find_data(
                 collection='tasks', 
-                filter={'task_label': self['tag']})
+                fltr={'task_label': self['tag']})
             relaxed_slab = Structure.from_dict(vasp_calc['output']['structure'])
             slab = Slab(relaxed_slab.lattice,
                         relaxed_slab.species_and_occu,
@@ -223,13 +223,13 @@ class FT_GetRelaxedSlab(FiretaskBase):
             nav_high = Navigator(db_file=db_file, high_level='triboflow')
             nav_high.update_data(
                 collection=functional+'.slab_data',
-                filter={'mpid': flag, 'miller': miller},
+                fltr={'mpid': flag, 'miller': miller},
                 new_values={'$set': {out_name: slab.as_dict()}})
         else:
             nav = Navigator(db_file=db_file)
             vasp_calc = nav.find_data(
                 collection='tasks',
-                filter={'task_label': self['tag']})
+                fltr={'task_label': self['tag']})
 
             if  vasp_calc:
                 relaxed_slab = Structure.from_dict(vasp_calc['output']['structure'])
@@ -455,7 +455,7 @@ class FT_MakeSlabInDB(FiretaskBase):
         slab_dict = monty.json.jsanitize(slab.as_dict(), allow_bson=True)
         nav_high.update_data(
             collection=functional+'.slab_data',
-            filter={'mpid': flag, 'miller': miller},
+            fltr={'mpid': flag, 'miller': miller},
             new_values={'$set': {'unrelaxed_slab': slab_dict}},
             upsert=True)
 
@@ -519,7 +519,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
         inter_name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
         inter_data = nav_high.find_data(
             collection=functional+'.interface_data',
-            filter={'name': inter_name})
+            fltr={'name': inter_name})
         
         inter_params = inter_data['interface_parameters']
         comp_params = inter_data['comp_parameters']
@@ -604,7 +604,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
 
                 nav_high.update_data(
                     collection=functional+'.interface_data',
-                    filter={'name': inter_name},
+                    fltr={'name': inter_name},
                     new_values={'$set': {'unrelaxed_structure': inter_dict,
                                          'bottom_aligned': bottom_dict,
                                          'top_aligned': top_dict}})
@@ -624,14 +624,14 @@ class FT_MakeHeteroStructure(FiretaskBase):
 
                     nav_high.update_data(
                         collection=functional+'.interface_data',
-                        filter={'name': interface_name},
+                        fltr={'name': interface_name},
                         new_values={'$set': 
                                        {'original_interface_params': 
                                             inter_params}})
 
                 nav_high.update_data(
                     collection=functional+'.interface_data',
-                    filter={'name': interface_name},
+                    fltr={'name': interface_name},
                     new_values={'$set': {'interface_parameters': new_params}})
 
                 new_fw = Firework(FT_MakeHeteroStructure(mp_id_1=mp_id_1,

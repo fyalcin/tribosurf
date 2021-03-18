@@ -502,7 +502,7 @@ def retrieve_from_db(mp_id, collection, db_file=None, database=None,
 
     miller : list, optional
         Miller index identifying the orientation of the slab. If it is not 
-        None, it can be used as an option as filter together with `mp_id`.
+        None, it can be used as an option as filter (fltr) together with `mp_id`.
         The default is None.
 
     entry : str or list or None, optional
@@ -529,13 +529,13 @@ def retrieve_from_db(mp_id, collection, db_file=None, database=None,
     # Call the navigator for retrieving structure
     nav = Navigator(db_file=db_file, high_level=database)
     
-    # Define the filter to be used
-    filter = {'mpid': mp_id}
+    # Define the filter (fltr) to be used
+    fltr = {'mpid': mp_id}
     if miller is not None:
-        filter.update({'miller': miller})
+        fltr.update({'miller': miller})
     
     # Extract data from the database
-    structure = nav.find_data(collection=collection, filter=filter)
+    structure = nav.find_data(collection=collection, fltr=fltr)
     
     if structure is not None:
         if entry is not None:
@@ -554,7 +554,7 @@ def retrieve_from_tag(collection, tag, tag_key='task_label', entry=None,
                       db_file=None, database=None):
     """
     Retrieve a dictionary field out of the database based on the combination
-    {tag_key : tag} as filter. Useful to retrieve quickly the results of a 
+    {tag_key : tag} as filter (fltr). Useful to retrieve quickly the results of a 
     VASP simulation run with Atomate and typically stored in the low level DB.
 
     Parameters
