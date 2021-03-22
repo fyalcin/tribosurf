@@ -281,7 +281,7 @@ class FT_MoveTagResults(FiretaskBase):
 
     2 - The field containing the data of interest is extracted. The query is 
     done on: `db_file`, `database_from`, `collection_from`. The correct field
-    is identified using the fltr:
+    is identified using the filter:
         {
             `tag_key`: `tag`
         }
@@ -347,7 +347,7 @@ class FT_MoveTagResults(FiretaskBase):
        data of interest. This is done matching tag_key and key with the entry
        of the field dictionary: 'transfer_test'.
     3. Extract both energy and energy2 values from the a-field.
-    4. Find the exact destination location with a fltr based on mp_id and 
+    4. Find the exact destination location with a filter based on mp_id and 
        place there, following the path provided by 'entry_to'.
 
     In the end, the b-field becomes:
