@@ -232,7 +232,7 @@ class FT_RetrievePESEnergies(FiretaskBase):
             x_shift = lateral_shifts.get(s)[0][0]
             y_shift = lateral_shifts.get(s)[0][1]
             vasp_calc = nav.find_data(
-                collection=nav.db.tasks, 
+                collection='tasks', 
                 fltr={'task_label': label})
             energy = vasp_calc['output']['energy']
             struct = vasp_calc['output']['structure']
@@ -246,10 +246,10 @@ class FT_RetrievePESEnergies(FiretaskBase):
         min_stacking = sorted_energy_list[0][0]
         max_stacking = sorted_energy_list[-1][0]
         calc_min = nav.find_data(
-            collection=nav.db.tasks,
+            collection='tasks',
             fltr={'task_label': tag+'_'+min_stacking})
         calc_max = nav.find_data(
-            collection=nav.db.tasks,
+            collection='tasks',
             fltr={'task_label': tag+'_'+max_stacking})
         struct_min = calc_min['output']['structure']
         struct_max = calc_max['output']['structure']
