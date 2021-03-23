@@ -232,7 +232,7 @@ class FT_RetrievePESEnergies(FiretaskBase):
             x_shift = lateral_shifts.get(s)[0][0]
             y_shift = lateral_shifts.get(s)[0][1]
             vasp_calc = nav.find_data(
-                collection=nav.db.tasks, 
+                collection='tasks', 
                 fltr={'task_label': label})
             energy = vasp_calc['output']['energy']
             struct = vasp_calc['output']['structure']
@@ -246,10 +246,10 @@ class FT_RetrievePESEnergies(FiretaskBase):
         min_stacking = sorted_energy_list[0][0]
         max_stacking = sorted_energy_list[-1][0]
         calc_min = nav.find_data(
-            collection=nav.db.tasks,
+            collection='tasks',
             fltr={'task_label': tag+'_'+min_stacking})
         calc_max = nav.find_data(
-            collection=nav.db.tasks,
+            collection='tasks',
             fltr={'task_label': tag+'_'+max_stacking})
         struct_min = calc_min['output']['structure']
         struct_max = calc_max['output']['structure']
@@ -348,7 +348,8 @@ class FT_FindHighSymmPoints(FiretaskBase):
                                 'bottom_all': b_hsp_a,
                                 'top_unique': t_hsp_u,
                                 'top_all': t_hsp_a,
-                                'combined_unique': jsanitize(c_hsp_u)}}},
+                                'combined_unique': jsanitize(c_hsp_u),
+                                'combined_all': jsanitize(c_hsp_a)}}},
             upsert=True)
 
         return FWAction(update_spec=({'lateral_shifts': c_hsp_u}))
