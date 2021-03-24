@@ -134,7 +134,9 @@ def adhesion_energy_swf(top_slab,
                   links_dict={FW_top: [FW_results],
                               FW_bot: [FW_results],
                               FW_interface: [FW_results]},
-                  name=
+                  name='Calculate adhesion SWF for {}'.format(interface_name))
+    
+    return WF
     
     
 def calc_pes_swf(top_slab, bottom_slab,

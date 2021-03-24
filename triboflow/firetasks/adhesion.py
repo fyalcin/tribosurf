@@ -70,3 +70,5 @@ class FT_CalcAdhesion(FiretaskBase):
             collection=functional+'.interface_data',
             fltr={'name': name},
             new_values={'$set': {out_name: E_Jm2}})
+        
+        return FWAction(update_spec=fw_spec)
