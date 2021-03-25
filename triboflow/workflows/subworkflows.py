@@ -10,6 +10,7 @@ import numpy as np
 from fireworks import Workflow, Firework
 
 from atomate.vasp.fireworks import StaticFW
+from atomate.vasp.powerups import add_modify_incar
 
 from triboflow.fireworks.common import run_pes_calc_fw, make_pes_fw
 from triboflow.firetasks.encut_convergence import FT_EnergyCutoffConvo
@@ -130,13 +131,13 @@ def adhesion_energy_swf(top_slab,
                                  top_label=tag+'top',
                                  bottom_label=tag+'bottom',
                                  interface_label=tag+'interface'))
-    WF = Workflow(fireworks=[FW_top, FW_bot, FW_interface, FW_results],
-                  links_dict={FW_top: [FW_results],
-                              FW_bot: [FW_results],
-                              FW_interface: [FW_results]},
-                  name='Calculate adhesion SWF for {}'.format(interface_name))
+    SWF = Workflow(fireworks=[FW_top, FW_bot, FW_interface, FW_results],
+                   links_dict={FW_top: [FW_results],
+                               FW_bot: [FW_results],
+                               FW_interface: [FW_results]},
+                   name='Calculate adhesion SWF for {}'.format(interface_name))
     
-    return WF
+    return add_modify_incar(SWF)
     
     
 def calc_pes_swf(top_slab, bottom_slab,

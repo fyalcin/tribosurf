@@ -6,8 +6,10 @@ Created on Tue Mar 23 15:36:52 2021
 @author: wolloch
 """
 import numpy as np
+from uuid import uuid4
 
 from pymatgen.core.structure import Structure
+from pymatgen.core.surface import Slab
 
 from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
@@ -15,6 +17,132 @@ from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 
 from triboflow.utils.database import Navigator
+from triboflow.workflows.base import dynamic_relax_swf
+from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
+
+
+@explicit_serialize
+class FT_RetrievMatchedSlabs(FiretaskBase):
+    required_params = ['interface_name', 'functional']
+    optional_params = ['db_file', 'top_out_name', 'bottom_out_name']
+    
+    def run_task(self, fw_spec):
+        from triboflow.workflows.subworkflows import adhesion_energy_swf
+        interface_name = self.get('interface_name')
+        functional = self.get('functional')
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
+        top_out_name = self.get('top_out_name', 'top_aligned_relaxed')
+        bot_out_name = self.get('bottom_out_name', 'bottom_aligned_relaxed')
+        
+        input_list = fw_spec.get('relaxation_inputs')
+        
+        if input_list:
+            nav = Navigator(db_file, high_level=False)
+            for i in input_list:
+                label = i[-1]    
+                calc = nav.find_data(collection='tasks',
+                                     fltr={'name': label})
+                out_struct = calc['outputs']['structure']
+                if label.startswith('top'):
+                    out_name = top_out_name
+                else:
+                    out_name = bot_out_name
+                nav_high = Navigator(db_file, high_level=True)
+                nav.update_data(collection=functional+'.interface_data',
+                                fltr={'name': interface_name},
+                                new_values={out_name: out_struct})
+        
+        return FWAction(update_spec=fw_spec)
+
+@explicit_serialize
+class FT_RelaxMatchedSlabs(FiretaskBase):
+    required_params = ['interface_name', 'functional']
+    optional_params = ['db_file', 'top_in_name', 'top_out_name',
+                       'bottom_in_name', 'bottom_out_name']
+    
+    def run_task(self, fw_spec):
+        from triboflow.workflows.subworkflows import adhesion_energy_swf
+        interface_name = self.get('interface_name')
+        functional = self.get('functional')
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
+        top_in_name = self.get('top_in_name', 'top_aligned')
+        top_out_name = self.get('top_out_name', 'top_aligned_relaxed')
+        bot_in_name = self.get('bottom_in_name', 'bottom_aligned')
+        bot_out_name = self.get('bottom_out_name', 'bottom_aligned_relaxed')
+        
+        nav = Navigator(db_file, high_level=True)
+        
+        interface_dict = nav.find_data(collection=functional+'.interface_data',
+                                       fltr={'name': interface_name})
+        
+        relaxed_top_present = interface_dict.get(top_out_name)
+        relaxed_bot_present = interface_dict.get(top_out_name)
+        comp_params = interface_dict.get('comp_parameters', {})
+        
+        inputs = []
+        if not relaxed_top_present:
+            top_slab = Slab.from_dict(interface_dict[top_in_name])
+            top_vis = get_custom_vasp_relax_settings(top_slab,
+                                                     comp_params,
+                                                     'slab_full_relax')
+            formula = top_slab.composition.reduced_formula
+            miller = ''.join(str(s) for s in top_slab.miller_index)
+            label = 'top_slab_'+formula+miller+'_'+str(uuid4())
+            inputs.append([top_slab, top_vis, label])
+        if not relaxed_bot_present:
+            bot_slab = Slab.from_dict(interface_dict[bot_in_name])
+            bot_vis = get_custom_vasp_relax_settings(bot_slab,
+                                                     comp_params,
+                                                     'slab_full_relax')
+            formula = bot_slab.composition.reduced_formula
+            miller = ''.join(str(s) for s in bot_slab.miller_index)
+            label = 'bot_slab_'+formula+miller+'_'+str(uuid4())
+            inputs.append([bot_slab, bot_vis, label])
+            
+        if inputs:
+            WF = dynamic_relax_swf(inputs, 'Relaxing the matched slabs')
+            return FWAction(detours=WF,
+                            update_spec={'relaxation_inputs': inputs})
+        else:
+            return FWAction(update_spec={'relaxation_inputs': inputs})
+        
+@explicit_serialize
+class FT_StartAdhesionSWF(FiretaskBase):
+    required_params = ['interface_name', 'functional']
+    optional_params = ['db_file', 'adhesion_handle']
+    def run_task(self, fw_spec):
+        from triboflow.workflows.subworkflows import adhesion_energy_swf
+        interface_name = self.get('interface_name')
+        functional = self.get('functional')
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
+        adhesion_handle = self.get('adhesion_handle', 'adhesion_energy@min')
+            
+        nav = Navigator(db_file, high_level=True)
+        
+        interface_dict = nav.find_data(collection=functional+'.interface_data',
+                                       fltr={'name': interface_name})
+        
+        adhesion_was_calculated = interface_dict.get(adhesion_handle)
+        
+        if not adhesion_was_calculated:
+            top_slab = Slab.from_dict(interface_dict['top_aligned_relaxed'])
+            bottom_slab = Slab.from_dict(interface_dict['bottom_aligned_relaxed'])
+            interface = Structure.from_dict(interface_dict['relaxed_structure@min']) 
+        
+            SWF = adhesion_energy_swf(top_slab,
+                                  bottom_slab,
+                                  interface,
+                                  interface_name=None,
+                                  functional='PBE',
+                                  comp_parameters={})
+            
+            return FWAction(detours=SWF)
 
 @explicit_serialize
 class FT_CalcAdhesion(FiretaskBase):
