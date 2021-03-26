@@ -116,7 +116,7 @@ def plot_pes(data, lattice, to_fig=None, vmin=None, vmax=None):
         levels = np.linspace(vmin, vmax, n)
     else:
         levels = np.linspace(np.amin(E), np.amax(E), n)
-    fig = plt.figure(figsize=(7, 7), dpi=100)
+    fig = plt.figure(figsize=(7, 7), dpi=150)
     ax = fig.add_subplot(111)
     ax.set_aspect('equal')
     anglerot='vertical'

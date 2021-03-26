@@ -1,9 +1,9 @@
 {
     "logging": {
         "save_log": true,
-        "console_logging_level": 10,
-        "file_logging_level": 10,
-        "database_logging_level": 10
+        "console_logging_level": "DEBUG",
+        "file_logging_level": "DEBUG",
+        "database_logging_level": "DEBUG"
     },
     "database_path": "",
     "workflow": {},

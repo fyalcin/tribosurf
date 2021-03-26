@@ -19,8 +19,9 @@ import json
 from pathlib import Path, PurePosixPath
 
 # Global variables 
-levels = {'DEBUG': 10, 'INFO': 20, 'WARNING': 30, 
-          'ERROR': 40, 'CRITICAL': 50}
+levels_int = {'DEBUG': 10, 'INFO': 20, 'WARNING': 30, 
+              'ERROR': 40, 'CRITICAL': 50}
+levels_str = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 log_format = '%(process)d - %(asctime)s - %(levelname)s - %(message)s'
 
 
@@ -94,11 +95,11 @@ class LoggingBase:
         ----------
         name : str
             Name of the logger.
-        console_level : int, optional
+        console_level : int or str, optional
             Console debug level. The default is 30.
         path : str or None, optional
             Path to save the logfile. The default is None.
-        file_level : int, optional
+        file_level : int or str, optional
             Logfile debug level. The default is 30.
         log_format : str, optional
             Format fot the debug messages. The default is log_format (gloabl 
@@ -142,16 +143,27 @@ class LoggingBase:
         
         Parameters
         ----------
-        level : int
+        level : int or str
             Debug level.
 
         """
-
-        if level not in levels.values():
-            raise ValueError("'{}' level is not a valid level."
-                             " Valid levels are: DEBUG: 10, INFO: 20, "
-                             "WARNING: 30, ERROR: 40, "
-                             "CRITICAL: 50.".format(level))
+        if isinstance(level, int): 
+            if level not in levels_int.values():
+                raise ValueError("'{}' level is not a valid level."
+                                " Valid levels are: DEBUG: 10, INFO: 20, "
+                                "WARNING: 30, ERROR: 40, "
+                                "CRITICAL: 50.".format(level))
+        elif isinstance(level, str):
+            if level not in levels_str:
+                raise ValueError("'{}' level is not a valid level."
+                                " Valid levels are: DEBUG: 10, INFO: 20, "
+                                "WARNING: 30, ERROR: 40, "
+                                "CRITICAL: 50.".format(level))
+        else:
+            raise ValueError("'{}' value for the debug level is not a string"
+                             " nor an integer. Valid debug levels are:"
+                             " DEBUG: 10, INFO: 20, WARNING: 30, "
+                             "ERROR: 40, CRITICAL: 50.".format(level))
 
     def __initialize_console_logger_handler(self, name, console_level, 
                                             log_format):
@@ -162,7 +174,7 @@ class LoggingBase:
         ----------
         name : str
             Name of the console logger.
-        console_level : int
+        console_level : int or str
             Console level debug.
         log_format : str
             Log format.
@@ -188,7 +200,7 @@ class LoggingBase:
         ----------
         name : str
             Name of the file logger.
-        file_level : int
+        file_level : int or str
             File level debug.
         path : str
             Path to save the log file.
