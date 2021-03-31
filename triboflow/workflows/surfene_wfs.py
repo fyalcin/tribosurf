@@ -29,11 +29,8 @@ import numpy as np
 from fireworks import Workflow, Firework
 
 from triboflow.utils.utils import create_tags, get_miller_str
-from triboflow.firetasks.slabs import (
-    FT_GenerateSlabs, 
-    FT_RelaxStructure, 
-    FT_MoveTagResults
-)
+from triboflow.firetasks.core import FT_RelaxStructure, FT_MoveTagResults
+from triboflow.firetasks.slabs import FT_GenerateSlabs
 from triboflow.firetasks.surfene import FT_SurfaceEnergy
 from triboflow.utils.errors import SubWFError
 
@@ -137,7 +134,7 @@ class SurfEneWF:
                                      database_from=None,
                                      database_to=low_level,
                                      miller=miller,
-                                     entry_check=[
+                                     check_entry=[
                                          ['thickness', 
                                          'data_' + str(thk), 
                                          'output']
@@ -164,7 +161,8 @@ class SurfEneWF:
 
             fw = Firework([ft_1, ft_2],
                           spec=spec,
-                          name='Relax and store in DB, slab: ' + n)
+                          name='Relax and store in DB, slab: ' + 
+                               formula + miller_str + ', thickness: ' + str(thk))
             fw_relax_slabs.append(fw)
 
         # Define the third Firework(s)
