@@ -86,8 +86,7 @@ class SurfEneWF:
         # Create the dictionary key where the unrelaxed slab will be saved
         formula = structure.composition.reduced_formula
         miller_str = get_miller_str(miller)
-        slab_entry = [[formula + 'slab_' + miller_str + '_' + str(t), 
-                       'unrelaxed'] for t in thickness]
+        slab_entry = [['thickness', 'data_' + str(thk), 'unrelaxed'] for thk in thickness]
 
         # Generate the slabs and store them in the low level database, under
         # the dictionary key: 'unrelaxed_slab'
@@ -112,7 +111,8 @@ class SurfEneWF:
         # ==================================================
 
         # Create the tags to store the calculation of the slabs
-        tags = create_tags(slab_entry)
+        tag_prefix = [formula + 'slab_' + miller_str + '_' + str(t) for t in thickness]
+        tags = create_tags(tag_prefix)
 
         # Create the Firetasks to relax the structures
         fw_relax_slabs = []
@@ -130,21 +130,22 @@ class SurfEneWF:
                                      check_key='relaxed')
 
             ft_2 = FT_MoveTagResults(mp_id=mp_id,
-                                     collection_from=functional+'.slab_data',
+                                     collection_from='tasks',
                                      collection_to=functional+'.slab_data',
+                                     tag=t,
                                      db_file=db_file,
-                                     database_from=low_level,
-                                     database_to=high_level,
+                                     database_from=None,
+                                     database_to=low_level,
                                      miller=miller,
                                      entry_check=[
                                          ['thickness', 
                                          'data_' + str(thk), 
-                                         'calc_output']
+                                         'output']
                                          ],
                                      entry_to=[
                                          ['thickness', 
                                           'data_' + str(thk), 
-                                          'calc_output'] * 9
+                                          'output'] * 9
                                          ],
                                      entry_from=[
                                          ['output', 'structure'],
@@ -154,8 +155,8 @@ class SurfEneWF:
                                          ['output', 'energy_per_atom' ],
                                          ['output', 'bandgap'],
                                          ['output', 'forces'],
-                                         ['output', 'stresses'],                                         
-                                         ['_id']
+                                         ['output', 'stresses'],
+                                         ['task_label']
                                          ],
                                      struct_kind='slab',
                                      override=True,
@@ -170,17 +171,17 @@ class SurfEneWF:
         # ==================================================
 
         # Set the location of the energies in the high level DB
-        entry_surfene = [['thickness', 'data_0', 'calc_output']]
+        entry_surfene = [['thickness', 'data_0', 'output']]
         thk_loop = thickness if recursion else thickness[1:]
         for thk in thk_loop:
-            entry_surfene.append(['thickness', 'data_' + str(thk), 'calc_output'])
+            entry_surfene.append(['thickness', 'data_' + str(thk), 'output'])
 
         ft_surfene = FT_SurfaceEnergy(mp_id=mp_id,
                                       collection=functional+'.slab_data',
                                       miller=miller,
                                       entry=entry_surfene,
                                       db_file=db_file,
-                                      database=high_level)
+                                      database=low_level)
 
         fw_surfene = Firework([ft_surfene],
                               spec=spec,
