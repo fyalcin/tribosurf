@@ -8,52 +8,35 @@ the Firetasks. It provides tools to manage the input parameters of a Firetask
 and to manipulate the dictionaries to be retrieved and stored to the database
 
 The module contains the following functions:
-
-** Read input parameters **:
     - read_json
     - read_runtask_params
     - read_default_params
-
-    Author: Gabriele Losi (glosi000)
-    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
-
-** Manipulate dictionaries **:
     - get_one_info_from_dict
     - get_multiple_info_from_dict
     - write_one_dict_for_db
     - write_multiple_dict_for_db
-
-    Author: Gabriele Losi (glosi000)
-    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
-    
-    - convert_dict_to_mongodb
-    
-    Author: Gabriele Losi (glosi000)
-    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
-    Credits: Code readapted from StackOverflow, Creative Commons licence 3.0
-    https://creativecommons.org/licenses/by-sa/3.0/
-    https://stackoverflow.com/questions/29267519/mongodb-update-dictionary-in-document
-
-** Interaction with Database **:
     - retrieve_from_db
     - retrieve_from_tag
     - save_calctags
-
-    Author: Gabriele Losi (glosi000)
-    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
-
-** Input/function handling **:
     - create_tags
     - get_miller_str
     - select_struct_func
 
     Author: Gabriele Losi (glosi000)
-    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
+    
+    - convert_dict_to_mongodb
+    
+    Author: Gabriele Losi (glosi000)
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE University of Bologna
+    Credits: Code readapted from StackOverflow, Creative Commons licence 3.0
+    https://creativecommons.org/licenses/by-sa/3.0/
+    https://stackoverflow.com/questions/29267519/mongodb-update-dictionary-in-document
 
 """
 
 __author__ = 'Gabriele Losi'
-__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 22nd, 2021'
 
@@ -542,12 +525,12 @@ def retrieve_from_db(mp_id, collection, db_file=None, database=None,
         filter.update({'miller': miller})
     
     # Extract data from the database
-    structure = nav.find_data(collection=collection, filter=filter)
+    field = nav.find_data(collection=collection, filter=filter)
     
-    if structure is not None:
+    if field is not None:
         if entry is not None:
             try:
-                structure = get_one_info_from_dict(structure, entry)
+                structure = get_one_info_from_dict(field, entry)
             except:
                 structure = None
         
@@ -555,7 +538,7 @@ def retrieve_from_db(mp_id, collection, db_file=None, database=None,
             func = Slab if is_slab else Structure
             structure = func.from_dict(structure)
 
-    return structure
+    return field, structure
 
 def retrieve_from_tag(collection, tag, tag_key='task_label', entry=None, 
                       db_file=None, database=None):
