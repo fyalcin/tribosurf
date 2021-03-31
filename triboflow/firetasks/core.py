@@ -192,19 +192,19 @@ class FT_RelaxStructure(FiretaskBase):
         RelaxStructureError.check_collection(p['collection'])
 
         # Retrieve the structure from the Database
-        structure = retrieve_from_db(db_file=p['db_file'], 
-                                     database=p['database'], 
-                                     collection=p['collection'], 
-                                     mp_id=p['mp_id'],
-                                     miller=p['miller'],
-                                     entry=p['entry'],
-                                     pymatgen_obj=pymatgen_obj)
+        field, structure = retrieve_from_db(db_file=p['db_file'], 
+                                            database=p['database'], 
+                                            collection=p['collection'], 
+                                            mp_id=p['mp_id'],
+                                            miller=p['miller'],
+                                            entry=p['entry'],
+                                            pymatgen_obj=pymatgen_obj)
         RelaxStructureError.is_data(structure, p['mp_id'], p['functional'])
 
         # Check if the calculation is already done, searching for given keys
         is_done = False
         if p['check_key'] is not None:
-            is_done = True if p['check_key'] in structure.keys() else False
+            is_done = True if p['check_key'] in field.keys() else False
 
         func = select_struct_func(p['struct_kind'])
         structure = func.from_dict(structure)
@@ -420,13 +420,13 @@ class FT_MoveTagResults(FiretaskBase):
         
         if p['check_entry'] is not None:
             # Retrieve the structure from the Database
-            check_dict = retrieve_from_db(db_file=p['db_file'], 
-                                          database=p['database_to'], 
-                                          collection=p['collection_to'], 
-                                          mp_id=p['mp_id'],
-                                          miller=p['miller'],
-                                          entry=p['check_entry'],
-                                          pymatgen_obj=False)
+            _, check_dict = retrieve_from_db(db_file=p['db_file'], 
+                                             database=p['database_to'], 
+                                             collection=p['collection_to'], 
+                                             mp_id=p['mp_id'],
+                                             miller=p['miller'],
+                                             entry=p['check_entry'],
+                                             pymatgen_obj=False)
 
             # Check if the calculation is already done
             is_done = True

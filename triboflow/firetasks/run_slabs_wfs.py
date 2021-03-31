@@ -190,9 +190,9 @@ class FT_SlabOptThick(FiretaskBase):
             pymatgen bulk structure
         """
 
-        bulk = retrieve_from_db(p['mp_id'], collection=p['functional']+'.bulk_data',
-                                db_file=p['db_file'], entry=p['bulk_entry'], 
-                                is_slab=False, pymatgen_obj=True)
+        _, bulk = retrieve_from_db(p['mp_id'], collection=p['functional']+'.bulk_data',
+                                   db_file=p['db_file'], entry=p['bulk_entry'], 
+                                   is_slab=False, pymatgen_obj=True)
         
         return bulk
     
@@ -217,9 +217,9 @@ class FT_SlabOptThick(FiretaskBase):
         """
         
         # Retrieve the slab from the database
-        slab = retrieve_from_db(p['mp_id'], collection=p['functional']+'.slab_data',
-                                db_file=p['db_file'], miller=p['miller'], 
-                                entry=p['slab_entry'], pymatgen_obj=False)
+        _, slab = retrieve_from_db(p['mp_id'], collection=p['functional']+'.slab_data',
+                                   db_file=p['db_file'], miller=p['miller'], 
+                                   entry=p['slab_entry'], pymatgen_obj=False)
 
         if slab is not None:
             # If the entry to be checked is not in first layer of the dictionary
