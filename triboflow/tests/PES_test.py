@@ -16,7 +16,7 @@ from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
 
 nav = Navigator()
 db_file = nav.path
-functional = "SCAN"
+functional = "PBE"
 
 # TODO: TO REFACTOR
 # Test Ag111Ag111 interface
@@ -38,16 +38,6 @@ functional = "SCAN"
 # bottom_slab = Slab.from_dict(int_dict['bottom_aligned'])
 # comp_params = int_dict['comp_parameters']
 
-#Test GrapheneGraphene interface
-# struct, mpid = GetLowEnergyStructure('C', 'mp-1040425')
-# slab = SlabFromStructure([0,0,1], struct)
-# comp_params = {'functional': functional,
-#                'use_vdw': True,
-#                'use_spin': True,
-#                'encut': 500,
-#                'is_metal': True,
-#                'k_dens': 2000
-#                }
 
 # WF = CalcPES_SWF(top_slab=top_slab, bottom_slab=bottom_slab, top_mpid='mp-66',
 #                  bottom_mpid='mp-81',comp_parameters=comp_params,
@@ -71,8 +61,10 @@ comp_params = {'functional': functional,
                'k_dens': 2000
                }
 
-WF = calc_pes_swf(top_slab=slab, bottom_slab=slab, comp_parameters=comp_params)
+WF = calc_pes_swf(top_slab=slab, bottom_slab=slab,
+                  comp_parameters=comp_params,
+                  interface_name="Navigator_test_Gr-Gr")
 
 lpad = LaunchPad.auto_load()
 lpad.add_wf(WF)
-rapidfire(lpad)
+#rapidfire(lpad)

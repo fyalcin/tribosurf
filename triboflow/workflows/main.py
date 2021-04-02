@@ -9,10 +9,12 @@ from fireworks import Workflow, Firework
 from triboflow.fireworks.common import check_inputs_fw
 from triboflow.firetasks.encut_convergence import FT_StartEncutConvo
 from triboflow.firetasks.kpoint_convergence import FT_StartKPointConvo
-from triboflow.firetasks.structure_manipulation import FT_StartSlabRelaxSWF, \
-    FT_MakeHeteroStructure
+from triboflow.firetasks.structure_manipulation import (
+    FT_StartSlabRelaxSWF, FT_MakeHeteroStructure)
 from triboflow.firetasks.PES import FT_StartPESCalcSubWF
 from triboflow.firetasks.check_inputs import FT_UpdateCompParams
+from triboflow.firetasks.adhesion import (
+    FT_RelaxMatchedSlabs, FT_RetrievMatchedSlabs, FT_StartAdhesionSWF)
 from triboflow.utils.database import NavigatorMP
 from triboflow.utils.structure_manipulation import interface_name
 
@@ -116,14 +118,45 @@ def heterogeneous_wf(inputs):
         name='Match the interface')
     WF.append(MakeInterface)
     
-    CalcPESPoints = Firework(FT_StartPESCalcSubWF(
-        mp_id_1=mp_id_1,
-        mp_id_2=mp_id_2,
-        miller_1=mat_1.get('miller'),
-        miller_2=mat_2.get('miller'),
-        functional=functional),
+    RelaxMatchedSlabs = Firework(
+        FT_RelaxMatchedSlabs(
+            mp_id_1=mp_id_1,
+            mp_id_2=mp_id_2,
+            miller_1=mat_1.get('miller'),
+            miller_2=mat_2.get('miller'),
+            functional=functional),
+        name='Fully relax the matched slabs')
+    WF.append(RelaxMatchedSlabs)
+    
+    RetrieveMatchedSlabs = Firework(
+        FT_RetrievMatchedSlabs(
+            mp_id_1=mp_id_1,
+            mp_id_2=mp_id_2,
+            miller_1=mat_1.get('miller'),
+            miller_2=mat_2.get('miller'),
+            functional=functional),
+        name='Retrieve relaxed matched slabs')
+    WF.append(RetrieveMatchedSlabs)
+    
+    CalcPESPoints = Firework(
+        FT_StartPESCalcSubWF(
+            mp_id_1=mp_id_1,
+            mp_id_2=mp_id_2,
+            miller_1=mat_1.get('miller'),
+            miller_2=mat_2.get('miller'),
+            functional=functional),
         name='Compute PES high-symmetry points')
     WF.append(CalcPESPoints)
+    
+    ComputeAdhesion = Firework(
+        FT_StartAdhesionSWF(
+            mp_id_1=mp_id_1,
+            mp_id_2=mp_id_2,
+            miller_1=mat_1.get('miller'),
+            miller_2=mat_2.get('miller'),
+            functional=functional),
+        name='Calculate Adhesion')
+    WF.append(ComputeAdhesion)
     
     # Define dependencies:
     Dependencies = {Initialize: [ConvergeEncut_M1, ConvergeEncut_M2],
@@ -134,7 +167,10 @@ def heterogeneous_wf(inputs):
                     Final_Params: [MakeSlabs_M1, MakeSlabs_M2],
                     MakeSlabs_M1: [MakeInterface],
                     MakeSlabs_M2: [MakeInterface],
-                    MakeInterface: [CalcPESPoints]}
+                    MakeInterface: [CalcPESPoints, RelaxMatchedSlabs],
+                    RelaxMatchedSlabs: [RetrieveMatchedSlabs],
+                    CalcPESPoints: [ComputeAdhesion],
+                    RetrieveMatchedSlabs: [ComputeAdhesion]}
 
     WF_Name = 'TriboFlow ' + interface_name(mp_id_1, mat_1.get('miller'),
                                             mp_id_2, mat_2.get('miller'))

@@ -9,15 +9,137 @@ import numpy as np
 
 from fireworks import Workflow, Firework
 
+from atomate.vasp.fireworks import StaticFW
+from atomate.vasp.powerups import add_modify_incar
+
 from triboflow.fireworks.common import run_pes_calc_fw, make_pes_fw
 from triboflow.firetasks.encut_convergence import FT_EnergyCutoffConvo
 from triboflow.firetasks.kpoint_convergence import FT_KpointsConvo
 from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \
     FT_StartSlabRelax, FT_GetRelaxedSlab
 from triboflow.firetasks.PPES import FT_DoPPESCalcs, FT_FitPPES
+from triboflow.firetasks.adhesion import FT_CalcAdhesion
 from triboflow.utils.database import Navigator, NavigatorMP
 from triboflow.utils.vasp_tools import get_emin, get_custom_vasp_static_settings
 
+
+def adhesion_energy_swf(top_slab,
+                        bottom_slab,
+                        interface,
+                        interface_name=None,
+                        functional='PBE',
+                        comp_parameters={}):
+    """Create a subworkflow to compute the adhesion energy for an interface.
+    
+    This workflow takes two matched slabs (their cells must be identical) and
+    a relaxed interface structure of those slabs and computes the andhesion
+    energy. The two matched slabs must be relaxed as well to get correct
+    results.
+    Output are saved in a high-level database, but may also be also written
+    as files and copied to a chosen location. Note that this copy operation
+    is generally dependent on which machine the calculations are executed,
+    and not on the machine where the workflow is submitted. Also ssh-keys need
+    to be set up for remote_copy to work!
+    
+    Parameters
+    ----------
+    top_slab : pymatgen.core.surface.Slab
+        Relaxed top slab of the interface.
+    bottom_slab : pymatgen.core.surface.Slab
+        Relaxed bottom slab of the interface.
+    interface : pymatgen.core.surface.Slab
+        Relaxed interface structure.
+    interface_name : str, optional
+        Unique name to find the interface in the database with.
+        The default is None, which will lead to an automatic interface_name
+        generation which will be printed on screen.
+    bottom_mpid : str, optional
+        ID of the bulk material of the top slab in the MP database.
+        The default is None.
+    functional : str, optional
+        Which functional to use; has to be 'PBE' or 'SCAN'. The default is 'PBE'
+    comp_parameters : dict, optional
+        Computational parameters to be passed to the vasp input file generation.
+        The default is {}.
+
+    Returns
+    -------
+    SWF : fireworks.core.firework.Workflow
+        A subworkflow intended to compute the adhesion of a certain interface.
+
+    """
+    try:
+        top_miller = list(top_slab.miller_index)
+    except:
+        raise AssertionError("You have used {} as an input for <top_slab>.\n"
+                             "Please use <class 'pymatgen.core.surface.Slab'>"
+                             " instead.".format(type(top_slab)))
+        
+    try:
+        bot_miller = list(bottom_slab.miller_index)
+    except:
+        raise AssertionError("You have used {} as an input for <bot_slab>.\n"
+                             "Please use <class 'pymatgen.core.surface.Slab'>"
+                             " instead.".format(type(bottom_slab)))
+        
+    if not interface_name:
+        mt = ''.join(str(s) for s in top_miller)
+        mb = ''.join(str(s) for s in bot_miller)
+        interface_name = (top_slab.composition.reduced_formula+'_'+mt+'_'+
+                          bottom_slab.composition.reduced_formula+'_'+mb+
+                          '_AutoGen')
+        print('\nYour interface name has been automatically generated to be:'
+              '\n {}'.format(interface_name))
+        
+    
+    if comp_parameters == {}:
+        print('\nNo computational parameters have been defined!\n'
+              'Workflow will run with:\n'
+              '   ISPIN = 1\n'
+              '   ISMEAR = 0\n'
+              '   ENCUT = 520\n'
+              '   kpoint density kappa = 5000\n'
+              'We recommend to pass a comp_parameters dictionary'
+              ' of the form:\n'
+              '   {"use_vdw": <True/False>,\n'
+              '    "use_spin": <True/False>,\n'
+              '    "is_metal": <True/False>,\n'
+              '    "encut": <float>,\n'
+              '    "k_dens": <int>}\n')
+    
+    tag = interface_name+'_'+str(uuid4())
+    
+    vis_top = get_custom_vasp_static_settings(top_slab,
+                                              comp_parameters,
+                                              'slab_from_scratch')
+    vis_bot = get_custom_vasp_static_settings(bottom_slab,
+                                              comp_parameters,
+                                              'slab_from_scratch')
+    vis_interface = get_custom_vasp_static_settings(interface,
+                                              comp_parameters,
+                                              'slab_from_scratch')
+    
+    FW_top = StaticFW(structure=top_slab, vasp_input_set=vis_top,
+                      name=tag+'top')
+    FW_bot = StaticFW(structure=bottom_slab, vasp_input_set=vis_bot,
+                      name=tag+'bottom')
+    FW_interface = StaticFW(structure=interface, vasp_input_set=vis_interface,
+                      name=tag+'interface')
+    
+    FW_results = Firework(FT_CalcAdhesion(interface_name=interface_name,
+                                 functional=functional,
+                                 top_label=tag+'top',
+                                 bottom_label=tag+'bottom',
+                                 interface_label=tag+'interface'))
+    SWF = Workflow(fireworks=[FW_top, FW_bot, FW_interface, FW_results],
+                   links_dict={FW_top: [FW_results],
+                               FW_bot: [FW_results],
+                               FW_interface: [FW_results]},
+                   name='Calculate adhesion SWF for {}'.format(interface_name))
+    
+    return add_modify_incar(SWF)
+    
+    
 def calc_pes_swf(top_slab, bottom_slab,
                  interface_name=None,
                  functional='PBE',
