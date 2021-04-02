@@ -114,6 +114,9 @@ class SurfEneWF:
         # Create the Firetasks to relax the structures
         fw_relax_slabs = []
         for thk, n, t in zip(thickness, slab_entry, tags):
+
+            res = 'bulk_pos_relax' if thk == 0 else relax_type
+
             ft_1 = FT_RelaxStructure(mp_id=mp_id,
                                      functional=functional,
                                      collection=functional+'.slab_data',
@@ -121,7 +124,7 @@ class SurfEneWF:
                                      tag=t,
                                      db_file=db_file,
                                      database=low_level,
-                                     relax_type=relax_type,
+                                     relax_type=res,
                                      comp_params=comp_params,
                                      miller=miller,
                                      check_key='relaxed')
@@ -209,8 +212,8 @@ class SurfEneWF:
             for fw in fw_relax_slabs:
                 wf_list.append(fw)
                 links.update({fw: [fw_surfene]})
-        
-        wf_list.append(fw_surfene) 
+
+        wf_list.append(fw_surfene)
 
         wf = Workflow(wf_list, links, name="Converge surface energy WF")
 
