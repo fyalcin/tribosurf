@@ -235,8 +235,6 @@ class FT_MakeBulkInDB(FiretaskBase):
                         'structure_fromMP': struct.as_dict(),
                         'comp_parameters': comp_data}})
             return
-        
-    
 
 @explicit_serialize
 class FT_CheckCompParamDict(FiretaskBase):
@@ -282,7 +280,7 @@ class FT_CheckCompParamDict(FiretaskBase):
         
         volume_tolerance_default = 0.001
         energy_tolerance_default = 0.001
-        functional_default = 'SCAN'
+        functional_default = 'PBE'
         use_spin_default = True
         BM_tolerance_default = 0.01
         #####################################################################
@@ -315,8 +313,7 @@ class FT_CheckCompParamDict(FiretaskBase):
                 else:
                     out_dict['use_vdw'] = False
                 check_essential[key] = True
-        
-        
+
         # Check if all essential keys are present and print out missing ones.
         missing_keys=[]
         for key in check_essential.keys():
@@ -357,7 +354,7 @@ class FT_CheckCompParamDict(FiretaskBase):
                     out_dict['BM_tolerance'] = BM_tolerance_default
                 
         return FWAction(mod_spec=[{'_set': {output_dict_name: out_dict}}])
-    
+
 @explicit_serialize
 class FT_CheckInterfaceParamDict(FiretaskBase):
     """Checks a dictionary for essential keys and adds default values if needed.

@@ -131,7 +131,7 @@
    "comp_params":{
       "BM_tolerance":0.01,
       "energy_tolerance":0.001,
-      "functional":"SCAN",
+      "functional":"PBE",
       "use_spin":true,
       "volume_tolerance":0.001
    },

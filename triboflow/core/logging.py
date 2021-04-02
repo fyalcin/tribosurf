@@ -3,13 +3,16 @@
 """
 Created on Mon Feb  2 10:31:19 2021
 
-Simple logger.
+Simple logger. It contains:
+- LoggingBase
+
+
 
 @author: omarchehaimi
 """
 
 __author__ = 'Omar Chehaimi'
-__copyright__ = 'Prof. M.C. Righi, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 2nd, 2021'
 

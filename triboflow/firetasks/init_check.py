@@ -37,7 +37,7 @@ import os
 from fireworks import FWAction, FiretaskBase, explicit_serialize
 
 from triboflow.utils.database import NavigatorMP
-from triboflow.tasks.io import read_json
+from triboflow.utils.utils import read_json
 
 
 currentdir = os.path.dirname(__file__)
@@ -202,7 +202,7 @@ def material_from_mp(inputs):
         chem_formula = mat.get('formula'), 
         mp_id = mat.get('mpid'))
     
-    functional = comp_params.get('functional', 'SCAN')
+    functional = comp_params.get('functional', 'PBE')
     
     return struct, mpid, functional
 
