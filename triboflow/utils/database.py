@@ -185,7 +185,7 @@ class Navigator:
         """
 
         if isinstance(collection, str):
-            collection_obj = self.db.coll[collection]
+            collection_obj = self.db[collection]
         elif isinstance(collection, VaspCalcDb):
             collection_obj = collection
         else:
