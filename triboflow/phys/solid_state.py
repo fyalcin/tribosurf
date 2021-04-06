@@ -50,7 +50,7 @@ def orient_bulk(structure, miller, thickness, primitive=False, lll_reduce=False,
 
 def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
                    center_slab=True, primitive=False, lll_reduce=False,
-                   in_unit_planes=True,  ext_index=0, bonds=None, ftol=0.1, 
+                   in_unit_planes=True, ext_index=0, bonds=None, ftol=0.1, 
                    tol=0.1, repair=False, max_broken_bonds=0, symmetrize=False):
     """
     Create and return a single slab or a list of slabs out of a structure.
@@ -65,6 +65,9 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
         miller : [0, 0, 1] or [[0, 0, 1], [1, 1, 1], [1, 1, 0]].
 
     """
+
+    # VALUES FOR TESTING ON THE CLUSTER, to be faster
+    lll_reduce = True
 
     # Manage the arguments type in order to have lists
     if isinstance(miller, list) and not all([isinstance(m, list) for m in miller]):
