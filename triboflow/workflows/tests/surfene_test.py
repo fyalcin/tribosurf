@@ -4,7 +4,7 @@ Created on Thu Mar 4 11:36:15 2021
 Tests for surface energy calculation.
 The following tests are about the slabs generation and the following surface 
 energy calculation for an aluminum system.
-        
+
 Author: Omar Chehaimi
 Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
 
@@ -35,13 +35,14 @@ structure, mid = nav_mp.get_low_energy_structure(
 
 # Surface generation tests
 wf = SurfEneWF.conv_surface_energy(
-    structure=structure, 
+    structure=structure,
     mp_id=mid, 
-    miller=[1, 0, 0],
-    thick_min=1, 
-    thick_max=1,
-    thick_incr=1)
+    miller=[1, 1, 1],
+    thick_min=3, 
+    thick_max=6,
+    thick_incr=3)
 
 # Launch the calculation
 lpad = LaunchPad.auto_load()
 lpad.add_wf(wf)
+rapidfire(lpad)

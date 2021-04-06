@@ -48,7 +48,7 @@ class FT_GenerateSlabs(FiretaskBase):
      hat are taken into account to generate the possible different slabs are: 
      miller, thickness, vacuum, entry. The slabs are generated with 
      SlabGenerator and stored in the database.
-    
+
     """
 
     required_params = ['structure', 'mp_id', 'miller', 'collection']
@@ -75,7 +75,7 @@ class FT_GenerateSlabs(FiretaskBase):
                                thick_bulk=p['thick_bulk'],
                                ext_index=p['ext_index'],
                                in_unit_planes=p['in_unit_planes'])
-        
+
         # Store the slab structure in collection.field.entry in db, within db_file
         self.structure_in_db(slabs, miller, entry, p)
         
@@ -107,7 +107,7 @@ class FT_GenerateSlabs(FiretaskBase):
     def structure_in_db(self, slabs, miller, entry, p):
 
         nav = Navigator(p['db_file'], p['database'])
-        
+
         # Store unrelaxed data in the Database
         for s, hkl, en in zip(slabs, miller, entry):
             # Clean the data and create a dictionary with the given path
