@@ -287,9 +287,9 @@ def check_choice(tag, nav, mp_id, miller, thk, functional, tol=1e-5, override=Fa
     else:
         calc = nav.find_data('tasks', {'task_label': tag})
         if calc is not None:
-        if 'output' in calc.keys():
-            out = calc['output']
-            if 'energy' in out.keys() and 'energy_per_atom' in calc.keys() and 'nsites' in d.keys():
-                check_relax = ['thickness', 'data_' + str(thk), 'input']
+            if 'output' in calc.keys():
+                out = calc['output']
+                if 'energy' in out.keys() and 'energy_per_atom' in calc.keys() and 'nsites' in d.keys():
+                    check_relax = ['thickness', 'data_' + str(thk), 'input']
 
     return check_relax, check_move
