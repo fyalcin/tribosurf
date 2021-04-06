@@ -17,6 +17,7 @@ __date__ = 'March 4th, 2021'
 
 
 from pymatgen.io.vasp import Poscar
+from pymatgen.core.structure import Structure
 from fireworks import LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
 
@@ -33,17 +34,18 @@ from triboflow.workflows.surfene_wfs import SurfEneWF
 #    mp_id=mid)
 
 # Get the bulk from a local simple Poscar
-structure = Poscar.from_file('POSCAR')
+# poscar = Poscar.from_file('POSCAR')
+structure = Structure.from_file('POSCAR')
 mid = 'custom-1'
 
 # Surface generation tests
 wf = SurfEneWF.conv_surface_energy(
     structure=structure,
     mp_id=mid,
-    miller=[1, 0, 0],
-    thick_min=3, 
-    thick_max=6,
-    thick_incr=3)
+    miller=[0, 0, 1],
+    thick_min=2, 
+    thick_max=3,
+    thick_incr=1)
 
 # Launch the calculation
 lpad = LaunchPad.auto_load()
