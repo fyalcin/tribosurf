@@ -16,7 +16,6 @@ __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'March 4th, 2021'
 
 
-from pymatgen.io.vasp import Poscar
 from pymatgen.core.structure import Structure
 from fireworks import LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
@@ -34,7 +33,6 @@ from triboflow.workflows.surfene_wfs import SurfEneWF
 #    mp_id=mid)
 
 # Get the bulk from a local simple Poscar
-# poscar = Poscar.from_file('POSCAR')
 structure = Structure.from_file('POSCAR')
 mid = 'custom-1'
 

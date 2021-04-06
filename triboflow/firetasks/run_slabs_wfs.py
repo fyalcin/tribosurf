@@ -395,7 +395,8 @@ class FT_StartThickConvo(FiretaskBase):
     optional_params = ['db_file', 'low_level', 'high_level', 'conv_kind', 
                        'relax_type', 'comp_params', 'thick_min', 'thick_max', 
                        'thick_incr', 'vacuum', 'in_unit_planes', 'ext_index', 
-                       'parallelization', 'recursion', 'cluster_params']
+                       'parallelization', 'recursion', 'cluster_params',
+                       'override']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -449,10 +450,11 @@ class FT_EndThickConvo(FiretaskBase):
     """
 
     required_params = ['structure', 'mp_id', 'miller']
-    optional_params = ['db_file', 'low_level', 'high_level', 'functional', 
+    optional_params = ['db_file', 'low_level', 'high_level', 'spec', 'functional', 
                        'conv_kind', 'relax_type', 'comp_params', 'thick_min', 
                        'thick_max', 'thick_incr', 'vacuum', 'in_unit_planes', 
-                       'ext_index', 'conv_thr', 'parallelization', 'cluster_params']
+                       'ext_index', 'conv_thr', 'parallelization', 'cluster_params',
+                       'recursion', 'override']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.

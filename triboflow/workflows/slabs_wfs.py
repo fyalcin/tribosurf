@@ -36,7 +36,10 @@ from triboflow.firetasks.run_slabs_wfs import (
 )
 from triboflow.utils.utils import read_default_params
 
+
 currentdir = os.path.dirname(__file__)
+currentdir += '/../firetasks'
+
 
 # ============================================================================
 # Classes
@@ -48,9 +51,9 @@ class SlabWF:
     manipulate slab structures. It also contains methods to manage the 
     optimization of a slab thickness, based on the evaluation of the surface 
     energy and the lattice parameter.
-    
-    """
 
+    """
+    
     @staticmethod
     def conv_slabthick_surfene(structure, mp_id, miller, functional='PBE',
                                comp_params={}, spec={}, db_file=None,
@@ -74,7 +77,7 @@ class SlabWF:
         dfl = currentdir + '/defaults_fw.json'
         p = read_default_params(default_file=dfl, 
                                 default_key="cluster_params", 
-                                cluster_params=cluster_params)
+                                dict_params=cluster_params)
         
         # Print relevant information and raise errors based on parameters
         SlabWF._check_subwf_params(structure, mp_id, miller, functional, 
@@ -107,7 +110,7 @@ class SlabWF:
                                               miller=miller, 
                                               functional=functional,
                                               comp_params=comp_params, 
-                                              spec=spec, 
+                                              spec=spec,
                                               db_file=db_file,
                                               low_level=low_level, 
                                               high_level=high_level,
@@ -143,7 +146,7 @@ class SlabWF:
         pass
 
     @staticmethod
-    def _check_subwf_params(self, structure, mp_id, miller, functional, db_file, 
+    def _check_subwf_params(structure, mp_id, miller, functional, db_file, 
                             comp_params, cluster_params):
         """
         Check if the Firetasks parameters are correct and print information.
@@ -180,12 +183,13 @@ class SlabWF:
                 '    "k_dens": <int>}\n')
 
         # Print help to the user
-        if cluster_params['print_help']:
-            print('Once you workflow has finished you can access the '
-                  'results from the database using this code:\n\n'
-                  'import pprint\n'
-                  'from triboflow.utils.database import GetBulkFromDB\n\n'
-                  'nav = Navigator({})'
-                  'results = find_data({} + ".slab_data", dict("mpid": {}, '
-                  '"miller": {}))\n'
-                  'pprint.pprint(results)\n'.format(db_file, functional, mp_id, miller))
+        if'print_help' in cluster_params.keys():
+            if cluster_params['print_help']:
+                print('Once you workflow has finished you can access the '
+                      'results from the database using this code:\n\n'
+                      'import pprint\n'
+                      'from triboflow.utils.database import GetBulkFromDB\n\n'
+                      'nav = Navigator({})'
+                      'results = find_data({} + ".slab_data", dict("mpid": {}, '
+                      '"miller": {}))\n'
+                      'pprint.pprint(results)\n'.format(db_file, functional, mp_id, miller))

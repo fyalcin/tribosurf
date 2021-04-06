@@ -46,6 +46,7 @@
       "db_file":null,
       "low_level":null,
       "high_level":"triboflow",
+      "spec":{},
       "functional":"PBE",
       "conv_kind":"surfene",
       "relax_type":"slab_pos_relax",
@@ -63,6 +64,7 @@
       "cluster_params":{
          
       },
+      "recursion":false,
       "override":false
    },
    "GenerateSlabs":{
