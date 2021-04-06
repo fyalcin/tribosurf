@@ -195,7 +195,7 @@ def get_one_info_from_dict(input_dict, entry):
 
     entry : str or list
         Contains the key(s) that should be read in sequence from the dictionary.
-        The keys should be "innested" within the dictionary or an error raises.
+        The keys should be nested within the dictionary or an error raises.
         
         Example:
             1.  entry = 'key'

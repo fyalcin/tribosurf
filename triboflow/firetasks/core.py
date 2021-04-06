@@ -385,9 +385,9 @@ class FT_MoveTagResults(FiretaskBase):
 
         # Check if a structure is already present in entry and check_key
         is_done = self.check_struct(p)
-        
+
         if not is_done or (is_done and p['override']):
-            
+
             # Extract the information and store in destination db
             vasp_calc, info = self.get_results_from_tag(p)            
             self.store_results(info, p)
@@ -420,7 +420,7 @@ class FT_MoveTagResults(FiretaskBase):
         
         # Check if collection does exist
         MoveTagResultsError.check_collection(p['collection_to'])
-        
+
         if p['check_entry'] is not None:
             # Retrieve the structure from the Database
             _, check_dict = retrieve_from_db(db_file=p['db_file'], 
@@ -435,7 +435,7 @@ class FT_MoveTagResults(FiretaskBase):
             is_done = True
             if check_dict is None or check_dict == {}:
                 is_done = False
-                
+
         else:
             is_done = False
 
