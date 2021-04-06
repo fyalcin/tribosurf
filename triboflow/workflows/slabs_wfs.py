@@ -6,16 +6,16 @@ Created on Tue Feb  2 15:02:48 2021
 Collection of Workflow to study the properties and structures of crystal slabs.
 
 The module contains:
-    
+
 ** SlabWF **:
     General class to work on crystalline slabs, workflows are static method.
     It includes the following methods:
         - conv_slabthick_surfene
         - conv_slabthick_alat
         - _check_subwf_params
-        
+
     Author: Gabriele Losi (glosi000)
-    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
 
 """
 
