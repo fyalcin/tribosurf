@@ -51,11 +51,11 @@ from triboflow.utils.utils import (
     read_runtask_params,
     read_default_params,
     convert_dict_to_mongodb,
+    get_multiple_info_from_dict,
     write_multiple_dict,
     select_struct_func,
     retrieve_from_db,
     retrieve_from_tag
-
 )
 from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
 from triboflow.utils.file_manipulation import copy_output_files
@@ -204,7 +204,10 @@ class FT_RelaxStructure(FiretaskBase):
         # Check if the calculation is already done, searching for given keys
         is_done = False
         if p['check_key'] is not None:
-            is_done = True if p['check_key'] in field.keys() else False
+            try:
+                d = get_multiple_info_from_dict(field, p['check_key'])
+                is_done = True
+            except: pass
 
         func = select_struct_func(p['struct_kind'])
         structure = func.from_dict(structure)
@@ -386,7 +389,7 @@ class FT_MoveTagResults(FiretaskBase):
         if not is_done or (is_done and p['override']):
             
             # Extract the information and store in destination db
-            vasp_calc, info = self.get_results_from_tag(p)
+            vasp_calc, info = self.get_results_from_tag(p)            
             self.store_results(info, p)
 
             # Manage stdout, save a local poscar with results
