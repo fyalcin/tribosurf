@@ -59,7 +59,7 @@ class SlabWF:
                                thick_max=12, thick_incr=2, vacuum=10,
                                in_unit_planes=True, ext_index=0, conv_thr=0.025,
                                parallelization='low', recursion=False,
-                               cluster_params={}):
+                               cluster_params={}, override=False):
         """ 
         Function to set the computational and physical parameters and start a 
         workflow to converge the thickness of the provided slabs.
@@ -99,7 +99,8 @@ class SlabWF:
                                                   ext_index=ext_index,
                                                   parallelization=parallelization,
                                                   recursion=recursion,
-                                                  cluster_params=p)
+                                                  cluster_params=p,
+                                                  override=override)
 
         ft_end_thick_convo = FT_EndThickConvo(structure=structure,
                                               mp_id=mp_id, 
@@ -120,7 +121,8 @@ class SlabWF:
                                               conv_thr=conv_thr,
                                               parallelization=parallelization, 
                                               recursion=recursion,
-                                              cluster_params=cluster_params)
+                                              cluster_params=cluster_params,
+                                              override=override)
 
         # Set it to a firework and a workflow
         # TODO: Understand if it is possible to have a structure of this kind
@@ -139,7 +141,7 @@ class SlabWF:
         parameters. Not implemented yet.
         """
         pass
-    
+
     @staticmethod
     def _check_subwf_params(self, structure, mp_id, miller, functional, db_file, 
                             comp_params, cluster_params):
@@ -160,7 +162,7 @@ class SlabWF:
                                  '(mp-id) you have chosen which corresponds '
                                  'to {}.\n'.format(
                                  formula_from_struct, formula_from_flag))
-        
+
         # Check computational parameters and use defaults if necessary
         if comp_params == {}:
             print('\nNo computational parameters have been defined!\n'
@@ -176,7 +178,7 @@ class SlabWF:
                 '    "is_metal": <True/False>,\n'
                 '    "encut": <int>,\n'
                 '    "k_dens": <int>}\n')
-        
+
         # Print help to the user
         if cluster_params['print_help']:
             print('Once you workflow has finished you can access the '

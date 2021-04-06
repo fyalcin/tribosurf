@@ -71,17 +71,17 @@ class FT_SlabOptThick(FiretaskBase):
     ----------
     mp_id : str
         MP-id of the structure from the MP database.
-    
+
     miller : list of int, or str
         Miller indexes (h, k, l) to select the slab orientation.
-        
+
     functional : str
         Functional for the pseudopotential to be adopted.
 
     db_file : str or None
         Path to the location of the database. If nothing is provided it will be
         searched by env_check from Atomate. The default is None.
-        
+
     low_level : str or None, optional
         Name of the table of the "low level" database, saved in db_file. The 
         intermediate calculations and raw data during will be saved here. If 
@@ -138,6 +138,13 @@ class FT_SlabOptThick(FiretaskBase):
     slab_entry : str or None, optional
         Where to search for the information about the optimal thickness in the
         slab dictionary in the high level database. The default is None.
+    
+    cluster_params : dict, optional
+        Optional params to print data and/or interact with clusters. The default is {}.
+
+    override : bool, optional
+        Decide if the dft simulation should be done in any case, despite the
+        possible presence of previous results.
 
     """
     
@@ -147,7 +154,8 @@ class FT_SlabOptThick(FiretaskBase):
     optional_params = ['db_file', 'low_level', 'high_level', 'conv_kind',
                        'relax_type', 'thick_min', 'thick_max', 'thick_incr',
                        'vacuum', 'in_unit_planes', 'ext_index', 'conv_thr',
-                       'parallelization', 'bulk_entry', 'slab_entry', 'cluster_params']
+                       'parallelization', 'bulk_entry', 'slab_entry', 
+                       'cluster_params', 'override']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -296,7 +304,7 @@ class FT_SlabOptThick(FiretaskBase):
                          vacuum=p['vacuum'], in_unit_planes=p['in_unit_planes'],
                          ext_index=p['ext_index'], conv_thr=p['conv_thr'],
                          parallelization=p['parallelization'],
-                         cluster_params=cluster_params)
+                         cluster_params=cluster_params, override=p['override'])
 
         return wf
 
@@ -426,7 +434,8 @@ class FT_StartThickConvo(FiretaskBase):
                                               ext_index=p['ext_index'], 
                                               parallelization=p['parallelization'],
                                               recursion=p['recursion'],
-                                              cluster_params=p['cluster_params'])
+                                              cluster_params=p['cluster_params'],
+                                              override=p['override'])
                 return wf
 
             else:
@@ -646,6 +655,7 @@ class FT_EndThickConvo(FiretaskBase):
                              vacuum=p['vacuum'], in_unit_planes=p['in_unit_planes'], 
                              ext_index=p['ext_index'], conv_thr=p['conv_thr'], 
                              parallelization=p['parallelization'], 
-                             recursion=True, cluster_params=p['cluster_params'])
-            
+                             recursion=True, cluster_params=p['cluster_params'],
+                             override=p['override'])
+
             return wf
