@@ -15,29 +15,32 @@ __copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, Universi
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'March 4th, 2021'
 
-import os
-from pathlib import Path, PurePosixPath
 
+from pymatgen.io.vasp import Poscar
 from fireworks import LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
 
 from triboflow.utils.database import NavigatorMP
 from triboflow.workflows.surfene_wfs import SurfEneWF
 
-# Get the bulk
-formula = 'Cu'
-mid = 'mp-30'
-nav_mp = NavigatorMP()
 
-structure, mid = nav_mp.get_low_energy_structure(
-    chem_formula=formula, 
-    mp_id=mid)
+# Get the bulk from the online Database: Materials Project
+#formula = 'Cu'
+#mid = 'mp-30'
+#nav_mp = NavigatorMP()
+#structure, mid = nav_mp.get_low_energy_structure(
+#    chem_formula=formula, 
+#    mp_id=mid)
+
+# Get the bulk from a local simple Poscar
+structure = Poscar.from_file('POSCAR')
+mid = 'custom-1'
 
 # Surface generation tests
 wf = SurfEneWF.conv_surface_energy(
     structure=structure,
-    mp_id=mid, 
-    miller=[1, 1, 1],
+    mp_id=mid,
+    miller=[1, 0, 0],
     thick_min=3, 
     thick_max=6,
     thick_incr=3)
