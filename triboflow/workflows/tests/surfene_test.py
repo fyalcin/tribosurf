@@ -45,4 +45,4 @@ wf = SurfEneWF.conv_surface_energy(
 # Launch the calculation
 lpad = LaunchPad.auto_load()
 lpad.add_wf(wf)
-rapidfire(lpad)
+# rapidfire(lpad)
