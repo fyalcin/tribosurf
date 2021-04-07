@@ -61,7 +61,7 @@ class SlabWF:
                                relax_type='slab_pos_relax', thick_min=4, 
                                thick_max=12, thick_incr=2, vacuum=10,
                                in_unit_planes=True, ext_index=0, conv_thr=0.025,
-                               parallelization='low', recursion=False,
+                               parallelization='low', recursion=0,
                                cluster_params={}, override=False):
         """ 
         Function to set the computational and physical parameters and start a 
@@ -130,10 +130,15 @@ class SlabWF:
         # Set it to a firework and a workflow
         # TODO: Understand if it is possible to have a structure of this kind
         # if a detour is done.
-        fw = Firework([ft_start_thick_convo, ft_end_thick_convo],
-                      spec = spec,
-                      name = 'Converge slab thickness via surfene WF')           
-        wf = Workflow([fw], name=name)
+        fw_1 = Firework(ft_start_thick_convo,
+                        spec = spec,
+                        name = 'Start slab thickness convergence WF')
+        
+        fw_2 = Firework(ft_end_thick_convo,
+                        spec = spec,
+                        name = 'End slab thickness convergence WF')
+        
+        wf = Workflow([fw_1, fw_2], {fw_1: fw_2}, name=name)
 
         return wf
 
@@ -159,7 +164,7 @@ class SlabWF:
             formula_from_struct = structure.composition.reduced_formula
             formula_from_flag = nav_mp.get_property_from_mp(mp_id, 
                                                             ['pretty_formula'])
-            if not formula_from_flag == formula_from_struct:
+            if not formula_from_flag['pretty_formula'] == formula_from_struct:
                 raise SystemExit('The chemical formula of your structure ({}) '
                                  'does not match the chemical formula of the flag '
                                  '(mp-id) you have chosen which corresponds '
