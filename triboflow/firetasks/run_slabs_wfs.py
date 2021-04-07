@@ -529,8 +529,10 @@ class FT_EndThickConvo(FiretaskBase):
         if p['parallelization'] == 'high':
             for key in thickness_dict.keys():
                 if key.startswith('data_'):
-                    thks.append(int(key.split('_')[-1]))
-            if not p['thick_min'] in thks or p['thick_max'] in thks:
+                    i = int(key.split('_')[-1])
+                    if i != 0:
+                        thks.append(i)
+            if not p['thick_min'] in thks or not p['thick_max'] in thks:
                 raise SlabOptThickError('Min or Max values not present among '
                                         'the results. Something weird happening')
         else:
@@ -548,6 +550,7 @@ class FT_EndThickConvo(FiretaskBase):
                                                 'has no output, something '
                                                 'went wrong'.format(i))
                     index.append(i)
+                    print(item['output'].keys())
                     data.append(item['output'][case])
 
         sorted_index = np.array(index).argsort()

@@ -87,4 +87,4 @@ lpad.add_wf(wf_2)
 # Run first test
 # lpad.add_wf(wf_1)
 
-# rapidfire(lpad)
+rapidfire(lpad)

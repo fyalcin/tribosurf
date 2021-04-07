@@ -9,7 +9,7 @@ Classes to manage data from local and online DataBases at a high level.
 """
 
 __author__ = 'Omar Chehaimi'
-__copyright__ = 'Prof. M.C. Righi, University of Bologna'
+__copyright__ = 'Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 1st, 2021'
 
