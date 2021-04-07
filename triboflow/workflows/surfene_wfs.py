@@ -115,6 +115,12 @@ class SurfEneWF:
         # Start the navigator
         nav = Navigator(db_file=db_file, high_level=low_level)
 
+        # TEST
+        tags = ["Cuslab_001_0_47a3cb51-9c9d-41de-b737-f72340342439",
+        "Cuslab_001_3_041a64f1-1e9b-4794-b1df-31619a15b0fe",
+        "Cuslab_001_6_bff3632b-0aa5-42c1-9059-c077ea3b9508"
+        ]
+
         # Create the Firetasks to relax the structures
         fw_relax_slabs = []
         for thk, n, t in zip(thickness, slab_entry, tags):
@@ -163,7 +169,7 @@ class SurfEneWF:
                                           ['thickness', 'data_' + str(thk), 
                                            'output', 'forces'],
                                           ['thickness', 'data_' + str(thk), 
-                                           'output', 'stresses'],
+                                           'output', 'stress'],
                                           ['thickness', 'data_' + str(thk), 
                                            'output', 'task_label']],
                                      entry_from=[
@@ -174,7 +180,7 @@ class SurfEneWF:
                                          ['output', 'energy_per_atom' ],
                                          ['output', 'bandgap'],
                                          ['output', 'forces'],
-                                         ['output', 'stresses'],
+                                         ['output', 'stress'],
                                          ['task_label']
                                          ],
                                      struct_kind=struct_kind,
@@ -284,12 +290,20 @@ def check_choice(tag, nav, mp_id, miller, thk, functional, tol=1e-5, override=Fa
                         check_relax = ['thickness', 'data_' + str(thk), 'output']
                         check_move = ['thickness', 'data_' + str(thk), 'output']
 
+        else:
+            calc = nav.find_data('tasks', {'task_label': tag})
+            if calc is not None:
+                if 'output' in calc.keys():
+                    out = calc['output']
+                    if 'energy' in out.keys() and 'energy_per_atom' in out.keys() and 'nsites' in calc.keys():
+                        check_relax = ['thickness', 'data_' + str(thk), 'input']
+
     else:
         calc = nav.find_data('tasks', {'task_label': tag})
         if calc is not None:
             if 'output' in calc.keys():
                 out = calc['output']
-                if 'energy' in out.keys() and 'energy_per_atom' in calc.keys() and 'nsites' in d.keys():
+                if 'energy' in out.keys() and 'energy_per_atom' in out.keys() and 'nsites' in calc.keys():
                     check_relax = ['thickness', 'data_' + str(thk), 'input']
 
     return check_relax, check_move

@@ -25,24 +25,24 @@ from triboflow.workflows.surfene_wfs import SurfEneWF
 
 
 # Get the bulk from the online Database: Materials Project
-#formula = 'Cu'
-#mid = 'mp-30'
-#nav_mp = NavigatorMP()
-#structure, mid = nav_mp.get_low_energy_structure(
-#    chem_formula=formula, 
-#    mp_id=mid)
+formula = 'Cu'
+mid = 'mp-30'
+nav_mp = NavigatorMP()
+structure, mid = nav_mp.get_low_energy_structure(
+   chem_formula=formula, 
+   mp_id=mid)
 
 # Get the bulk from a local simple Poscar
-structure = Structure.from_file('POSCAR')
-mid = 'custom-1'
+# structure = Structure.from_file('POSCAR')
+# mid = 'custom-1'
 
 # Surface generation tests
 wf = SurfEneWF.conv_surface_energy(
     structure=structure,
     mp_id=mid,
     miller=[0, 0, 1],
-    thick_min=2, 
-    thick_max=3,
+    thick_min=3, 
+    thick_max=6,
     thick_incr=1)
 
 # Launch the calculation
