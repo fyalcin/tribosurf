@@ -36,7 +36,7 @@
       "in_unit_planes":true,
       "ext_index":0,
       "parallelization":null,
-      "recursion":false,
+      "recursion":0,
       "cluster_params":{
          
       },
@@ -64,7 +64,7 @@
       "cluster_params":{
          
       },
-      "recursion":false,
+      "recursion":0,
       "override":false
    },
    "GenerateSlabs":{
