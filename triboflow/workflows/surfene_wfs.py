@@ -49,7 +49,7 @@ class SurfEneWF:
                             relax_type='slab_pos_relax', comp_params={}, thick_min=4, 
                             thick_max=12, thick_incr=2, vacuum=10, in_unit_planes=True, 
                             ext_index=0, cluster_params={}, parallelization=None,
-                            recursion=False, override=False):
+                            recursion=0, override=False):
         """
         Description of the method...
 
@@ -57,7 +57,7 @@ class SurfEneWF:
 
         # Define the first Firework
         # =====================================================================
-
+        
         # Define the thicknesses to create and simulate the slabs
         if parallelization == 'low' or parallelization is None:
             if recursion:
@@ -69,7 +69,7 @@ class SurfEneWF:
             try:
                 thickness = np.arange(thick_min, thick_max, thick_incr)
                 thickness = thickness.tolist()
-                
+
                 # If the array length is zero, the thick values are not well set
                 assert len(thickness) > 0
 
@@ -109,22 +109,19 @@ class SurfEneWF:
         # ==================================================
 
         # Create the tags to store the calculation of the slabs
-        tag_prefix = [formula + 'slab_' + miller_str + '_' + str(t) for t in thickness]
-        tags = create_tags(tag_prefix)
+        #tag_prefix = [formula + '_slab_' + miller_str + '_' + str(t) for t in thickness]
+        #tags = create_tags(tag_prefix)
+
+        # TEST SUPER
+        tags = [formula + '_slab_' + miller_str + '_' + str(t) for t in thickness]
 
         # Start the navigator
         nav = Navigator(db_file=db_file, high_level=low_level)
 
-        # TEST
-        tags = ["Cuslab_001_0_47a3cb51-9c9d-41de-b737-f72340342439",
-        "Cuslab_001_3_041a64f1-1e9b-4794-b1df-31619a15b0fe",
-        "Cuslab_001_6_bff3632b-0aa5-42c1-9059-c077ea3b9508"
-        ]
-
         # Create the Firetasks to relax the structures
         fw_relax_slabs = []
         for thk, n, t in zip(thickness, slab_entry, tags):
-
+            
             # Define different minor options to set correctly the firetasks
             res = 'bulk_pos_relax' if thk == 0 else relax_type
             struct_kind = 'bulk' if 'bulk' in res else 'slab'
@@ -217,13 +214,17 @@ class SurfEneWF:
         # ==================================================       
 
         # Build the workflow list and the links between elements
+        
+        # fw_gen_slabs = 0
+        # fw_relax_slabs = ['1_1', '1_2', '1_3', '1_4', '1_5']
+        # fw_surfene = 2
 
         wf_list = [fw_gen_slabs]
 
         # Case of parallelization = None, make serial calculations
         if parallelization is None and not recursion:
             links = {fw_gen_slabs: fw_relax_slabs[0]}
-            
+ 
             for n, fw in enumerate(fw_relax_slabs):
                 wf_list.append(fw)
                 if n < len(fw_relax_slabs) - 1:
@@ -236,7 +237,7 @@ class SurfEneWF:
             links = {fw_gen_slabs: fw_relax_slabs}
             for fw in fw_relax_slabs:
                 wf_list.append(fw)
-                links.update({fw: [fw_surfene]})
+                links.update({fw: fw_surfene})
 
         wf_list.append(fw_surfene)
 
@@ -279,7 +280,8 @@ def check_choice(tag, nav, mp_id, miller, thk, functional, tol=1e-5, override=Fa
                         if 'output' in calc.keys():
                             out = calc['output']
                             is_eq = abs(out['energy'] - d['energy']) < tol and\
-                                    abs(out['energy_per_atom'] - d['energy_per_atom']) < tol
+                                    abs(out['energy_per_atom'] - d['energy_per_atom']) < tol and\
+                                    d['nsites'] == calc['nsites']
                         else:
                             is_eq = False
 
