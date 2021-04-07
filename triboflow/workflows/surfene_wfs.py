@@ -109,11 +109,11 @@ class SurfEneWF:
         # ==================================================
 
         # Create the tags to store the calculation of the slabs
-        #tag_prefix = [formula + '_slab_' + miller_str + '_' + str(t) for t in thickness]
-        #tags = create_tags(tag_prefix)
+        tag_prefix = [formula + '_slab_' + miller_str + '_' + str(t) for t in thickness]
+        tags = create_tags(tag_prefix)
 
-        # TEST SUPER
-        tags = [formula + '_slab_' + miller_str + '_' + str(t) for t in thickness]
+        # FOR TESTING
+        # tags = [formula + '_slab_' + miller_str + '_' + str(t) for t in thickness]
 
         # Start the navigator
         nav = Navigator(db_file=db_file, high_level=low_level)
@@ -214,11 +214,6 @@ class SurfEneWF:
         # ==================================================       
 
         # Build the workflow list and the links between elements
-        
-        # fw_gen_slabs = 0
-        # fw_relax_slabs = ['1_1', '1_2', '1_3', '1_4', '1_5']
-        # fw_surfene = 2
-
         wf_list = [fw_gen_slabs]
 
         # Case of parallelization = None, make serial calculations
