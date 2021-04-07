@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Created on Thu Mar 4 11:36:15 2021
 
@@ -43,7 +45,8 @@ wf = SurfEneWF.conv_surface_energy(
     miller=[0, 0, 1],
     thick_min=3, 
     thick_max=6,
-    thick_incr=1)
+    thick_incr=1,
+    parallelization=None)
 
 # Launch the calculation
 lpad = LaunchPad.auto_load()
