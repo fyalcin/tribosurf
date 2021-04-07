@@ -112,9 +112,6 @@ class SurfEneWF:
         tag_prefix = [formula + '_slab_' + miller_str + '_' + str(t) for t in thickness]
         tags = create_tags(tag_prefix)
 
-        # FOR TESTING
-        # tags = [formula + '_slab_' + miller_str + '_' + str(t) for t in thickness]
-
         # Start the navigator
         nav = Navigator(db_file=db_file, high_level=low_level)
 

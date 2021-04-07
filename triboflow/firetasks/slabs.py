@@ -78,14 +78,14 @@ class FT_GenerateSlabs(FiretaskBase):
 
         # Store the slab structure in collection.field.entry in db, within db_file
         self.structure_in_db(slabs, miller, entry, p)
-        
+
         return FWAction(update_spec=fw_spec)
-    
+
     def _convert_to_list(self, p):
 
         GenerateSlabsError.check_inputs(p['miller'], p['thickness'], 
                                         p['vacuum'], p['entry'])
-        
+
         miller = p['miller']
         if not all([isinstance(x, list) for x in miller]):
             miller = [miller]
@@ -103,7 +103,7 @@ class FT_GenerateSlabs(FiretaskBase):
             vacuum = [vacuum] * len(miller)
 
         return miller, thickness, vacuum, entry
-    
+
     def structure_in_db(self, slabs, miller, entry, p):
 
         nav = Navigator(p['db_file'], p['database'])
