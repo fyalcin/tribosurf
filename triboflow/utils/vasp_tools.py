@@ -244,10 +244,10 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
     """
 
     allowed_types = ['bulk_full_relax', 'bulk_vol_relax', 'bulk_pos_relax',
-                        'bulk_shape_relax',
-                        'slab_shape_relax', 'slab_pos_relax',
-                        'interface_shape_relax', 'interface_pos_relax',
-                        'interface_z_relax']
+                     'bulk_shape_relax',
+                     'slab_shape_relax', 'slab_pos_relax',
+                     'interface_shape_relax', 'interface_pos_relax',
+                     'interface_z_relax']
     
     if relax_type not in allowed_types:
         raise SystemExit('relax type is not known. Please select from: {}'
@@ -264,15 +264,14 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
     uis['NELMIN'] = 5
     uis['EDIFF'] = 0.5E-5
     uis['LAECHG'] = '.FALSE.'
-    
+
     if structure.num_sites < 20:
         uis['LREAL'] = '.FALSE.'
-        
+
     #Adjust mixing for slabs that have a very large c axis:
     if structure.lattice.matrix[-1,1] > 50.0:
         uis['AMIN'] = 0.05
-        
-    
+
     if relax_type.startswith('slab_') or relax_type.startswith('interface_'):
         uis['NELMDL'] = -15
         uis['EDIFFG'] = -0.02
@@ -282,11 +281,11 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
         # uis['BMIX'] = 0.0001
         # uis['AMIX_MAG'] = 0.8
         # uis['BMIX_MAG'] = 0.0001
-        
+
     else:
         uis['NELMDL'] = -6
         uis['EDIFFG'] = -0.01
-    
+
     if relax_type.endswith('full_relax'):
         uis['ISIF'] = 3
     elif relax_type.endswith('pos_relax'):
@@ -302,16 +301,16 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
         uis['ISIF'] = 7
     elif relax_type.endswith('shape_relax'):
         uis['ISIF'] = 5
-    
+
     if 'encut' in comp_parameters:
         uis['ENCUT'] = comp_parameters['encut']
-        
+
     if 'use_spin' in comp_parameters:
         if comp_parameters['use_spin']:
             uis['ISPIN'] = 2
         else:
             uis['ISPIN'] = 1
-    
+
     if 'is_metal' in comp_parameters:
         if comp_parameters['is_metal']:
             uis['SIGMA'] = 0.2
@@ -322,8 +321,7 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
     else:
         uis['SIGMA'] = 0.1
         uis['ISMEAR'] = 0
-        
-        
+
     #set van der Waals functional. Note that as of now, 'functional' must be
     #specified for vdw to work!
     if set(('use_vdw', 'functional')) <= comp_parameters.keys():
@@ -336,10 +334,10 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
             vdw = None
     else:
         vdw = None
-        
+
     if 'k_dens' in comp_parameters:
         kpoints = Kpoints.automatic_gamma_density(structure,
-                                            comp_parameters['k_dens'])
+                                                  comp_parameters['k_dens'])
     else:
         #if no k-density is supplied in the comp_parameters, use a large value
         kpoints = Kpoints.automatic_gamma_density(structure, 5000)
@@ -348,8 +346,8 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
     #by force.
     if relax_type.startswith('slab_') or relax_type.startswith('interface_'):
         uks = Kpoints(comment=kpoints.comment+'  adjusted for slabs',
-                    num_kpts=0,
-                    kpts=[[kpoints.kpts[0][0], kpoints.kpts[0][1], 1]])
+                      num_kpts=0,
+                      kpts=[[kpoints.kpts[0][0], kpoints.kpts[0][1], 1]])
     else:
         uks = kpoints
         
@@ -372,5 +370,5 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
         vis = MPRelaxSet(structure, user_incar_settings = uis, vdw = vdw,
                         user_kpoints_settings = uks,
                         user_potcar_functional = 'PBE_54')
-        
+
     return vis

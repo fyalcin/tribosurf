@@ -527,13 +527,13 @@ def retrieve_from_db(mp_id, collection, db_file=None, database=None,
     # Extract data from the database
     field = nav.find_data(collection=collection, filter=filter)
     
-    if field is not None:
-        if entry is not None:
-            try:
-                structure = get_one_info_from_dict(field, entry)
-            except:
-                structure = None
-        
+    structure = None
+    if field is not None and entry is not None:
+        try:
+            structure = get_one_info_from_dict(field, entry)
+        except:
+            structure = None
+
         if pymatgen_obj and structure is not None:
             func = Slab if is_slab else Structure
             structure = func.from_dict(structure)
