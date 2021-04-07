@@ -228,11 +228,12 @@ class FT_SlabOptThick(FiretaskBase):
         _, slab = retrieve_from_db(p['mp_id'], collection=p['functional']+'.slab_data',
                                    db_file=p['db_file'], miller=p['miller'], 
                                    entry=p['slab_entry'], pymatgen_obj=False)
-
+# TODO : Check the problem below here, in principle I am already able to download a slab
         if slab is not None:
             # If the entry to be checked is not in first layer of the dictionary
             if p['slab_entry'] is not None:
-                structure = get_one_info_from_dict(structure, p['slab_entry'])
+                #structure = get_one_info_from_dict(structure, p['slab_entry'])
+                structure = slab
 
             # Check if an optimal thickness has been already calculated
             is_data = structure.get('opt_thickness', None)
@@ -413,34 +414,34 @@ class FT_StartThickConvo(FiretaskBase):
 
         return FWAction(detours=wf, update_spec=fw_spec)
 
-        def select_conv(self, p):
-        
-            from triboflow.workflows.surfene_wfs import SurfEneWF
+    def select_conv(self, p):
+    
+        from triboflow.workflows.surfene_wfs import SurfEneWF
 
-            if p['conv_kind'] == 'surfene':
-                wf = SurfEneWF.surface_energy(structure=p['structure'],
-                                              mp_id=p['mp_id'], 
-                                              miller=p['miller'], 
-                                              functional=p['functional'],
-                                              db_file=p['db_file'], 
-                                              low_level=p['low_level'],
-                                              high_level=p['high_level'],
-                                              relax_type=p['relax_type'],
-                                              comp_params=p['comp_params'],
-                                              thick_min=p['thick_min'], 
-                                              thick_max=p['thick_max'],
-                                              thick_incr=p['thick_incr'],
-                                              vacuum=p['vacuum'],
-                                              in_unit_planes=p['in_unit_planes'],
-                                              ext_index=p['ext_index'], 
-                                              parallelization=p['parallelization'],
-                                              recursion=p['recursion'],
-                                              cluster_params=p['cluster_params'],
-                                              override=p['override'])
-                return wf
+        if p['conv_kind'] == 'surfene':
+            wf = SurfEneWF.surface_energy(structure=p['structure'],
+                                          mp_id=p['mp_id'], 
+                                          miller=p['miller'], 
+                                          functional=p['functional'],
+                                          db_file=p['db_file'], 
+                                          low_level=p['low_level'],
+                                          high_level=p['high_level'],
+                                          relax_type=p['relax_type'],
+                                          comp_params=p['comp_params'],
+                                          thick_min=p['thick_min'], 
+                                          thick_max=p['thick_max'],
+                                          thick_incr=p['thick_incr'],
+                                          vacuum=p['vacuum'],
+                                          in_unit_planes=p['in_unit_planes'],
+                                          ext_index=p['ext_index'], 
+                                          parallelization=p['parallelization'],
+                                          recursion=p['recursion'],
+                                          cluster_params=p['cluster_params'],
+                                          override=p['override'])
+            return wf
 
-            else:
-                raise SystemExit('Lattice parameter convergence not yet implemented')
+        else:
+            raise SystemExit('Lattice parameter convergence not yet implemented')
 
 @explicit_serialize
 class FT_EndThickConvo(FiretaskBase):
