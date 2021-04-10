@@ -13,7 +13,7 @@ The module contains:
         - conv_slabthick_surfene
         - conv_slabthick_alat
         - _check_subwf_params
-        
+
     Author: Gabriele Losi (glosi000)
     Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
 
@@ -116,7 +116,8 @@ class SurfEneWF:
         nav = Navigator(db_file=db_file, high_level=low_level)
 
         # Create the Firetasks to relax the structures
-        fw_relax_slabs = []
+        fw_relax = []
+        fw_move = []
         for thk, n, t in zip(thickness, slab_entry, tags):
             
             # Define different minor options to set correctly the firetasks
@@ -124,7 +125,7 @@ class SurfEneWF:
             struct_kind = 'bulk' if 'bulk' in res else 'slab'
             chkrel, chkmove = check_choice(t, nav, mp_id, miller, thk, functional, 
                                            tol=1e-6, override=override)
-
+            
             ft_1 = FT_RelaxStructure(mp_id=mp_id,
                                      functional=functional,
                                      collection=functional+'.slab_data',
@@ -143,7 +144,7 @@ class SurfEneWF:
                                      collection_to=functional+'.slab_data',
                                      tag=t,
                                      db_file=db_file,
-                                     database_from=None,
+                                     database_from=low_level,
                                      database_to=low_level,
                                      miller=miller,
                                      check_entry=chkmove,
@@ -181,15 +182,21 @@ class SurfEneWF:
                                      override=False,
                                      cluster_params=cluster_params)
 
-            fw = Firework([ft_1, ft_2],
-                          spec=spec,
-                          name='Relax and store in DB, slab: ' + 
-                               formula + miller_str + ', thickness: ' + str(thk))
-            fw_relax_slabs.append(fw)
+            fw_1 = Firework([ft_1],
+                            spec=spec,
+                            name='Relax structure: ' + formula + ' ' + 
+                                 miller_str + ', thickness: ' + str(thk))
+            fw_2 = Firework([ft_2],
+                            spec=spec,
+                            name='Store structure in DB: ' + formula + ' ' +
+                                 miller_str + ', thickness: ' + str(thk))
+
+            fw_relax.append(fw_1)
+            fw_move.append(fw_2)
 
         # Define the third Firework(s)
         # ==================================================
-
+        
         # Set the location of the energies in the high level DB
         entry_surfene = [['thickness', 'data_0', 'output']]
         thk_loop = thickness if recursion else thickness[1:]
@@ -208,28 +215,33 @@ class SurfEneWF:
                               name='Calculate the Surface Energies')
 
         # Define and return the Workflow
-        # ==================================================       
+        # ==================================================
 
         # Build the workflow list and the links between elements
         wf_list = [fw_gen_slabs]
 
         # Case of parallelization = None, make serial calculations
         if parallelization is None and not recursion:
-            links = {fw_gen_slabs: fw_relax_slabs[0]}
+            links = {fw_gen_slabs: fw_relax[0]}
  
-            for n, fw in enumerate(fw_relax_slabs):
-                wf_list.append(fw)
-                if n < len(fw_relax_slabs) - 1:
-                    links.update({fw: fw_relax_slabs[n+1]})
+            for n, fw in enumerate(zip(fw_relax, fw_move)):
+                fwr, fwm = fw
+                wf_list.append(fwr)
+                wf_list.append(fwm)
+                links.update({fwr: fwm})
+                if n < len(fw_relax) - 1:
+                    links.update({fwm: fw_relax[n+1]})
             
-            links.update({fw_relax_slabs[-1]: fw_surfene})
+            links.update({fw_move[-1]: fw_surfene})
         
         # Other cases or when recursion is True (one element)
         else:
-            links = {fw_gen_slabs: fw_relax_slabs}
-            for fw in fw_relax_slabs:
-                wf_list.append(fw)
-                links.update({fw: fw_surfene})
+            links = {fw_gen_slabs: fw_relax}
+            for fwr, fwm in zip(fw_relax, fw_move):
+                wf_list.append(fwr)
+                wf_list.append(fwm)
+                links.update({fwr: fwm})
+                links.update({fwm: fw_surfene})
 
         wf_list.append(fw_surfene)
 
@@ -253,6 +265,7 @@ def check_choice(tag, nav, mp_id, miller, thk, functional, tol=1e-5, override=Fa
 
     data = nav.find_data(functional+'.slab_data', {'mpid': mp_id, 
                                                    'miller': miller})
+    
     if data is not None:
         try:
             d = data['thickness']['data_' + str(thk)]['output']
