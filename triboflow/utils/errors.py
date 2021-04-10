@@ -130,7 +130,47 @@ class MoveTagResultsError(GeneralErrorFT):
 class SurfaceEnergyError(GeneralErrorFT):
     """ Error in surface energy Firetask.
     """
-    pass
+    
+    @staticmethod
+    def check_entry(entry):
+        """ At least two elements are needed to calculate the surface energy
+        """
+        if len(entry) < 2:
+            raise SurfaceEnergyError('Wrong argument: entry. At least two '
+                                     'elements are needed to calculate the '
+                                     'surface energy, i.e. OUC bulk and a slab. '
+                                     'You provided: {}'.format(entry))
+    
+    @staticmethod
+    def check_output(output):
+        for el in output:
+            if el is None:
+                raise SurfaceEnergyError('Error with output data. Some data is '
+                                         'missing. Cannot proceed with surface '
+                                         'energy calculation')
+        
+        if not 'energy_per_atom' in output[0].keys():
+                raise SurfaceEnergyError('Error with output data. The first dict '
+                                         'should contain the OUC bulk, and have '
+                                         'a key: "energy_per_atom". Your keys '
+                                         'are: {}'.format(output[0].keys()))
+        else:
+            for i, out in enumerate(output[1:]):
+                k = out.keys()
+                val = None
+                if not 'energy' in k:
+                    val = '"energy"'
+                if not 'nsites' in k: 
+                    if val is not None:
+                        val = val + ', "nsites"'
+                    else:
+                        val = '"nsites"'
+                if val is not None:
+                    raise SurfaceEnergyError('Error with output data. The {} dict '
+                                             'should contain a slab, and have '
+                                             'keys: "energy", "nsites". No {} '
+                                             'is provided. Your keys '
+                                             'are: {}'.format(i+1, val, k))                        
 
 class SubWFError(Exception):
     """ Error in reading the subworkflow parameters.
