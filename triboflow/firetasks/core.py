@@ -382,7 +382,7 @@ class FT_MoveTagResults(FiretaskBase):
                                 self.optional_params,
                                 default_file=dfl,
                                 default_key="MoveTagResults")
-
+        
         # Check if a structure is already present in entry and check_key
         is_done = self.check_struct(p)
 
@@ -455,6 +455,7 @@ class FT_MoveTagResults(FiretaskBase):
                                             tag_key=p['tag_key'],
                                             entry=p['entry_from'],
                                             database=p['database_from'])
+        
         return vasp_calc, info
     
     def store_results(self, info, p):

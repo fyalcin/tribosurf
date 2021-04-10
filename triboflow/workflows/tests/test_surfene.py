@@ -27,8 +27,8 @@ from triboflow.workflows.surfene_wfs import SurfEneWF
 
 
 # Get the bulk from the online Database: Materials Project
-formula = 'Cu'
-mid = 'mp-30'
+formula = 'Mg'
+mid = 'mp-110'
 nav_mp = NavigatorMP()
 structure, mid = nav_mp.get_low_energy_structure(
    chem_formula=formula, 
@@ -43,12 +43,12 @@ wf = SurfEneWF.conv_surface_energy(
     structure=structure,
     mp_id=mid,
     miller=[0, 0, 1],
-    thick_min=3, 
-    thick_max=6,
+    thick_min=2, 
+    thick_max=3,
     thick_incr=1,
     parallelization=None)
 
 # Launch the calculation
 lpad = LaunchPad.auto_load()
 lpad.add_wf(wf)
-# rapidfire(lpad)
+rapidfire(lpad)

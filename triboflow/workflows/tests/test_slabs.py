@@ -74,7 +74,7 @@ wf_2 = SlabWF.conv_slabthick_surfene(structure=structure,
                                       in_unit_planes=True,
                                       ext_index=0,
                                       conv_thr=0.00001,
-                                      parallelization='high',
+                                      parallelization='low',
                                       recursion=0,
                                       cluster_params={},
                                       override=False)
