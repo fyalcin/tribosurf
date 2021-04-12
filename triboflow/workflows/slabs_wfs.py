@@ -75,9 +75,9 @@ class SlabWF:
         
         # Set the cluster parameters
         dfl = currentdir + '/defaults_fw.json'
-        p = read_default_params(default_file=dfl, 
-                                default_key="cluster_params", 
-                                dict_params=cluster_params)
+        cluster_params = read_default_params(default_file=dfl, 
+                                             default_key="cluster_params", 
+                                             dict_params=cluster_params)
         
         # Print relevant information and raise errors based on parameters
         SlabWF._check_subwf_params(structure, mp_id, miller, functional, 
