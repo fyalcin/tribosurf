@@ -661,9 +661,9 @@ class FT_EndThickConvo(FiretaskBase):
         if high_dict is None:
             store = {'formula': Slab.from_dict(input_dict).composition.reduced_formula,
                      'mpid': p['mp_id'], 'miller': p['miller'],
-                     'thickness': thickness_dict, 'opt_thickness': index}
+                     'thickness': thickness_dict, 'opt_thickness': int(index)}
         else:
-            store = {'thickness': thickness_dict, 'opt_thickness': index}     
+            store = {'thickness': thickness_dict, 'opt_thickness': int(index)}     
         store = jsanitize(store)
 
         # Update data
