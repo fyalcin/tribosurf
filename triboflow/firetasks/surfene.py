@@ -7,7 +7,6 @@ Firetasks to calculate the surface energy for a slab along a given orientation.
 
 The module contains the following Firetasks:
 
-** Surface Energy evaluation **
     - FT_SurfaceEnergy
     Calculate the surface energy between of one or more slabs with respect to
     the bulk structure having the same orientation.

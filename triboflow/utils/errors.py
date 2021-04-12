@@ -5,11 +5,27 @@ Created on Mon Feb  8 16:03:22 2021
 
 Custom errors for any Firetasks and Workflow.
 
-@author: glosi000
+The module contains the following error classes:
+    - GeneralErrorFT
+    - SlabOptThickError
+    - GenerateSlabsError
+    - RelaxStructureError
+    - MoveTagResultsError
+    - SurfaceEnergyError
+    - SubWFError
+    - NavigatorError
+    - StuctNavigatorError
+    - NavigatorMPError
+    - ReadParamsError
+    - WriteParamsError
+
+    Author: Gabriele Losi (glosi000)
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
+
 """
 
 __author__ = 'Gabriele Losi'
-__copyright__ = 'Prof. M.C. Righi, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 8th, 2021'
 

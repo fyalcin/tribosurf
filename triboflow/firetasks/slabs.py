@@ -7,19 +7,17 @@ Firetasks to generate and manipulate crystalline slabs.
 
 The module contains the following Firetasks:
 
-** Slab generation **
-
     - FT_GenerateSlabs
     Generate a list of slabs out of a structure provided as input and store
     them in a given location inside the database.
 
     Author: Gabriele Losi (glosi000)
-    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
 
 """
 
 __author__ = 'Gabriele Losi'
-__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 2nd, 2021'
 

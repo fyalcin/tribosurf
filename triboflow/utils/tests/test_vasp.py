@@ -5,11 +5,13 @@ Created on Wed Apr  7 17:58:50 2021
 
 Test the generation of the computational parameters to be used by VASP.
 
-@author: glosi000
+    Author: Gabriele Losi (glosi000)
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
+
 """
 
 __author__ = 'Gabriele Losi'
-__copyright__ = 'Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = '7th April, 2021'
 

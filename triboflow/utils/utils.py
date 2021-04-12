@@ -28,7 +28,7 @@ The module contains the following functions:
     - convert_dict_to_mongodb
     
     Author: Gabriele Losi (glosi000)
-    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE University of Bologna
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
     Credits: Code readapted from StackOverflow, Creative Commons licence 3.0
     https://creativecommons.org/licenses/by-sa/3.0/
     https://stackoverflow.com/questions/29267519/mongodb-update-dictionary-in-document

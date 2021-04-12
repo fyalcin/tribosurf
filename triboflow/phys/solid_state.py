@@ -6,20 +6,19 @@ Created on Mon Feb 22 11:00:47 2021
 Functions to manage crystalline structures and solid state physics.
 
 The module contains the following functions:
-
-** Slabs structures **:
     - orient_bulk
     - generate_slabs
 
     Author: Gabriele Losi (glosi000)
-    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
 
 """
 
 __author__ = 'Gabriele Losi'
-__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 22nd, 2021'
+
 
 from pymatgen.core.surface import SlabGenerator
 

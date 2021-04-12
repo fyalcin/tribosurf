@@ -5,11 +5,27 @@ Created on Tue Sep 22 14:52:15 2020
 
 Calculate the High Simmetry (HS) points for slab and interface
 
-@author: gl
+The module contains the following functions:
+    - get_slab_hs
+    - hs_dict_converter
+    - get_interface_hs
+    - normalize_hs_dict
+    - pbc_hspoints
+
+    Author: Gabriele Losi (glosi000)
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
+ 
+    - fix_hs_dicts
+    - assign_replicate_points
+    - remove_equivalent_shifts
+
+    Author: Michael Wolloch (mwolloch)
+    Copyright 2020, Michael Wolloch
+
 """
 
 __author__ = 'Gabriele Losi'
-__copyright__ = 'Prof. M.C. Righi, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 8th, 2021'
 
@@ -22,10 +38,10 @@ from pymatgen.analysis.structure_matcher import StructureMatcher
 from triboflow.utils.structure_manipulation import stack_aligned_slabs, \
     clean_up_site_properties, recenter_aligned_slabs
 
+
 # =============================================================================
 # CALCULATE THE HS POINTS FOR A SLAB
 # =============================================================================
-
 
 def get_slab_hs(slab, allowed_sites=['ontop', 'bridge', 'hollow'], to_array=False): 
     """
@@ -171,7 +187,6 @@ def hs_dict_converter(hs, to_array=True):
 # CALCULATE HS POINTS FOR AN INTERFACE
 # =============================================================================
 
-
 def get_interface_hs(hs_1, hs_2, cell, to_array=False, z_red=True):
     """
     Calculate the HS sites for a hetero interface by combining the HS sites of
@@ -225,7 +240,6 @@ def get_interface_hs(hs_1, hs_2, cell, to_array=False, z_red=True):
 # =============================================================================
 # TOOLS FOR HS DICTIONARIES
 # =============================================================================
-
 
 def fix_hs_dicts(hs_unique, hs_all, top_aligned, bot_aligned,
                  ltol=0.01, stol=0.01, angle_tol=0.01,
@@ -292,7 +306,6 @@ def fix_hs_dicts(hs_unique, hs_all, top_aligned, bot_aligned,
                                     structure_matcher=struct_match)
     
     return c_u, c_all
-    
 
 def assign_replicate_points(hs_u, hs_a, top_slab, bot_slab, structure_matcher):
     """Assign the replicated high-symmetry points to the correct unique ones.
@@ -340,10 +353,10 @@ def assign_replicate_points(hs_u, hs_a, top_slab, bot_slab, structure_matcher):
         
         for shift in all_shifts:
             test_struct = stack_aligned_slabs(bot_slab,
-                                            top_slab,
-                                            top_shift = [shift[0],
-                                                         shift[1],
-                                                         0])
+                                              top_slab,
+                                              top_shift = [shift[0],
+                                                           shift[1],
+                                                           0])
             test_struct = clean_up_site_properties(test_struct)
             if structure_matcher.fit(unique_struct, test_struct):
                 new_hsp_dict_a.setdefault(key, []).append(shift)

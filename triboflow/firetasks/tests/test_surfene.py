@@ -6,8 +6,7 @@ Created on Tue Feb 23 11:58:05 2021
 Test the Firetasks of the `surfene` module.
 
 Author: Gabriele Losi (glosi000)
-Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
-
+Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
 """
 
 from fireworks import Firework, Workflow, LaunchPad

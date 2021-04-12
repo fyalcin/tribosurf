@@ -6,7 +6,7 @@ Created on Mon Feb 22 16:56:54 2021
 Test the Firetasks of the `core` module.
 
 Author: Omar Chehaimi
-Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
+Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
 
 """
 

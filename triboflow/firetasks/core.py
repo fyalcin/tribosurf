@@ -8,29 +8,23 @@ for any advanced Workflow.
 
 The modules contains the following Firetasks:
 
-** DFT Simulations **:
-
     - FT_RelaxStructure
     General Firetask to relax a given structure, either bulk, slab or interface.
-
-    Author: Gabriele Losi (glosi000)
-    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
-
-** Database Interactions **
 
     - FT_MoveTagResults
     Move a subdictionary containing some results of interest from a location in
     the database to another one.
 
     Author: Gabriele Losi (glosi000)
-    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
 
 """
 
 __author__ = 'Gabriele Losi'
-__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 22nd, 2021'
+
 
 import os
 
@@ -60,6 +54,7 @@ from triboflow.utils.utils import (
 from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
 from triboflow.utils.file_manipulation import copy_output_files
 from triboflow.utils.errors import RelaxStructureError, MoveTagResultsError
+
 
 currentdir = os.path.dirname(__file__)
 

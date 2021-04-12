@@ -6,13 +6,16 @@ Created on Tue Feb  9 14:47:15 2021
 Workflows for calculating and converging the surface energy of a slab.
 
 The module contains:
+
+    ** SurfEneWF **:
+        General class to work on crystalline slabs, workflows are static method.
+        It includes the following methods:
+            - conv_slabthick_surfene
+            - conv_slabthick_alat
+            - _check_subwf_params
     
-** SurfEneWF **:
-    General class to work on crystalline slabs, workflows are static method.
-    It includes the following methods:
-        - conv_slabthick_surfene
-        - conv_slabthick_alat
-        - _check_subwf_params
+    Functions:
+    - check_choice
 
     Author: Gabriele Losi (glosi000)
     Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
@@ -20,7 +23,7 @@ The module contains:
 """
 
 __author__ = 'Gabriele Losi'
-__copyright__ = 'Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 9th, 2021'
 

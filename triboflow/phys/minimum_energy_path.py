@@ -5,11 +5,20 @@ Created on Wed Oct 28 16:40:41 2020
 
 Python functions to get the Minimum Energy Path (MEP) of a PES of an interface
 
-@author: gl
+The module contains the following functions:
+
+    - get_mep
+    - get_bs_mep
+    Author: Gabriele Losi (glosi000)
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
+    Code readapted from our past homogeneous workflow, MIT license,
+    https://github.com/mcrighi/interface-workflow
+
 """
 
 __author__ = 'Gabriele Losi'
-__copyright__ = 'Prof. M.C. Righi, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
+__credits__ = 'Code readapted from our past homogeneous workflow, MIT license, https://github.com/mcrighi/interface-workflow,'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 8th, 2021'
 

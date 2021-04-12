@@ -6,8 +6,7 @@ Created on Mon Feb 22 16:27:12 2021
 Test the Firetasks of the `slabs` module.
 
 Author: Gabriele Losi (glosi000)
-Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
-
+Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
 """
 
 from pymatgen.core.structure import Structure
