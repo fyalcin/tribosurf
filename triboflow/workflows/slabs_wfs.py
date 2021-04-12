@@ -102,7 +102,7 @@ class SlabWF:
                                                   ext_index=ext_index,
                                                   parallelization=parallelization,
                                                   recursion=recursion,
-                                                  cluster_params=p,
+                                                  cluster_params=cluster_params,
                                                   override=override)
 
         ft_end_thick_convo = FT_EndThickConvo(structure=structure,
