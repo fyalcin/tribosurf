@@ -85,4 +85,4 @@ wf_2 = SlabWF.conv_slabthick_surfene(structure=structure,
                                      cluster_params={},
                                      override=False)
 lpad.add_wf(wf_2)
-rapidfire(lpad)
+# rapidfire(lpad)
