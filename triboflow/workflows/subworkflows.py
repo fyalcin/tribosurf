@@ -493,8 +493,8 @@ def converge_kpoints_swf(structure,
                          comp_parameters={},
                          spec={},
                          functional='PBE',
-                         k_dens_start=500,
-                         k_dens_incr=50,
+                         k_dens_start=1,
+                         k_dens_incr=0.1,
                          n_converge=3,
                          db_file=None,
                          file_output=False,
@@ -606,9 +606,10 @@ def converge_kpoints_swf(structure,
         print('Once you workflow has finished you can access the '
               'results from the database using this code:\n\n'
               'import pprint\n'
-              'from triboflow.utils.database import GetBulkFromDB\n'
-              'results = GetBulkFromDB("{}", "{}", "{}")\n'
-              'pprint.pprint(results)\n'.format(flag, db_file, functional))
+              'from triboflow.utils.database import StructureNavigator\n'
+              'nav = StructureNavigator(db_file="localhost", high_level="triboflow")\n'
+              'results = nav.get_bulk_from_db("{}", "{}")\n'
+              'pprint.pprint(results)\n'.format(flag, functional))
     
     tag = "Kpoints group for {} - {}".format(formula, str(uuid4()))
         
