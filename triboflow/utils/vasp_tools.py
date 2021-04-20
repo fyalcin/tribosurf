@@ -9,7 +9,7 @@ from pymatgen.io.vasp.sets import (MPRelaxSet, MPScanRelaxSet, MPStaticSet,
 
 from triboflow.utils.file_manipulation import remove_matching_files
 
-class MeshFromDenisty:
+class MeshFromDensity:
     """
     Class to find classic or generalized Monkhorst-Pack meshes which may
     or my not be Gamma-Centred from a given k-point density.
@@ -455,7 +455,7 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type):
             is_slab = True
         else:
             is_slab = False
-        KPTS = MeshFromDenisty(structure,
+        KPTS = MeshFromDensity(structure,
                                comp_parameters['k_dens'],
                                is_slab=is_slab,
                                force_gamma=True)
@@ -468,7 +468,7 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type):
             is_slab = True
         else:
             is_slab = False
-        KPTS = MeshFromDenisty(structure, 50, is_slab=is_slab, force_gamma=True)
+        KPTS = MeshFromDensity(structure, 50, is_slab=is_slab, force_gamma=True)
         kpoints = KPTS.get_kpoints()
     
     #If a structure has a vacuum layer, set the third kpoints devision to 1
@@ -621,7 +621,7 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
             is_slab = True
         else:
             is_slab = False
-        KPTS = MeshFromDenisty(structure,
+        KPTS = MeshFromDensity(structure,
                                comp_parameters['k_dens'],
                                is_slab=is_slab,
                                force_gamma=True)
@@ -634,7 +634,7 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
             is_slab = True
         else:
             is_slab = False
-        KPTS = MeshFromDenisty(structure,
+        KPTS = MeshFromDensity(structure,
                                50,
                                is_slab=is_slab,
                                force_gamma=True)
