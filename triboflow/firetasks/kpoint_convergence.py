@@ -19,7 +19,7 @@ from atomate.vasp.powerups import add_modify_incar
 from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
 from triboflow.utils.check_convergence import is_list_converged
 from triboflow.utils.vasp_tools import (
-    get_generalized_kmesh, get_custom_vasp_static_settings, MeshFromDenisty)
+    get_generalized_kmesh, get_custom_vasp_static_settings, MeshFromDensity)
 from triboflow.utils.file_manipulation import copy_output_files
 
 @explicit_serialize
@@ -202,7 +202,7 @@ class FT_KpointsConvo(FiretaskBase):
             comp_params['k_dens'] = k_dens_start
             vis = get_custom_vasp_static_settings(struct, comp_params,
                                                   'bulk_from_scratch')
-            KPTS = MeshFromDenisty(struct, k_dens_start)
+            KPTS = MeshFromDensity(struct, k_dens_start)
             kpoints = KPTS.get_kpoints()
             #kpoints = get_generalized_kmesh(struct, k_dens_start)
             k_dens_list = [k_dens_start]
@@ -321,11 +321,11 @@ class FT_KpointsConvo(FiretaskBase):
                 
                 #last_mesh = data['last_mesh']
                 k_dens = k_dens_list[-1] + k_dens_incr
-                KPTS = MeshFromDenisty(struct, k_dens,
+                KPTS = MeshFromDensity(struct, k_dens,
                                        compare_density=k_dens_list[-1])
                 while KPTS.are_meshes_the_same():
                     k_dens = k_dens + k_dens_incr
-                    KPTS = MeshFromDenisty(struct, k_dens,
+                    KPTS = MeshFromDensity(struct, k_dens,
                                        compare_density=k_dens_list[-1])
                 kpoints = KPTS.get_kpoints()
                 
