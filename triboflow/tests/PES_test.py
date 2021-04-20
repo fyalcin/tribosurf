@@ -16,8 +16,9 @@ from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
 
 nav = Navigator()
 db_file = nav.path
-functional = "SCAN"
+functional = "PBE"
 
+# TODO: TO REFACTOR
 # Test Ag111Ag111 interface
 # mpid = "mp-124"
 # miller = [1,1,1]
@@ -31,6 +32,21 @@ functional = "SCAN"
 # slab = Slab.from_dict(slab_dict['relaxed_slab'])
 # comp_params = slab_dict['comp_parameters']
 
+#Test Au111_C001 interface
+# int_dict = GetInterfaceFromDB('Au111_C001_mp-66_mp-81', db_file, functional)
+# top_slab = Slab.from_dict(int_dict['top_aligned'])
+# bottom_slab = Slab.from_dict(int_dict['bottom_aligned'])
+# comp_params = int_dict['comp_parameters']
+
+
+# WF = CalcPES_SWF(top_slab=top_slab, bottom_slab=bottom_slab, top_mpid='mp-66',
+#                  bottom_mpid='mp-81',comp_parameters=comp_params,
+#                  file_output=True, output_dir = '/home/fs71332/mwo4',
+#                  remote_copy = True, server = 'vsc4.vsc.ac.at',  user = 'mwo4', 
+#                  port = 27)
+
+#lpad = LaunchPad.auto_load()
+#lpad.add_wf(WF)
 # Test GrapheneGraphene interface
 nav_mp = NavigatorMP()
 struct, mpid = nav_mp.get_low_energy_structure(
@@ -45,8 +61,10 @@ comp_params = {'functional': functional,
                'k_dens': 2000
                }
 
-WF = calc_pes_swf(top_slab=slab, bottom_slab=slab, comp_parameters=comp_params)
+WF = calc_pes_swf(top_slab=slab, bottom_slab=slab,
+                  comp_parameters=comp_params,
+                  interface_name="Navigator_test_Gr-Gr")
 
 lpad = LaunchPad.auto_load()
 lpad.add_wf(WF)
-rapidfire(lpad)
+#rapidfire(lpad)

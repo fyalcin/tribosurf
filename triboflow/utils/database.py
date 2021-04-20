@@ -16,6 +16,8 @@ __date__ = 'February 1st, 2021'
 
 import io
 import os
+from pathlib import Path, PurePosixPath
+import pickle
 from datetime import datetime
 from pathlib import Path, PurePosixPath
 import pymongo
@@ -80,11 +82,11 @@ class Navigator:
     __initialize_obj_collection(collection)
         Initialize a MongoDB object collection.
     
-    update_data(collection, filter, new_values, )
-        Update a single document matching the filter with the new value.
+    update_data(collection, fltr, new_values, )
+        Update a single document matching the filter (fltr) with the new value.
     
-    update_many_data(collection, filter, new_values, upsert)
-        Update many documents that match the filter with the new values.
+    update_many_data(collection, fltr, new_values, upsert)
+        Update many documents that match the filter (fltr) with the new values.
     
     insert_data(collection, data, duplicates, message)
         Insert a single document in the collection.
@@ -92,17 +94,17 @@ class Navigator:
     insert_many_data(collection, data, duplicates)
         Insert an iterable of documents in the collection.
 
-    find_data(collection, filter)
-        Get a single document in the collection that matches the filter.
+    find_data(collection, fltr)
+        Get a single document in the collection that matches the filter (fltr).
     
-    find_many_data(collection, filter)
-       Get all the documents in the collection that match the filter.
+    find_many_data(collection, fltr)
+       Get all the documents in the collection that match the filter (fltr).
     
-    delete_data(collection, filter)
-        Delate a single document that matches the filter.
+    delete_data(collection, fltr)
+        Delate a single document that matches the filter (fltr).
     
-    delete_many_data(collection, filter)
-        Delate one or more documents that match the filter.
+    delete_many_data(collection, fltr)
+        Delate one or more documents that match the filter (fltr).
     
     drop_data(Drop all the documents in the collection.)
         Drop all the documents in the collection.
@@ -195,9 +197,9 @@ class Navigator:
         
         return collection_obj
 
-    def update_data(self, collection, filter, new_values, upsert=False):
+    def update_data(self, collection, fltr, new_values, upsert=False):
         """
-        Update a single document matching the filter with the new value.
+        Update a single document matching the filter (fltr) with the new value.
 
         https://pymongo.readthedocs.io/en/stable/api/pymongo/collection.html#pymongo.collection.Collection.update_one
 
@@ -206,7 +208,7 @@ class Navigator:
         collection : str, VaspCalcDb
             Name of the collection in the database or in the VaspCalcDb object.
 
-        filter : dict
+        fltr : dict
             Dictionary containing the document to update.
 
         new_values : dict
@@ -219,7 +221,7 @@ class Navigator:
         
         upsert : bool
             PyMongo parameter for the update_one function. If True update_one 
-            performs an insertion if no documents match the filter.
+            performs an insertion if no documents match the filter (fltr).
 
         """
 
@@ -227,11 +229,11 @@ class Navigator:
 
         log.info('Updating the collection {} with the new data {}.'
                  ''.format(collection, new_values))
-        collection_obj.update_one(filter, new_values, upsert)
+        collection_obj.update_one(fltr, new_values, upsert)
     
-    def update_many_data(self, collection, filter, new_values, upsert=False):
+    def update_many_data(self, collection, fltr, new_values, upsert=False):
         """
-        Update many documents that match the filter with the new values.
+        Update many documents that match the filter (fltr) with the new values.
 
         https://pymongo.readthedocs.io/en/stable/api/pymongo/collection.html#pymongo.collection.Collection.update_many
 
@@ -240,7 +242,7 @@ class Navigator:
         collection : str, VaspCalcDb
             Name of the collection in the database or in the VaspCalcDb object.
         
-        filter : dict
+        fltr : dict
             Dictionary containing the documents to update.
 
         new_values : dict
@@ -248,7 +250,7 @@ class Navigator:
         
         upsert : bool
             PyMongo parameter for the update_one function. If True update_one 
-            performs an insertion if no documents match the filter.
+            performs an insertion if no documents match the filter (fltr).
 
         """
 
@@ -256,7 +258,7 @@ class Navigator:
 
         log.info('Updating the collection {} with the new data {}.'
                  ''.format(collection, new_values))
-        collection_obj.update_many(filter, new_values, upsert)
+        collection_obj.update_many(fltr, new_values, upsert)
 
     def insert_data(self, collection, data, duplicates=False, message=None):
         """
@@ -344,9 +346,9 @@ class Navigator:
         log.info('Writing {} in the collection {}.'.format(data, collection))
         collection_obj.insert_many(data)
 
-    def find_data(self, collection, filter):
+    def find_data(self, collection, fltr):
         """
-        Get a single document in the collection that matches the filter.
+        Get a single document in the collection that matches the filter (fltr).
 
         https://pymongo.readthedocs.io/en/stable/api/pymongo/collection.html#pymongo.collection.Collection.find_one
 
@@ -355,9 +357,9 @@ class Navigator:
         collection : str, VaspCalcDb
             Name of the collection in the database or VaspCalcDb object.
 
-        filter : dict, optional
+        fltr : dict, optional
             Dictionary containing the name of the document to find.
-            If filter is empty all the documents in the collection are returned.
+            If fltr is empty all the documents in the collection are returned.
 
         Returns
         -------
@@ -369,18 +371,18 @@ class Navigator:
 
         collection_obj = self.__initialize_obj_collection(collection)
 
-        data = collection_obj.find_one(filter)
+        data = collection_obj.find_one(fltr)
 
         if not data:
-            log.warning('There are no data for {}.'.format(filter))
+            log.warning('There are no data for {}.'.format(fltr))
             return data
 
-        log.info('{} has been found in {}.'. format(filter, collection))
+        log.info('{} has been found in {}.'. format(fltr, collection))
         return data
 
-    def find_many_data(self, collection, filter):
+    def find_many_data(self, collection, fltr):
         """
-        Get all the documents in the collection that match the filter.
+        Get all the documents in the collection that match the filter (fltr).
 
         https://pymongo.readthedocs.io/en/stable/api/pymongo/collection.html#pymongo.collection.Collection.find
 
@@ -390,9 +392,9 @@ class Navigator:
         collection : str, VaspCalcDb
             Name of the collection in the database or VaspCalcDb object. 
 
-        filter : dict, optional
+        fltr : dict, optional
             Dictionary containing the name of the document to find.
-            If filter is empty all the documents in the collection are returned.
+            If fltr is empty all the documents in the collection are returned.
 
         Returns
         -------
@@ -404,18 +406,18 @@ class Navigator:
 
         collection_obj = self.__initialize_obj_collection(collection)
 
-        data = collection_obj.find(filter)
+        data = collection_obj.find(fltr)
 
         if not data:
-            log.warning('There are no data for {}.'.format(filter))
+            log.warning('There are no data for {}.'.format(fltr))
             return data
 
-        log.info('{} has been found in {}.'. format(filter, collection))
+        log.info('{} has been found in {}.'. format(fltr, collection))
         return data
 
-    def delete_data(self, collection, filter):
+    def delete_data(self, collection, fltr):
         """
-        Delate a single document that matches the filter.
+        Delate a single document that matches the filter (fltr).
 
         https://pymongo.readthedocs.io/en/stable/api/pymongo/collection.html#pymongo.collection.Collection.delete_one
 
@@ -424,7 +426,7 @@ class Navigator:
         collection : str, VaspCalcDb
             Name of the collection in the database or VaspCalcDb object.
 
-        filter : dict
+        fltr : dict
             Document to be removed.
 
         """
@@ -432,12 +434,12 @@ class Navigator:
         collection_obj = self.__initialize_obj_collection(collection)
 
         log.info('Deleting {} from the collection {}.'
-                 ''.format(filter, collection))
-        collection_obj.delete_one(filter)
+                 ''.format(fltr, collection))
+        collection_obj.delete_one(fltr)
 
-    def delete_many_data(self, collection, filter):
+    def delete_many_data(self, collection, fltr):
         """
-        Delate one or more documents that match the filter.
+        Delate one or more documents that match the filter (fltr).
 
         https://pymongo.readthedocs.io/en/stable/api/pymongo/collection.html#pymongo.collection.Collection.delete_many
 
@@ -446,14 +448,14 @@ class Navigator:
         collection : str, VaspCalcDb
             Name of the collection in the database or VaspCalcDb object.
 
-        filter : dict
+        fltr : dict
             Documents to be removed.
 
         """
 
         collection_obj = self.__initialize_obj_collection(collection)
 
-        collection_obj.delete_many(filter)
+        collection_obj.delete_many(fltr)
 
     def drop_data(self, collection):
         """
@@ -469,7 +471,7 @@ class Navigator:
         """
         log.critical('This will drop all entries {} from the database. '
                      'Write the current date (YYYY-mm-dd, e.g. 2021-02-01) '
-                     'to confirm: '.format(filter))
+                     'to confirm: ')
         user_date = input()
         current_date = datetime.today().strftime("%Y-%m-%d")
 
@@ -785,8 +787,14 @@ class NavigatorMP:
 
     Methods
     -------
-    get_low_energy_structure(chem_formula, mp_id, print_info)
+    __get_low_energy_structure(chem_formula, mp_id, print_info)
         Get the low energy structure from the Materials Project database.
+    get_low_energy_structure(chem_formula, mp_id, print_info)    
+        Retrive the structure correspoding to the lowest energy.
+    __save_struct_object(structure, mp_id, path)
+        Save the structure object in the specified path.
+    __get_struct_object(struct_path):
+        Load the structure object in the specified path.
     get_property_from_mp(mp_id, prop)
         Get the searched property from the Materials Project database.
 
@@ -822,8 +830,8 @@ class NavigatorMP:
                                    ' database.'.format(chem_formula))
         return mp_id[0]['material_id']
 
-    def get_low_energy_structure(self, chem_formula, mp_id=None, 
-                                 print_info=False):
+    def __get_low_energy_structure(self, chem_formula, mp_id=None, 
+                                   print_info=False):
         """
         Search MaterialsProjects for structure.
 
@@ -851,7 +859,7 @@ class NavigatorMP:
             Tuple containing several information about the desired structure.
 
         mp_id : str
-            Materials Project ID for the given chemical formula.)
+            Materials Project ID for the given chemical formula.
 
         Examples
         --------
@@ -887,6 +895,129 @@ class NavigatorMP:
                 struct = self.__mpr.get_structure_by_material_id(mp_id)
 
                 return struct, mp_id
+
+    def get_low_energy_structure(self, chem_formula, mp_id=None, 
+                                 print_info=False):
+        """
+        Retrive the structure correspoding to the lowest energy. If the mp_id is
+        provided, before request to the Materials Project server it firstly 
+        check if the structure has been already saved in the 
+        /structures/mp_structures folder 
+        as a pymatgen.core.structure.Structure object.
+
+        The convention name for the object is to name the file using the
+        corresponding mp_id: e.g. for the aluminum (Al) the file name will be 
+        mp-134.
+
+        Parameters
+        ---------- 
+        chem_formula : str
+            Chemical formula of the structure.
+            e.g.: NaCl, Fe2O3, SiO, FeCW.
+        mp_id : str or None, optional
+            Materials Project ID of the desired structure. The default is None.
+            e.g.: 'mp-990448'.       
+        print_info : bool or None, optional
+            Whether to print some information about the collected structure.
+            The default is False
+             
+        Returns
+        -------
+        struct : pymatgen.core.structure.Structure
+            Struct object.
+
+        mp_id : str
+            Materials Project ID for the given chemical formula.
+  
+        """
+        project_folder = os.path.dirname(__file__)
+        # PurePosixPath gets the first level parten directory
+        struct_folder_object = PurePosixPath(project_folder)
+        struct_folder = str(struct_folder_object.parent.parent.parent) \
+            + '/structures/mp_structures/'
+        struct_path = Path(struct_folder)
+
+        if not struct_path.is_dir():
+            print("WARNING: There is no folder for structures files.")
+            print("Creating a new mp_structures folder in " + struct_folder)
+            struct_folder = PurePosixPath(struct_folder)
+            os.mkdir(struct_folder.parent)
+            os.mkdir(struct_folder)
+            struct_path = Path(struct_folder)
+            if not struct_path.is_dir():
+                raise RuntimeError('The creation of struct path has failed!')
+        struct_path = str(struct_path)
+
+        if mp_id is None:
+            struct, mp_id = self.__get_low_energy_structure(
+                chem_formula=chem_formula, 
+                mp_id=mp_id,
+                print_info=print_info)
+
+            self.__save_struct_object(
+                structure=struct, 
+                mp_id=mp_id, 
+                path=struct_path)
+        else:
+            files = os.listdir(struct_path)
+            found = False
+            for file in files:
+                if file == mp_id:
+                    struct = self.__get_struct_object(struct_path+'/'+file)
+                    found = True
+                    break
+
+            # If nothing has been found then do the query and save
+            if not found:
+                struct, mp_id = self.__get_low_energy_structure(
+                    chem_formula=chem_formula, 
+                    mp_id=mp_id,
+                    print_info=print_info)
+
+                self.__save_struct_object(
+                    structure=struct, 
+                    mp_id=mp_id, 
+                    path=struct_path)
+        
+        return struct, mp_id
+            
+    def __save_struct_object(self, structure, mp_id, path):
+        """
+        Save the structure object in the specified path.
+
+        Parameters
+        ----------
+        structure : pymatgen.core.structure.Structure
+            Struct object.
+        mp_id : str
+            Materials Project id corresponding to the structure.
+        path : str
+            Path to save the structure.
+
+        """
+
+        with open(path+'/'+mp_id, 'wb') as struct_out:
+            pickle.dump(structure, struct_out, pickle.HIGHEST_PROTOCOL)
+    
+    def __get_struct_object(self, struct_path):
+        """
+        Load the structure object in the specified path.
+
+        Parameters
+        ----------
+        struct_path : str
+            Location where to retrive the saved structure.
+        
+        Returns
+        -------
+        pymatgen.core.structure.Structure
+            The searched structure.
+
+        """
+
+        with open(struct_path, 'rb') as structure:
+            return pickle.load(structure)
+        
 
     def get_property_from_mp(self, mp_id, properties):
         """

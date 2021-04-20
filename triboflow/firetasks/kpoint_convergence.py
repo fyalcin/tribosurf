@@ -8,7 +8,7 @@ from datetime import datetime
 from pprint import pprint, pformat
 
 from pymatgen.core.structure import Structure
-from pymatgen.io.vasp.inputs import Kpoints
+#from pymatgen.io.vasp.inputs import Kpoints
 from pymatgen.io.vasp.sets import MPStaticSet
 from fireworks import FWAction, FiretaskBase, Firework, Workflow, FileWriteTask
 from fireworks.utilities.fw_utilities import explicit_serialize
@@ -19,9 +19,8 @@ from atomate.vasp.powerups import add_modify_incar
 from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
 from triboflow.utils.check_convergence import is_list_converged
 from triboflow.utils.vasp_tools import (
-    get_generalized_kmesh, get_custom_vasp_static_settings)
+    get_generalized_kmesh, get_custom_vasp_static_settings, MeshFromDenisty)
 from triboflow.utils.file_manipulation import copy_output_files
-
 
 @explicit_serialize
 class FT_StartKPointConvo(FiretaskBase):
@@ -39,8 +38,8 @@ class FT_StartKPointConvo(FiretaskBase):
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
 
-        k_dens_start = self.get('k_dens_start', 500)
-        k_dens_incr = self.get('k_dens_incr', 50)
+        k_dens_start = self.get('k_dens_start', 1)
+        k_dens_incr = self.get('k_dens_incr', 0.1)
         n_converge = self.get('n_converge', 3)
         
         nav_structure = StructureNavigator(
@@ -106,14 +105,14 @@ class FT_UpdateELists(FiretaskBase):
         nav = Navigator(db_file=db_file)
         # Get energy from last vasp run
         vasp_calc = nav.find_data(
-            collection=nav.db.task, 
-            filter={'task_label': calc_label})
+            collection='tasks', 
+            fltr={'task_label': calc_label})
         energy = vasp_calc['output']['energy']
         
         # Update data array in the database
         nav.update_data(
             collection='kpoints_data_sharing',
-            filter={'tag': tag},
+            fltr={'tag': tag},
             new_values={'$push': {'E_list': energy}})
 
 
@@ -160,8 +159,8 @@ class FT_KpointsConvo(FiretaskBase):
     def run_task(self, fw_spec):
         
         n_converge = self.get('n_converge', 3)
-        k_dens_start = self.get('k_dens_start', 500)
-        k_dens_incr = self.get('k_dens_incr', 50)
+        k_dens_start = self.get('k_dens_start', 1)
+        k_dens_incr = self.get('k_dens_incr', 0.1)
         file_output = self.get('file_output', False)
         output_dir = self.get('output_dir', None)
         remote_copy = self.get('remote_copy', False)
@@ -187,7 +186,7 @@ class FT_KpointsConvo(FiretaskBase):
         nav = Navigator(db_file=db_file)
         data = nav.find_data(
             collection='kpoints_data_sharing',
-            filter={'tag': tag}
+            fltr={'tag': tag}
         )
 
         if data:
@@ -203,7 +202,8 @@ class FT_KpointsConvo(FiretaskBase):
             comp_params['k_dens'] = k_dens_start
             vis = get_custom_vasp_static_settings(struct, comp_params,
                                                   'bulk_from_scratch')
-            kpoints = Kpoints.automatic_gamma_density(struct, k_dens_start)
+            KPTS = MeshFromDenisty(struct, k_dens_start)
+            kpoints = KPTS.get_kpoints()
             #kpoints = get_generalized_kmesh(struct, k_dens_start)
             k_dens_list = [k_dens_start]
                 
@@ -278,14 +278,14 @@ class FT_KpointsConvo(FiretaskBase):
 
                 nav_high = Navigator(db_file=db_file, high_level='triboflow')
                 nav_high.update_data(
-                    collection='functional+'.bulk_data,
-                    filter={'mpid': flag},
+                    collection=functional+'.bulk_data',
+                    fltr={'mpid': flag},
                     new_values={'$set': out_dict},
                     upsert=True)
 
                 nav.update_data(
                     collection='kpoints_data_sharing',
-                    filter={'tag': tag},
+                    fltr={'tag': tag},
                     new_values={'$set': {'final_k_dens': final_k_dens,
                                          'final_energy': final_E,
                                          'energy_list': E_list,
@@ -319,15 +319,16 @@ class FT_KpointsConvo(FiretaskBase):
                 calc_nr = len(E_list)
                 label = tag + ' calc '+str(calc_nr)
                 
-                last_mesh = data['last_mesh']
+                #last_mesh = data['last_mesh']
                 k_dens = k_dens_list[-1] + k_dens_incr
-                kpoints = Kpoints.automatic_gamma_density(struct, k_dens)
-                
-                #kpoints = get_generalized_kmesh(struct, k_dens)
-                while kpoints.kpts == last_mesh:
+                KPTS = MeshFromDenisty(struct, k_dens,
+                                       compare_density=k_dens_list[-1])
+                while KPTS.are_meshes_the_same():
                     k_dens = k_dens + k_dens_incr
-                    kpoints = Kpoints.automatic_gamma_density(struct, k_dens)
-                    #kpoints = get_generalized_kmesh(struct, k_dens)
+                    KPTS = MeshFromDenisty(struct, k_dens,
+                                       compare_density=k_dens_list[-1])
+                kpoints = KPTS.get_kpoints()
+                
                 comp_params['k_dens'] = k_dens
                 vis = get_custom_vasp_static_settings(struct, comp_params,
                                                       'bulk_from_scratch')
@@ -367,7 +368,7 @@ class FT_KpointsConvo(FiretaskBase):
                 # Update Database entry for Encut list
                 nav.update_data(
                     collection='kpoints_data_sharing',
-                    filter={'tag': tag},
+                    fltr={'tag': tag},
                     new_values={'$push': {'k_dens_list': k_dens,
                                           'k-meshes': kpoints.as_dict()},
                                 '$set': {'last_mesh': kpoints.kpts}})

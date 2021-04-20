@@ -22,7 +22,9 @@ __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 8th, 2021'
 
 import numpy as np
-import matplotlib.pyplot as plt  
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from pymatgen.analysis.adsorption import plot_slab
 
@@ -70,7 +72,7 @@ def plot_slab_hs(hs, slab, to_fig=None):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     
-    plot_slab(slab, ax, scale=0.8, repeat=3, window=1.25, 
+    plot_slab(slab, ax, scale=0.8, repeat=3, window=2.25, 
               draw_unit_cell=True, decay=0.2, adsorption_sites=False)
     ax.set(xlim = ( -0.1*(a[0] + b[0]), 1.1*(a[0] + b[0]) ), 
            ylim = ( -0.1*(a[1] + b[1]), 1.1*(a[1] + b[1]) ))
@@ -79,20 +81,32 @@ def plot_slab_hs(hs, slab, to_fig=None):
     for k in hs.keys():
         data = hs[k]
         if len(data.shape) == 1:
-            plt.plot(data[0], data[1], marker='x', markersize=10, mew=3, 
+            plt.plot(data[0], data[1], marker='o', markersize=12, mew=3, 
                      linestyle='', zorder=10000, label=k)     
         else:
-            plt.plot(data[:,0], data[:,1], marker='x', markersize=7.5, mew=3, 
+            plt.plot(data[:,0], data[:,1], marker='o', markersize=12, mew=3, 
                      linestyle='', zorder=10000, label=k)
  
     plt.legend(bbox_to_anchor=(1.025, 1), loc='upper left')
     
+    plt.rcParams.update({'font.size': 18})
+    plt.tick_params(
+    axis='both',          # changes apply to the x-axis
+    which='both',      # both major and minor ticks are affected
+    bottom=False,      # ticks along the bottom edge are off
+    top=False,         # ticks along the top edge are off
+    left=False,
+    right=False,
+    labelbottom=False,
+    labelleft=False) # labels along the bottom edge are off
+    
     if to_fig != None:
-        plt.savefig(to_fig+'.pdf', dpi=300)
+        plt.savefig(to_fig+'.png', dpi=300, bbox_inches='tight')
     
     plt.show()
 
-def plot_pes(data, lattice, to_fig=None):
+
+def plot_pes(data, lattice, to_fig=None, vmin=None, vmax=None):
     """
     Plot the PES and eventually save it
 
@@ -105,14 +119,18 @@ def plot_pes(data, lattice, to_fig=None):
     E = data[2]
 
     fact=1.
-    level= 43
-    fig = plt.figure(figsize=(7, 7), dpi=100)
+    n = 51
+    if vmin and vmax:
+        levels = np.linspace(vmin, vmax, n)
+    else:
+        levels = np.linspace(np.amin(E), np.amax(E), n)
+    fig = plt.figure(figsize=(7, 7), dpi=150)
     ax = fig.add_subplot(111)
     ax.set_aspect('equal')
     anglerot='vertical'
     shrin=1.
     #zt1=plt.contourf(x, y, E, level, extent=(-fact*a, fact*a, -fact*b, fact*b), cmap=plt.cm.RdYlBu_r)
-    zt1=plt.contourf(x, y, E, level, cmap=plt.cm.RdYlBu_r)
+    zt1=plt.contourf(x, y, E, levels, cmap=plt.cm.RdYlBu_r)
     cbar1=plt.colorbar(zt1,ax=ax,orientation=anglerot,shrink=shrin)
     cbar1.set_label(r'$E_{adh} (J/m^2)$', rotation=270, labelpad=20,fontsize=15,family='serif')
 
@@ -174,3 +192,18 @@ def plot_uniform_grid(grid, cell, n_a, n_b):
     
     ax.plot(x, y, z)
     plt.show()
+
+def plot_kpoint_convergence(bulk_dict):
+    k_dens_l = bulk_dict['k_dens_info']['k_dens_list']
+    energy_l = bulk_dict['k_dens_info']['energy_list']
+    nr_sites = len(bulk_dict['structure_fromMP']['sites'])
+    tol = bulk_dict['k_dens_info']['Energy_tol_abs']*1000
+    E_l = np.asarray(energy_l)
+    E_l = (E_l - E_l[-1])*1000
+    plt.plot(k_dens_l, E_l, 'ro--')
+    plt.ylim([-tol*5, tol*5])
+    plt.xlabel('kpoint denisty')
+    plt.ylabel('total energy [meV/atom]')
+    plt.axhline(y=-tol, linestyle='dotted')
+    plt.axhline(y=tol, linestyle='dotted')
+    return

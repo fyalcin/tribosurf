@@ -285,7 +285,7 @@ class FT_MoveTagResults(FiretaskBase):
         }
 
     3 - Once the field dictionary has been retrieved, the data to be transferred
-    is identied by `entry_from`, which could be: str, list, list of lists.
+    is identified by `entry_from`, which could be: str, list, list of lists.
     To transfer more data it is necessary to use lists of lists, where each
     list contains the nested keys within the extracted dictionary containing 
     the data that I want to transfer.
@@ -467,13 +467,13 @@ class FT_MoveTagResults(FiretaskBase):
     
         # Prepare the database and options where to store data
         nav = Navigator(db_file=p['db_file'], high_level=p['database_to'])
-        filter = {'mpid': p['mp_id']}
+        fltr = {'mpid': p['mp_id']}
         if p['miller'] is not None:
-            filter.update({'miller': p['miller']})        
+            fltr.update({'miller': p['miller']})        
 
         # Finally store the data
         for d in info_dict:
-            nav.update_data(p['collection_to'], filter, {'$set': d}, upsert=True)
+            nav.update_data(p['collection_to'], fltr, {'$set': d}, upsert=True)
     
     def user_output(self, vasp_calc, p, dfl):
 

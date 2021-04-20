@@ -45,7 +45,10 @@ class FT_StartEncutConvo(FiretaskBase):
         stop_convergence = data.get('encut_info')
         
         if not stop_convergence:
-            structure = Structure.from_dict(data.get('structure_fromMP'))
+            structure_dict = data.get('primitive_structure')
+            if not structure_dict:
+                structure_dict = data.get('structure_fromMP')
+            structure = Structure.from_dict(structure_dict)
             comp_params = data.get('comp_parameters', {})
             SWF = converge_encut_swf(structure=structure, flag=mp_id,
                                      comp_parameters=comp_params,
@@ -90,7 +93,7 @@ class FT_UpdateBMLists(FiretaskBase):
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
         
-        nav_structure = StructureNavigator(db_file=db_file, high_level='triboflow')
+        nav_structure = StructureNavigator(db_file=db_file, high_level=None)
         results = nav_structure.get_last_bmd_data_from_db(formula=formula)
         
         BM = results['bulk_modulus']
@@ -98,7 +101,7 @@ class FT_UpdateBMLists(FiretaskBase):
         
         # Update data arrays in the database
         nav = Navigator(db_file=db_file)
-        nav.update_data(collection='BM_data_sharing', filter={'tag': tag}, 
+        nav.update_data(collection='BM_data_sharing', fltr={'tag': tag}, 
                         new_values={'$push': {'BM_list': BM, 'V0_list': V0}})
 
 @explicit_serialize
@@ -179,7 +182,7 @@ class FT_EnergyCutoffConvo(FiretaskBase):
         
         # Get the data arrays from the database (returns None when not there)
         nav = Navigator(db_file=db_file)
-        data = nav.find_data(collection='BM_data_sharing', data={'tag': tag})
+        data = nav.find_data(collection='BM_data_sharing', fltr={'tag': tag})
 
         if data:
             BM_list = data.get('BM_list')
@@ -285,13 +288,13 @@ class FT_EnergyCutoffConvo(FiretaskBase):
                 nav_high = Navigator(db_file=db_file, high_level='triboflow')
                 nav_high.update_data(
                     collection=functional+'.bulk_data',
-                    filter={'mpid': flag}, 
+                    fltr={'mpid': flag}, 
                     new_values={'$set': output_dict},
                     upsert=True)
                 
                 nav.update_data(
                     collection='BM_data_sharing',
-                    filter={'tag': tag},
+                    fltr={'tag': tag},
                     new_values={'$set': 
                                     {'final_encut': final_encut,
                                      'final_BM': final_BM,
@@ -365,7 +368,7 @@ class FT_EnergyCutoffConvo(FiretaskBase):
             # Update Database entry for Encut list
             nav.update_data(
                 collection='BM_data_sharing',
-                filter={'tag': tag},
+                fltr={'tag': tag},
                 new_values={'$push': {'Encut_list': encut}})
 
             return FWAction(detours=BM_WF)

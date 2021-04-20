@@ -239,7 +239,7 @@ class FT_FitPPES(FiretaskBase):
             # Get energy from vasp run for this distance
             vasp_calc = nav.find_data(
                 collection=nav.db.tasks,
-                filter={'task_label': calc_label})
+                fltr={'task_label': calc_label})
             energy = vasp_calc['output']['energy']
             d_E_array.append([d, energy])
 
@@ -249,7 +249,7 @@ class FT_FitPPES(FiretaskBase):
 
         nav_high.update_data(
             collection=functional+'.interface_data', 
-            filter={'name': name},
+            fltr={'name': name},
             new_values={'$set': 
                            {'PPES':
                                {out_name: 

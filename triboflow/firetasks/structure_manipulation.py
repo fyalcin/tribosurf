@@ -15,14 +15,15 @@ from fireworks import FWAction, FiretaskBase, Firework, Workflow, FileWriteTask
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 from atomate.vasp.powerups import add_modify_incar
-from atomate.vasp.fireworks.core import OptimizeFW, ScanOptimizeFW
-from mpinterfaces.transformations import get_aligned_lattices, \
-    get_interface # generate_all_configs
+from mpinterfaces.transformations import (
+    get_aligned_lattices, get_interface) # generate_all_configs
 
+from triboflow.workflows.base import dynamic_relax_swf
 from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
 from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
-from triboflow.utils.structure_manipulation import interface_name, \
-    slab_from_structure, recenter_aligned_slabs, stack_aligned_slabs
+from triboflow.utils.structure_manipulation import (
+    interface_name, slab_from_structure, recenter_aligned_slabs, 
+    stack_aligned_slabs)
 from triboflow.utils.file_manipulation import copy_output_files
 
 
@@ -207,8 +208,8 @@ class FT_GetRelaxedSlab(FiretaskBase):
             # Get results from OptimizeFW
             nav = Navigator(db_file=db_file)
             vasp_calc = nav.find_data(
-                collection=nav.db.tasks, 
-                filter={'task_label': self['tag']})
+                collection='tasks', 
+                fltr={'task_label': self['tag']})
             relaxed_slab = Structure.from_dict(vasp_calc['output']['structure'])
             slab = Slab(relaxed_slab.lattice,
                         relaxed_slab.species_and_occu,
@@ -222,13 +223,13 @@ class FT_GetRelaxedSlab(FiretaskBase):
             nav_high = Navigator(db_file=db_file, high_level='triboflow')
             nav_high.update_data(
                 collection=functional+'.slab_data',
-                filter={'mpid': flag, 'miller': miller},
+                fltr={'mpid': flag, 'miller': miller},
                 new_values={'$set': {out_name: slab.as_dict()}})
         else:
             nav = Navigator(db_file=db_file)
             vasp_calc = nav.find_data(
-                collection=nav.db.tasks,
-                filter={'task_label': self['tag']})
+                collection='tasks',
+                fltr={'task_label': self['tag']})
 
             if  vasp_calc:
                 relaxed_slab = Structure.from_dict(vasp_calc['output']['structure'])
@@ -346,7 +347,7 @@ class FT_StartSlabRelax(FiretaskBase):
             db_file=db_file, 
             high_level='triboflow')
         slab_data = nav_structure.get_slab_from_db(
-            mpi_id=flag,
+            mp_id=flag,
             functional=functional,
             miller=miller)
         
@@ -357,21 +358,12 @@ class FT_StartSlabRelax(FiretaskBase):
         if 'relaxed_slab' not in slab_data:
             vis = get_custom_vasp_relax_settings(slab_to_relax, comp_params,
                                                  relax_type)
-            if functional == 'SCAN':
-                FW = ScanOptimizeFW(structure=slab_to_relax,
-                                    name=tag,
-                                    vasp_input_set=vis)
-            else:
-                FW = OptimizeFW(slab_to_relax, name=tag,
-                                vasp_input_set=vis,
-                                half_kpts_first_relax=True)
+            inputs = [[slab_to_relax, vis, tag]]
             wf_name = formula+miller_str+'_'+relax_type
-
-            # Use add_modify_incar powerup to add KPAR and NCORE settings
-            # based on env_chk in my_fworker.yaml
-            Optimize_WF = add_modify_incar(Workflow([FW], name = wf_name))
-
-            return FWAction(detours=Optimize_WF)
+            WF = dynamic_relax_swf(inputs_list=inputs,
+                                   wf_name=wf_name)
+                        
+            return FWAction(detours=WF)
 
 @explicit_serialize
 class FT_MakeSlabInDB(FiretaskBase):
@@ -463,7 +455,7 @@ class FT_MakeSlabInDB(FiretaskBase):
         slab_dict = monty.json.jsanitize(slab.as_dict(), allow_bson=True)
         nav_high.update_data(
             collection=functional+'.slab_data',
-            filter={'mpid': flag, 'miller': miller},
+            fltr={'mpid': flag, 'miller': miller},
             new_values={'$set': {'unrelaxed_slab': slab_dict}},
             upsert=True)
 
@@ -524,10 +516,10 @@ class FT_MakeHeteroStructure(FiretaskBase):
             db_file = env_chk('>>db_file<<', fw_spec)
 
         nav_high = Navigator(db_file=db_file, high_level='triboflow')
-        interface_name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
+        inter_name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
         inter_data = nav_high.find_data(
             collection=functional+'.interface_data',
-            filter={'name': interface_name})
+            fltr={'name': inter_name})
         
         inter_params = inter_data['interface_parameters']
         comp_params = inter_data['comp_parameters']
@@ -612,7 +604,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
 
                 nav_high.update_data(
                     collection=functional+'.interface_data',
-                    filter={'name': interface_name},
+                    fltr={'name': inter_name},
                     new_values={'$set': {'unrelaxed_structure': inter_dict,
                                          'bottom_aligned': bottom_dict,
                                          'top_aligned': top_dict}})
@@ -632,14 +624,14 @@ class FT_MakeHeteroStructure(FiretaskBase):
 
                     nav_high.update_data(
                         collection=functional+'.interface_data',
-                        filter={'name': interface_name},
+                        fltr={'name': interface_name},
                         new_values={'$set': 
                                        {'original_interface_params': 
                                             inter_params}})
 
                 nav_high.update_data(
                     collection=functional+'.interface_data',
-                    filter={'name': interface_name},
+                    fltr={'name': interface_name},
                     new_values={'$set': {'interface_parameters': new_params}})
 
                 new_fw = Firework(FT_MakeHeteroStructure(mp_id_1=mp_id_1,

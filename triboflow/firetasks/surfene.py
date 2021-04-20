@@ -36,6 +36,7 @@ from triboflow.utils.utils import (
 )
 from triboflow.utils.errors import SurfaceEnergyError
 
+
 currentdir = os.path.dirname(__file__)
 
 
@@ -173,7 +174,7 @@ class FT_SurfaceEnergy(FiretaskBase):
         # Call the navigator for retrieving the dictionary out of the DB
         nav = Navigator(db_file=p['db_file'], high_level=p['database'])
         dic = nav.find_data(collection=p['collection'], 
-                            filter={'mpid': p['mp_id'], 'miller': p['miller']})
+                            fltr={'mpid': p['mp_id'], 'miller': p['miller']})
 
         # Extract the output dictionary containing energies and get surfene
         try:

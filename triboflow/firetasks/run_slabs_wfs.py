@@ -639,18 +639,21 @@ class FT_EndThickConvo(FiretaskBase):
         index : int
             Index of the thickness indicating the optimal slab.
 
+        p : dict
+            Dictionary containing the FT arguments.
+
         """
 
         # Start the navigator to extract the data from the low level database
         nav_low = Navigator(db_file=p['db_file'], high_level=p['low_level'])
         low_dict = nav_low.find_data(collection=p['functional'] + '.slab_data', 
-                                     filter={'mpid': p['mp_id'],
+                                     fltr={'mpid': p['mp_id'],
                                              'miller': p['miller']})
         
         # Start the navigator to store the data to the high level database
         nav_high = Navigator(db_file=p['db_file'], high_level=p['high_level'])
         high_dict = nav_high.find_data(collection=p['functional'] + '.slab_data', 
-                                       filter={'mpid': p['mp_id'],
+                                       fltr={'mpid': p['mp_id'],
                                                'miller': p['miller']})
         
         # Extract the data to be saved in the database
@@ -668,7 +671,7 @@ class FT_EndThickConvo(FiretaskBase):
 
         # Update data
         nav_high.update_data(collection=p['functional'] + '.slab_data', 
-                             filter={'mpid': p['mp_id'], 'miller': p['miller']},
+                             fltr={'mpid': p['mp_id'], 'miller': p['miller']},
                              new_values={'$set': store}, upsert=True)
 
     def call_recursion(self, fw_spec, p):
