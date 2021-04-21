@@ -468,7 +468,7 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type):
             is_slab = True
         else:
             is_slab = False
-        KPTS = MeshFromDensity(structure, 50, is_slab=is_slab, force_gamma=True)
+        KPTS = MeshFromDensity(structure, 12.5, is_slab=is_slab, force_gamma=True)
         kpoints = KPTS.get_kpoints()
     
     #If a structure has a vacuum layer, set the third kpoints devision to 1
@@ -617,7 +617,7 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
 
     if 'k_dens' in comp_parameters:
         #kpoints = Kpoints.automatic(structure, comp_parameters['k_dens'])
-        if relax_type.startswith('slab_'):
+        if relax_type.startswith('slab_') or relax_type.startswith('interface_'):
             is_slab = True
         else:
             is_slab = False
@@ -630,12 +630,12 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
     else:
         #if no k-density is supplied in the comp_parameters, use a large value
         #kpoints = Kpoints.automatic(structure, 5000)
-        if relax_type.startswith('slab_'):
+        if relax_type.startswith('slab_') or relax_type.startswith('interface_'):
             is_slab = True
         else:
             is_slab = False
         KPTS = MeshFromDensity(structure,
-                               50,
+                               12.5,
                                is_slab=is_slab,
                                force_gamma=True)
         kpoints = KPTS.get_kpoints()
