@@ -201,7 +201,7 @@ class Geometry():
         slab_params.update(corrected_params)
 
         # Initial vacuum region is calculated
-        initial_vacuum = Geometry._get_layer_spacings(slab_resized)
+        initial_vacuum = Geometry._identify_regions(slab_resized).get('vacuum')
 
         # Lattice parameters are generated in order to be modified
         lat_attrs = ['a', 'b', 'c', 'alpha', 'beta', 'gamma']
@@ -343,35 +343,3 @@ class Geometry():
         slab_copy = slab.copy()
         slab_copy.remove_sites(flat_list)
         return slab_copy
-
-
-def test_geometry(el, miller, slab_thick, vac_thick):
-    from triboflow.utils.database import NavigatorMP
-    from pymatgen.core.surface import SlabGenerator
-    from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
-    from pymatgen.core.structure import Structure
-    nav_mp = NavigatorMP()
-    # struct = Structure(Lattice.cubic(2.8), ["Fe", "Fe"], [[0, 0, 0], [0.5, 0.5, 0.5]])
-    struct, mp_id = nav_mp.get_low_energy_structure(el)
-    bulk_conv = SpacegroupAnalyzer(struct).get_conventional_standard_structure()
-    
-    SG = SlabGenerator(initial_structure = bulk_conv,
-                       miller_index = miller,
-                       center_slab = True,
-                       primitive = True,
-                       in_unit_planes = True,
-                       lll_reduce = False,
-                       max_normal_search=max([abs(l) for l in miller]),
-                       min_slab_size = slab_thick,
-                       min_vacuum_size = vac_thick)
-    
-    slabs = SG.get_slabs(bonds=None, ftol=0.1, tol=0.1, symmetrize = False, repair=False)
-    
-    print('For {}-{} we have {} terminations'.format(struct.composition.reduced_formula, ''.join([str(i) for i in miller]), len(slabs)))
-    print('Required slab thickness is {} layers and vacuum thickness is {} A'.format(slab_thick, vac_thick))
-    print('resultant slabs have {} layers'.format([len(Geometry._get_layers(slab)) for slab in slabs]))
-    print('resultant cells have {} A vacuum'.format([Geometry._get_layer_spacings(slab) for slab in slabs]))
-    rec_slabs = [Geometry.reconstruct_slab(slab, slab_thick, vac_thick) for slab in slabs]
-    print('Reconstructed slabs have {} layers'.format([len(Geometry._get_layers(slab)) for slab in rec_slabs]))
-    print('Reconstructed cells have {} A vacuum'.format([Geometry._get_layer_spacings(slab) for slab in rec_slabs]))
-    return slabs, rec_slabs
