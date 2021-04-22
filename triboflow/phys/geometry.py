@@ -29,6 +29,7 @@ __author__ = 'Fırat Yalçın'
 __contact__ = 'firat.yalcin@univie.ac.at'
 __date__ = 'April 21st, 2021'
 
+from pymatgen.core.structure import Structure
 from pymatgen.core.lattice import Lattice
 from pymatgen.core.surface import center_slab, Slab
 from scipy.cluster.hierarchy import fcluster, linkage
@@ -115,7 +116,7 @@ class Geometry():
         elif region == "slab" or region == "vacuum":
             proj_height = Geometry._identify_regions(struct).get(region)
         else:
-            raise ValueError('Region must be one of ''cell'', ''vacuum'', or ''slab''')
+            raise ValueError('Region must be one of "cell", "vacuum", or "slab"')
         return proj_height
 
     @staticmethod
@@ -152,7 +153,7 @@ class Geometry():
         return regions
 
     @staticmethod
-    def reconstruct_slab(slab, slab_thickness, vacuum_thickness, center=True):
+    def reconstruct(struct, struct_thickness, vacuum_thickness, center=True):
         """
         Reconstruct the input slab with the desired slab thickness in
         number of layers and the vacuum region in Angstroms. All the attributes
@@ -182,33 +183,42 @@ class Geometry():
         """
         # Input slab is first centered for the cases where the slab spills
         # outside the box from the top and the bottom
-        slab_centered = center_slab(slab.copy(sanitize=True))
+        struct_centered = center_slab(struct.copy(sanitize=True))
 
         # Layers (containing sites) are removed from the bottom until
         # the desired slab_thickness is reached
-        slab_resized = Geometry._remove_layers(slab_centered, slab_thickness)
+        struct_resized = Geometry._remove_layers(struct_centered, struct_thickness)
 
-        # Necessary slab attributed to reconstruct the slab
-        slab_attrs = ["species", "miller_index", "oriented_unit_cell", "shift",
-                      "scale_factor", "reorient_lattice", "reconstruction",
-                      "site_properties", "energy"]
-        slab_params = attr_to_dict(slab_resized, slab_attrs)
+        # Check if a Slab or Structure is passed and process accordingly
+        
+        if 'miller_index' in vars(struct_resized):
+            # Necessary slab attributes to reconstruct the Slab
+            attrs = ["species", "miller_index", "oriented_unit_cell",
+                     "shift", "scale_factor", "reorient_lattice",
+                     "reconstruction", "site_properties", "energy"]
+            struct_params = attr_to_dict(struct_resized, attrs)
+            out_object = Slab
+        else:
+            # Necessary structure attributed to reconstruct the Structure
+            attrs = ["species", "site_properties"]
+            struct_params = attr_to_dict(struct_resized, attrs)
+            out_object = Structure
 
         # To avoid issues with fractional coordinates when scaling vacuum,
         # cartesian coordinates are used
-        corrected_params = {'coords': slab_resized.cart_coords,
+        corrected_params = {'coords': struct_resized.cart_coords,
                             'coords_are_cartesian': True}
-        slab_params.update(corrected_params)
+        struct_params.update(corrected_params)
 
         # Initial vacuum region is calculated
-        initial_vacuum = Geometry._identify_regions(slab_resized).get('vacuum')
+        initial_vacuum = Geometry._identify_regions(struct_resized).get('vacuum')
 
         # Lattice parameters are generated in order to be modified
         lat_attrs = ['a', 'b', 'c', 'alpha', 'beta', 'gamma']
-        lat_params = attr_to_dict(slab_resized.lattice, lat_attrs)
+        lat_params = attr_to_dict(struct_resized.lattice, lat_attrs)
 
-        latvec = slab_resized.lattice.matrix
-        proj_height = Geometry._get_hkl_projection(latvec[2], slab_resized)
+        latvec = struct_resized.lattice.matrix
+        proj_height = Geometry._get_hkl_projection(latvec[2], struct_resized)
 
         # 'c' parameter of the Lattice is modified to adjust vacuum
         # to the desired thickness
@@ -218,9 +228,82 @@ class Geometry():
         # Reconstructed slab is generated from the resized slab parameters
         # and modified Lattice, then centered again due to being off centered
         # after layer removal and vacuum modification
-        if center:
-            reconstructed_slab = center_slab(Slab(new_lat, **slab_params))
+
+        reconstructed_slab = center_slab(out_object(new_lat, **struct_params)) \
+            if center else out_object(new_lat, **struct_params)
+
         return reconstructed_slab
+
+    # @staticmethod
+    # def reconstruct_slab(slab, slab_thickness, vacuum_thickness, center=True):
+    #     """
+    #     Reconstruct the input slab with the desired slab thickness in
+    #     number of layers and the vacuum region in Angstroms. All the attributes
+    #     of sites are preserved by the reconstruction.
+
+    #     Parameters
+    #     ----------
+    #     slab : pymatgen.core.surface.Slab
+    #         Slab object that is to be reconstructed. Input object
+    #         is not modified with this method.
+    #     slab_thickness : int
+    #         Desired slab thickness in number of layers. Layers will
+    #         be removed from the bottom until the desired thickness is
+    #         reached.
+    #     vacuum_thickness : float
+    #         Desired vacuum region thickness in Angstroms. Lattice
+    #         parameters are modified in order to get the correct vacuum.
+    #     center : bool
+    #         Whether to center the reconstructed slab between the vacuum region.
+    #         The default is True.
+
+    #     Returns
+    #     -------
+    #     reconstructed_slab : pymatgen.core.surface.Slab
+    #         Reconstructed slab with the desired parameters.
+
+    #     """
+    #     # Input slab is first centered for the cases where the slab spills
+    #     # outside the box from the top and the bottom
+    #     slab_centered = center_slab(slab.copy(sanitize=True))
+
+    #     # Layers (containing sites) are removed from the bottom until
+    #     # the desired slab_thickness is reached
+    #     slab_resized = Geometry._remove_layers(slab_centered, slab_thickness)
+
+    #     # Necessary slab attributes to reconstruct the slab
+    #     slab_attrs = ["species", "miller_index", "oriented_unit_cell", "shift",
+    #                   "scale_factor", "reorient_lattice", "reconstruction",
+    #                   "site_properties", "energy"]
+    #     slab_params = attr_to_dict(slab_resized, slab_attrs)
+
+    #     # To avoid issues with fractional coordinates when scaling vacuum,
+    #     # cartesian coordinates are used
+    #     corrected_params = {'coords': slab_resized.cart_coords,
+    #                         'coords_are_cartesian': True}
+    #     slab_params.update(corrected_params)
+
+    #     # Initial vacuum region is calculated
+    #     initial_vacuum = Geometry._identify_regions(slab_resized).get('vacuum')
+
+    #     # Lattice parameters are generated in order to be modified
+    #     lat_attrs = ['a', 'b', 'c', 'alpha', 'beta', 'gamma']
+    #     lat_params = attr_to_dict(slab_resized.lattice, lat_attrs)
+
+    #     latvec = slab_resized.lattice.matrix
+    #     proj_height = Geometry._get_hkl_projection(latvec[2], slab_resized)
+
+    #     # 'c' parameter of the Lattice is modified to adjust vacuum
+    #     # to the desired thickness
+    #     lat_params['c'] += (vacuum_thickness-initial_vacuum)*lat_params['c']/proj_height
+    #     new_lat = Lattice.from_parameters(**lat_params)
+
+    #     # Reconstructed slab is generated from the resized slab parameters
+    #     # and modified Lattice, then centered again due to being off centered
+    #     # after layer removal and vacuum modification
+    #     if center:
+    #         reconstructed_slab = center_slab(Slab(new_lat, **slab_params))
+    #     return reconstructed_slab
 
     @staticmethod
     def _get_hkl_projection(vector, struct):
