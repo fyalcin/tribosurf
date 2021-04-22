@@ -21,6 +21,7 @@ __date__ = 'February 22nd, 2021'
 
 
 from pymatgen.core.surface import SlabGenerator
+from triboflow.phys.geometry import Geometry
 
 
 # ============================================================================
@@ -85,29 +86,30 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
 
     slabs = []
     for hkl, thk, vac in zip(miller, thickness, vacuum):
+        
+        slabgen = SlabGenerator(initial_structure=structure,
+                                miller_index=hkl,
+                                center_slab=center_slab,
+                                primitive=primitive,
+                                lll_reduce=lll_reduce,
+                                in_unit_planes=in_unit_planes,
+                                min_slab_size=thk,
+                                min_vacuum_size=vac)
+        
+        s = slabgen.get_slabs(bonds=bonds, 
+                              ftol=ftol, 
+                              tol=tol, 
+                              repair=repair,
+                              max_broken_bonds=max_broken_bonds, 
+                              symmetrize=symmetrize)
+        
         # Case of an oriented bulk
         if thk == 0:
-            s = orient_bulk(structure, hkl, thick_bulk, primitive, lll_reduce, 
-                            in_unit_planes)
+            s = s[ext_index].oriented_unit_cell
 
         # Case of a slab
         else:
-            slabgen = SlabGenerator(initial_structure=structure,
-                                    miller_index=hkl,
-                                    center_slab=center_slab,
-                                    primitive=primitive,
-                                    lll_reduce=lll_reduce,
-                                    in_unit_planes=in_unit_planes,
-                                    min_slab_size=thk,
-                                    min_vacuum_size=vac)
-        
-            # Select the ext_index-th slab from the list of possible slabs
-            s = slabgen.get_slabs(bonds=bonds, 
-                                  ftol=ftol, 
-                                  tol=tol, 
-                                  repair=repair,
-                                  max_broken_bonds=max_broken_bonds, 
-                                  symmetrize=symmetrize)
+            s = [Geometry.reconstruct_slab(slab, thk, vac) for slab in s]
             s = s[ext_index]
 
         slabs.append(s)
