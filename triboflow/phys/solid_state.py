@@ -21,7 +21,7 @@ __date__ = 'February 22nd, 2021'
 
 
 from pymatgen.core.surface import SlabGenerator
-from triboflow.phys.geometry import Geometry
+from triboflow.phys.Shaper import Shaper
 
 
 # ============================================================================
@@ -109,7 +109,7 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
 
         # Case of a slab
         else:
-            s = [Geometry.reconstruct_slab(slab, thk, vac) for slab in s]
+            s = [Shaper.reconstruct_slab(slab, thk, vac) for slab in s]
             s = s[ext_index]
 
         slabs.append(s)
