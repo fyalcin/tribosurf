@@ -123,38 +123,38 @@ class Shaper():
             raise ValueError('Region must be one of "cell", "vacuum", or "slab"')
         return proj_height
 
-    # @staticmethod
-    # def _identify_regions(struct, min_vac=4.0):
-    #     """
-    #     Internal method to identify regions in a given structure.
+    @staticmethod
+    def _identify_regions(struct, min_vac=4.0):
+        """
+        Internal method to identify regions in a given structure.
 
-    #     Parameters
-    #     ----------
-    #     struct : pymatgen.core.structure.Structure
-    #         Main object in pymatgen to store structures.
-    #     min_vac : float, optional
-    #         Minimum thickness to identify a region as 'vacuum'.
-    #         The default is 4.0.
+        Parameters
+        ----------
+        struct : pymatgen.core.structure.Structure
+            Main object in pymatgen to store structures.
+        min_vac : float, optional
+            Minimum thickness to identify a region as 'vacuum'.
+            The default is 4.0.
 
-    #     Returns
-    #     -------
-    #     regions : dict
-    #         Simple dictionary with keys as regions 'slab' and 'vacuum' and values
-    #         as the respective projected thickness values in angstroms.
+        Returns
+        -------
+        regions : dict
+            Simple dictionary with keys as regions 'slab' and 'vacuum' and values
+            as the respective projected thickness values in angstroms.
 
-    #     """
-    #     frac_coords_c = struct.frac_coords[:, 2]
-    #     struct_cp = struct.copy()
-    #     # To avoid issues with identifying vacuum region at the periodic boundary,
-    #     # we translate the structure in -c direction by the lowest c coordinate of
-    #     # its constituent sites. This way, we always start with a slab region.
-    #     struct_cp.translate_sites(list(range(len(struct_cp))), [0, 0, -min(frac_coords_c)])
+        """
+        frac_coords_c = struct.frac_coords[:, 2]
+        struct_cp = struct.copy()
+        # To avoid issues with identifying vacuum region at the periodic boundary,
+        # we translate the structure in -c direction by the lowest c coordinate of
+        # its constituent sites. This way, we always start with a slab region.
+        struct_cp.translate_sites(list(range(len(struct_cp))), [0, 0, -min(frac_coords_c)])
 
-    #     spacings = Shaper._get_layer_spacings(struct_cp)
-    #     vac_region = sum([s for s in spacings if s > min_vac])
-    #     slab_region = sum(spacings) - vac_region
-    #     regions = {"vacuum": vac_region, "slab": slab_region}
-    #     return regions
+        spacings = Shaper._get_layer_spacings(struct_cp)
+        vac_region = sum([s for s in spacings if s > min_vac])
+        slab_region = sum(spacings) - vac_region
+        regions = {"vacuum": vac_region, "slab": slab_region}
+        return regions
 
     @staticmethod
     def reconstruct(struct, struct_thickness, vacuum_thickness, center=True):

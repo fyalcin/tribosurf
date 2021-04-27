@@ -19,10 +19,11 @@ __date__ = 'March 4th, 2021'
 
 
 from pymatgen.core.structure import Structure
+from pymatgen.core.surface import Slab
 from fireworks import LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
 
-from triboflow.utils.database import NavigatorMP
+from triboflow.utils.database import Navigator, NavigatorMP
 from triboflow.workflows.surfene_wfs import SurfEneWF
 
 
@@ -43,7 +44,7 @@ wf = SurfEneWF.conv_surface_energy(
     structure=structure,
     mp_id=mid,
     miller=[0, 0, 1],
-    thick_min=2, 
+    thick_min=2,
     thick_max=3,
     thick_incr=1,
     parallelization=None)
@@ -52,3 +53,10 @@ wf = SurfEneWF.conv_surface_energy(
 lpad = LaunchPad.auto_load()
 lpad.add_wf(wf)
 # rapidfire(lpad)
+
+# Check if the structures are correct
+# a = Navigator()
+# b = a.find_data('PBE.slab_data', {'mpid': 'mp-110'})
+# oriented_bulk = Structure.from_dict(b['thickness']['data_0']['input'])
+# min_thick_slab = Slab.from_dict(b['thickness']['data_2']['input'])
+# max_thick_slab = Slab.from_dict(b['thickness']['data_3']['input'])

@@ -21,7 +21,7 @@ __date__ = 'February 22nd, 2021'
 
 
 from pymatgen.core.surface import SlabGenerator
-from triboflow.phys.Shaper import Shaper
+from triboflow.phys.shaper import Shaper
 
 
 # ============================================================================
@@ -34,7 +34,7 @@ def orient_bulk(structure, miller, thickness, primitive=False, lll_reduce=False,
     Orient a bulk unit cell along a direction identified by Miller indexes.
 
     """
-    
+
     # Generate the oriented bulk
     slabgen = SlabGenerator(initial_structure=structure,
                             miller_index=miller,
@@ -66,9 +66,6 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
 
     """
 
-    # VALUES FOR TESTING ON THE CLUSTER, to be faster
-    lll_reduce = True
-
     # Manage the arguments type in order to have lists
     if isinstance(miller, list) and not all([isinstance(m, list) for m in miller]):
         miller = [miller]
@@ -87,29 +84,34 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
     slabs = []
     for hkl, thk, vac in zip(miller, thickness, vacuum):
         
+        # If thk is zero, then we want to construct an oriented unit bulk by
+        # our conversion, so we define a "fake" thickness > 1 to be used to
+        # build the slabs, otherwise errors are raised by pymatgen
+        thk_gen = 1 if thk == 0 else thk
+
         slabgen = SlabGenerator(initial_structure=structure,
                                 miller_index=hkl,
                                 center_slab=center_slab,
                                 primitive=primitive,
                                 lll_reduce=lll_reduce,
                                 in_unit_planes=in_unit_planes,
-                                min_slab_size=thk,
+                                min_slab_size=thk_gen,
                                 min_vacuum_size=vac)
-        
-        s = slabgen.get_slabs(bonds=bonds, 
-                              ftol=ftol, 
-                              tol=tol, 
+
+        s = slabgen.get_slabs(bonds=bonds,
+                              ftol=ftol,
+                              tol=tol,
                               repair=repair,
-                              max_broken_bonds=max_broken_bonds, 
+                              max_broken_bonds=max_broken_bonds,
                               symmetrize=symmetrize)
-        
+
         # Case of an oriented bulk
         if thk == 0:
             s = s[ext_index].oriented_unit_cell
 
         # Case of a slab
         else:
-            s = [Shaper.reconstruct_slab(slab, thk, vac) for slab in s]
+            s = [Shaper.reconstruct(slab, thk, vac) for slab in s]
             s = s[ext_index]
 
         slabs.append(s)
