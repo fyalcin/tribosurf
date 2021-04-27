@@ -214,7 +214,7 @@ class Shaper():
         struct_params.update(corrected_params)
 
         # Initial vacuum region is calculated
-        initial_vacuum = Shaper._identify_regions(struct_resized).get('vacuum')
+        initial_vacuum = Shaper._get_proj_height(struct_resized, 'vacuum')
 
         # Lattice parameters are generated in order to be modified
         lat_attrs = ['a', 'b', 'c', 'alpha', 'beta', 'gamma']

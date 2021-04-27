@@ -21,7 +21,7 @@ __date__ = 'February 22nd, 2021'
 
 
 from pymatgen.core.surface import SlabGenerator
-from triboflow.phys.Shaper import Shaper
+from triboflow.phys.shaper import Shaper
 
 
 # ============================================================================
@@ -76,7 +76,7 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
         thickness = [thickness]
     if not isinstance(vacuum, list):
         vacuum = [vacuum]
-    
+
     # Manage the length of the lists
     n = len(thickness)
     if len(vacuum) != n:
@@ -86,7 +86,9 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
 
     slabs = []
     for hkl, thk, vac in zip(miller, thickness, vacuum):
-        
+
+        thk = 1 if thk == 0 else thk
+
         slabgen = SlabGenerator(initial_structure=structure,
                                 miller_index=hkl,
                                 center_slab=center_slab,
@@ -95,21 +97,21 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
                                 in_unit_planes=in_unit_planes,
                                 min_slab_size=thk,
                                 min_vacuum_size=vac)
-        
-        s = slabgen.get_slabs(bonds=bonds, 
-                              ftol=ftol, 
-                              tol=tol, 
+
+        s = slabgen.get_slabs(bonds=bonds,
+                              ftol=ftol,
+                              tol=tol,
                               repair=repair,
-                              max_broken_bonds=max_broken_bonds, 
+                              max_broken_bonds=max_broken_bonds,
                               symmetrize=symmetrize)
-        
+
         # Case of an oriented bulk
-        if thk == 0:
+        if thk == 1:
             s = s[ext_index].oriented_unit_cell
 
         # Case of a slab
         else:
-            s = [Shaper.reconstruct_slab(slab, thk, vac) for slab in s]
+            s = [Shaper.reconstruct(slab, thk, vac) for slab in s]
             s = s[ext_index]
 
         slabs.append(s)
