@@ -45,8 +45,8 @@ wf = SurfEneWF.conv_surface_energy(
     mp_id=mid,
     miller=[0, 0, 1],
     thick_min=2,
-    thick_max=3,
-    thick_incr=1,
+    thick_max=8,
+    thick_incr=2,
     parallelization=None)
 
 # Launch the calculation
