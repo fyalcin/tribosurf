@@ -22,7 +22,7 @@ __date__ = 'February 22nd, 2021'
 
 from pymatgen.core.surface import SlabGenerator
 from triboflow.phys.shaper import Shaper
-
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 # ============================================================================
 # Functions to deal with crystalline slabs
@@ -83,6 +83,9 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
         vacuum *= n
     if len(miller) != n:
         miller *= n
+    # SlabGenerator expects conventional unit cell so we convert the structure accordingly.
+    # As a result, we require input structure to be the primitive standard structure.
+    structure = SpacegroupAnalyzer(structure).get_conventional_standard_structure()
 
     slabs = []
     for hkl, thk, vac in zip(miller, thickness, vacuum):
@@ -94,6 +97,7 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
                                 center_slab=center_slab,
                                 primitive=primitive,
                                 lll_reduce=lll_reduce,
+                                max_normal_search=max([abs(index) for index in hkl]),
                                 in_unit_planes=in_unit_planes,
                                 min_slab_size=thk,
                                 min_vacuum_size=vac)
