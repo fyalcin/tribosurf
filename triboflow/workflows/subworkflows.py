@@ -13,8 +13,6 @@ from atomate.vasp.fireworks import StaticFW
 from atomate.vasp.powerups import add_modify_incar
 
 from triboflow.fireworks.common import run_pes_calc_fw, make_pes_fw
-from triboflow.firetasks.encut_convergence import FT_EnergyCutoffConvo
-from triboflow.firetasks.kpoint_convergence import FT_KpointsConvo
 from triboflow.firetasks.convergence import FT_Convo
 from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \
     FT_StartSlabRelax, FT_GetRelaxedSlab
@@ -655,7 +653,18 @@ def converge_swf(structure,
               'from triboflow.utils.database import GetBulkFromDB\n'
               'results = GetBulkFromDB("{}", "{}", "{}")\n'
               'pprint.pprint(results)\n'.format(flag, db_file, functional))
-    
+
+    if not comp_parameters.get('functional'):
+        comp_parameters['functional']=functional
+    else:
+        if not comp_parameters.get('functional') == functional:
+            print('The functional set in your computational parameters ({}) '
+                  'does not match the one given in the input ({})!\n'
+                  'The functional in the computational parameter has been '
+                  'overwritten to {}!\n'.format(comp_parameters.get('functional'),
+                                                functional, functional))
+            comp_parameters['functional']=functional
+
     FT_EncutConvo = FT_Convo(structure=structure,
                              conv_type=conv_type,
                              comp_params=comp_parameters,
@@ -665,7 +674,9 @@ def converge_swf(structure,
                              deformations=deformations,
                              db_file=db_file,
                              encut_incr=encut_incr,
-                             encut_start=encut_start, 
+                             encut_start=encut_start,
+                             k_dens_start=k_dens_start,
+                             k_dens_incr=k_dens_incr,
                              n_converge=n_converge,
                              file_output=file_output,
                              output_dir=output_dir,
