@@ -164,6 +164,9 @@ class FT_Convo(FiretaskBase):
         Increment for the kpoint convergence. Can be set quite small since
         there is a check in place to see if a new mesh is actually constructed
         for each density. Defaults to 0.1.
+    k_dens_default : float, optional
+        Default (quite high) kpoints density for encut convergence studies if
+        no k_dens parameter is found in the comp_parameters. The default is 12.5
     db_file : str
         Full path to the db.json file that should be used. Defaults to
         '>>db_file<<', to use env_chk.
@@ -195,9 +198,9 @@ class FT_Convo(FiretaskBase):
     required_params = ['structure', 'conv_type', 'comp_params', 'tag', 'flag',
                        'functional', 'conv_type']
     optional_params = ['deformations', 'n_converge', 'encut_start',
-                       'encut_incr', 'k_dens_start', 'k_dens_incr', 'db_file',
-                       'file_output', 'output_dir', 'remote_copy', 'server',
-                       'user', 'port']
+                       'encut_incr', 'k_dens_start', 'k_dens_incr', 'k_dens_default',
+                       'db_file', 'file_output', 'output_dir', 'remote_copy',
+                       'server', 'user', 'port']
 
     def run_task(self, fw_spec):
         
@@ -210,6 +213,7 @@ class FT_Convo(FiretaskBase):
         encut_incr = self.get('encut_incr', 25)
         k_dens_start = self.get('k_dens_start', 2.0)
         k_dens_incr = self.get('k_dens_incr', 0.1)
+        k_dens_def = self.get('k_dens_default', 12.5)
         deformations = self.get('deformations')
         file_output = self.get('file_output', False)
         output_dir = self.get('output_dir', None)
@@ -258,10 +262,11 @@ class FT_Convo(FiretaskBase):
                     encut_start = int(25 * np.ceil(emin/25))
                 comp_params['encut'] = encut_start
                 convo_list = [encut_start]
+                # Pass kspacing to ensure correct meshes for all deformations
                 if 'k_dens' in comp_params:
-                    # Pass kspacing to ensure correct meshes for all deformations
                     comp_params['kspacing'] = 1.0/comp_params['k_dens']
-                
+                else:
+                    comp_params['kspacing'] = 1.0/k_dens_def
             else:
                 convo_list = [k_dens_start]
                 # Pass kspacing to ensure correct meshes for all deformations
@@ -443,9 +448,11 @@ class FT_Convo(FiretaskBase):
             if conv_type == 'encut':
                 encut = convo_list[-1]+encut_incr
                 comp_params['encut'] = encut
+                # Pass kspacing to ensure correct meshes for all deformations
                 if 'k_dens' in comp_params:
-                    # Pass kspacing to ensure correct meshes for all deformations
                     comp_params['kspacing'] = 1.0/comp_params['k_dens']
+                else:
+                    comp_params['kspacing'] = 1.0/k_dens_def
             else:
                 k_dens = convo_list[-1] + k_dens_incr
                 # Ensure that the new density leads to a different mesh.
