@@ -26,15 +26,21 @@ from triboflow.utils.file_manipulation import copy_output_files
 @explicit_serialize
 class FT_StartConvo(FiretaskBase):
     _fw_name = 'Start Encut or Kdensity Convergence'
-    required_params = ['type', 'mp_id', 'functional']
-    optional_params = ['db_file']
+    required_params = ['conv_type', 'mp_id', 'functional']
+    optional_params = ['db_file', 'encut_start', 'encut_incr', 'k_dens_start',
+                       'k_dens_incr', 'n_converge']
     def run_task(self, fw_spec):
         from triboflow.workflows.subworkflows import converge_swf
         
-        conv_type = self.get('type')
+        conv_type = self.get('conv_type')
         mp_id = self.get('mp_id')
         functional = self.get('functional')
         db_file = self.get('db_file')
+        n_converge = self.get('n_converge', 3)
+        encut_start = self.get('encut_start', None)
+        encut_incr = self.get('encut_incr', 25)
+        k_dens_start = self.get('k_dens_start', 2.0)
+        k_dens_incr = self.get('k_dens_incr', 0.1)
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
             
@@ -60,10 +66,16 @@ class FT_StartConvo(FiretaskBase):
                 structure_dict = data.get('structure_fromMP')
             structure = Structure.from_dict(structure_dict)
             comp_params = data.get('comp_parameters', {})
-            SWF = converge_swf(structure=structure, conv_type=conv_type,
+            SWF = converge_swf(structure=structure,
+                               conv_type=conv_type,
                                flag=mp_id,
                                comp_parameters=comp_params,
                                functional=functional,
+                               encut_start=encut_start,
+                               encut_incr=encut_incr,
+                               k_dens_start=k_dens_start,
+                               k_dens_incr=k_dens_incr,
+                               n_converge=n_converge, 
                                print_help=False)
             return FWAction(detours=SWF, update_spec=fw_spec)
         else:
@@ -196,7 +208,7 @@ class FT_Convo(FiretaskBase):
         n_converge = self.get('n_converge', 3)
         encut_start = self.get('encut_start', None)
         encut_incr = self.get('encut_incr', 25)
-        k_dens_start = self.get('k_dens_start', 1.0)
+        k_dens_start = self.get('k_dens_start', 2.0)
         k_dens_incr = self.get('k_dens_incr', 0.1)
         deformations = self.get('deformations')
         file_output = self.get('file_output', False)
@@ -246,9 +258,14 @@ class FT_Convo(FiretaskBase):
                     encut_start = int(25 * np.ceil(emin/25))
                 comp_params['encut'] = encut_start
                 convo_list = [encut_start]
+                if 'k_dens' in comp_params:
+                    # Pass kspacing to ensure correct meshes for all deformations
+                    comp_params['kspacing'] = 1.0/comp_params['k_dens']
+                
             else:
-                comp_params['k_dens'] = k_dens_start
                 convo_list = [k_dens_start]
+                # Pass kspacing to ensure correct meshes for all deformations
+                comp_params['kspacing'] = 1.0/k_dens_start
                 
             vis = get_custom_vasp_static_settings(struct, comp_params,
                                                   'bulk_from_scratch')
@@ -426,6 +443,9 @@ class FT_Convo(FiretaskBase):
             if conv_type == 'encut':
                 encut = convo_list[-1]+encut_incr
                 comp_params['encut'] = encut
+                if 'k_dens' in comp_params:
+                    # Pass kspacing to ensure correct meshes for all deformations
+                    comp_params['kspacing'] = 1.0/comp_params['k_dens']
             else:
                 k_dens = convo_list[-1] + k_dens_incr
                 # Ensure that the new density leads to a different mesh.
@@ -435,7 +455,8 @@ class FT_Convo(FiretaskBase):
                     k_dens = k_dens + k_dens_incr
                     KPTS = MeshFromDenisty(struct, k_dens,
                                        compare_density=convo_list[-1])
-                comp_params['k_dens'] = k_dens
+                # Pass kspacing to ensure correct meshes for all deformations
+                comp_params['kspacing'] = 1.0/k_dens
                 
             vis = get_custom_vasp_static_settings(struct, comp_params,
                                                   'bulk_from_scratch')

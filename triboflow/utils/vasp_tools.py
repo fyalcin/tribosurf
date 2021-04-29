@@ -153,7 +153,7 @@ class MeshFromDenisty:
     def _is_slab(self):
         """Figures out if the passed structure is a slab.
         
-        Automatic detection might fail for slabs that are set up in a non
+        Automatic detection might fail for slabs that are set up in a none
         standard way!
         
         Returns
@@ -449,9 +449,12 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type):
         uis['ICHARG'] = 11
         uis['NELMDL'] = -1
         
-    if 'k_dens' in comp_parameters:
-        #kpoints = Kpoints.automatic(structure, comp_parameters['k_dens'])
-        if static_type.startswith('slab_'):
+    if 'kspacing' in comp_parameters:
+        uis['KSPACING'] = comp_parameters['kspacing']
+        uis['KGAMMA'] = True
+        kpoints = None
+    elif 'k_dens' in comp_parameters:
+        if static_type.startswith('slab_') or static_type.startswith('interface_'):
             is_slab = True
         else:
             is_slab = False
@@ -460,25 +463,16 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type):
                                is_slab=is_slab,
                                force_gamma=True)
         kpoints = KPTS.get_kpoints()
-        
     else:
-        #if no k-density is supplied in the comp_parameters, use a large value
-        #kpoints = Kpoints.automatic(structure, 50)
-        if static_type.startswith('slab_'):
+        if static_type.startswith('slab_') or static_type.startswith('interface_'):
             is_slab = True
         else:
             is_slab = False
-        KPTS = MeshFromDenisty(structure, 50, is_slab=is_slab, force_gamma=True)
+        KPTS = MeshFromDenisty(structure,
+                               12.5,
+                               is_slab=is_slab,
+                               force_gamma=True)
         kpoints = KPTS.get_kpoints()
-    
-    #If a structure has a vacuum layer, set the third kpoints devision to 1
-    #by force.
-    # if static_type.startswith('slab_'):
-    #     uks = Kpoints(comment=kpoints.comment+'  adjusted for slabs',
-    #                 num_kpts=0,
-    #                 kpts=[[kpoints.kpts[0][0], kpoints.kpts[0][1], 1]])
-    # else:
-    #     uks = kpoints
     uks = kpoints
     
     if comp_parameters.get('functional') == 'SCAN':
@@ -617,9 +611,12 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
     else:
         vdw = None
         
-    if 'k_dens' in comp_parameters:
-        #kpoints = Kpoints.automatic(structure, comp_parameters['k_dens'])
-        if relax_type.startswith('slab_'):
+    if 'kspacing' in comp_parameters:
+        uis['KSPACING'] = comp_parameters['kspacing']
+        uis['KGAMMA'] = True
+        kpoints = None
+    elif 'k_dens' in comp_parameters:
+        if relax_type.startswith('slab_') or relax_type.startswith('interface_'):
             is_slab = True
         else:
             is_slab = False
@@ -628,16 +625,13 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
                                is_slab=is_slab,
                                force_gamma=True)
         kpoints = KPTS.get_kpoints()
-        
     else:
-        #if no k-density is supplied in the comp_parameters, use a large value
-        #kpoints = Kpoints.automatic(structure, 5000)
-        if relax_type.startswith('slab_'):
+        if relax_type.startswith('slab_') or relax_type.startswith('interface_'):
             is_slab = True
         else:
             is_slab = False
         KPTS = MeshFromDenisty(structure,
-                               50,
+                               12.5,
                                is_slab=is_slab,
                                force_gamma=True)
         kpoints = KPTS.get_kpoints()

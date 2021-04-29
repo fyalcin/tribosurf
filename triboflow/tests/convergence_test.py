@@ -9,7 +9,7 @@ Created on Fri Jun 19 16:15:02 2020
 from pymatgen.core.structure import Structure
 from fireworks import LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
-from triboflow.workflows.subworkflows import converge_kpoints_swf, converge_swf
+from triboflow.workflows.subworkflows import converge_swf
 
 prim_bulk_dict = {'@module': 'pymatgen.core.structure',
  '@class': 'Structure',
@@ -33,23 +33,24 @@ prim_bulk_dict = {'@module': 'pymatgen.core.structure',
 struct = Structure.from_dict(prim_bulk_dict)
 
 
-WF = converge_swf(structure=struct,
-                  conv_type='kpoints',
-                  flag='NewkpointsConvoTest_SCAN',
-                  functional='SCAN',
-                  comp_parameters={'is_metal': True,
-                                   'use_spin': True,
-                                   'functional': 'SCAN'},
-                  k_dens_start=2,
-                  k_dens_incr=0.1)
+# WF = converge_swf(structure=struct,
+#                   conv_type='kpoints',
+#                   flag='NewkspacingConvoTest_SCAN',
+#                   functional='SCAN',
+#                   comp_parameters={'is_metal': True,
+#                                    'use_spin': True,
+#                                    'functional': 'SCAN'},
+#                   k_dens_start=2,
+#                   k_dens_incr=0.1)
 
 WF = converge_swf(structure=struct,
                   conv_type='encut',
-                  flag='NewEncutConvoTest_SCAN',
+                  flag='NewEncutKSPCAINGConvoTest_SCAN',
                   functional='SCAN',
                   comp_parameters={'is_metal': True,
-                                   'use_spin': True,
-                                   'functional': 'SCAN'})
+                                    'use_spin': True,
+                                    'functional': 'SCAN',
+                                    'k_dens': 5.5})
 
 
 lpad = LaunchPad.auto_load()
