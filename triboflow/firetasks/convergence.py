@@ -57,13 +57,18 @@ class FT_StartConvo(FiretaskBase):
         
         if conv_type == 'encut':
             stop_convergence = data.get('encut_info')
-        elif conv_type == 'kpoint':
+        elif conv_type == 'kpoints':
             stop_convergence = data.get('k_dens_info')
         
         if not stop_convergence:
-            structure_dict = data.get('primitive_structure')
+            structure_dict = data.get('structure_equiVol')
             if not structure_dict:
-                structure_dict = data.get('structure_fromMP')
+                structure_dict = data.get('primitive_structure')
+                if not structure_dict:
+                    structure_dict = data.get('structure_fromMP')
+                else:
+                    raise LookupError('No structure found that can be used '
+                                      'as input for the convergence swf.')
             structure = Structure.from_dict(structure_dict)
             comp_params = data.get('comp_parameters', {})
             SWF = converge_swf(structure=structure,
