@@ -17,7 +17,7 @@ from atomate.vasp.workflows.base.bulk_modulus import get_wf_bulk_modulus
 
 from triboflow.utils.database import Navigator, StructureNavigator, NavigatorMP
 from triboflow.utils.vasp_tools import (
-    get_custom_vasp_static_settings, get_emin, MeshFromDenisty)
+    get_custom_vasp_static_settings, get_emin, MeshFromDensity)
 from triboflow.utils.check_convergence import is_list_converged
 from triboflow.utils.file_manipulation import copy_output_files
 
@@ -66,9 +66,9 @@ class FT_StartConvo(FiretaskBase):
                 structure_dict = data.get('primitive_structure')
                 if not structure_dict:
                     structure_dict = data.get('structure_fromMP')
-                else:
-                    raise LookupError('No structure found that can be used '
-                                      'as input for the convergence swf.')
+                    if not structure_dict:
+                        raise LookupError('No structure found that can be used '
+                                          'as input for the convergence swf.')
             structure = Structure.from_dict(structure_dict)
             comp_params = data.get('comp_parameters', {})
             SWF = converge_swf(structure=structure,
@@ -251,7 +251,7 @@ class FT_Convo(FiretaskBase):
         else:
             BM_list = None
             V0_list = None
-            Encut_list = None
+            convo_list = None
         
         if BM_list is None:
             
@@ -461,11 +461,11 @@ class FT_Convo(FiretaskBase):
             else:
                 k_dens = convo_list[-1] + k_dens_incr
                 # Ensure that the new density leads to a different mesh.
-                KPTS = MeshFromDenisty(struct, k_dens,
+                KPTS = MeshFromDensity(struct, k_dens,
                                        compare_density=convo_list[-1])
                 while KPTS.are_meshes_the_same():
                     k_dens = k_dens + k_dens_incr
-                    KPTS = MeshFromDenisty(struct, k_dens,
+                    KPTS = MeshFromDensity(struct, k_dens,
                                        compare_density=convo_list[-1])
                 # Pass kspacing to ensure correct meshes for all deformations
                 comp_params['kspacing'] = 1.0/k_dens
