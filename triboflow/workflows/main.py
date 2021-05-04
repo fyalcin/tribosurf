@@ -7,8 +7,7 @@ Created on Wed Jun 17 15:47:39 2020
 from fireworks import Workflow, Firework
 
 from triboflow.fireworks.common import check_inputs_fw
-from triboflow.firetasks.encut_convergence import FT_StartEncutConvo
-from triboflow.firetasks.kpoint_convergence import FT_StartKPointConvo
+from triboflow.firetasks.convergence import FT_StartConvo
 from triboflow.firetasks.structure_manipulation import (
     FT_StartSlabRelaxSWF, FT_MakeHeteroStructure)
 from triboflow.firetasks.PES import FT_StartPESCalcSubWF
@@ -63,26 +62,34 @@ def heterogeneous_wf(inputs):
                                  FW_name='Check input parameters')
     WF.append(Initialize)
     
-    ConvergeEncut_M1 = Firework(FT_StartEncutConvo(mp_id=mp_id_1,
-                                                   functional=functional),
+    ConvergeEncut_M1 = Firework(FT_StartConvo(conv_type='encut',
+                                              mp_id=mp_id_1,
+                                              functional=functional,
+                                              ),
                                 name='Start encut convergence for {}'
                                       .format(mat_1['formula']))
     WF.append(ConvergeEncut_M1)
     
-    ConvergeEncut_M2 = Firework(FT_StartEncutConvo(mp_id=mp_id_2,
-                                                   functional=functional),
+    ConvergeEncut_M2 = Firework(FT_StartConvo(conv_type='encut',
+                                              mp_id=mp_id_2,
+                                              functional=functional,
+                                              ),
                                 name='Start encut convergence for {}'
                                       .format(mat_2['formula']))
     WF.append(ConvergeEncut_M2)
     
-    ConvergeKpoints_M1 = Firework(FT_StartKPointConvo(mp_id=mp_id_1,
-                                                   functional=functional),
+    ConvergeKpoints_M1 = Firework(FT_StartConvo(conv_type='kpoints',
+                                                mp_id=mp_id_1,
+                                                functional=functional,
+                                                ),
                                   name='Start kpoints convergence for {}'
                                         .format(mat_1['formula']))
     WF.append(ConvergeKpoints_M1)
     
-    ConvergeKpoints_M2 = Firework(FT_StartKPointConvo(mp_id=mp_id_2,
-                                                      functional=functional),
+    ConvergeKpoints_M2 = Firework(FT_StartConvo(conv_type='kpoints',
+                                                mp_id=mp_id_2,
+                                                functional=functional,
+                                                ),
                                 name='Start kpoints convergence for {}'
                                      .format(mat_2['formula']))
     WF.append(ConvergeKpoints_M2)

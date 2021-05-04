@@ -280,11 +280,10 @@ class FT_CheckCompParamDict(FiretaskBase):
         #Edit this block according to need, but be careful with the defaults!
         #####################################################################
         essential_keys = ['use_vdw']
-        additional_keys = ['volume_tolerance', 'energy_tolerance', 'use_spin',
+        additional_keys = ['volume_tolerance', 'use_spin',
                            'BM_tolerance', 'functional']
         
         volume_tolerance_default = 0.001
-        energy_tolerance_default = 0.001
         functional_default = 'SCAN'
         use_spin_default = True
         BM_tolerance_default = 0.01
@@ -343,11 +342,6 @@ class FT_CheckCompParamDict(FiretaskBase):
                     out_dict['volume_tolerance'] = float(input_dict[key])
                 else:
                     out_dict['volume_tolerance'] = volume_tolerance_default
-            if key == 'energy_tolerance':
-                if key in input_dict:
-                    out_dict['energy_tolerance'] = float(input_dict[key])
-                else:
-                    out_dict['energy_tolerance'] = energy_tolerance_default
             if key == 'functional':
                 if key in input_dict:
                     out_dict['functional'] = str(input_dict[key])
