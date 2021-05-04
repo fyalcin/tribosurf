@@ -3,9 +3,26 @@
 """
 Created on Mon Feb  2 10:31:19 2021
 
-Simple logger.
+Simple logger. This modules contains the class:
 
-@author: omarchehaimi
+    **LoggingBase**
+    Base class which implements all the logging operations. It includes methods:
+    - __check_debug_level(level)
+    - __initialize_console_logger_handler
+    - __initialize_file_logger_handler
+    - __get_config
+    - initialize_logfolder
+    - debug
+    - info
+    - warnign
+    - error
+    - critical
+    - get_config
+    - logging_path
+
+    Author: Omar Chehaimi (omarchehaimi)
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
+
 """
 
 __author__ = 'Omar Chehaimi'
@@ -13,10 +30,12 @@ __copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, Universi
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 2nd, 2021'
 
+
 import logging
 import os
 import json
 from pathlib import Path, PurePosixPath
+
 
 # Global variables 
 levels_int = {'DEBUG': 10, 'INFO': 20, 'WARNING': 30, 

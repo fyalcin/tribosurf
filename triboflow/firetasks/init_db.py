@@ -25,13 +25,13 @@ The module contains:
     Author: Gabriele Losi (glosi000)
     Credits: The code is partially based on the original work of Michael 
     Wolloch, Triboflow package, Wien University
-    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
 
 """
 
 __author__ = 'Gabriele Losi'
 __credits__ = 'This module is based on the work of Michael Wolloch, TriboFlow'
-__copyright__ = 'Prof. M.C. Righi, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'January 20th, 2021'
 

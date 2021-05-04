@@ -9,7 +9,7 @@ from pymatgen.io.vasp.sets import (MPRelaxSet, MPScanRelaxSet, MPStaticSet,
 
 from triboflow.utils.file_manipulation import remove_matching_files
 
-class MeshFromDenisty:
+class MeshFromDensity:
     """
     Class to find classic or generalized Monkhorst-Pack meshes which may
     or my not be Gamma-Centred from a given k-point density.
@@ -328,13 +328,13 @@ def get_generalized_kmesh(structure, k_dist, RemoveSymm=False, Vasp6=True):
     with open('PRECALC', 'w') as out:
         for line in precalc:
             out.write(line+'\n')
-            
+
     magmom_list = structure.site_properties.get('magmom')
     if magmom_list:
         with open('INCAR', 'w') as out:
             out.write('ISPIN = 2')
             out.write('MAGMOM = '+' '.join(str(m) for m in magmom_list))
-    
+
     structure.to(fmt='poscar', filename='POSCAR')
     get_kpoints_file = subprocess.Popen('getKPoints')
     get_kpoints_file.communicate()
@@ -399,11 +399,11 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type):
     #Adjust mixing for slabs that have a very large c axis:
     if structure.lattice.matrix[-1,1] > 50.0:
         uis['AMIN'] = 0.05
-        
+
     if comp_parameters.get('functional') == 'SCAN':
         uis['ISMEAR'] = 0
         uis['SIGMA'] = 0.1
-    
+
     if static_type.startswith('slab_'):
         uis['NELMDL'] = -15
         uis['NELM'] = 200
@@ -411,16 +411,16 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type):
         uis['NELMDL'] = -10
     else:
         uis['NELMDL'] = -6
-        
+
     if 'encut' in comp_parameters:
         uis['ENCUT'] = comp_parameters['encut']
-        
+
     if 'use_spin' in comp_parameters:
         if comp_parameters['use_spin']:
             uis['ISPIN'] = 2
         else:
             uis['ISPIN'] = 1
-        
+
     #set van der Waals functional. Note that as of now, 'functional' must be
     #specified for vdw to work!
     if set(('use_vdw', 'functional')) <= comp_parameters.keys():
@@ -433,7 +433,7 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type):
             vdw = None
     else:
         vdw = None
-    
+
     if comp_parameters.get('functional') == 'SCAN':
         uis['METAGGA'] = 'SCAN'
         uis['ALGO'] = 'All'
@@ -458,7 +458,7 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type):
             is_slab = True
         else:
             is_slab = False
-        KPTS = MeshFromDenisty(structure,
+        KPTS = MeshFromDensity(structure,
                                comp_parameters['k_dens'],
                                is_slab=is_slab,
                                force_gamma=True)
@@ -468,10 +468,7 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type):
             is_slab = True
         else:
             is_slab = False
-        KPTS = MeshFromDenisty(structure,
-                               12.5,
-                               is_slab=is_slab,
-                               force_gamma=True)
+        KPTS = MeshFromDensity(structure, 12.5, is_slab=is_slab, force_gamma=True)
         kpoints = KPTS.get_kpoints()
     uks = kpoints
     
@@ -485,7 +482,7 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type):
                           user_potcar_functional = 'PBE_54')
         
     return vis
-      
+
 def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
     """Make custom vasp settings for relaxations.
     
@@ -538,12 +535,11 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
     
     if structure.num_sites < 20:
         uis['LREAL'] = '.FALSE.'
-        
+
     #Adjust mixing for slabs that have a very large c axis:
     if structure.lattice.matrix[-1,1] > 50.0:
         uis['AMIN'] = 0.05
-        
-    
+
     if relax_type.startswith('slab_') or relax_type.startswith('interface_'):
         uis['NELMDL'] = -15
         uis['EDIFFG'] = -0.015
@@ -555,7 +551,7 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
         # uis['BMIX'] = 0.0001
         # uis['AMIX_MAG'] = 0.8
         # uis['BMIX_MAG'] = 0.0001
-        
+
     else:
         uis['NELMDL'] = -6
         uis['EDIFFG'] = -0.01
@@ -576,16 +572,16 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
         uis['ISIF'] = 7
     elif relax_type.endswith('shape_relax'):
         uis['ISIF'] = 5
-    
+
     if 'encut' in comp_parameters:
         uis['ENCUT'] = comp_parameters['encut']
-        
+
     if 'use_spin' in comp_parameters:
         if comp_parameters['use_spin']:
             uis['ISPIN'] = 2
         else:
             uis['ISPIN'] = 1
-    
+
     if 'is_metal' in comp_parameters:
         if comp_parameters['is_metal']:
             uis['SIGMA'] = 0.2
@@ -596,8 +592,7 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
     else:
         uis['SIGMA'] = 0.1
         uis['ISMEAR'] = 0
-        
-        
+
     #set van der Waals functional. Note that as of now, 'functional' must be
     #specified for vdw to work!
     if set(('use_vdw', 'functional')) <= comp_parameters.keys():
@@ -620,7 +615,7 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
             is_slab = True
         else:
             is_slab = False
-        KPTS = MeshFromDenisty(structure,
+        KPTS = MeshFromDensity(structure,
                                comp_parameters['k_dens'],
                                is_slab=is_slab,
                                force_gamma=True)
@@ -630,7 +625,7 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
             is_slab = True
         else:
             is_slab = False
-        KPTS = MeshFromDenisty(structure,
+        KPTS = MeshFromDensity(structure,
                                12.5,
                                is_slab=is_slab,
                                force_gamma=True)
@@ -658,5 +653,5 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
         vis = MPRelaxSet(structure, user_incar_settings = uis, vdw = vdw,
                         user_kpoints_settings = uks,
                         user_potcar_functional = 'PBE_54')
-        
+
     return vis

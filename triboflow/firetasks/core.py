@@ -8,29 +8,23 @@ for any advanced Workflow.
 
 The modules contains the following Firetasks:
 
-** DFT Simulations **:
-
     - FT_RelaxStructure
     General Firetask to relax a given structure, either bulk, slab or interface.
-
-    Author: Gabriele Losi (glosi000)
-    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
-
-** Database Interactions **
 
     - FT_MoveTagResults
     Move a subdictionary containing some results of interest from a location in
     the database to another one.
 
     Author: Gabriele Losi (glosi000)
-    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
 
 """
 
 __author__ = 'Gabriele Losi'
-__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 22nd, 2021'
+
 
 import os
 
@@ -51,15 +45,16 @@ from triboflow.utils.utils import (
     read_runtask_params,
     read_default_params,
     convert_dict_to_mongodb,
+    get_multiple_info_from_dict,
     write_multiple_dict,
     select_struct_func,
     retrieve_from_db,
     retrieve_from_tag
-
 )
 from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
 from triboflow.utils.file_manipulation import copy_output_files
 from triboflow.utils.errors import RelaxStructureError, MoveTagResultsError
+
 
 currentdir = os.path.dirname(__file__)
 
@@ -192,19 +187,22 @@ class FT_RelaxStructure(FiretaskBase):
         RelaxStructureError.check_collection(p['collection'])
 
         # Retrieve the structure from the Database
-        structure = retrieve_from_db(db_file=p['db_file'], 
-                                     database=p['database'], 
-                                     collection=p['collection'], 
-                                     mp_id=p['mp_id'],
-                                     miller=p['miller'],
-                                     entry=p['entry'],
-                                     pymatgen_obj=pymatgen_obj)
+        field, structure = retrieve_from_db(db_file=p['db_file'], 
+                                            database=p['database'], 
+                                            collection=p['collection'], 
+                                            mp_id=p['mp_id'],
+                                            miller=p['miller'],
+                                            entry=p['entry'],
+                                            pymatgen_obj=pymatgen_obj)
         RelaxStructureError.is_data(structure, p['mp_id'], p['functional'])
 
         # Check if the calculation is already done, searching for given keys
         is_done = False
         if p['check_key'] is not None:
-            is_done = True if p['check_key'] in structure.keys() else False
+            try:
+                d = get_multiple_info_from_dict(field, p['check_key'])
+                is_done = True
+            except: pass
 
         func = select_struct_func(p['struct_kind'])
         structure = func.from_dict(structure)
@@ -379,14 +377,14 @@ class FT_MoveTagResults(FiretaskBase):
                                 self.optional_params,
                                 default_file=dfl,
                                 default_key="MoveTagResults")
-
+        
         # Check if a structure is already present in entry and check_key
         is_done = self.check_struct(p)
-        
+
         if not is_done or (is_done and p['override']):
-            
+
             # Extract the information and store in destination db
-            vasp_calc, info = self.get_results_from_tag(p)
+            vasp_calc, info = self.get_results_from_tag(p)            
             self.store_results(info, p)
 
             # Manage stdout, save a local poscar with results
@@ -417,22 +415,22 @@ class FT_MoveTagResults(FiretaskBase):
         
         # Check if collection does exist
         MoveTagResultsError.check_collection(p['collection_to'])
-        
+
         if p['check_entry'] is not None:
             # Retrieve the structure from the Database
-            check_dict = retrieve_from_db(db_file=p['db_file'], 
-                                          database=p['database_to'], 
-                                          collection=p['collection_to'], 
-                                          mp_id=p['mp_id'],
-                                          miller=p['miller'],
-                                          entry=p['check_entry'],
-                                          pymatgen_obj=False)
+            _, check_dict = retrieve_from_db(db_file=p['db_file'], 
+                                             database=p['database_to'], 
+                                             collection=p['collection_to'], 
+                                             mp_id=p['mp_id'],
+                                             miller=p['miller'],
+                                             entry=p['check_entry'],
+                                             pymatgen_obj=False)
 
             # Check if the calculation is already done
             is_done = True
             if check_dict is None or check_dict == {}:
                 is_done = False
-                
+
         else:
             is_done = False
 
@@ -452,6 +450,7 @@ class FT_MoveTagResults(FiretaskBase):
                                             tag_key=p['tag_key'],
                                             entry=p['entry_from'],
                                             database=p['database_from'])
+        
         return vasp_calc, info
     
     def store_results(self, info, p):

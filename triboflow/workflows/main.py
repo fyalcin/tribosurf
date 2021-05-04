@@ -51,7 +51,7 @@ def heterogeneous_wf(inputs):
         chem_formula=mat_2.get('formula'),
         mp_id=mat_2.get('mp_id'))
     
-    functional = comp_params.get('functional', 'SCAN')
+    functional = comp_params.get('functional', 'PBE')
     
     WF = []
 
