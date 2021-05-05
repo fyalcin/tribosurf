@@ -16,6 +16,7 @@ from triboflow.firetasks.adhesion import (
     FT_RelaxMatchedSlabs, FT_RetrievMatchedSlabs, FT_StartAdhesionSWF)
 from triboflow.utils.database import NavigatorMP
 from triboflow.utils.structure_manipulation import interface_name
+from triboflow.firetasks.run_slabs_wfs import FT_SlabOptThick
 
 def heterogeneous_wf(inputs):
     """Return main workflow for heterogeneous interfaces within Triboflow.
@@ -99,21 +100,27 @@ def heterogeneous_wf(inputs):
                                                 miller_1=mat_1.get('miller'),
                                                 miller_2=mat_2.get('miller'),
                                                 functional=functional),
-                            name='Consolidate computational paramters')
+                            name='Consolidate computational parameters')
     WF.append(Final_Params)
+
+    # optional_params = ['db_file', 'low_level', 'high_level', 'conv_kind',
+    #                    'relax_type', 'thick_min', 'thick_max', 'thick_incr',
+    #                    'vacuum', 'in_unit_planes', 'ext_index', 'conv_thr',
+    #                    'parallelization', 'bulk_entry', 'slab_entry', 
+    #                    'cluster_params', 'override']
     
-    MakeSlabs_M1 = Firework(FT_StartSlabRelaxSWF(mp_id=mp_id_1,
-                                                 miller=mat_1.get('miller'),
-                                                 functional=functional),
-                            name='Make and relax slabs for {}'
-                                 .format(mat_1['formula']))
+    MakeSlabs_M1 = Firework(FT_SlabOptThick(mp_id=mp_id_1,
+                                            miller=mat_1.get('miller'),
+                                            functional=functional),
+                                            name='Slab thickness optimization '
+                                                 'for {}'.format(mat_1['formula']))
     WF.append(MakeSlabs_M1)
-    
-    MakeSlabs_M2 = Firework(FT_StartSlabRelaxSWF(mp_id=mp_id_2,
-                                                 miller=mat_2.get('miller'),
-                                                 functional=functional),
-                            name='Make and relax slabs for {}'
-                                  .format(mat_2['formula']))
+
+    MakeSlabs_M2 = Firework(FT_SlabOptThick(mp_id=mp_id_2,
+                                            miller=mat_2.get('miller'),
+                                            functional=functional),
+                                            name='Slab thickness optimization '
+                                                 'for {}'.format(mat_2['formula']))
     WF.append(MakeSlabs_M2)
     
     MakeInterface = Firework(FT_MakeHeteroStructure(

@@ -127,10 +127,6 @@ class FT_SlabOptThick(FiretaskBase):
         database and to be used to build the slabs. Bulks are identified by 
         mp_id and functional but there might be different structures of the
         same material. The default is "structure_fromMP".
-
-    slab_entry : str or None, optional
-        Where to search for the information about the optimal thickness in the
-        slab dictionary in the high level database. The default is None.
     
     cluster_params : dict, optional
         Optional params to print data and/or interact with clusters. The default is {}.
@@ -147,8 +143,7 @@ class FT_SlabOptThick(FiretaskBase):
     optional_params = ['db_file', 'low_level', 'high_level', 'conv_kind',
                        'relax_type', 'thick_min', 'thick_max', 'thick_incr',
                        'vacuum', 'in_unit_planes', 'ext_index', 'conv_thr',
-                       'parallelization', 'bulk_entry', 'slab_entry', 
-                       'cluster_params', 'override']
+                       'parallelization', 'bulk_entry', 'cluster_params', 'override']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -654,19 +649,21 @@ class FT_EndThickConvo(FiretaskBase):
         nav_high = Navigator(db_file=p['db_file'], high_level=p['high_level'])
         high_dict = nav_high.find_data(collection=p['functional'] + '.slab_data', 
                                        fltr={'mpid': p['mp_id'],
-                                               'miller': p['miller']})
+                                             'miller': p['miller']})
         
         # Extract the data to be saved in the database
         thickness_dict = get_one_info_from_dict(low_dict, ['thickness'])
-        input_dict = thickness_dict['data_' + str(index)]['input']
+        output_slab = thickness_dict['data_' + str(index)]['output']['structure']
 
         # Prepare the dictionary for the update
         if high_dict is None:
-            store = {'formula': Slab.from_dict(input_dict).composition.reduced_formula,
+            store = {'formula': Slab.from_dict(output_slab).composition.reduced_formula,
                      'mpid': p['mp_id'], 'miller': p['miller'],
-                     'thickness': thickness_dict, 'opt_thickness': int(index)}
+                     'thickness': thickness_dict, 'opt_thickness': int(index),
+                     'relaxed_slab': output_slab}
         else:
-            store = {'thickness': thickness_dict, 'opt_thickness': int(index)}     
+            store = {'thickness': thickness_dict, 'opt_thickness': int(index),
+                     'relaxed_slab': output_slab}
         store = jsanitize(store)
 
         # Update data

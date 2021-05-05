@@ -89,7 +89,7 @@ class FTCheckInput(FiretaskBase):
     def run_task(self, fw_spec):
         """ Run the FireTask.
         """        
-
+        
         # Read the required and optional input parameters of the Firetask
         input_dict = self['input_dict']
         output_dict_name = self.get('output_dict_name', 'out_params')
