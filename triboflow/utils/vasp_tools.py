@@ -3,7 +3,6 @@ import subprocess
 import math
 
 from pymatgen.io.vasp.inputs import Kpoints
-from kpLib.interface import get_kpoints as get_generalized_kpoints
 from pymatgen.io.vasp.sets import (MPRelaxSet, MPScanRelaxSet, MPStaticSet,
                                    MPScanStaticSet)
 
@@ -11,13 +10,12 @@ from triboflow.utils.file_manipulation import remove_matching_files
 
 class MeshFromDensity:
     """
-    Class to find classic or generalized Monkhorst-Pack meshes which may
+    Class to find classic Monkhorst-Pack meshes which may
     or my not be Gamma-Centred from a given k-point density.
     Provides also capabilites to check if meshes generated from similar
     densities are equivalent. Meshes for slabs are adapted according to
     the lower symmetry conditions.
     
-    GENERALIZED MONHORST-PACK MESHES NOT YET FULLY TESTED. SHOULD NOT BE USED!
     """
     
     def __init__(self,
@@ -98,57 +96,6 @@ class MeshFromDensity:
         if self._is_slab():
             k3 = 1
         return (k1, k2, k3)
-    
-    def __make_generalized_mesh(self, density):
-        """Return a generalized Monkhorst-Pack mesh using kpLib.
-        
-        More information can be found here:
-        http://muellergroup.jhu.edu/K-Points.html
-        https://pypi.org/project/kpLib/
-
-        Parameters
-        ----------
-        density : float
-            The minimum allowed distance between lattice points on the
-            real-space superlattice (rmin in the paper). This determines the
-            density of the k-point grid.
-
-        Returns
-        -------
-        kpoints : pymatgen.io.vasp.Kpoints
-            Generalized Monkhorst-Pack mesh.
-        k_dict : dict
-            dictionary with information about the Kpoints object.
-
-        """
-        
-        k_dict = get_generalized_kpoints(structure=self.struct,
-                                               include_gamma=None,
-                                               symprec=1e-5,
-                                               use_scale_factor=False,
-                                               minDistance=density,
-                                               minTotalKpoints=4)
-        
-        d_coords = []
-        d_weights = []
-        
-        for i, w in enumerate(k_dict['weights']):
-            if w > 0:
-                d_coords.append(k_dict['coords'][i])
-                d_weights.append(w)
-        
-        kpoints = Kpoints(comment='GMP-M; '
-                          'Rmin = {}; '
-                          'TotPoints = {}; '
-                          'DistinctPoints = {}'.format(
-                              k_dict['min_periodic_distance'],
-                              k_dict['num_total_kpts'],
-                              k_dict['num_distinct_kpts']),
-                          num_kpts=k_dict['num_distinct_kpts'],
-                          style=Kpoints.supported_modes.Reciprocal,
-                          kpts=d_coords,#[:k_dict['num_distinct_kpts']],
-                          kpts_weights=d_weights)
-        return kpoints, k_dict
        
     def _is_slab(self):
         """Figures out if the passed structure is a slab.
@@ -199,45 +146,6 @@ class MeshFromDensity:
             kpoints = Kpoints.monkhorst_automatic(kpts=mesh)
         
         return kpoints
-    
-    def get_generalised_kpoints(self):
-        """Returns a generalized Monkhorst-Pack mesh as a Kpoints object.
-        
-
-        Returns
-        -------
-        kpoints : pymatgen.io.vasp.Kpoints
-            Generalized Monkhorst-Pack mesh.
-
-        """
-        
-        kpoints, kpoints_dict = self.__make_generalized_mesh(self.dens)
-        
-        return kpoints
-    
-    def are_generalised_meshes_the_same(self):
-        """Compares list of kpoints for generalized k-meshes.
-        
-        To test if a different target density actually provides a different
-        mesh than a reference density.
-        
-
-        Returns
-        -------
-        bool
-            True if meshes are the same, False otherwise.
-
-        """
-        kpoints_1, info_1 = self.__make_generalized_mesh(self.dens)
-        kpoints_2, info_2 = self.__make_generalized_mesh(self.compare_dens)
-        
-        coords_1 = info_1['coords']
-        coords_2 = info_2['coords']
-        
-        if coords_1 == coords_2:
-            return True
-        else:
-            return False
     
     def are_meshes_the_same(self):
         """Compares conventional Monkhorst-Pack meshes and Gamma centered meshes.
@@ -343,7 +251,8 @@ def get_generalized_kmesh(structure, k_dist, RemoveSymm=False, Vasp6=True):
 
     return KPTS
 
-def get_custom_vasp_static_settings(structure, comp_parameters, static_type):
+def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
+                                    k_dens_default=12.5):
     """Make custom vasp settings for static calculations.
     
     Parameters
@@ -357,6 +266,9 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type):
     statc_type : str
         Specifies what system is treated in what way. Check 'allowed_types'
         for a list of choices.
+    k_dens_default : float, optional
+        Specifies the default kpoint density if no k_dens or kspacing key
+        is found in the comp_parameters dictionary. The default is 12.5
 
     Raises
     ------
@@ -468,7 +380,10 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type):
             is_slab = True
         else:
             is_slab = False
-        KPTS = MeshFromDensity(structure, 12.5, is_slab=is_slab, force_gamma=True)
+        KPTS = MeshFromDensity(structure,
+                               k_dens_default,
+                               is_slab=is_slab,
+                               force_gamma=True)
         kpoints = KPTS.get_kpoints()
     uks = kpoints
     
@@ -483,7 +398,8 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type):
         
     return vis
 
-def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
+def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
+                                   k_dens_default=12.5):
     """Make custom vasp settings for relaxations.
     
     Parameters
@@ -497,6 +413,9 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
     relax_type : str
         Specifies what is to be relaxed in what way. Check 'allowed_types'
         for a list of choices.
+    k_dens_default : float, optional
+        Specifies the default kpoint density if no k_dens or kspacing key
+        is found in the comp_parameters dictionary. The default is 12.5
 
     Raises
     ------
@@ -626,7 +545,7 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type):
         else:
             is_slab = False
         KPTS = MeshFromDensity(structure,
-                               12.5,
+                               k_dens_default,
                                is_slab=is_slab,
                                force_gamma=True)
         kpoints = KPTS.get_kpoints()

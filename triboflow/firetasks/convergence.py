@@ -201,7 +201,7 @@ class FT_Convo(FiretaskBase):
     
     _fw_name = 'Convergence for encut or kpoints'
     required_params = ['structure', 'conv_type', 'comp_params', 'tag', 'flag',
-                       'functional', 'conv_type']
+                       'functional']
     optional_params = ['deformations', 'n_converge', 'encut_start',
                        'encut_incr', 'k_dens_start', 'k_dens_incr', 'k_dens_default',
                        'db_file', 'file_output', 'output_dir', 'remote_copy',
