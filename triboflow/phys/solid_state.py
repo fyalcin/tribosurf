@@ -49,7 +49,7 @@ def orient_bulk(structure, miller, thickness, primitive=False, lll_reduce=False,
     return bulk_miller
 
 def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
-                   center_slab=True, primitive=False, lll_reduce=False,
+                   center_slab=True, primitive=True, lll_reduce=True,
                    in_unit_planes=True, ext_index=0, bonds=None, ftol=0.1, 
                    tol=0.1, repair=False, max_broken_bonds=0, symmetrize=False):
     """

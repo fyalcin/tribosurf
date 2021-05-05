@@ -505,7 +505,9 @@ class FT_CheckMaterialInputDict(FiretaskBase):
                               'and use only the following parameters:\n')
                     out.write(str(known_keys))
                     out.write('\n')
-                raise SystemExit
+                raise SystemExit('The input parameter <'+str(key)+
+                              '> is not known. Please check your input file'
+                              'and use only the following parameters:\n')
             elif key == 'formula':
                 out_dict['formula'] = str(input_dict[key])
                 check_essential[key] = True

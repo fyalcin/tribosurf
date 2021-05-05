@@ -222,7 +222,7 @@ class FT_SlabOptThick(FiretaskBase):
             is_done = field.get('opt_thickness', None)
 
             # Define the computational parameters of the slab
-            comp_params = field.get('comp_params', {})
+            comp_params = field.get('comp_parameters', {})
 
         else:
             is_done = False

@@ -6,7 +6,7 @@
       "conv_kind":"surfene",
       "relax_type":"slab_pos_relax",
       "thick_min":4,
-      "thick_max":12,
+      "thick_max":8,
       "thick_incr":1,
       "vacuum":25,
       "in_unit_planes":true,
@@ -26,7 +26,7 @@
       "conv_kind":"surfene",
       "relax_type":"slab_pos_relax",
       "comp_params":{
-         
+          
       },
       "thick_min":4,
       "thick_max":12,
@@ -136,7 +136,12 @@
       "BM_tolerance":0.01,
       "functional":"PBE",
       "use_spin":true,
-      "volume_tolerance":0.001
+      "volume_tolerance":0.001,
+      "encut":520,
+      "k_dens":12.5,
+      "use_vdw":false,
+      "functional":"PBE",
+      "is_metal":null
    },
    "interface_params":{
       "interface_distance":2.0,

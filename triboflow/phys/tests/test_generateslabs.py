@@ -57,14 +57,14 @@ c = generate_slabs(structure=Cu_local,
 for el, thk in zip(a, thickness):
     print(el.lattice)
     print('')
-    el.to('poscar', 'POSCAR_'+str(thk)+'_Mg_'+miller_str)
+    el.to('poscar', 'POSCAR_'+str(thk)+'_Mg_'+miller_str+'.vasp')
     
 for el, thk in zip(b, thickness):
     print(el.lattice)
     print('')
-    el.to('poscar', 'POSCAR_'+str(thk)+'_Cu_'+miller_str)
+    el.to('poscar', 'POSCAR_'+str(thk)+'_Cu_'+miller_str+'.vasp')
 
 for el, thk in zip(c, thickness):
     print(el.lattice)
     print('')
-    el.to('poscar', 'POSCAR_'+str(thk)+'_Cu_local_'+miller_str)
+    el.to('poscar', 'POSCAR_'+str(thk)+'_Cu_local_'+miller_str+'.vasp')
