@@ -140,7 +140,6 @@
       "encut":520,
       "k_dens":12.5,
       "use_vdw":false,
-      "functional":"PBE",
       "is_metal":null
    },
    "interface_params":{
