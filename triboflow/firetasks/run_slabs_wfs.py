@@ -655,6 +655,18 @@ class FT_EndThickConvo(FiretaskBase):
         thickness_dict = get_one_info_from_dict(low_dict, ['thickness'])
         output_slab = thickness_dict['data_' + str(index)]['output']['structure']
 
+        # Create an array containing the thickness vs surface energy info
+        thick_array = []
+        surfene_array = []
+        for k in thickness_dict.keys():
+            thick = int(k.split('_')[-1])
+            if thick != 0:
+                thick_array.append(thick)
+                surfene_array.append(thickness_dict[k]['output']['surface_energy'])
+
+        array = np.column_stack((thick_array, surfene_array))
+        thickness_dict['thick_surfene_array'] = array[np.argsort(array[:, 0])]
+
         # Prepare the dictionary for the update
         if high_dict is None:
             store = {'formula': Slab.from_dict(output_slab).composition.reduced_formula,
