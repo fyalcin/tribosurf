@@ -35,7 +35,7 @@ import os
 from monty.json import jsanitize
 
 import numpy as np
-from pymatgen.core.surface import Slab
+from pymatgen.core.structure import Structure
 from fireworks import explicit_serialize, FiretaskBase, FWAction
 
 from triboflow.utils.database import Navigator
@@ -45,6 +45,7 @@ from triboflow.utils.utils import (
     get_one_info_from_dict,
     retrieve_from_db
 )
+from triboflow.utils.structure_manipulation import slab_from_structure
 from triboflow.utils.errors import SlabOptThickError
 
 
@@ -653,7 +654,12 @@ class FT_EndThickConvo(FiretaskBase):
         
         # Extract the data to be saved in the database
         thickness_dict = get_one_info_from_dict(low_dict, ['thickness'])
-        output_slab = thickness_dict['data_' + str(index)]['output']['structure']
+        out_struct_dict = thickness_dict['data_' + str(index)]['output']['structure']
+        
+        # Convert out_struct_dict to slab (Issue in Atomate OptimizeFW, every
+        # structure that is simulated in that way is saved in tasks collection
+        # as a Structure)
+        output_slab = slab_from_structure(p['miller'], Structure.from_dict(out_struct_dict))
 
         # Create an array containing the thickness vs surface energy info
         thick_array = []
@@ -669,13 +675,13 @@ class FT_EndThickConvo(FiretaskBase):
 
         # Prepare the dictionary for the update
         if high_dict is None:
-            store = {'formula': Slab.from_dict(output_slab).composition.reduced_formula,
+            store = {'formula': output_slab.composition.reduced_formula,
                      'mpid': p['mp_id'], 'miller': p['miller'],
                      'thickness': thickness_dict, 'opt_thickness': int(index),
-                     'relaxed_slab': output_slab}
+                     'relaxed_slab': output_slab.as_dict()}
         else:
             store = {'thickness': thickness_dict, 'opt_thickness': int(index),
-                     'relaxed_slab': output_slab}
+                     'relaxed_slab': output_slab.as_dict()}
         store = jsanitize(store)
 
         # Update data

@@ -169,7 +169,7 @@ class FT_RelaxStructure(FiretaskBase):
             All the input parameters of the Firetasks, placed in a dictionary.
 
         pymatgen_obj : bool, optional
-            Decide whether to directly convert the dictionary extracted to the
+            Decide whether to directly convert the dictionary extracted from the
             database to a structure or not. The default is False.
 
         Returns
