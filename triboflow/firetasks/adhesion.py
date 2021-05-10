@@ -167,8 +167,8 @@ class FT_StartAdhesionSWF(FiretaskBase):
             SWF = adhesion_energy_swf(top_slab,
                                   bottom_slab,
                                   interface,
-                                  interface_name=None,
-                                  functional='PBE',
+                                  interface_name=name,
+                                  functional=functional,
                                   comp_parameters=comp_params)
             
             return FWAction(detours=SWF)
