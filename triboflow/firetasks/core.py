@@ -245,7 +245,7 @@ class FT_RelaxStructure(FiretaskBase):
             fw = ScanOptimizeFW(structure=structure, name=tag, vasp_input_set=vis)
         else:
             fw = OptimizeFW(structure, name=tag, vasp_input_set=vis,
-                            half_kpts_first_relax=True)
+                            half_kpts_first_relax=False)
 
         # Define the workflow name
         wf_name = p['mp_id'] + '_' + p['relax_type']
