@@ -206,8 +206,12 @@ class FT_MakeBulkInDB(FiretaskBase):
         struct, mp_id = nav_mp.get_low_energy_structure(
             chem_formula=data['formula'], 
             mp_id=data['mp_id'])
+        # Make a primitive standard structure to ensure high symmetry.
         sga = SpacegroupAnalyzer(struct)
         prim_struct = sga.get_primitive_standard_structure()
+        # site properties are not retained, so we have to add them again.
+        for key, value in struct.site_properties.items():
+            prim_struct.add_site_property(key,value)
 
         bandgap = nav_mp.get_property_from_mp(
             mp_id=mp_id, 
