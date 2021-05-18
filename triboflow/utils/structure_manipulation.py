@@ -1,8 +1,68 @@
 import numpy as np
+import warnings
 from pymatgen.core.surface import Slab
 from pymatgen.core.sites import PeriodicSite
 
 from triboflow.utils.database import NavigatorMP
+
+
+def transfer_average_magmoms(magnetic_struct, struct_without_magmoms):
+    """Set magmom for a structure based on the average value of each species of a reference structure.
+    
+    For unit cells of the same structure, it is not always trivial to transfer
+    the site properties. This function attempts to transfer at least the magmom
+    site property between two structures with the same species, but not
+    necessarily the same number of sites. For each species the average value
+    of the magentic moments in the magnetic input structure is computed and
+    set as a site property for all atoms of the same species in the output
+    structure. NOTE THAT THIS WILL GIVE GENERALLY WRONG RESULTS FOR ALL BUT
+    SIMPLE FERROMAGENTIC STRUCTURES!
+
+    Parameters
+    ----------
+    magnetic_struct : pymatgen.core.structure.Structure
+        Input structure with "magmom" site property.
+    struct_without_magmoms : pymatgen.core.structure.Structure
+        Input structure with no "magmom" site property but the same species.
+
+    Returns
+    -------
+    new_struct : pymatgen.core.structure.Structure
+        copy of struct_without_magmoms with added "magmom" site property.
+
+    """
+    
+    mag_struct = magnetic_struct.copy()
+    new_struct = struct_without_magmoms.copy()
+    
+    if mag_struct.site_properties.get('magmom') == {}:
+        raise ValueError('Magnetic input structure {} has no "magmom" '
+                         'site property')
+    
+    if not sorted(mag_struct.types_of_species) == sorted(new_struct.types_of_species):
+        warnings.warn('\n##################################################\n'
+                      'You are trying to transfer magnetig moments between\n'
+                      'two structures which contain different species and\n'
+                      '                 THIS CANNOT WORK!\n'
+                      'The code will continue to run, without transfering\n'
+                      'any magnetic moments. Convergence might be slow...'
+                      '\n##################################################\n')
+        return new_struct
+    
+    magmom_dict={}
+    for s in mag_struct.types_of_species:
+        magmom_dict[s]=[]
+        for i, el in enumerate(mag_struct.species):
+            if s==el:
+                magmom_dict[s].append(mag_struct.site_properties.get('magmom')[i])
+        magmom_dict[s] = np.mean(magmom_dict[s])
+        
+    new_magmoms = []
+    for s in new_struct.species:
+        new_magmoms.append(magmom_dict[s])
+    new_struct.add_site_property('magmom', new_magmoms)
+    
+    return new_struct
 
 def slab_from_structure(miller, structure):
     """Returns a pymatgen.core.surface.Slab from a pymatgen structure.

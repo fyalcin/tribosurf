@@ -4,6 +4,7 @@ Created on Wed Jun 17 15:59:59 2020
 @author: mwo
 """
 import monty
+import numpy as np
 from pprint import pprint, pformat
 
 from pymatgen.core.structure import Structure
@@ -23,7 +24,7 @@ from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
 from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
 from triboflow.utils.structure_manipulation import (
     interface_name, slab_from_structure, recenter_aligned_slabs, 
-    stack_aligned_slabs)
+    stack_aligned_slabs, transfer_average_magmoms)
 from triboflow.utils.file_manipulation import copy_output_files
 
 
@@ -432,6 +433,7 @@ class FT_MakeSlabInDB(FiretaskBase):
         #     miller=miller)
         
         bulk_conv = SpacegroupAnalyzer(bulk_prim).get_conventional_standard_structure()
+        bulk_conv = transfer_average_magmoms(bulk_prim, bulk_conv)
         
         SG = SlabGenerator(initial_structure=bulk_conv,
                            miller_index=miller,
@@ -456,7 +458,7 @@ class FT_MakeSlabInDB(FiretaskBase):
         nav_high.update_data(
             collection=functional+'.slab_data',
             fltr={'mpid': flag, 'miller': miller},
-            new_values={'$set': {'unrelaxed_slab': slab_dict}},
+            new_values={'$set': {slab_name: slab_dict}},
             upsert=True)
 
         return
