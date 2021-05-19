@@ -21,8 +21,10 @@ __date__ = 'February 22nd, 2021'
 
 
 from pymatgen.core.surface import SlabGenerator
-from triboflow.phys.shaper import Shaper
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
+
+from triboflow.phys.shaper import Shaper
+from triboflow.utils.structure_manipulation import transfer_average_magmoms
 
 # ============================================================================
 # Functions to deal with crystalline slabs
@@ -82,7 +84,8 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
         miller *= n
     # SlabGenerator expects conventional unit cell so we convert the structure accordingly.
     # As a result, we require input structure to be the primitive standard structure.
-    structure = SpacegroupAnalyzer(structure).get_conventional_standard_structure()
+    conv_structure = SpacegroupAnalyzer(structure).get_conventional_standard_structure()
+    structure = transfer_average_magmoms(structure, conv_structure)
 
     slabs = []
     for hkl, thk, vac in zip(miller, thickness, vacuum):

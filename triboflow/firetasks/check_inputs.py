@@ -9,7 +9,8 @@ from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 
 from triboflow.utils.database import Navigator, StructureNavigator, NavigatorMP
-from triboflow.utils.structure_manipulation import interface_name
+from triboflow.utils.structure_manipulation import (
+    interface_name, transfer_average_magmoms)
 
 
 @explicit_serialize
@@ -209,9 +210,8 @@ class FT_MakeBulkInDB(FiretaskBase):
         # Make a primitive standard structure to ensure high symmetry.
         sga = SpacegroupAnalyzer(struct)
         prim_struct = sga.get_primitive_standard_structure()
-        # site properties are not retained, so we have to add them again.
-        for key, value in struct.site_properties.items():
-            prim_struct.add_site_property(key,value)
+        # site properties are not retained, so we have to add magmom again.
+        prim_struct = transfer_average_magmoms(struct, prim_struct)
 
         bandgap = nav_mp.get_property_from_mp(
             mp_id=mp_id, 
