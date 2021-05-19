@@ -35,9 +35,9 @@ def transfer_average_magmoms(magnetic_struct, struct_without_magmoms):
     mag_struct = magnetic_struct.copy()
     new_struct = struct_without_magmoms.copy()
     
-    if mag_struct.site_properties.get('magmom') == {}:
-        raise ValueError('Magnetic input structure {} has no "magmom" '
-                         'site property')
+    if not mag_struct.site_properties.get('magmom'):
+        print('No magnetic moments to transfer. Doing nothing...')
+        return new_struct
     
     if not sorted(mag_struct.types_of_species) == sorted(new_struct.types_of_species):
         warnings.warn('\n##################################################\n'
@@ -160,7 +160,8 @@ def stack_aligned_slabs(bottom_slab, top_slab, top_shift=[0,0,0]):
         new_site = PeriodicSite(lattice=interface.lattice,
                                 coords=s.frac_coords,
                                 coords_are_cartesian=False,
-                                species=s.species)
+                                species=s.species,
+                                properties=s.properties)
         interface.sites.append(new_site)
     
     return interface
