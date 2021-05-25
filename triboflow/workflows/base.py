@@ -5,6 +5,7 @@ Created on Mon Feb  1 15:05:37 2021
 
 @author: mwo
 """
+from copy import deepcopy
 from fireworks import Workflow
 from atomate.vasp.fireworks.core import ScanOptimizeFW, OptimizeFW
 from atomate.vasp.powerups import add_modify_incar
@@ -47,12 +48,14 @@ def dynamic_relax_swf(inputs_list,
         vis = inputs_list[i][1]
         name = inputs_list[i][2]
         if vis.incar.get('METAGGA') in ['Scan', 'R2scan']:
+            gga_vis = deepcopy(vis)
+            gga_vis.user_incar_settings['ALGO'] = 'Normal'
             vis_params = {'user_incar_settings': vis.user_incar_settings,
                           'user_kpoints_settings': vis.user_kpoints_settings,
                           'user_potcar_functional': vis.potcar_functional,
                           'vdw': vis.vdw}
             fw_1 = ScanOptimizeFW(structure=struct, name=name+'_PBEsolPreCalc',
-                                  vasp_input_set=vis,
+                                  vasp_input_set=gga_vis,
                                   vasp_input_set_params={'vdw': vis.vdw})
             fw_2 = ScanOptimizeFW(vasp_input_set_params=vis_params,
                                       parents = fw_1, prev_calc_loc=True,
