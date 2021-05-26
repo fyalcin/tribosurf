@@ -157,6 +157,7 @@ class FT_StartAdhesionSWF(FiretaskBase):
                                        fltr={'name': name})
         
         adhesion_was_calculated = interface_dict.get(adhesion_handle)
+        comp_params = interface_dict.get('comp_parameters',{})
         
         if not adhesion_was_calculated:
             top_slab = Slab.from_dict(interface_dict['top_aligned_relaxed'])
@@ -166,9 +167,9 @@ class FT_StartAdhesionSWF(FiretaskBase):
             SWF = adhesion_energy_swf(top_slab,
                                   bottom_slab,
                                   interface,
-                                  interface_name=None,
-                                  functional='PBE',
-                                  comp_parameters={})
+                                  interface_name=name,
+                                  functional=functional,
+                                  comp_parameters=comp_params)
             
             return FWAction(detours=SWF)
         else:

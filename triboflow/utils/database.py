@@ -10,7 +10,7 @@ Classes to manage data from local and online DataBases at a high level.
 
 __author__ = 'Omar Chehaimi'
 __credits__ = 'This module is based on the Triboflow package, Michael Wolloch'
-__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, SLIDE-ERC, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 1st, 2021'
 

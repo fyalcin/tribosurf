@@ -6,23 +6,25 @@ Created on Mon Feb 22 11:00:47 2021
 Functions to manage crystalline structures and solid state physics.
 
 The module contains the following functions:
-
-** Slabs structures **:
     - orient_bulk
     - generate_slabs
 
     Author: Gabriele Losi (glosi000)
-    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
 
 """
 
 __author__ = 'Gabriele Losi'
-__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 22nd, 2021'
 
-from pymatgen.core.surface import SlabGenerator
 
+from pymatgen.core.surface import SlabGenerator
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
+
+from triboflow.phys.shaper import Shaper
+from triboflow.utils.structure_manipulation import transfer_average_magmoms
 
 # ============================================================================
 # Functions to deal with crystalline slabs
@@ -34,7 +36,7 @@ def orient_bulk(structure, miller, thickness, primitive=False, lll_reduce=False,
     Orient a bulk unit cell along a direction identified by Miller indexes.
 
     """
-    
+
     # Generate the oriented bulk
     slabgen = SlabGenerator(initial_structure=structure,
                             miller_index=miller,
@@ -49,8 +51,8 @@ def orient_bulk(structure, miller, thickness, primitive=False, lll_reduce=False,
     return bulk_miller
 
 def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
-                   center_slab=True, primitive=False, lll_reduce=False,
-                   in_unit_planes=True,  ext_index=0, bonds=None, ftol=0.1, 
+                   center_slab=True, primitive=True, lll_reduce=True,
+                   in_unit_planes=True, ext_index=0, bonds=None, ftol=0.1, 
                    tol=0.1, repair=False, max_broken_bonds=0, symmetrize=False):
     """
     Create and return a single slab or a list of slabs out of a structure.
@@ -73,42 +75,52 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
         thickness = [thickness]
     if not isinstance(vacuum, list):
         vacuum = [vacuum]
-    
+
     # Manage the length of the lists
     n = len(thickness)
     if len(vacuum) != n:
         vacuum *= n
     if len(miller) != n:
         miller *= n
+    # SlabGenerator expects conventional unit cell so we convert the structure accordingly.
+    # As a result, we require input structure to be the primitive standard structure.
+    conv_structure = SpacegroupAnalyzer(structure).get_conventional_standard_structure()
+    structure = transfer_average_magmoms(structure, conv_structure)
 
     slabs = []
     for hkl, thk, vac in zip(miller, thickness, vacuum):
+        
+        # If thk is zero, then we want to construct an oriented unit bulk by
+        # our conversion, so we define a "fake" thickness > 1 to be used to
+        # build the slabs, otherwise errors are raised by pymatgen
+        thk_gen = 1 if thk == 0 else thk
+
+        slabgen = SlabGenerator(initial_structure=structure,
+                                miller_index=hkl,
+                                center_slab=center_slab,
+                                primitive=primitive,
+                                lll_reduce=lll_reduce,
+                                max_normal_search=max([abs(index) for index in hkl]),
+                                in_unit_planes=in_unit_planes,
+                                min_slab_size=thk_gen,
+                                min_vacuum_size=vac)
+
+        s = slabgen.get_slabs(bonds=bonds,
+                              ftol=ftol,
+                              tol=tol,
+                              repair=repair,
+                              max_broken_bonds=max_broken_bonds,
+                              symmetrize=symmetrize)
+
         # Case of an oriented bulk
         if thk == 0:
-            s = orient_bulk(structure, hkl, thick_bulk, primitive, lll_reduce, 
-                            in_unit_planes)
+            s = s[ext_index].oriented_unit_cell
 
         # Case of a slab
         else:
-            slabgen = SlabGenerator(initial_structure=structure,
-                                    miller_index=hkl,
-                                    center_slab=center_slab,
-                                    primitive=primitive,
-                                    lll_reduce=lll_reduce,
-                                    in_unit_planes=in_unit_planes,
-                                    min_slab_size=thk,
-                                    min_vacuum_size=vac)
-        
-            # Select the ext_index-th slab from the list of possible slabs
-            s = slabgen.get_slabs(bonds=bonds, 
-                                  ftol=ftol, 
-                                  tol=tol, 
-                                  repair=repair,
-                                  max_broken_bonds=max_broken_bonds, 
-                                  symmetrize=symmetrize)
-
+            s = [Shaper.reconstruct(slab, thk, vac) for slab in s]
             s = s[ext_index]
 
         slabs.append(s)
-    
+
     return slabs

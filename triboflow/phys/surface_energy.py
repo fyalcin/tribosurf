@@ -3,12 +3,18 @@
 """
 Created on Mon Feb 22 11:00:54 2021
 
+Functions to calculate the surface energy of a slab.
 
-@author: glosi000
+The module contains the following functions:
+    - calculate_surface_energy
+
+    Author: Gabriele Losi (glosi000)
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
+
 """
 
 __author__ = 'Gabriele Losi'
-__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 22nd, 2021'
 

@@ -6,18 +6,18 @@
       "conv_kind":"surfene",
       "relax_type":"slab_pos_relax",
       "thick_min":4,
-      "thick_max":12,
-      "thick_incr":2,
-      "vacuum":10,
+      "thick_max":8,
+      "thick_incr":1,
+      "vacuum":25,
       "in_unit_planes":true,
       "ext_index":0,
-      "conv_thr":0.025,
-      "parallelization":null,
-      "bulk_entry":"structure_fromMP",
-      "slab_entry":null,
+      "conv_thr":0.01,
+      "parallelization":"low",
+      "bulk_entry":"structure_equiVol",
       "cluster_params":{
       
-      }
+      },
+      "override":false
    },
    "StartThickConvo":{
       "db_file":null,
@@ -26,7 +26,7 @@
       "conv_kind":"surfene",
       "relax_type":"slab_pos_relax",
       "comp_params":{
-         
+          
       },
       "thick_min":4,
       "thick_max":12,
@@ -35,15 +35,17 @@
       "in_unit_planes":true,
       "ext_index":0,
       "parallelization":null,
-      "recursion":false,
+      "recursion":0,
       "cluster_params":{
          
-      }
+      },
+      "override":false
    },
    "EndThickConvo":{
       "db_file":null,
       "low_level":null,
       "high_level":"triboflow",
+      "spec":{},
       "functional":"PBE",
       "conv_kind":"surfene",
       "relax_type":"slab_pos_relax",
@@ -60,7 +62,9 @@
       "parallelization":null,
       "cluster_params":{
          
-      }
+      },
+      "recursion":0,
+      "override":false
    },
    "GenerateSlabs":{
       "db_file":null,
@@ -130,10 +134,13 @@
    },
    "comp_params":{
       "BM_tolerance":0.01,
-      "energy_tolerance":0.001,
-      "functional":"SCAN",
+      "functional":"PBE",
       "use_spin":true,
-      "volume_tolerance":0.001
+      "volume_tolerance":0.001,
+      "encut":520,
+      "k_dens":12.5,
+      "use_vdw":false,
+      "is_metal":null
    },
    "interface_params":{
       "interface_distance":2.0,

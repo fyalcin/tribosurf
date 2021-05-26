@@ -13,8 +13,7 @@ from atomate.vasp.fireworks import StaticFW
 from atomate.vasp.powerups import add_modify_incar
 
 from triboflow.fireworks.common import run_pes_calc_fw, make_pes_fw
-from triboflow.firetasks.encut_convergence import FT_EnergyCutoffConvo
-from triboflow.firetasks.kpoint_convergence import FT_KpointsConvo
+from triboflow.firetasks.convergence import FT_Convo
 from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \
     FT_StartSlabRelax, FT_GetRelaxedSlab
 from triboflow.firetasks.PPES import FT_DoPPESCalcs, FT_FitPPES
@@ -488,183 +487,46 @@ def make_and_relax_slab_swf(bulk_structure,
     return SWF
 
 
-def converge_kpoints_swf(structure,
-                         flag,
-                         comp_parameters={},
-                         spec={},
-                         functional='PBE',
-                         k_dens_start=500,
-                         k_dens_incr=50,
-                         n_converge=3,
-                         db_file=None,
-                         file_output=False,
-                         output_dir=None,
-                         remote_copy=False,
-                         server=None, 
-                         user=None, 
-                         port=None,
-                         print_help=True):
-    """Subworkflows that converges the the k-mesh density via total energy.
-    
-    Takes a given structure, computational parameters (which includes the
-    convergence criterion in eV/atom) and runs static vasp calculations with
-    a denser and denser mesh (larger k_dens parameter) until convergence in the
-    total energy is achieved. Output is printed to the screen and saved in the
-    high-level triboflow database where it can be queried using the flag set.
 
-    Parameters
-    ----------
-    structure : pymatgen.core.structure.Structure
-        The structure for which to converge the K-pint grids.
-    flag : str
-        An identifier to find the results in the database. It is strongly
-        suggested to use the proper Materials-ID from the MaterialsProject
-        if it is known for the specific input structure. Otherwise use something
-        unique which you can find again.
-    comp_parameters : dict
-        Dictionary of computational parameters for the VASP calculations.
-        Convergence criterion in eV/atom can be given here under the key:
-        'energy_tolerance' and defaults to 0.001 (1meV/atom).
-    spec : dict
-        Previous fw_spec that will be updated and/or passed on for child
-        Fireworks.
-    k_dens_start : int, optional
-        Starting density value for the first run. Defaults to 500.
-    k_dens_incr : int, optional
-        Increment for the k-mesh density during the convergence. Defaults to
-        50. The increment might actually be larger if otherwise no new mesh
-        would be formed!
-    n_converge : int, optional
-        Number of calculations that have to be inside the convergence
-        threshold for convergence to be reached. Defaults to 3.
-    db_file : str
-        Full path to the db.json file that should be used. Defaults to
-        None, in which case env_chk will be used in the FT.
-    file_output : bool, optional
-        Toggles file output. The default is False.
-    output_dir : str, optional
-        Defines a directory the output is to be copied to. (Do not use a
-        trailing / and/or relative location symbols like ~/.)
-        The default is None.
-    remote_copy : bool, optional
-        If true, scp will be used to copy the results to a remote server. Be
-        advised that ssh-key certification must be set up between the two
-        machines. The default is False.
-    server : str, optional
-        Fully qualified domain name of the server the output should be copied
-        to. The default is None.
-    user : str, optional
-        The user name on the remote server.
-    port : int, optional
-        On some machines ssh-key certification is only supported for certain
-        ports. A port may be selected here. The default is None.
-    print_help : bool, optional
-        Prints a few lines of code that shows how to retrieve the results from
-        the database. The default is True.
 
-    Returns
-    -------
-    WF : fireworks.core.firework.Workflow
-        A subworkflow intended to find the converged k_distance for a given
-        structure.
-
-    """
-    formula = structure.composition.reduced_formula
-    name = 'Kpoint Convergence SWF of '+formula
-    
-    if flag.startswith('mp-') and flag[3:].isdigit():
-        formula_from_struct = structure.composition.reduced_formula
-        nav_mp = NavigatorMP()
-        formula_from_flag = nav_mp.get_property_from_mp(
-            mp_id=flag,
-            properties=['pretty_formula'])
-        formula_from_flag = formula_from_flag['pretty_formula']
-
-        if not formula_from_flag == formula_from_struct:
-            raise SystemExit('The chemical formula of your structure ({}) '
-                             'does not match the chemical formula of the flag '
-                             '(mp-id) you have chosen which corresponds '
-                             'to {}.\n'.format(
-                                 formula_from_struct, formula_from_flag))
-    
-    if comp_parameters == {}:
-        print('\nNo computational parameters have been defined!\n'
-              'Workflow will run with:\n'
-              '   ISPIN = 1\n'
-              '   ISMEAR = 0\n'
-              '   ENCUT = 520\n'
-              'We recommend to pass a comp_parameters dictionary'
-              ' of the form:\n'
-              '   {"use_vdw": <True/False>,\n'
-              '    "use_spin": <True/False>,\n'
-              '    "is_metal": <True/False>,\n'
-              '    "encut": <int>}\n')
-    
-    if print_help:
-        nav = Navigator()
-        db_file = nav.path
-        print('Once you workflow has finished you can access the '
-              'results from the database using this code:\n\n'
-              'import pprint\n'
-              'from triboflow.utils.database import GetBulkFromDB\n'
-              'results = GetBulkFromDB("{}", "{}", "{}")\n'
-              'pprint.pprint(results)\n'.format(flag, db_file, functional))
-    
-    tag = "Kpoints group for {} - {}".format(formula, str(uuid4()))
-        
-    FT_KptsConvo = FT_KpointsConvo(structure=structure,
-                                   comp_params=comp_parameters,
-                                   tag=tag,
-                                   flag=flag,
-                                   functional=functional,
-                                   db_file=db_file,
-                                   k_dens_incr=k_dens_incr,
-                                   k_dens_start=k_dens_start,
-                                   n_converge=n_converge,
-                                   file_output=file_output,
-                                   output_dir=output_dir,
-                                   remote_copy=remote_copy,
-                                   server=server,
-                                   user=user,
-                                   port=port)
-    
-    FW_CE = Firework(FT_KptsConvo, spec=spec,
-                     name='Kpoint Convergence')
-    WF = Workflow([FW_CE], name=name)
-
-    return WF
-
-def converge_encut_swf(structure, 
-                       flag, 
-                       comp_parameters={}, 
-                       spec={},
-                       functional='PBE', 
-                       deformations=None, 
-                       encut_start=None,
-                       encut_incr=25, 
-                       n_converge=3, 
-                       db_file=None,
-                       file_output=False,
-                       output_dir=None,
-                       remote_copy=False,
-                       server=None, 
-                       user=None, 
-                       port=None,
-                       print_help=True):
-    """Subworkflows that converges the Encut using a fit to an BM-EOS.
+def converge_swf(structure, 
+                 conv_type,
+                 flag, 
+                 comp_parameters={}, 
+                 spec={},
+                 functional='PBE', 
+                 deformations=None, 
+                 encut_start=None,
+                 encut_incr=25,
+                 k_dens_start=1.0,
+                 k_dens_incr=0.1,
+                 k_dens_default=12.5,
+                 n_converge=3, 
+                 db_file=None,
+                 file_output=False,
+                 output_dir=None,
+                 remote_copy=False,
+                 server=None, 
+                 user=None, 
+                 port=None,
+                 print_help=True):
+    """Subworkflows that converges Encut or kpoints denstiy using fits to an EOS.
     
     Takes a given structure, computational parameters, and a optional list
     of deformations and uses these deformations to compute an
-    Birch-Murnaghan equation of state for higher and higher energy cutoffs.
+    Birch-Murnaghan equation of state for higher and higher energy cutoffs or 
+    kpoints density.
     Once bulk modulus and equilibrium volume do not change any longer,
     convergence is reached. Output is printed to the screen and saved in the
     high-level triboflow database where it can be queried using the mp_id
-    of the material.
+    of the material. Optionally there is also output to a file.
 
     Parameters
     ----------
     structure : pymatgen.core.structure.Structure
         The structure for which to converge the energy cutoff parameter.
+    conv_type : str
+        Either "kpoints" or "encut", depending on what to converge.
     flag : str
         An identifier to find the results in the database. It is strongly
         suggested to use the proper Materials-ID from the MaterialsProject
@@ -684,6 +546,15 @@ def converge_encut_swf(structure,
         in the POTCAR.
     encut_incr : float, optional
         Increment for the encut during the convergence. Defaults to 25.
+    k_dens_start : float, optional
+        Starting kpoint density in 1/Angstrom. Defaults to 1.0
+    k_dens_increment : float, optional
+        Increment for the kpoint convergence. Can be set quite small since
+        there is a check in place to see if a new mesh is actually constructed
+        for each density. Defaults to 0.1.
+    k_dens_default : float, optional
+        Default (quite high) kpoints density for encut convergence studies if
+        no k_dens parameter is found in the comp_parameters. The default is 12.5
     n_converge : int, optional
         Number of calculations that have to be inside the convergence
         threshold for convergence to be reached. Defaults to 3.
@@ -718,8 +589,21 @@ def converge_encut_swf(structure,
         A subworkflow intended to find the converged ENCUT for a given
         structure.
 
-    """   
-    name = 'Encut Convergence SWF of '+structure.composition.reduced_formula
+    """
+    if conv_type not in ['kpoints', 'encut']:
+        raise ValueError('"type" input must be either "kpoints" or'
+                         '"encut".\nYou have passed {}'.format(conv_type))
+    if conv_type == 'encut':
+            name = 'Encut Convergence SWF of '+structure.composition.reduced_formula
+            if not encut_start:
+                # Get the largest EMIN value of the potcar and round up to the
+                # next whole 25.
+                vis = get_custom_vasp_static_settings(structure, comp_parameters,
+                                                      'bulk_from_scratch')
+                emin = get_emin(vis.potcar)
+                encut_start = int(25 * np.ceil(emin/25))
+    elif conv_type == 'kpoints':
+            name = 'Kpoint Convergence SWF of '+structure.composition.reduced_formula
     
     tag = "BM group: {}".format(str(uuid4()))
         
@@ -737,27 +621,32 @@ def converge_encut_swf(structure,
                              '(mp-id) you have chosen which corresponds '
                              'to {}.\n'.format(
                                  formula_from_struct, formula_from_flag))
-    
-    if not encut_start:
-        # Get the largest EMIN value of the potcar and round up to the
-        # next whole 25.
-        vis = get_custom_vasp_static_settings(structure, comp_parameters,
-                                              'bulk_from_scratch')
-        emin = get_emin(vis.potcar)
-        encut_start = int(25 * np.ceil(emin/25))
         
     if comp_parameters == {}:
-        print('\nNo computational parameters have been defined!\n'
-              'Workflow will run with:\n'
-              '   ISPIN = 1\n'
-              '   ISMEAR = 0\n'
-              '   kpoint density kappa = 5000\n'
-              'We recommend to pass a comp_parameters dictionary'
-              ' of the form:\n'
-              '   {"use_vdw": <True/False>,\n'
-              '    "use_spin": <True/False>,\n'
-              '    "is_metal": <True/False>,\n'
-              '    "k_dens": <int>}\n')
+        if conv_type == 'encut':
+            print('\nNo computational parameters have been defined!\n'
+                  'Workflow will run with:\n'
+                  '   ISPIN = 1\n'
+                  '   ISMEAR = 0\n'
+                  '   kpoint density kappa = 12.5\n'
+                  'We recommend to pass a comp_parameters dictionary'
+                  ' of the form:\n'
+                  '   {"use_vdw": <True/False>,\n'
+                  '    "use_spin": <True/False>,\n'
+                  '    "is_metal": <True/False>,\n'
+                  '    "k_dens": <int>}\n')
+        else:
+            print('\nNo computational parameters have been defined!\n'
+                  'Workflow will run with:\n'
+                  '   ISPIN = 1\n'
+                  '   ISMEAR = 0\n'
+                  '   ENCUT = 650\n'
+                  'We recommend to pass a comp_parameters dictionary'
+                  ' of the form:\n'
+                  '   {"use_vdw": <True/False>,\n'
+                  '    "use_spin": <True/False>,\n'
+                  '    "is_metal": <True/False>,\n'
+                  '    "encut": <int>}\n')
     
     if print_help:
         nav = Navigator()
@@ -768,26 +657,41 @@ def converge_encut_swf(structure,
               'from triboflow.utils.database import GetBulkFromDB\n'
               'results = GetBulkFromDB("{}", "{}", "{}")\n'
               'pprint.pprint(results)\n'.format(flag, db_file, functional))
+
+    if not comp_parameters.get('functional'):
+        comp_parameters['functional']=functional
+    else:
+        if not comp_parameters.get('functional') == functional:
+            print('The functional set in your computational parameters ({}) '
+                  'does not match the one given in the input ({})!\n'
+                  'The functional in the computational parameter has been '
+                  'overwritten to {}!\n'.format(comp_parameters.get('functional'),
+                                                functional, functional))
+            comp_parameters['functional']=functional
+
+    FT_EncutConvo = FT_Convo(structure=structure,
+                             conv_type=conv_type,
+                             comp_params=comp_parameters,
+                             tag=tag,
+                             flag=flag,
+                             functional=functional,
+                             deformations=deformations,
+                             db_file=db_file,
+                             encut_incr=encut_incr,
+                             encut_start=encut_start,
+                             k_dens_start=k_dens_start,
+                             k_dens_incr=k_dens_incr,
+                             k_dens_default=k_dens_default,
+                             n_converge=n_converge,
+                             file_output=file_output,
+                             output_dir=output_dir,
+                             remote_copy=remote_copy,
+                             server=server, 
+                             user=user, 
+                             port=port)        
     
-    FT_EncutConvo = FT_EnergyCutoffConvo(structure=structure,
-                                         comp_params=comp_parameters,
-                                         tag=tag,
-                                         flag=flag,
-                                         functional=functional,
-                                         deformations=deformations,
-                                         db_file=db_file,
-                                         encut_incr=encut_incr,
-                                         encut_start=encut_start, 
-                                         n_converge=n_converge,
-                                         file_output=file_output,
-                                         output_dir=output_dir,
-                                         remote_copy=remote_copy,
-                                         server=server, 
-                                         user=user, 
-                                         port=port)        
-    
-    FW_CE = Firework(FT_EncutConvo, spec=spec,
-                     name='Encut Convergence')
-    WF = Workflow([FW_CE], name=name)
+    FW_C = Firework(FT_EncutConvo, spec=spec,
+                    name=name)
+    WF = Workflow([FW_C], name=name)
 
     return WF

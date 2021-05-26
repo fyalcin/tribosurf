@@ -5,13 +5,24 @@ Created on Wed Oct 28 16:44:44 2020
 
 Python functions to get the Shear Strength (SS) of an interface
 
-@author: gl
+The module contains the following functions:
+
+    - get_shear_strength
+    - get_shear_strength_xy
+    - take_derivative
+
+    Author: Gabriele Losi (glosi000)
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
+    Credits: Code readapted from our past homogeneous workflow, MIT license,
+    https://github.com/mcrighi/interface-workflow,
 """
 
 __author__ = 'Gabriele Losi'
-__copyright__ = 'Prof. M.C. Righi, University of Bologna'
+__credits__ = 'Code readapted from our past homogeneous workflow, MIT license, https://github.com/mcrighi/interface-workflow,'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 8th, 2021'
+
 
 import numpy as np
 
@@ -19,7 +30,6 @@ import numpy as np
 # =============================================================================
 # EVALUATION OF THE SHEAR STRENGTH
 # =============================================================================
-
 
 def get_shear_strength(coords, rbf, delta=0.01):
     """
@@ -143,7 +153,6 @@ def get_shear_strength_xy(lattice, rbf, params=None):
 # UTILITY FOR THE SHEAR STRENGTH
 # =============================================================================
 
-
 def take_derivative(rbf, coordx, coordy, m=None ,delta=0.01):
     """
     Inner function used to calculate the shear strength
@@ -172,7 +181,6 @@ def take_derivative(rbf, coordx, coordy, m=None ,delta=0.01):
     zdev = 0.5 * (V_2 - V_1) / delta
     
     return zdev
-
 
 # OLD VERSIONS OF THE DERIVATIVE. IT WORKED
 

@@ -9,7 +9,8 @@ from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 
 from triboflow.utils.database import Navigator, StructureNavigator, NavigatorMP
-from triboflow.utils.structure_manipulation import interface_name
+from triboflow.utils.structure_manipulation import (
+    interface_name, transfer_average_magmoms)
 
 
 @explicit_serialize
@@ -206,8 +207,11 @@ class FT_MakeBulkInDB(FiretaskBase):
         struct, mp_id = nav_mp.get_low_energy_structure(
             chem_formula=data['formula'], 
             mp_id=data['mp_id'])
+        # Make a primitive standard structure to ensure high symmetry.
         sga = SpacegroupAnalyzer(struct)
         prim_struct = sga.get_primitive_standard_structure()
+        # site properties are not retained, so we have to add magmom again.
+        prim_struct = transfer_average_magmoms(struct, prim_struct)
 
         bandgap = nav_mp.get_property_from_mp(
             mp_id=mp_id, 
@@ -238,8 +242,6 @@ class FT_MakeBulkInDB(FiretaskBase):
                         'primitive_structure': prim_struct.as_dict(),
                         'comp_parameters': comp_data})
             return
-        
-    
 
 @explicit_serialize
 class FT_CheckCompParamDict(FiretaskBase):
@@ -280,12 +282,11 @@ class FT_CheckCompParamDict(FiretaskBase):
         #Edit this block according to need, but be careful with the defaults!
         #####################################################################
         essential_keys = ['use_vdw']
-        additional_keys = ['volume_tolerance', 'energy_tolerance', 'use_spin',
+        additional_keys = ['volume_tolerance', 'use_spin',
                            'BM_tolerance', 'functional']
         
         volume_tolerance_default = 0.001
-        energy_tolerance_default = 0.001
-        functional_default = 'SCAN'
+        functional_default = 'PBE'
         use_spin_default = True
         BM_tolerance_default = 0.01
         #####################################################################
@@ -318,8 +319,7 @@ class FT_CheckCompParamDict(FiretaskBase):
                 else:
                     out_dict['use_vdw'] = False
                 check_essential[key] = True
-        
-        
+
         # Check if all essential keys are present and print out missing ones.
         missing_keys=[]
         for key in check_essential.keys():
@@ -343,11 +343,6 @@ class FT_CheckCompParamDict(FiretaskBase):
                     out_dict['volume_tolerance'] = float(input_dict[key])
                 else:
                     out_dict['volume_tolerance'] = volume_tolerance_default
-            if key == 'energy_tolerance':
-                if key in input_dict:
-                    out_dict['energy_tolerance'] = float(input_dict[key])
-                else:
-                    out_dict['energy_tolerance'] = energy_tolerance_default
             if key == 'functional':
                 if key in input_dict:
                     out_dict['functional'] = str(input_dict[key])
@@ -360,7 +355,7 @@ class FT_CheckCompParamDict(FiretaskBase):
                     out_dict['BM_tolerance'] = BM_tolerance_default
                 
         return FWAction(mod_spec=[{'_set': {output_dict_name: out_dict}}])
-    
+
 @explicit_serialize
 class FT_CheckInterfaceParamDict(FiretaskBase):
     """Checks a dictionary for essential keys and adds default values if needed.
@@ -514,7 +509,9 @@ class FT_CheckMaterialInputDict(FiretaskBase):
                               'and use only the following parameters:\n')
                     out.write(str(known_keys))
                     out.write('\n')
-                raise SystemExit
+                raise SystemExit('The input parameter <'+str(key)+
+                              '> is not known. Please check your input file'
+                              'and use only the following parameters:\n')
             elif key == 'formula':
                 out_dict['formula'] = str(input_dict[key])
                 check_essential[key] = True

@@ -8,63 +8,53 @@ the Firetasks. It provides tools to manage the input parameters of a Firetask
 and to manipulate the dictionaries to be retrieved and stored to the database
 
 The module contains the following functions:
-
-** Read input parameters **:
     - read_json
     - read_runtask_params
     - read_default_params
-
-    Author: Gabriele Losi (glosi000)
-    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
-
-** Manipulate dictionaries **:
     - get_one_info_from_dict
     - get_multiple_info_from_dict
     - write_one_dict_for_db
     - write_multiple_dict_for_db
-
-    Author: Gabriele Losi (glosi000)
-    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
-    
-    - convert_dict_to_mongodb
-    
-    Author: Gabriele Losi (glosi000)
-    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
-    Credits: Code readapted from StackOverflow, Creative Commons licence 3.0
-    https://creativecommons.org/licenses/by-sa/3.0/
-    https://stackoverflow.com/questions/29267519/mongodb-update-dictionary-in-document
-
-** Interaction with Database **:
     - retrieve_from_db
     - retrieve_from_tag
-
-    Author: Gabriele Losi (glosi000)
-    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
-
-** Input/function handling **:
+    - save_calctags
     - create_tags
     - get_miller_str
     - select_struct_func
 
     Author: Gabriele Losi (glosi000)
-    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
+    
+    - convert_dict_to_mongodb
+    
+    Author: Gabriele Losi (glosi000)
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
+    Credits: Code readapted from StackOverflow, Creative Commons licence 3.0
+    https://creativecommons.org/licenses/by-sa/3.0/
+    https://stackoverflow.com/questions/29267519/mongodb-update-dictionary-in-document
 
 """
 
 __author__ = 'Gabriele Losi'
-__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 22nd, 2021'
 
+import os
 import json
 from uuid import uuid4
+from pathlib import Path, PurePosixPath
 
 import numpy as np
+import pandas as pd
 from pymatgen.core.surface import Structure, Slab
 from atomate.utils.utils import env_chk
 
 from triboflow.utils.database import Navigator
 from triboflow.utils.errors import ReadParamsError, WriteParamsError
+
+
+project_folder = os.path.dirname(__file__)
 
 
 # ============================================================================
@@ -205,7 +195,7 @@ def get_one_info_from_dict(input_dict, entry):
 
     entry : str or list
         Contains the key(s) that should be read in sequence from the dictionary.
-        The keys should be "innested" within the dictionary or an error raises.
+        The keys should be nested within the dictionary or an error raises.
         
         Example:
             1.  entry = 'key'
@@ -535,20 +525,20 @@ def retrieve_from_db(mp_id, collection, db_file=None, database=None,
         fltr.update({'miller': miller})
     
     # Extract data from the database
-    structure = nav.find_data(collection=collection, fltr=fltr)
+    field = nav.find_data(collection=collection, fltr=fltr)
     
-    if structure is not None:
-        if entry is not None:
-            try:
-                structure = get_one_info_from_dict(structure, entry)
-            except:
-                structure = None
-        
+    structure = None
+    if field is not None and entry is not None:
+        try:
+            structure = get_one_info_from_dict(field, entry)
+        except:
+            structure = None
+
         if pymatgen_obj and structure is not None:
             func = Slab if is_slab else Structure
             structure = func.from_dict(structure)
 
-    return structure
+    return field, structure
 
 def retrieve_from_tag(collection, tag, tag_key='task_label', entry=None, 
                       db_file=None, database=None):
@@ -645,3 +635,43 @@ def select_struct_func(struct_kind):
         ValueError("Wrong argument: struct_kind. Allowed values: "
                    "'bulk', 'slab'. Given value: {}".format(struct_kind)) 
     return func
+
+def save_calctags(tag, collection, formula=None, mpid=None, miller=None, 
+                  name=None, db_file=None, database='triboflow'):
+    """
+    Store in a csv file the tags of a calculation which was succesfully done by
+    vasp. Useful to retrieve later the tags in order to have a complete access
+    to the results data stored in the low level datababase.
+
+    """
+    
+    # Check the folder containing calculation tags, if not present create it
+    folder_object = PurePosixPath(project_folder)
+    folder = str(folder_object.parent.parent.parent) + '/results/'
+    path = Path(folder)
+    if not path.is_dir():
+        print("WARNING: There is no folder for calculation tags.")
+        print("Creating a new mp_structures folder in " + folder)
+        folder = PurePosixPath(folder)
+        os.mkdir(folder)
+        path = Path(folder)
+        if not path.is_dir():
+            raise RuntimeError('The creation of struct path has failed!')
+            
+    # Create the path to the csv file
+    path = str(path)
+    csv_file = path + '/calc_tags.csv'
+    columns = ['tag', 'formula', 'mpid', 'miller', 'name',
+               'db_file', 'database', 'collection']
+
+    # Create the new row for the Dataframe 
+    df_new = pd.DataFrame([[tag, formula, mpid, miller, name, db_file, 
+                           database, collection]], columns=columns)
+    
+    # Check if the csv table does exist, if not create it, else append df_new
+    if not os.path.exists(csv_file):
+        df_new.to_csv(csv_file, index=False)
+    else:
+        df = pd.read_csv(csv_file)
+        df = df.append(df_new)
+        df.to_csv(csv_file, index=False)

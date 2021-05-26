@@ -7,8 +7,7 @@ Created on Wed Jun 17 15:47:39 2020
 from fireworks import Workflow, Firework
 
 from triboflow.fireworks.common import check_inputs_fw
-from triboflow.firetasks.encut_convergence import FT_StartEncutConvo
-from triboflow.firetasks.kpoint_convergence import FT_StartKPointConvo
+from triboflow.firetasks.convergence import FT_StartConvo
 from triboflow.firetasks.structure_manipulation import (
     FT_StartSlabRelaxSWF, FT_MakeHeteroStructure)
 from triboflow.firetasks.PES import FT_StartPESCalcSubWF
@@ -17,6 +16,7 @@ from triboflow.firetasks.adhesion import (
     FT_RelaxMatchedSlabs, FT_RetrievMatchedSlabs, FT_StartAdhesionSWF)
 from triboflow.utils.database import NavigatorMP
 from triboflow.utils.structure_manipulation import interface_name
+from triboflow.firetasks.run_slabs_wfs import FT_SlabOptThick
 
 def heterogeneous_wf(inputs):
     """Return main workflow for heterogeneous interfaces within Triboflow.
@@ -52,7 +52,7 @@ def heterogeneous_wf(inputs):
         chem_formula=mat_2.get('formula'),
         mp_id=mat_2.get('mp_id'))
     
-    functional = comp_params.get('functional', 'SCAN')
+    functional = comp_params.get('functional', 'PBE')
     
     WF = []
 
@@ -63,26 +63,34 @@ def heterogeneous_wf(inputs):
                                  FW_name='Check input parameters')
     WF.append(Initialize)
     
-    ConvergeEncut_M1 = Firework(FT_StartEncutConvo(mp_id=mp_id_1,
-                                                   functional=functional),
+    ConvergeEncut_M1 = Firework(FT_StartConvo(conv_type='encut',
+                                              mp_id=mp_id_1,
+                                              functional=functional,
+                                              ),
                                 name='Start encut convergence for {}'
                                       .format(mat_1['formula']))
     WF.append(ConvergeEncut_M1)
     
-    ConvergeEncut_M2 = Firework(FT_StartEncutConvo(mp_id=mp_id_2,
-                                                   functional=functional),
+    ConvergeEncut_M2 = Firework(FT_StartConvo(conv_type='encut',
+                                              mp_id=mp_id_2,
+                                              functional=functional,
+                                              ),
                                 name='Start encut convergence for {}'
                                       .format(mat_2['formula']))
     WF.append(ConvergeEncut_M2)
     
-    ConvergeKpoints_M1 = Firework(FT_StartKPointConvo(mp_id=mp_id_1,
-                                                   functional=functional),
+    ConvergeKpoints_M1 = Firework(FT_StartConvo(conv_type='kpoints',
+                                                mp_id=mp_id_1,
+                                                functional=functional,
+                                                ),
                                   name='Start kpoints convergence for {}'
                                         .format(mat_1['formula']))
     WF.append(ConvergeKpoints_M1)
     
-    ConvergeKpoints_M2 = Firework(FT_StartKPointConvo(mp_id=mp_id_2,
-                                                      functional=functional),
+    ConvergeKpoints_M2 = Firework(FT_StartConvo(conv_type='kpoints',
+                                                mp_id=mp_id_2,
+                                                functional=functional,
+                                                ),
                                 name='Start kpoints convergence for {}'
                                      .format(mat_2['formula']))
     WF.append(ConvergeKpoints_M2)
@@ -92,21 +100,27 @@ def heterogeneous_wf(inputs):
                                                 miller_1=mat_1.get('miller'),
                                                 miller_2=mat_2.get('miller'),
                                                 functional=functional),
-                            name='Consolidate computational paramters')
+                            name='Consolidate computational parameters')
     WF.append(Final_Params)
+
+    # optional_params = ['db_file', 'low_level', 'high_level', 'conv_kind',
+    #                    'relax_type', 'thick_min', 'thick_max', 'thick_incr',
+    #                    'vacuum', 'in_unit_planes', 'ext_index', 'conv_thr',
+    #                    'parallelization', 'bulk_entry', 'slab_entry', 
+    #                    'cluster_params', 'override']
     
-    MakeSlabs_M1 = Firework(FT_StartSlabRelaxSWF(mp_id=mp_id_1,
-                                                 miller=mat_1.get('miller'),
-                                                 functional=functional),
-                            name='Make and relax slabs for {}'
-                                 .format(mat_1['formula']))
+    MakeSlabs_M1 = Firework(FT_SlabOptThick(mp_id=mp_id_1,
+                                            miller=mat_1.get('miller'),
+                                            functional=functional),
+                                            name='Slab thickness optimization '
+                                                 'for {}'.format(mat_1['formula']))
     WF.append(MakeSlabs_M1)
-    
-    MakeSlabs_M2 = Firework(FT_StartSlabRelaxSWF(mp_id=mp_id_2,
-                                                 miller=mat_2.get('miller'),
-                                                 functional=functional),
-                            name='Make and relax slabs for {}'
-                                  .format(mat_2['formula']))
+
+    MakeSlabs_M2 = Firework(FT_SlabOptThick(mp_id=mp_id_2,
+                                            miller=mat_2.get('miller'),
+                                            functional=functional),
+                                            name='Slab thickness optimization '
+                                                 'for {}'.format(mat_2['formula']))
     WF.append(MakeSlabs_M2)
     
     MakeInterface = Firework(FT_MakeHeteroStructure(

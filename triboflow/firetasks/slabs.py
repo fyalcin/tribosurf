@@ -7,19 +7,17 @@ Firetasks to generate and manipulate crystalline slabs.
 
 The module contains the following Firetasks:
 
-** Slab generation **
-
     - FT_GenerateSlabs
     Generate a list of slabs out of a structure provided as input and store
     them in a given location inside the database.
 
     Author: Gabriele Losi (glosi000)
-    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
 
 """
 
 __author__ = 'Gabriele Losi'
-__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 2nd, 2021'
 
@@ -48,7 +46,7 @@ class FT_GenerateSlabs(FiretaskBase):
      hat are taken into account to generate the possible different slabs are: 
      miller, thickness, vacuum, entry. The slabs are generated with 
      SlabGenerator and stored in the database.
-    
+
     """
 
     required_params = ['structure', 'mp_id', 'miller', 'collection']
@@ -75,17 +73,17 @@ class FT_GenerateSlabs(FiretaskBase):
                                thick_bulk=p['thick_bulk'],
                                ext_index=p['ext_index'],
                                in_unit_planes=p['in_unit_planes'])
-        
+
         # Store the slab structure in collection.field.entry in db, within db_file
         self.structure_in_db(slabs, miller, entry, p)
-        
+
         return FWAction(update_spec=fw_spec)
-    
+
     def _convert_to_list(self, p):
 
         GenerateSlabsError.check_inputs(p['miller'], p['thickness'], 
                                         p['vacuum'], p['entry'])
-        
+
         miller = p['miller']
         if not all([isinstance(x, list) for x in miller]):
             miller = [miller]
@@ -103,11 +101,11 @@ class FT_GenerateSlabs(FiretaskBase):
             vacuum = [vacuum] * len(miller)
 
         return miller, thickness, vacuum, entry
-    
+
     def structure_in_db(self, slabs, miller, entry, p):
 
         nav = Navigator(p['db_file'], p['database'])
-        
+
         # Store unrelaxed data in the Database
         for s, hkl, en in zip(slabs, miller, entry):
             # Clean the data and create a dictionary with the given path

@@ -5,11 +5,20 @@ Created on Wed Oct  7 15:46:24 2020
 
 Utility tools to calculate the High Simmetry (HS) points for slab and interface
 
-@author: gl
+The module contains the following functions:
+    
+    - pbc_coordinates
+    - replicate_points
+    - generate_uniform_grid
+    - orthorombize
+
+    Author: Gabriele Losi (glosi000)
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
+ 
 """
 
 __author__ = 'Gabriele Losi'
-__copyright__ = 'Prof. M.C. Righi, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 8th, 2021'
 
@@ -22,7 +31,6 @@ from triboflow.utils.plot_tools import plot_uniform_grid
 # =============================================================================
 # TOOLS FOR PERIODIC BOUNDARY CONDITIONS
 # =============================================================================
-
     
 def pbc_coordinates(data, cell, to_array=True, scaled_positions=False):
     """
@@ -69,7 +77,6 @@ def pbc_coordinates(data, cell, to_array=True, scaled_positions=False):
 # TOOLS TO REPLICATE POINTS IN THE CELL
 # =============================================================================
 
-
 def replicate_points(data, cell, replicate_of=(1, 1)):
     """ 
     Replicate a set of points or atomic sites in a (n,m)-size lattice cell.
@@ -114,7 +121,6 @@ def replicate_points(data, cell, replicate_of=(1, 1)):
         coordinates_new = np.column_stack([x_new, y_new, E_new])
     
         return coordinates_new
-
 
 def generate_uniform_grid(cell, density=1, pts_a=None, to_plot=False):
     """
@@ -197,7 +203,6 @@ def generate_uniform_grid(cell, density=1, pts_a=None, to_plot=False):
 # =============================================================================
 # TOOLS TO MODIFY THE LATTICE CELL
 # =============================================================================
-
 
 def orthorombize(data, cell, return_3x3=True):
     """

@@ -4,6 +4,7 @@ Created on Wed Jun 17 15:59:59 2020
 @author: mwo
 """
 import monty
+import numpy as np
 from pprint import pprint, pformat
 
 from pymatgen.core.structure import Structure
@@ -23,7 +24,7 @@ from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
 from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
 from triboflow.utils.structure_manipulation import (
     interface_name, slab_from_structure, recenter_aligned_slabs, 
-    stack_aligned_slabs)
+    stack_aligned_slabs, transfer_average_magmoms, clean_up_site_properties)
 from triboflow.utils.file_manipulation import copy_output_files
 
 
@@ -432,6 +433,7 @@ class FT_MakeSlabInDB(FiretaskBase):
         #     miller=miller)
         
         bulk_conv = SpacegroupAnalyzer(bulk_prim).get_conventional_standard_structure()
+        bulk_conv = transfer_average_magmoms(bulk_prim, bulk_conv)
         
         SG = SlabGenerator(initial_structure=bulk_conv,
                            miller_index=miller,
@@ -456,7 +458,7 @@ class FT_MakeSlabInDB(FiretaskBase):
         nav_high.update_data(
             collection=functional+'.slab_data',
             fltr={'mpid': flag, 'miller': miller},
-            new_values={'$set': {'unrelaxed_slab': slab_dict}},
+            new_values={'$set': {slab_name: slab_dict}},
             upsert=True)
 
         return
@@ -564,28 +566,6 @@ class FT_MakeHeteroStructure(FiretaskBase):
                 r1r2_tol=inter_params['r1r2_tol'])
         
             if bottom_aligned:
-# ============================================================================
-# TODO: Find out if this is actually useful for the PES to return
-#       all the interface structures we need, or if another stacking function
-#       should be written with another input of lateral shifts.
-#       Check out AdsorbateSiteFinder of pymatgen.analysis.adsorption!!
-#       If generate all configs will work, we just have to remove the
-#       [0] index and move the whole list of structures to the spec.
-# EDIT (19.08.2020): It seems as if the code of MPInterfaces has been changed.
-#       Now the relevant function is called get_interface and not
-#       generate_all_configs any more, and only one Interface is returned... 
-# ============================================================================
-# ============================================================================
-                # hetero_interfaces = generate_all_configs(top_aligned,
-                hetero_interfaces = get_interface(
-                    bottom_aligned,
-                    top_aligned,
-                    nlayers_2d=1,
-                    nlayers_substrate=1,
-                    separation=inter_params['interface_distance'])
-        
-                # inter_slab = hetero_interfaces[0]
-                inter_slab = hetero_interfaces
                 
                 bottom_aligned = slab_from_structure(miller_1, bottom_aligned)
                 top_aligned = slab_from_structure(miller_2, top_aligned)
@@ -597,6 +577,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
                     bottom_aligned,
                     d=inter_params['interface_distance'])
                 interface = stack_aligned_slabs(bot_align, top_align)
+                interface = clean_up_site_properties(interface)
                 
                 inter_dict = interface.as_dict()
                 bottom_dict = bot_align.as_dict()

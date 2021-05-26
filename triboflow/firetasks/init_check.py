@@ -22,13 +22,13 @@ The module contains:
     Author: Gabriele Losi (glosi000)
     Credits: The code is partially based on the original work of Michael 
     Wolloch, Triboflow package, Wien University
-    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
 
 """
 
 __author__ = 'Gabriele Losi'
 __credits__ = 'This module is based on the work of Michael Wolloch, TriboFlow'
-__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'January 13th, 2021'
 
@@ -37,7 +37,7 @@ import os
 from fireworks import FWAction, FiretaskBase, explicit_serialize
 
 from triboflow.utils.database import NavigatorMP
-from triboflow.tasks.io import read_json
+from triboflow.utils.utils import read_json
 
 
 currentdir = os.path.dirname(__file__)
@@ -89,7 +89,7 @@ class FTCheckInput(FiretaskBase):
     def run_task(self, fw_spec):
         """ Run the FireTask.
         """        
-
+        
         # Read the required and optional input parameters of the Firetask
         input_dict = self['input_dict']
         output_dict_name = self.get('output_dict_name', 'out_params')
@@ -202,7 +202,7 @@ def material_from_mp(inputs):
         chem_formula = mat.get('formula'), 
         mp_id = mat.get('mpid'))
     
-    functional = comp_params.get('functional', 'SCAN')
+    functional = comp_params.get('functional', 'PBE')
     
     return struct, mpid, functional
 

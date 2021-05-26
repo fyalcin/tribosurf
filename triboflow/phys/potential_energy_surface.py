@@ -3,13 +3,25 @@
 """
 Created on Wed Sep 30 18:12:33 2020
 
-Python functions to get the Potential Energy Surface (PES) of an interface
+Python functions to get the Potential Energy Surface (PES) of an interface.
 
-@author: gl
+The module contains the following functions:
+
+    - get_pes
+    - remove_duplicates
+    - unfold_pes
+    - plot_pes
+
+    Author: Gabriele Losi (glosi000)
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
+    Code readapted from our past homogeneous workflow, MIT license,
+    https://github.com/mcrighi/interface-workflow
+
 """
 
 __author__ = 'Gabriele Losi'
-__copyright__ = 'Prof. M.C. Righi, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
+__credits__ = 'Code readapted from our past homogeneous workflow, MIT license, https://github.com/mcrighi/interface-workflow,'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 8th, 2021'
 

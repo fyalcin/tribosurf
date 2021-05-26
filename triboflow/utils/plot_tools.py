@@ -3,13 +3,21 @@
 """
 Created on Wed Oct  7 15:46:24 2020
 
-Utility tools to calculate the High Simmetry (HS) points for slab and interface
+Utility tools to plot the High Simmetry (HS) points for slab and interface
 
-@author: gl
+The module contains the following functions:
+
+    - plot_slab_hs
+    - plot_pes
+    - plot_uniform_grid
+
+    Author: Gabriele Losi (glosi000)
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
+ 
 """
 
 __author__ = 'Gabriele Losi'
-__copyright__ = 'Prof. M.C. Righi, University of Bologna'
+__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 8th, 2021'
 
@@ -142,7 +150,6 @@ def plot_pes(data, lattice, to_fig=None, vmin=None, vmax=None):
     if to_fig != None:
         plt.title("PES for " + str(to_fig), fontsize=15, family='serif')
         plt.savefig('PES_' + str(to_fig) + '.png', dpi=300)
-
     
 def plot_uniform_grid(grid, cell, n_a, n_b):
     """
@@ -185,18 +192,3 @@ def plot_uniform_grid(grid, cell, n_a, n_b):
     
     ax.plot(x, y, z)
     plt.show()
-
-def plot_kpoint_convergence(bulk_dict):
-    k_dens_l = bulk_dict['k_dens_info']['k_dens_list']
-    energy_l = bulk_dict['k_dens_info']['energy_list']
-    nr_sites = len(bulk_dict['structure_fromMP']['sites'])
-    tol = bulk_dict['k_dens_info']['Energy_tol_abs']*1000
-    E_l = np.asarray(energy_l)
-    E_l = (E_l - E_l[-1])*1000
-    plt.plot(k_dens_l, E_l, 'ro--')
-    plt.ylim([-tol*5, tol*5])
-    plt.xlabel('kpoint denisty')
-    plt.ylabel('total energy [meV/atom]')
-    plt.axhline(y=-tol, linestyle='dotted')
-    plt.axhline(y=tol, linestyle='dotted')
-    return

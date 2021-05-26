@@ -1,4 +1,5 @@
-"""Firetasks for converging the energy cutof in the triboflow project.
+"""Firetasks for converging the kpoints density using absolute energy differences
+ in the triboflow project.
 
 Created on Wed Jun 17 15:59:59 2020
 @author: mwo
@@ -18,8 +19,8 @@ from atomate.vasp.powerups import add_modify_incar
 
 from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
 from triboflow.utils.check_convergence import is_list_converged
-from triboflow.utils.vasp_tools import (
-    get_generalized_kmesh, get_custom_vasp_static_settings)
+from triboflow.utils.vasp_tools import (get_custom_vasp_static_settings,
+    MeshFromDensity)
 from triboflow.utils.file_manipulation import copy_output_files
 
 
@@ -39,8 +40,8 @@ class FT_StartKPointConvo(FiretaskBase):
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
 
-        k_dens_start = self.get('k_dens_start', 500)
-        k_dens_incr = self.get('k_dens_incr', 50)
+        k_dens_start = self.get('k_dens_start', 1.0)
+        k_dens_incr = self.get('k_dens_incr', 0.1)
         n_converge = self.get('n_converge', 3)
         
         nav_structure = StructureNavigator(
@@ -160,8 +161,8 @@ class FT_KpointsConvo(FiretaskBase):
     def run_task(self, fw_spec):
         
         n_converge = self.get('n_converge', 3)
-        k_dens_start = self.get('k_dens_start', 500)
-        k_dens_incr = self.get('k_dens_incr', 50)
+        k_dens_start = self.get('k_dens_start', 1.0)
+        k_dens_incr = self.get('k_dens_incr', 0.1)
         file_output = self.get('file_output', False)
         output_dir = self.get('output_dir', None)
         remote_copy = self.get('remote_copy', False)
@@ -203,8 +204,7 @@ class FT_KpointsConvo(FiretaskBase):
             comp_params['k_dens'] = k_dens_start
             vis = get_custom_vasp_static_settings(struct, comp_params,
                                                   'bulk_from_scratch')
-            kpoints = Kpoints.automatic_gamma_density(struct, k_dens_start)
-            #kpoints = get_generalized_kmesh(struct, k_dens_start)
+            kpoints = vis.kpoints
             k_dens_list = [k_dens_start]
                 
             RunVASP_FW = StaticFW(structure=struct, vasp_input_set=vis,
@@ -321,16 +321,19 @@ class FT_KpointsConvo(FiretaskBase):
                 
                 last_mesh = data['last_mesh']
                 k_dens = k_dens_list[-1] + k_dens_incr
-                kpoints = Kpoints.automatic_gamma_density(struct, k_dens)
+                Mesh = MeshFromDensity(structure=struct,
+                                       target_density=k_dens,
+                                       compare_density=k_dens_list[-1])
                 
-                #kpoints = get_generalized_kmesh(struct, k_dens)
-                while kpoints.kpts == last_mesh:
+                while Mesh.are_meshes_the_same():
                     k_dens = k_dens + k_dens_incr
-                    kpoints = Kpoints.automatic_gamma_density(struct, k_dens)
-                    #kpoints = get_generalized_kmesh(struct, k_dens)
+                    Mesh = MeshFromDensity(structure=struct,
+                                       target_density=k_dens,
+                                       compare_density=k_dens_list[-1])
                 comp_params['k_dens'] = k_dens
                 vis = get_custom_vasp_static_settings(struct, comp_params,
                                                       'bulk_from_scratch')
+                kpoints = vis.kpoints
 
                 RunVASP_FW = StaticFW(structure=struct, vasp_input_set=vis,
                                       name=label)

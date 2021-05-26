@@ -7,13 +7,12 @@ Firetasks to calculate the surface energy for a slab along a given orientation.
 
 The module contains the following Firetasks:
 
-** Surface Energy evaluation **
     - FT_SurfaceEnergy
     Calculate the surface energy between of one or more slabs with respect to
     the bulk structure having the same orientation.
 
     Author: Gabriele Losi (glosi000)
-    Copyright 2021, Prof. M.C. Righi, TribChem, University of Bologna
+    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
 
 """
 
@@ -36,6 +35,7 @@ from triboflow.utils.utils import (
     write_multiple_dict
 )
 from triboflow.utils.errors import SurfaceEnergyError
+
 
 currentdir = os.path.dirname(__file__)
 
@@ -168,20 +168,28 @@ class FT_SurfaceEnergy(FiretaskBase):
 
         """
         
-        # Check for errors
-        #self._check_errors(p)
+        # Check for errors in the length of entry
+        SurfaceEnergyError.check_entry(p['entry'])
             
         # Call the navigator for retrieving the dictionary out of the DB
         nav = Navigator(db_file=p['db_file'], high_level=p['database'])
         dic = nav.find_data(collection=p['collection'], 
                             fltr={'mpid': p['mp_id'], 'miller': p['miller']})
-        
+
         # Extract the output dictionary containing energies and get surfene
-        output_list = get_multiple_info_from_dict(dic, p['entry'])
+        try:
+            output_list = get_multiple_info_from_dict(dic, p['entry'])
+        except:
+            raise SurfaceEnergyError('Some problems occurred in output list, '
+                                     'probably results are not stored correctly '
+                                     'in database: {}, collection: {}'
+                                     .format(p['database'], p['collection']))
+        SurfaceEnergyError.check_output(output_list)
+        
         surfene = calculate_surface_energy(output_list, sym_surface=True)
 
         return surfene
-    
+
     def store_to_db(self, surfene, p):
         """
         Store surface energies to DB.
@@ -207,9 +215,4 @@ class FT_SurfaceEnergy(FiretaskBase):
         for d in info_dict:
             nav.update_data(p['collection'], 
                             {'mpid': p['mp_id'], 'miller': p['miller']}, 
-                            {'$set': d})
-
-    def _check_errors(self, p):
-        """ Error check on allowed collections.
-        """
-        SurfaceEnergyError.check_collection(p['collection'])
+                            {'$set': d})        
