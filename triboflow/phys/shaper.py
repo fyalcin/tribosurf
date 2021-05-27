@@ -153,9 +153,6 @@ class Shaper():
         ----------
         struct : pymatgen.core.structure.Structure
             Main object in pymatgen to store structures.
-        min_vac : float, optional
-            Minimum thickness to identify a region as 'vacuum'.
-            The default is 4.0.
 
         Returns
         -------
@@ -211,12 +208,36 @@ class Shaper():
         struct_resized = Shaper._remove_layers(struct_centered, struct_thickness)
 
         # Vacuum region is modified to the desired thickness
-        reconstructed_struct = Shaper.modify_vacuum(struct_resized, vacuum_thickness)
+        reconstructed_struct = Shaper._modify_vacuum(struct_resized, vacuum_thickness)
 
         return reconstructed_struct
 
     @staticmethod
-    def modify_vacuum(struct, vac_thick, method='to_value', center=True):
+    def _modify_vacuum(struct, vac_thick, method='to_value', center=True):
+        """
+        Method to modify the vacuum region in a structure.
+
+        Parameters
+        ----------
+        struct : pymatgen.core.structure.Structure
+            Main object in pymatgen to store structures.
+        vac_thick : float
+            Vacuum adjustment amount in Angstroms.
+        method : str, optional
+            Whether to set the vacuum to the desired value or adjust the
+            vacuum in the structure by the given value.
+            The default is 'to_value'.
+        center : bool, optional
+            Whether to center the slab in the resulting structure inside
+            the vacuum region.
+            The default is True.
+
+        Returns
+        -------
+        modified_struct : pymatgen.core.structure.Structure
+            Modified pymatgen Structure object.
+
+        """
 
         # Check if a Slab or Structure is passed and proceed accordingly
         if 'miller_index' in vars(struct):
@@ -227,7 +248,7 @@ class Shaper():
             struct_params = attr_to_dict(struct, attrs)
             out_object = Slab
         else:
-            # Necessary structure attributed to reconstruct the Structure
+            # Necessary structure attributes to reconstruct the Structure
             attrs = ["species", "site_properties"]
             struct_params = attr_to_dict(struct, attrs)
             out_object = Structure
