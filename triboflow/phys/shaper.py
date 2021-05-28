@@ -179,8 +179,8 @@ class Shaper():
 
         Parameters
         ----------
-        slab : pymatgen.core.surface.Slab
-            Slab object that is to be reconstructed. Input object
+        struct : pymatgen.core.structure.Structure
+            Structure object that is to be reconstructed. Input object
             is not modified with this method.
         slab_thickness : int
             Desired slab thickness in number of layers. Layers will
@@ -189,14 +189,14 @@ class Shaper():
         vacuum_thickness : float
             Desired vacuum region thickness in Angstroms. Lattice
             parameters are modified in order to get the correct vacuum.
-        center : bool
+        center : bool, optional
             Whether to center the reconstructed slab between the vacuum region.
             The default is True.
 
         Returns
         -------
-        reconstructed_slab : pymatgen.core.surface.Slab
-            Reconstructed slab with the desired parameters.
+        reconstructed_struct : pymatgen.core.structure.Structure
+            Reconstructed structure with the desired parameters.
 
         """
         # Input slab is first centered for the cases where the slab spills
