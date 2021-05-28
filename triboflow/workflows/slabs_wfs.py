@@ -57,7 +57,7 @@ class SlabWF:
     @staticmethod
     def conv_slabthick_surfene(structure, mp_id, miller, functional='PBE',
                                comp_params={}, spec={}, db_file=None,
-                               low_level=None, high_level='triboflow',
+                               low_level=None, high_level=None,
                                relax_type='slab_pos_relax', thick_min=4, 
                                thick_max=12, thick_incr=2, vacuum=10,
                                in_unit_planes=True, ext_index=0, conv_thr=0.025,

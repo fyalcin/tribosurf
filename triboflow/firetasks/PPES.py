@@ -77,7 +77,7 @@ class FT_StartPPESWF(FiretaskBase):
 
         nav_structure = StructureNavigator(
             db_file=db_file, 
-            high_level='triboflow')
+            high_level=True)
         interface_dict = nav_structure.get_interface_from_db(
             name=name, 
             functional=functional)
@@ -153,7 +153,7 @@ class FT_DoPPESCalcs(FiretaskBase):
         
         nav_structure = StructureNavigator(
             db_file=db_file,
-            high_level='triboflow')
+            high_level=True)
         interface_dict = nav_structure.get_interface_from_db(
             name=name,
             functional=functional)            

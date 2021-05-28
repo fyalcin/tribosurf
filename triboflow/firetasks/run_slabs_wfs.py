@@ -81,11 +81,11 @@ class FT_SlabOptThick(FiretaskBase):
         intermediate calculations and raw data during will be saved here. If 
         nothing is passed the Firework database is used. The default is None.
 
-    high_level : str, optional
+    high_level : str, or None, optional
         Name of the table of the "high level" database, saved in db_file.
         The slab optimal thickness will be saved here. The slab energy and
         surface energy will be saved too if conv_kind is 'surfene'.
-        The default is 'triboflow'.
+        The default is None.
 
     conv_kind : str, optional
         Type of convergence to be performed. Allowed values are: 'surfene', 
