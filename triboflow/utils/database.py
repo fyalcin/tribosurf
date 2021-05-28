@@ -139,7 +139,13 @@ class Navigator:
             self.db = self.db.client[high_level]
         elif high_level:
             db_dict = read_json(db_path)
-            self.db = self.db.client[db_dict['high_level']]
+            try:
+                self.db = self.db.client[db_dict['high_level']]
+            except:
+                raise KeyError('You have not set the key for your '
+                               '"high_level" database in your db.json file. '
+                               'This is necessary for using TriboFlow, so '
+                               'please add it here: {}'.format(db_path))
 
     def __get_db(self, db_file):
         """ 
