@@ -21,6 +21,89 @@ from triboflow.utils.vasp_tools import (
 from triboflow.utils.check_convergence import is_list_converged
 from triboflow.utils.file_manipulation import copy_output_files
 
+@explicit_serialize
+class FT_PreRelax(FiretaskBase):
+    _fw_name = 'Start a cell shape relaxation'
+    required_params = ['mp_id', 'functional']
+    optional_params = ['db_file', 'encut', 'k_dens']
+    def run_task(self, fw_spec):
+        encut = self.get('encut', 300)
+        k_dens = self.get('k_dens', 6)
+        mp_id = self.get('mp_id')
+        functional = self.get('functional')
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
+
+        nav_structure = StructureNavigator(
+            db_file=db_file,
+            high_level='triboflow')
+        data = nav_structure.get_bulk_from_db(
+            mp_id=mp_id,
+            functional=functional)
+
+        prim_struct = data.get('primitive_structure')
+        if prim_struct is None:
+            struct = data.get('structure_fromMP')
+            if struct is None:
+                raise LookupError('No structure found in the database that can '
+                                  'be used as input for cell shape relaxation.')
+            from pymatgen.symmetry.analyzer import SpacegroupAnalyzer as sga
+            struct = Structure.from_dict(struct)
+            prim_struct = sga(struct).get_primitive_standard_structure()
+        else:
+            prim_struct = Structure.from_dict(prim_struct)
+
+        if data.get('prim_relaxed') or (prim_struct.lattice.a != prim_struct.lattice.c):
+            return FWAction(update_spec=fw_spec)
+        else:
+            # Remove later #
+            from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings, get_custom_vasp_static_settings
+            from triboflow.workflows.base import dynamic_relax_swf
+            from uuid import uuid4
+            from atomate.vasp.fireworks.core import StaticFW
+            # Remove later #
+
+            tag = "CellShapeRelax-{}".format(str(uuid4()))
+            comp_params = {'encut': encut, 'k_dens': k_dens, 'functional': functional}
+            vis = get_custom_vasp_relax_settings(prim_struct, comp_params, 'bulk_shape_relax')
+            # vis = get_custom_vasp_static_settings(prim_struct, comp_params, 'bulk_from_scratch')
+            CSR_WF = dynamic_relax_swf([struct, vis, tag])
+            # CSR_WF = Workflow.from_Firework(StaticFW(structure=prim_struct, vasp_input_set=vis, name=tag))
+            UPS_FW = Firework([FT_UpdatePrimStruct(functional=functional, tag=tag, flag=mp_id)])
+            UPS_WF = Workflow.from_Firework(UPS_FW, name='Update primitive structure WF')
+            CSR_WF.append_wf(UPS_WF, CSR_WF.leaf_fw_ids)
+
+            return FWAction(detours=CSR_WF, update_spec=fw_spec)
+
+
+@explicit_serialize
+class FT_UpdatePrimStruct(FiretaskBase):
+    _fw_name = 'Update primitive structure in the high level DB'
+    required_params = ['functional', 'tag', 'flag']
+    optional_params = ['message', 'db_file']
+
+    def run_task(self, fw_spec):
+        functional = self.get('functional')
+        tag = self.get('tag')
+        flag = self.get('flag')
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
+
+        nav = Navigator(db_file=db_file)
+        calc = nav.find_data('tasks', {'task_label': tag})
+        out = calc['output']
+
+        struct_dict = {'primitive_structure_test': out['structure'],
+                       'prim_relaxed': True}
+        nav_high = Navigator(db_file=db_file, high_level='triboflow')
+        nav_high.update_data(
+                    collection=functional+'.bulk_data',
+                    fltr={'mpid': flag},
+                    new_values={'$set': struct_dict},
+                    upsert=True)
+        return FWAction(update_spec=fw_spec)
 
 
 @explicit_serialize
