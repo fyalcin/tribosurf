@@ -54,7 +54,7 @@ class FT_PreRelax(FiretaskBase):
         else:
             prim_struct = Structure.from_dict(prim_struct)
 
-        if data.get('prim_relaxed') or (prim_struct.lattice.a != prim_struct.lattice.c):
+        if data.get('prim_relaxed') or (prim_struct.lattice.a == prim_struct.lattice.c):
             return FWAction(update_spec=fw_spec)
         else:
             # Remove later #
@@ -67,9 +67,7 @@ class FT_PreRelax(FiretaskBase):
             tag = "CellShapeRelax-{}".format(str(uuid4()))
             comp_params = {'encut': encut, 'k_dens': k_dens, 'functional': functional}
             vis = get_custom_vasp_relax_settings(prim_struct, comp_params, 'bulk_shape_relax')
-            # vis = get_custom_vasp_static_settings(prim_struct, comp_params, 'bulk_from_scratch')
             CSR_WF = dynamic_relax_swf([struct, vis, tag])
-            # CSR_WF = Workflow.from_Firework(StaticFW(structure=prim_struct, vasp_input_set=vis, name=tag))
             UPS_FW = Firework([FT_UpdatePrimStruct(functional=functional, tag=tag, flag=mp_id)])
             UPS_WF = Workflow.from_Firework(UPS_FW, name='Update primitive structure WF')
             CSR_WF.append_wf(UPS_WF, CSR_WF.leaf_fw_ids)
@@ -95,7 +93,7 @@ class FT_UpdatePrimStruct(FiretaskBase):
         calc = nav.find_data('tasks', {'task_label': tag})
         out = calc['output']
 
-        struct_dict = {'primitive_structure_test': out['structure'],
+        struct_dict = {'primitive_structure': out['structure'],
                        'prim_relaxed': True}
         nav_high = Navigator(db_file=db_file, high_level='triboflow')
         nav_high.update_data(
