@@ -92,8 +92,6 @@ class FTCheckInput(FiretaskBase):
         read_key = self['read_key']
         
         # Create the output dictionary to be stored in DB
-        input_keys = currentdir + '/input_keys.json'
-        defaults = currentdir + '/defaults.json'
         out_dict = read_input_dict(input_dict, read_key)
         
         # mpid of minimum energy structure is used as default for materials

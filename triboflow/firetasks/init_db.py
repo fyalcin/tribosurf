@@ -35,7 +35,10 @@ __copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, Universi
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'January 20th, 2021'
 
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
+
 from triboflow.utils.database import Navigator, NavigatorMP
+from triboflow.utils.structure_manipulation import transfer_average_magmoms
 
 from fireworks.utilities.fw_utilities import explicit_serialize
 from fireworks import FiretaskBase
@@ -150,6 +153,12 @@ def put_bulk_in_db(data, comp_params, db_file):
     struct, mp_id, functional, comp_params = material_data_for_db(
         data, comp_params, db_file, metal_thr = 0.2)
     
+    # Make a primitive standard structure to ensure high symmetry.
+    sga = SpacegroupAnalyzer(struct)
+    prim_struct = sga.get_primitive_standard_structure()
+    # site properties are not retained, so we have to add magmom again.
+    prim_struct = transfer_average_magmoms(struct, prim_struct)
+    
     # Load the bulk structure into the high level DB
     nav = Navigator(db_file, high_level=True)
     nav.insert_data(functional+'.bulk_data', 
@@ -183,8 +192,10 @@ def put_slab_in_db(data, comp_params, db_file):
                     {'mpid': mp_id,
                      'formula': data['formula'],
                      'miller': data['miller'],
-                     'min_thickness': data['min_thickness'],
-                     'min_vacuum': data['min_vacuum'],
+                     'thick_min': data['thick_min'],
+                     'thick_max': data['thick_max'],
+                     'thick_incr': data['thick_incr'],
+                     'vacuum': data['vacuum'],
                      'comp_parameters': comp_params})
 
 def put_inter_in_db(data_1, data_2, comp_params, inter_params, db_file):
