@@ -472,7 +472,7 @@ def write_multiple_dict(data, entry, to_mongodb=True):
 # Retrieve structure and VASP output from DB
 # ============================================================================
 
-def retrieve_from_db(mp_id, collection, db_file=None, high_level_db=True, 
+def retrieve_from_db(mp_id, collection, db_file='auto', high_level_db=True, 
                      miller=None, entry=None, is_slab=False, pymatgen_obj=False):
     """
     Retrieve data from a selected database and collection. By specifing an entry
@@ -546,7 +546,7 @@ def retrieve_from_db(mp_id, collection, db_file=None, high_level_db=True,
     return field, structure
 
 def retrieve_from_tag(collection, tag, tag_key='task_label', entry=None, 
-                      db_file=None, high_level_db=False):
+                      db_file='auto', high_level_db=False):
     """
     Retrieve a dictionary field out of the database based on the combination
     {tag_key : tag} as filter (fltr). Useful to retrieve quickly the results of a 

@@ -43,4 +43,4 @@ WF = heterogeneous_wf(inputs)
 
 lpad = LaunchPad.auto_load()
 lpad.add_wf(WF)
-rapidfire(lpad)
+#rapidfire(lpad)
