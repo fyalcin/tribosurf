@@ -505,9 +505,12 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
         if comp_parameters['is_metal']:
             uis['SIGMA'] = 0.2
             uis['ISMEAR'] = 1
-        else:
+        elif relax_type.startswith('bulk'):
             uis['SIGMA'] = 0.05
             uis['ISMEAR'] = -5
+        else:
+            uis['SIGMA'] = 0.1
+            uis['ISMEAR'] = 0
     else:
         uis['SIGMA'] = 0.1
         uis['ISMEAR'] = 0
