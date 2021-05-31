@@ -18,6 +18,7 @@ import io
 import os
 from pathlib import Path, PurePosixPath
 import pickle
+import json
 from datetime import datetime
 from pathlib import Path, PurePosixPath
 import pymongo
@@ -25,7 +26,6 @@ from PIL import Image
 from pymatgen.ext.matproj import MPRester
 from atomate.vasp.database import VaspCalcDb
 
-from triboflow.utils.utils import read_json
 from triboflow.core.logging import LoggingBase
 from triboflow.utils.errors import NavigatorError, StuctNavigatorError, NavigatorMPError
 
@@ -138,7 +138,8 @@ class Navigator:
         if isinstance(high_level, str):
             self.db = self.db.client[high_level]
         elif high_level:
-            db_dict = read_json(db_path)
+            with open(db_path, 'r') as f:
+                db_dict = json.load(f)
             try:
                 self.db = self.db.client[db_dict['high_level']]
             except:
@@ -166,7 +167,7 @@ class Navigator:
 
         """
 
-        if db_file is 'auto':
+        if db_file == 'auto':
             if 'FW_CONFIG_FILE' in os.environ:
                 conf_file = os.environ['FW_CONFIG_FILE']
                 conf_path = conf_file.rstrip('FW_config.yaml')
@@ -1153,3 +1154,63 @@ def image_bytes_converter(data, to_image=True):
         data_conv = convert_image_to_bytes(data)
             
     return data_conv
+
+def get_low_and_high_db_names(parameters_dict={}):
+    """Return the high_level and low_level database names.
+    
+    If no parameters_dict is passed, or the information therein does not specify
+    strings for the database names, the db.json file is read from the config
+    directory (location in environmental variable FW_CONFIG_FILE).
+    
+
+    Parameters
+    ----------
+    parameters_dict : TYPE, optional
+        Parameters dictionary that can be passed and my include information
+        about the database names in the keys: 'low_level' and  'high_level'.
+        Generally read from default values using
+        triboflow.utils.utils.read_default_params. The default is {}.
+
+    Raises
+    ------
+    NavigatorError
+        If the config directory can not be found, an error is raised.
+
+    Returns
+    -------
+    low_out : str
+        Name of the low level database.
+    high_out : str
+        Name of the high level database.
+
+    """
+    if 'FW_CONFIG_FILE' in os.environ:
+        conf_file = os.environ['FW_CONFIG_FILE']
+        conf_path = conf_file.rstrip('FW_config.yaml')
+        db_file = conf_path + 'db.json'
+    else:
+        raise NavigatorError('Could not find "FW_CONFIG_FILE" environment '
+                             'variable.\nPlease make sure that your python'
+                             'environment is configured correctly.')
+    low_db = parameters_dict.get('low_level', 'auto')
+    high_db = parameters_dict.get('high_level', 'auto')
+    with open(db_file, 'r') as f:
+        db_dict = json.load(f)
+    low_name = db_dict.get('database')
+    high_name = db_dict.get('high_level')
+    
+    if not low_db:
+        low_out = low_name
+    elif low_db == 'auto':
+        low_out = low_name
+    else:
+        low_out = low_db
+    
+    if not high_db:
+        high_out = high_name
+    elif high_db == 'auto':
+        high_out = high_name
+    else:
+        high_out = high_db
+        
+    return low_out, high_out

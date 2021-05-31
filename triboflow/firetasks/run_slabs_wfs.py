@@ -38,7 +38,7 @@ import numpy as np
 from pymatgen.core.structure import Structure
 from fireworks import explicit_serialize, FiretaskBase, FWAction
 
-from triboflow.utils.database import Navigator
+from triboflow.utils.database import Navigator, get_low_and_high_db_names
 from triboflow.utils.utils import (
     read_runtask_params,
     read_default_params,
@@ -151,10 +151,10 @@ class FT_SlabOptThick(FiretaskBase):
         """ 
 
         # Define the json file containing default values and read parameters
-        dfl = currentdir + '/defaults_fw.json'
+        dfl = currentdir + '/../defaults.json'
         p = read_runtask_params(self, fw_spec, self.required_params, self.optional_params,
                                 default_file=dfl, default_key="SlabOptThick")
-
+        
         # Check if a convergence calculation of the slab thickness is present
         is_done, comp_params = self.is_data(p, dfl)
 
@@ -187,7 +187,7 @@ class FT_SlabOptThick(FiretaskBase):
         """
 
         field, bulk = retrieve_from_db(p['mp_id'], collection=p['functional']+'.bulk_data',
-                                       db_file=p['db_file'], database=p['high_level'],
+                                       db_file=p['db_file'], high_level_db=True,
                                        entry=p['bulk_entry'], is_slab=False,
                                        pymatgen_obj=True)
         return bulk
@@ -214,7 +214,7 @@ class FT_SlabOptThick(FiretaskBase):
         
         # Retrieve the slab from the database
         field, _ = retrieve_from_db(mp_id=p['mp_id'], db_file=p['db_file'],
-                                    database=p['high_level'], miller=p['miller'],
+                                    high_level_db=p['high_level'], miller=p['miller'],
                                     collection=p['functional']+'.slab_data',
                                     pymatgen_obj=False)
         
@@ -394,7 +394,7 @@ class FT_StartThickConvo(FiretaskBase):
         """
 
         # Define the json file containing default values and read parameters
-        dfl = currentdir + '/defaults_fw.json'
+        dfl = currentdir + '/../defaults.json'
         p = read_runtask_params(self, fw_spec, self.required_params, 
                                 self.optional_params, default_file=dfl, 
                                 default_key="StartThickConvo")
@@ -409,13 +409,14 @@ class FT_StartThickConvo(FiretaskBase):
         from triboflow.workflows.surfene_wfs import SurfEneWF
 
         if p['conv_kind'] == 'surfene':
+            low_level_name, high_level_name = get_low_and_high_db_names(p)
             wf = SurfEneWF.conv_surface_energy(structure=p['structure'],
                                                mp_id=p['mp_id'], 
                                                miller=p['miller'], 
                                                functional=p['functional'],
                                                db_file=p['db_file'], 
-                                               low_level=p['low_level'],
-                                               high_level=p['high_level'],
+                                               low_level=low_level_name,
+                                               high_level=high_level_name,
                                                relax_type=p['relax_type'],
                                                comp_params=p['comp_params'],
                                                thick_min=p['thick_min'], 
@@ -452,7 +453,7 @@ class FT_EndThickConvo(FiretaskBase):
         """ 
 
         # Define the json file containing default values and read parameters
-        dfl = currentdir + '/defaults_fw.json'
+        dfl = currentdir + '/../defaults.json'
         p = read_runtask_params(self, fw_spec, self.required_params, 
                                 self.optional_params, default_file=dfl, 
                                 default_key="EndThickConvo")
