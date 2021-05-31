@@ -74,7 +74,7 @@ class SlabWF:
                 structure.composition.reduced_formula + ' ' + str(miller)
         
         # Set the cluster parameters
-        dfl = currentdir + '/defaults_fw.json'
+        dfl = currentdir + '/../defaults.json'
         cluster_params = read_default_params(default_file=dfl, 
                                              default_key="cluster_params", 
                                              dict_params=cluster_params)

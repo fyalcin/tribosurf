@@ -139,7 +139,7 @@ class FT_SurfaceEnergy(FiretaskBase):
         """
 
         # Define the json file containing default values and read parameters
-        dfl = currentdir + '/defaults_fw.json'
+        dfl = currentdir + '/../defaults.json'
         p = read_runtask_params(self, fw_spec, self.required_params,
                                 self.optional_params, default_file=dfl,
                                 default_key="SurfaceEnergy")

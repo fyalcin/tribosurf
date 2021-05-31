@@ -138,7 +138,7 @@ class FT_RelaxStructure(FiretaskBase):
         """ 
 
         # Define the json file containing default values and read parameters
-        dfl = currentdir + '/defaults_fw.json'
+        dfl = currentdir + '/../defaults.json'
         p = read_runtask_params(self,
                                 fw_spec, 
                                 self.required_params, 
@@ -188,7 +188,7 @@ class FT_RelaxStructure(FiretaskBase):
 
         # Retrieve the structure from the Database
         field, structure = retrieve_from_db(db_file=p['db_file'], 
-                                            database=p['database'], 
+                                            high_level_db=p['database'], 
                                             collection=p['collection'], 
                                             mp_id=p['mp_id'],
                                             miller=p['miller'],
@@ -370,7 +370,7 @@ class FT_MoveTagResults(FiretaskBase):
         """
 
         # Define the json file containing default values and read parameters
-        dfl = currentdir + '/defaults_fw.json'
+        dfl = currentdir + '/../defaults.json'
         p = read_runtask_params(self, 
                                 fw_spec,
                                 self.required_params,
@@ -419,7 +419,7 @@ class FT_MoveTagResults(FiretaskBase):
         if p['check_entry'] is not None:
             # Retrieve the structure from the Database
             _, check_dict = retrieve_from_db(db_file=p['db_file'], 
-                                             database=p['database_to'], 
+                                             high_level_db=p['database_to'], 
                                              collection=p['collection_to'], 
                                              mp_id=p['mp_id'],
                                              miller=p['miller'],
@@ -449,7 +449,7 @@ class FT_MoveTagResults(FiretaskBase):
                                             tag=p['tag'],
                                             tag_key=p['tag_key'],
                                             entry=p['entry_from'],
-                                            database=p['database_from'])
+                                            high_level_db=p['database_from'])
         
         return vasp_calc, info
     
