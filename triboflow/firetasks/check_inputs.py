@@ -42,7 +42,7 @@ class FT_UpdateCompParams(FiretaskBase):
         
         nav_structure = StructureNavigator(
             db_file=db_file, 
-            high_level='triboflow')
+            high_level=True)
         bulk_1 = nav_structure.get_bulk_from_db(
             mp_id=mp_id_1, 
             functional=functional)
@@ -61,7 +61,7 @@ class FT_UpdateCompParams(FiretaskBase):
         metal_2 = bulk_2['comp_parameters']['is_metal']
         metal_inter = any((metal_1, metal_2))
 
-        nav_high = Navigator(db_file=db_file, high_level='triboflow')
+        nav_high = Navigator(db_file=db_file, high_level=True)
         nav_high.update_data(
             collection=functional+'.slab_data',
             fltr={'mpid': mp_id_1, 'miller': miller_1},
@@ -109,7 +109,7 @@ class FT_MakeInterfaceInDB(FiretaskBase):
             chem_formula=data2['formula'],
             mp_id=data2['mp_id'])
 
-        nav_high = Navigator(db_file=db_file, high_level='triboflow')
+        nav_high = Navigator(db_file=db_file, high_level=True)
 
         name = interface_name(mp_id_1, data1['miller'],
                               mp_id_2, data2['miller'])
@@ -163,7 +163,7 @@ class FT_MakeSlabInDB(FiretaskBase):
         else:
             comp_data['is_metal'] = True
 
-        nav_high = Navigator(db_file=db_file, high_level='triboflow')
+        nav_high = Navigator(db_file=db_file, high_level=True)
 
         if nav_high.find_data(
             collection=functional+'.slab_data',
@@ -223,7 +223,7 @@ class FT_MakeBulkInDB(FiretaskBase):
         else:
             comp_data['is_metal'] = True
         
-        nav_high = Navigator(db_file=db_file, high_level='triboflow')
+        nav_high = Navigator(db_file=db_file, high_level=True)
 
         if nav_high.find_data(
             collection=functional+'.bulk_data',

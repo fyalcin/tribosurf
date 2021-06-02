@@ -11,18 +11,16 @@ from monty.json import jsanitize
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import Slab
 from pymatgen.core.operations import SymmOp
-from fireworks import FWAction, FiretaskBase, Workflow
+from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
-from atomate.vasp.fireworks.core import OptimizeFW, ScanOptimizeFW
-from atomate.vasp.powerups import add_modify_incar
 
 from triboflow.phys.high_symmetry import (
     get_slab_hs, get_interface_hs, pbc_hspoints, fix_hs_dicts)
 from triboflow.phys.potential_energy_surface import get_pes
 from triboflow.utils.plot_tools import plot_pes
 from triboflow.utils.database import (
-    Navigator, NavigatorMP, StructureNavigator, convert_image_to_bytes)
+    Navigator, StructureNavigator, convert_image_to_bytes)
 from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
 from triboflow.utils.structure_manipulation import (
     interface_name, clean_up_site_properties, stack_aligned_slabs, 
@@ -59,7 +57,7 @@ class FT_StartPESCalcSubWF(FiretaskBase):
     """
     required_params = ['mp_id_1', 'mp_id_2', 'miller_1', 'miller_2',
                        'functional']
-    optional_params = ['db_file']
+    optional_params = ['db_file', 'high_level_db']
 
     def run_task(self, fw_spec):
 
@@ -72,12 +70,13 @@ class FT_StartPESCalcSubWF(FiretaskBase):
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
+        hl_db = self.get('high_level_db', True)
         
         name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
         
         nav_structure = StructureNavigator(
             db_file=db_file, 
-            high_level='triboflow')
+            high_level=hl_db)
         interface_dict = nav_structure.get_interface_from_db(
             name=name,
             functional=functional
@@ -125,7 +124,7 @@ class FT_ComputePES(FiretaskBase):
     """
     
     required_params = ['interface_name', 'functional', 'file_output']
-    optional_params = ['db_file']
+    optional_params = ['db_file', 'high_level_db']
 
     def run_task(self, fw_spec):
 
@@ -136,10 +135,11 @@ class FT_ComputePES(FiretaskBase):
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
+        hl_db = self.get('high_level_db', True)
         
         nav_structure = StructureNavigator(
             db_file=db_file,
-            high_level='triboflow')
+            high_level=hl_db)
         inter_dict = nav_structure.get_interface_from_db(
             name=name,
             functional=functional
@@ -165,7 +165,7 @@ class FT_ComputePES(FiretaskBase):
         plot_name = 'PES_' + str(name) + '.png'
         pes_image_bytes = convert_image_to_bytes('./'+plot_name)
         
-        nav_high = Navigator(db_file=db_file, high_level='triboflow')
+        nav_high = Navigator(db_file=db_file, high_level=hl_db)
         nav_high.update_data(
             collection=functional+'.interface_data',
             fltr={'name': name},
@@ -204,7 +204,7 @@ class FT_RetrievePESEnergies(FiretaskBase):
     """
 
     required_params = ['interface_name', 'functional', 'tag']
-    optional_params = ['db_file']
+    optional_params = ['db_file', 'high_level_db']
 
     def run_task(self, fw_spec):
     
@@ -215,10 +215,11 @@ class FT_RetrievePESEnergies(FiretaskBase):
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
+        hl_db = self.get('high_level_db', True)
         
         nav_structure = StructureNavigator(
             db_file=db_file,
-            high_level='triboflow')
+            high_level=hl_db)
         interface_dict = nav_structure.get_interface_from_db(
             name=name,
             functional=functional)
@@ -254,7 +255,7 @@ class FT_RetrievePESEnergies(FiretaskBase):
         struct_min = calc_min['output']['structure']
         struct_max = calc_max['output']['structure']
 
-        nav_high = Navigator(db_file=db_file, high_level='triboflow')
+        nav_high = Navigator(db_file=db_file, high_level=hl_db)
         nav_high.update_data(
             collection=functional+'.interface_data',
             fltr={'name': name},
@@ -303,7 +304,7 @@ class FT_FindHighSymmPoints(FiretaskBase):
     """
 
     required_params = ['top_slab', 'bot_slab', 'functional', 'interface_name']
-    optional_params = ['db_file']
+    optional_params = ['db_file' 'high_level_db']
 
     def run_task(self, fw_spec):
     
@@ -315,7 +316,8 @@ class FT_FindHighSymmPoints(FiretaskBase):
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
- 
+        hl_db = self.get('high_level_db', True)
+        
         # Top slab needs to be mirrored to find the high symmetry points at the
         # interface.
         mirror = SymmOp.reflection(normal=[0,0,1], origin=[0, 0, 0])
@@ -338,7 +340,7 @@ class FT_FindHighSymmPoints(FiretaskBase):
         t_hsp_u =  pbc_hspoints(top_hsp_unique, cell)
         t_hsp_a =  pbc_hspoints(top_hsp_all, cell)
         
-        nav_high = Navigator(db_file=db_file, high_level='triboflow')
+        nav_high = Navigator(db_file=db_file, high_level=hl_db)
         nav_high.update_data(
             collection=functional+'.interface_data',
             fltr={'name': name},
@@ -369,8 +371,6 @@ class FT_StartPESCalcs(FiretaskBase):
         Top slab of the interface.
     bottom_slab : pymatgen.core.surface.Slab
         Bottom slab of the interface.
-    functional : str
-        Which functional to use; has to be 'PBE' or 'SCAN'.
     interface_name : str
         Name of the interface in the high-level database.
     comp_parameters : dict
@@ -386,7 +386,7 @@ class FT_StartPESCalcs(FiretaskBase):
     FWActions that produce a detour workflow with relaxations for the PES.
     """
 
-    required_params = ['top_slab', 'bot_slab', 'functional', 'interface_name',
+    required_params = ['top_slab', 'bot_slab', 'interface_name',
                        'comp_parameters', 'tag']
     optional_params = ['db_file']
 
@@ -394,7 +394,6 @@ class FT_StartPESCalcs(FiretaskBase):
 
         top_slab = self.get('top_slab')
         bot_slab = self.get('bot_slab')
-        functional = self.get('functional')
         name = self.get('interface_name')
         comp_params = self.get('comp_parameters')
         tag = self.get('tag')

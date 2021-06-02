@@ -31,7 +31,6 @@ class FT_RetrievMatchedSlabs(FiretaskBase):
                        'high_level_db']
     
     def run_task(self, fw_spec):
-        from triboflow.workflows.subworkflows import adhesion_energy_swf
         mp_id_1 = self.get('mp_id_1')
         mp_id_2 = self.get('mp_id_2')
         miller_1 = self.get('miller_1')
@@ -78,7 +77,6 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
                        'bottom_in_name', 'bottom_out_name', 'high_level_db']
     
     def run_task(self, fw_spec):
-        from triboflow.workflows.subworkflows import adhesion_energy_swf
         mp_id_1 = self.get('mp_id_1')
         mp_id_2 = self.get('mp_id_2')
         miller_1 = self.get('miller_1')
@@ -101,7 +99,7 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
                                        fltr={'name': name})
         
         relaxed_top_present = interface_dict.get(top_out_name)
-        relaxed_bot_present = interface_dict.get(top_out_name)
+        relaxed_bot_present = interface_dict.get(bot_out_name)
         comp_params = interface_dict.get('comp_parameters', {})
         
         inputs = []

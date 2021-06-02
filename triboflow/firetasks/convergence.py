@@ -28,7 +28,7 @@ class FT_StartConvo(FiretaskBase):
     _fw_name = 'Start Encut or Kdensity Convergence'
     required_params = ['conv_type', 'mp_id', 'functional']
     optional_params = ['db_file', 'encut_start', 'encut_incr', 'k_dens_start',
-                       'k_dens_incr', 'n_converge']
+                       'k_dens_incr', 'n_converge', 'high_level_db']
     def run_task(self, fw_spec):
         from triboflow.workflows.subworkflows import converge_swf
         
@@ -43,6 +43,7 @@ class FT_StartConvo(FiretaskBase):
         k_dens_incr = self.get('k_dens_incr', 0.1)
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
+        hl_db = self.get('high_level_db', True)
             
         if conv_type not in ['kpoints', 'encut']:
             raise ValueError('"type" input must be either "kpoints" or'
@@ -50,7 +51,7 @@ class FT_StartConvo(FiretaskBase):
         
         nav_structure = StructureNavigator(
             db_file=db_file, 
-            high_level='triboflow')
+            high_level=hl_db)
         data = nav_structure.get_bulk_from_db(
             mp_id=mp_id, 
             functional=functional)
@@ -121,7 +122,7 @@ class FT_UpdateBMLists(FiretaskBase):
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
         
-        nav_structure = StructureNavigator(db_file=db_file, high_level=None)
+        nav_structure = StructureNavigator(db_file=db_file, high_level=False)
         results = nav_structure.get_last_bmd_data_from_db(formula=formula)
         
         BM = results['bulk_modulus']
@@ -205,7 +206,7 @@ class FT_Convo(FiretaskBase):
     optional_params = ['deformations', 'n_converge', 'encut_start',
                        'encut_incr', 'k_dens_start', 'k_dens_incr', 'k_dens_default',
                        'db_file', 'file_output', 'output_dir', 'remote_copy',
-                       'server', 'user', 'port']
+                       'server', 'user', 'port', 'high_level_db']
 
     def run_task(self, fw_spec):
         
@@ -229,6 +230,7 @@ class FT_Convo(FiretaskBase):
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
+        hl_db = self.get('high_level_db', True)
         if not deformations:
             deformations = deforms
             
@@ -390,7 +392,7 @@ class FT_Convo(FiretaskBase):
                                 'comp_parameters.k_dens': final_k_dens,
                                 'structure_equiVol': struct_dict}
 
-                nav_high = Navigator(db_file=db_file, high_level='triboflow')
+                nav_high = Navigator(db_file=db_file, high_level=hl_db)
                 nav_high.update_data(
                     collection=functional+'.bulk_data',
                     fltr={'mpid': flag}, 
