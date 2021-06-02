@@ -159,14 +159,20 @@ def put_bulk_in_db(data, comp_params, db_file):
     # site properties are not retained, so we have to add magmom again.
     prim_struct = transfer_average_magmoms(struct, prim_struct)
     
-    # Load the bulk structure into the high level DB
+    # Load the bulk structure into the high level DB if not present already
     nav = Navigator(db_file, high_level=True)
-    nav.insert_data(functional+'.bulk_data', 
-                    {'mpid': mp_id,
-                     'formula': data['formula'],
-                     'structure_fromMP': struct.as_dict(),
-                     'comp_parameters': comp_params})
-    
+    prev_data = nav.find_data(functional+'.bulk_data', {'mpid': mp_id})
+    if not prev_data:
+        nav.insert_data(functional+'.bulk_data', 
+                        {'mpid': mp_id,
+                         'formula': data['formula'],
+                         'structure_fromMP': struct.as_dict(),
+                         'primitive_structure': prim_struct.as_dict(),
+                         'comp_parameters': comp_params})
+    else:
+        print('Entry for mpid {} already found in {} collection. '
+              'No update.'.format(mp_id, functional+'.bulk_data'))
+        
 def put_slab_in_db(data, comp_params, db_file):
     """
     Put slab data in high level DB.
@@ -186,17 +192,23 @@ def put_slab_in_db(data, comp_params, db_file):
     _, mp_id, functional, comp_params = material_data_for_db(
         data, comp_params, db_file, metal_thr = 0.5)
 
-    # Load the slab structure into the high level DB
+    # Load the slab structure into the high level DB if not already present
     nav = Navigator(db_file, high_level=True)
-    nav.insert_data(functional+'.slab_data', 
-                    {'mpid': mp_id,
-                     'formula': data['formula'],
-                     'miller': data['miller'],
-                     'thick_min': data['thick_min'],
-                     'thick_max': data['thick_max'],
-                     'thick_incr': data['thick_incr'],
-                     'vacuum': data['vacuum'],
-                     'comp_parameters': comp_params})
+    prev_data = nav.find_data(functional+'.slab_data', {'mpid': mp_id,
+                                                       'miller': data['miller']})
+    if not prev_data:
+        nav.insert_data(functional+'.slab_data', 
+                        {'mpid': mp_id,
+                         'formula': data['formula'],
+                         'miller': data['miller'],
+                         'thick_min': data['thick_min'],
+                         'thick_max': data['thick_max'],
+                         'thick_incr': data['thick_incr'],
+                         'vacuum': data['vacuum'],
+                         'comp_parameters': comp_params})
+    else:
+        print('Entry for mpid:{} and miller:{} already found in {} collection. '
+              'No update.'.format(mp_id, data['miller'], functional+'.slab_data'))
 
 def put_inter_in_db(data_1, data_2, comp_params, inter_params, db_file):
     """
@@ -226,11 +238,16 @@ def put_inter_in_db(data_1, data_2, comp_params, inter_params, db_file):
     name = interface_name(mp_id_1, data_1['miller'], mp_id_2, data_2['miller'])
     
     # Load the interface structure into the high level DB
-    nav_high = Navigator(db_file, high_level=True)
-    nav_high.insert_data(functional+'.interface_data', 
-                         {'name': name,
-                          'comp_parameters': comp_params,
-                          'interface_parameters': inter_params})
+    nav = Navigator(db_file, high_level=True)
+    prev_data = nav.find_data(functional+'.interface_data', {'name': name})
+    if not prev_data:
+        nav.insert_data(functional+'.interface_data', 
+                             {'name': name,
+                              'comp_parameters': comp_params,
+                              'interface_parameters': inter_params})
+    else:
+        print('Entry with name: {} already found in {} collection. '
+              'No update.'.format(name, functional+'.interface_data'))
 
 def material_data_for_db(data, comp_params, db_file, metal_thr=None):
     """

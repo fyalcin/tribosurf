@@ -1,4 +1,31 @@
-{
+{   
+    "comp_params":{
+      "use_vdw":"NO_DEFAULT",
+      "BM_tolerance":0.01,
+      "functional":"PBE",
+      "use_spin":true,
+      "volume_tolerance":0.001,
+      "encut":520,
+      "k_dens":12.5,
+      "surfene_thr":0.01,
+      "is_metal":null
+   },
+   "interface_params":{
+      "max_area":"NO_DEFAULT",
+      "interface_distance":2.0,
+      "max_angle_diff":1.5,
+      "max_mismatch":0.01,
+      "r1r2_tol":0.05
+   },
+   "material_params":{
+      "formula":"NO_DEFAULT",
+      "miller":"NO_DEFAULT",
+      "mpid":null,
+      "thick_min":4,
+      "thick_max":10,
+      "thick_incr":1,
+      "vacuum":25
+   },
    "SlabOptThick":{
       "db_file":null,
       "low_level":"auto",
@@ -121,7 +148,7 @@
    },
    "SurfaceEnergy":{
       "db_file":null,
-      "database":null
+      "high_level_db":true
    },
    "cluster_params":{
       "file_output":false,
@@ -131,33 +158,5 @@
       "user":null,
       "port":null,
       "print_help":false
-   },
-   "comp_params":{
-      "use_vdw":"NO_DEFAULT",
-      "BM_tolerance":0.01,
-      "functional":"PBE",
-      "use_spin":true,
-      "volume_tolerance":0.001,
-      "encut":520,
-      "k_dens":12.5,
-      "use_vdw":false,
-      "surfene_thr":0.01,
-      "is_metal":null
-   },
-   "interface_params":{
-      "max_area":"NO_DEFAULT",
-      "interface_distance":2.0,
-      "max_angle_diff":1.5,
-      "max_mismatch":0.01,
-      "r1r2_tol":0.05
-   },
-   "material_params":{
-      "formula":"NO_DEFAULT",
-      "miller":"NO_DEFAULT",
-      "mpid":null,
-      "thick_min":4,
-      "thick_max":10,
-      "thick_incr":1,
-      "vacuum":25
    }
 }

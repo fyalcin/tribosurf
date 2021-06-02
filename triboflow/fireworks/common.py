@@ -60,7 +60,6 @@ def run_pes_calc_fw(top_slab, bottom_slab, interface_name,
     
     FT_2 = FT_StartPESCalcs(top_slab=top_slab, bot_slab=bottom_slab,
                             interface_name=interface_name,
-                            functional=functional,
                             comp_parameters=comp_parameters,
                             tag=tag)
     

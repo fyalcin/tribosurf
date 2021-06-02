@@ -40,6 +40,7 @@ from fireworks import (
     FileWriteTask, 
     explicit_serialize
 )
+from triboflow.workflows.base import dynamic_relax_swf
 from triboflow.utils.database import Navigator
 from triboflow.utils.utils import (
     read_runtask_params,
@@ -239,19 +240,12 @@ class FT_RelaxStructure(FiretaskBase):
         
         # Set options for vasp
         vis = get_custom_vasp_relax_settings(structure, comp_params, p['relax_type'])
-        
-        # Create the Firework to run perform the simulation
-        if p['functional'] == 'SCAN':
-            fw = ScanOptimizeFW(structure=structure, name=tag, vasp_input_set=vis)
-        else:
-            fw = OptimizeFW(structure, name=tag, vasp_input_set=vis,
-                            half_kpts_first_relax=False)
 
         # Define the workflow name
         wf_name = p['mp_id'] + '_' + p['relax_type']
+        
+        wf = dynamic_relax_swf([[structure, vis, tag]], wf_name=wf_name)
 
-        # Use add_modify_incar to add KPAR and NCORE settings based on env_chk
-        wf = add_modify_incar(Workflow([fw], name=wf_name))
 
         return wf
 

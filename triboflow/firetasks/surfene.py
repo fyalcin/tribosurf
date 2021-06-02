@@ -172,7 +172,7 @@ class FT_SurfaceEnergy(FiretaskBase):
         SurfaceEnergyError.check_entry(p['entry'])
             
         # Call the navigator for retrieving the dictionary out of the DB
-        nav = Navigator(db_file=p['db_file'], high_level=p['database'])
+        nav = Navigator(db_file=p['db_file'], high_level=p['high_level_db'])
         dic = nav.find_data(collection=p['collection'], 
                             fltr={'mpid': p['mp_id'], 'miller': p['miller']})
 
@@ -211,7 +211,7 @@ class FT_SurfaceEnergy(FiretaskBase):
         info_dict = write_multiple_dict(surfene, entry)
     
         # Prepare the database and store the data one by one
-        nav = Navigator(db_file=p['db_file'], high_level=p['database'])
+        nav = Navigator(db_file=p['db_file'], high_level=p['high_level_db'])
         for d in info_dict:
             nav.update_data(p['collection'], 
                             {'mpid': p['mp_id'], 'miller': p['miller']}, 

@@ -66,8 +66,9 @@ class Navigator:
     db_file : str
         Path to the database.
 
-    high_level : str
-        High level database name.
+    high_level : str, or bool
+        High level database name. If set to True, name is taken from db.json,
+        if False, the low_level db is used.
 
     db : VaspCalcDb
         A VASP database type.
