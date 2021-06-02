@@ -301,6 +301,9 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
     uis['EDIFF'] = 1.0e-6
     #uis['SYMPREC'] = 1e-06
     
+    if static_type.startswith('bulk_'):
+        uis['ALGO'] = 'Fast'
+    
     if static_type.endswith('from_scratch'):
         uis['ICHARG'] = 2
         uis['LAECHG'] = '.FALSE.'
