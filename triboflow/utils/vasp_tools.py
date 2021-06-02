@@ -470,11 +470,14 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
         # uis['BMIX'] = 0.0001
         # uis['AMIX_MAG'] = 0.8
         # uis['BMIX_MAG'] = 0.0001
-
     else:
         uis['NELMDL'] = -6
         uis['EDIFFG'] = -0.01
         uis['NELM'] = 100
+        uis['ALGO'] = 'Fast'
+    
+    if relax_type.startswith('bulk_') or relax_type.startswith('slab_'):
+        uis['IBRION'] = 1
     
     if relax_type.endswith('full_relax'):
         uis['ISIF'] = 3
