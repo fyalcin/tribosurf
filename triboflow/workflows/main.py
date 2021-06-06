@@ -7,7 +7,7 @@ Created on Wed Jun 17 15:47:39 2020
 from fireworks import Workflow, Firework
 
 from triboflow.fireworks.common import check_inputs_fw
-from triboflow.firetasks.convergence import FT_StartConvo
+from triboflow.firetasks.convergence import FT_StartConvo, FT_StartPreRelax
 from triboflow.firetasks.structure_manipulation import (
     FT_StartSlabRelaxSWF, FT_MakeHeteroStructure)
 from triboflow.firetasks.PES import FT_StartPESCalcSubWF
@@ -62,7 +62,19 @@ def heterogeneous_wf(inputs):
                                  interface_params=inter_params,
                                  FW_name='Check input parameters')
     WF.append(Initialize)
-    
+
+    PreRelaxation_M1 = Firework(FT_StartPreRelax(mp_id=mp_id_1,
+                                                 functional=functional),
+                                name='Start pre-relaxation for {}'
+                                .format(mat_1['formula']))
+    WF.append(PreRelaxation_M1)
+
+    PreRelaxation_M2 = Firework(FT_StartPreRelax(mp_id=mp_id_2,
+                                                 functional=functional),
+                                name='Start pre-relaxation for {}'
+                                .format(mat_2['formula']))
+    WF.append(PreRelaxation_M2)
+
     ConvergeEncut_M1 = Firework(FT_StartConvo(conv_type='encut',
                                               mp_id=mp_id_1,
                                               functional=functional,
@@ -173,7 +185,9 @@ def heterogeneous_wf(inputs):
     WF.append(ComputeAdhesion)
     
     # Define dependencies:
-    Dependencies = {Initialize: [ConvergeEncut_M1, ConvergeEncut_M2],
+    Dependencies = {Initialize: [PreRelaxation_M1, PreRelaxation_M2],
+                    PreRelaxation_M1: [ConvergeEncut_M1],
+                    PreRelaxation_M2: [ConvergeEncut_M2],
                     ConvergeEncut_M1: [ConvergeKpoints_M1],
                     ConvergeEncut_M2: [ConvergeKpoints_M2],
                     ConvergeKpoints_M1: [Final_Params],
