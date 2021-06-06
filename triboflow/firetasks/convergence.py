@@ -22,19 +22,19 @@ from triboflow.utils.check_convergence import is_list_converged
 from triboflow.utils.file_manipulation import copy_output_files
 
 @explicit_serialize
-class FT_PreRelax(FiretaskBase):
+class FT_StartPreRelax(FiretaskBase):
     _fw_name = 'Start a cell shape relaxation'
     required_params = ['mp_id', 'functional']
     optional_params = ['db_file', 'encut', 'k_dens']
+
     def run_task(self, fw_spec):
-        encut = self.get('encut', 300)
-        k_dens = self.get('k_dens', 6)
         mp_id = self.get('mp_id')
         functional = self.get('functional')
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
 
+        # Querying the structure from the high level database.
         nav_structure = StructureNavigator(
             db_file=db_file,
             high_level='triboflow')
@@ -54,9 +54,18 @@ class FT_PreRelax(FiretaskBase):
         else:
             prim_struct = Structure.from_dict(prim_struct)
 
-        if data.get('prim_relaxed') or (prim_struct.lattice.a == prim_struct.lattice.c):
+        if data.get('pre_relaxed') or ((prim_struct.lattice.a == prim_struct.lattice.c) 
+                                       and (prim_struct.lattice.b == prim_struct.lattice.c)):
             return FWAction(update_spec=fw_spec)
         else:
+
+            # Querying the computational parameters from the high level database
+            # and updating the optional inputs
+            encut = self.get('encut', 300)
+            k_dens = self.get('k_dens', 6)
+            comp_params = data.get("comp_parameters")
+            comp_params.update({"encut": encut, "k_dens": k_dens})
+
             # Remove later #
             from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings, get_custom_vasp_static_settings
             from triboflow.workflows.base import dynamic_relax_swf
@@ -65,14 +74,49 @@ class FT_PreRelax(FiretaskBase):
             # Remove later #
 
             tag = "CellShapeRelax-{}".format(str(uuid4()))
-            comp_params = {'encut': encut, 'k_dens': k_dens, 'functional': functional}
             vis = get_custom_vasp_relax_settings(prim_struct, comp_params, 'bulk_shape_relax')
-            CSR_WF = dynamic_relax_swf([struct, vis, tag])
-            UPS_FW = Firework([FT_UpdatePrimStruct(functional=functional, tag=tag, flag=mp_id)])
-            UPS_WF = Workflow.from_Firework(UPS_FW, name='Update primitive structure WF')
-            CSR_WF.append_wf(UPS_WF, CSR_WF.leaf_fw_ids)
+            RelaxWF = dynamic_relax_swf([[prim_struct, vis, tag]])
 
-            return FWAction(detours=CSR_WF, update_spec=fw_spec)
+            # encut = 300
+            # k_dens = 6
+            # vis = get_custom_vasp_static_settings(prim_struct, comp_params, "bulk_from_scratch")
+            # StaticFW = StaticFW(prim_struct, tag, vis)
+
+            MoveResultsFW = Firework([FT_UpdatePrimStruct(functional=functional, tag=tag, flag=mp_id)])
+            MoveResultsWF = Workflow([MoveResultsFW])
+
+            RelaxWF.append_wf(MoveResultsWF, RelaxWF.leaf_fw_ids)
+
+            # RelaxFW = Firework([FT_PreRelax(structure=prim_struct, flag=mp_id, comp_params=comp_params)])
+            # MoveResultsFW = Firework([FT_UpdatePrimStruct(functional=functional, tag=None, flag=mp_id)])
+
+            # PreRelaxWF = Workflow([RelaxFW, MoveResultsFW], {RelaxFW: [MoveResultsFW]})
+
+            return FWAction(detours=RelaxWF, update_spec=fw_spec)
+
+
+# @explicit_serialize
+# class FT_PreRelax(FiretaskBase):
+#     _fw_name = "Start the pre-relaxation"
+#     required_params = ["structure", "flag"]
+#     optional_params = ["comp_params"]
+
+#     def run_task(self, fw_spec):
+#         prim_struct = self.get("structure")
+#         flag = self.get("flag")
+#         encut = self.get("encut")
+#         k_dens = self.get("k_dens")
+#         comp_params = self.get("comp_params")
+
+#         from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings, get_custom_vasp_static_settings
+#         from triboflow.workflows.base import dynamic_relax_swf
+#         from atomate.vasp.fireworks.core import StaticFW
+#         from uuid import uuid4
+
+#         tag = "CellShapeRelax-{}".format(str(uuid4()))
+#         vis = get_custom_vasp_static_settings(prim_struct, comp_params, "bulk_from_scratch")
+#         CSR_WF = StaticFW(prim_struct, tag, vis)
+#         return FWAction(detours=[CSR_WF], mod_spec=[{'_set': {"tag": tag}}])
 
 
 @explicit_serialize
@@ -84,6 +128,7 @@ class FT_UpdatePrimStruct(FiretaskBase):
     def run_task(self, fw_spec):
         functional = self.get('functional')
         tag = self.get('tag')
+        # tag = fw_spec.get("tag")
         flag = self.get('flag')
         db_file = self.get('db_file')
         if not db_file:
@@ -94,13 +139,15 @@ class FT_UpdatePrimStruct(FiretaskBase):
         out = calc['output']
 
         struct_dict = {'primitive_structure': out['structure'],
-                       'prim_relaxed': True}
+                       'pre_relaxed': True}
+
         nav_high = Navigator(db_file=db_file, high_level='triboflow')
         nav_high.update_data(
                     collection=functional+'.bulk_data',
                     fltr={'mpid': flag},
                     new_values={'$set': struct_dict},
-                    upsert=True)
+                    upsert=False)
+
         return FWAction(update_spec=fw_spec)
 
 
