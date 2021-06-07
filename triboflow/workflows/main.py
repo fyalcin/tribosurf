@@ -7,9 +7,9 @@ Created on Wed Jun 17 15:47:39 2020
 from fireworks import Workflow, Firework
 
 from triboflow.fireworks.common import check_inputs_fw
-from triboflow.firetasks.convergence import FT_StartConvo, FT_StartPreRelax
+from triboflow.firetasks.convergence import FT_StartConvo
 from triboflow.firetasks.structure_manipulation import (
-    FT_StartSlabRelaxSWF, FT_MakeHeteroStructure)
+    FT_StartSlabRelaxSWF, FT_MakeHeteroStructure, FT_StartPreRelax)
 from triboflow.firetasks.PES import FT_StartPESCalcSubWF
 from triboflow.firetasks.check_inputs import FT_UpdateCompParams
 from triboflow.firetasks.adhesion import (
