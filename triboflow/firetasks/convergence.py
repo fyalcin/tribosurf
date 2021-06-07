@@ -25,7 +25,7 @@ from triboflow.utils.file_manipulation import copy_output_files
 class FT_StartPreRelax(FiretaskBase):
     _fw_name = 'Start a cell shape relaxation'
     required_params = ['mp_id', 'functional']
-    optional_params = ['db_file', 'encut', 'k_dens']
+    optional_params = ['db_file', 'encut', 'k_dens', 'high_level_db']
 
     def run_task(self, fw_spec):
         mp_id = self.get('mp_id')
@@ -33,19 +33,20 @@ class FT_StartPreRelax(FiretaskBase):
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
+        hl_db = self.get('high_level_db', 'triboflow')
 
         # Querying the structure from the high level database.
         nav_structure = StructureNavigator(
             db_file=db_file,
-            high_level='triboflow')
+            high_level=hl_db)
         data = nav_structure.get_bulk_from_db(
             mp_id=mp_id,
             functional=functional)
 
         prim_struct = data.get('primitive_structure')
-        if prim_struct is None:
+        if not prim_struct:
             struct = data.get('structure_fromMP')
-            if struct is None:
+            if not struct:
                 raise LookupError('No structure found in the database that can '
                                   'be used as input for cell shape relaxation.')
             from pymatgen.symmetry.analyzer import SpacegroupAnalyzer as sga
@@ -53,17 +54,20 @@ class FT_StartPreRelax(FiretaskBase):
             prim_struct = sga(struct).get_primitive_standard_structure()
         else:
             prim_struct = Structure.from_dict(prim_struct)
-
-        if data.get('pre_relaxed') or ((prim_struct.lattice.a == prim_struct.lattice.c) 
-                                       and (prim_struct.lattice.b == prim_struct.lattice.c)):
+        
+        a = np.round(prim_struct.lattice.a, 6)
+        b = np.round(prim_struct.lattice.b, 6)
+        c = np.round(prim_struct.lattice.c, 6)
+        
+        if data.get('pre_relaxed') or ((a == c) and (b == c)):
             return FWAction(update_spec=fw_spec)
         else:
 
             # Querying the computational parameters from the high level database
             # and updating the optional inputs
-            encut = self.get('encut', 300)
-            k_dens = self.get('k_dens', 6)
             comp_params = data.get("comp_parameters")
+            encut = self.get('encut', 1000)
+            k_dens = self.get('k_dens', 20)
             comp_params.update({"encut": encut, "k_dens": k_dens})
 
             # Remove later #
@@ -82,7 +86,11 @@ class FT_StartPreRelax(FiretaskBase):
             # vis = get_custom_vasp_static_settings(prim_struct, comp_params, "bulk_from_scratch")
             # StaticFW = StaticFW(prim_struct, tag, vis)
 
-            MoveResultsFW = Firework([FT_UpdatePrimStruct(functional=functional, tag=tag, flag=mp_id)])
+            MoveResultsFW = Firework([FT_UpdatePrimStruct(functional=functional,
+                                                          tag=tag, flag=mp_id,
+                                                          high_level_db=hl_db)],
+                                     name='Move pre-relaxed structure for {}'.
+                                     format(prim_struct.formula))
             MoveResultsWF = Workflow([MoveResultsFW])
 
             RelaxWF.append_wf(MoveResultsWF, RelaxWF.leaf_fw_ids)
@@ -123,7 +131,7 @@ class FT_StartPreRelax(FiretaskBase):
 class FT_UpdatePrimStruct(FiretaskBase):
     _fw_name = 'Update primitive structure in the high level DB'
     required_params = ['functional', 'tag', 'flag']
-    optional_params = ['message', 'db_file']
+    optional_params = ['message', 'db_file', 'high_level_db']
 
     def run_task(self, fw_spec):
         functional = self.get('functional')
@@ -133,6 +141,7 @@ class FT_UpdatePrimStruct(FiretaskBase):
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
+        hl_db = self.get('high_level_db', True)
 
         nav = Navigator(db_file=db_file)
         calc = nav.find_data('tasks', {'task_label': tag})
@@ -141,7 +150,7 @@ class FT_UpdatePrimStruct(FiretaskBase):
         struct_dict = {'primitive_structure': out['structure'],
                        'pre_relaxed': True}
 
-        nav_high = Navigator(db_file=db_file, high_level='triboflow')
+        nav_high = Navigator(db_file=db_file, high_level=hl_db)
         nav_high.update_data(
                     collection=functional+'.bulk_data',
                     fltr={'mpid': flag},
