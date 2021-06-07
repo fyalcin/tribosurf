@@ -431,7 +431,8 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
     """
 
     allowed_types = ['bulk_full_relax', 'bulk_vol_relax', 'bulk_pos_relax',
-                     'bulk_shape_relax', 'slab_shape_relax', 'slab_pos_relax',
+                     'bulk_shape_relax', 'bulk_pos_shape_relax',
+                     'slab_shape_relax', 'slab_pos_relax',
                      'interface_shape_relax', 'interface_pos_relax',
                      'interface_z_relax']
     
@@ -489,6 +490,8 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
         structure.add_site_property('selective_dynamics', sd_array)
     elif relax_type.endswith('vol_relax'):
         uis['ISIF'] = 7
+    elif relax_type.endswith('pos_shape_relax'):
+        uis['ISIF'] = 4
     elif relax_type.endswith('shape_relax'):
         uis['ISIF'] = 5
 

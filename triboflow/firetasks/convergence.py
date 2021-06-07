@@ -22,7 +22,6 @@ from triboflow.utils.check_convergence import is_list_converged
 from triboflow.utils.file_manipulation import copy_output_files
 
 
-
 @explicit_serialize
 class FT_StartConvo(FiretaskBase):
     _fw_name = 'Start Encut or Kdensity Convergence'
