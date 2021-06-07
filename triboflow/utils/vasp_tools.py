@@ -326,6 +326,7 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
         uis['NELMDL'] = -10
     else:
         uis['NELMDL'] = -6
+        uis['NELM'] = 200
 
     if 'encut' in comp_parameters:
         uis['ENCUT'] = comp_parameters['encut']

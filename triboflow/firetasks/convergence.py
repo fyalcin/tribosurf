@@ -211,7 +211,7 @@ class FT_Convo(FiretaskBase):
     def run_task(self, fw_spec):
         
         deforms = []
-        for i in np.arange(0.9, 1.1, 0.05):
+        for i in np.arange(0.95, 1.05, 0.025):
             dm=np.eye(3)*i
             deforms.append(dm)  
         n_converge = self.get('n_converge', 3)
