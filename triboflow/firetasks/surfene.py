@@ -132,7 +132,7 @@ class FT_SurfaceEnergy(FiretaskBase):
     
     _fw_name = 'Surface Energy calculation'
     required_params = ['mp_id', 'collection', 'miller', 'entry']
-    optional_params = ['db_file', 'database']
+    optional_params = ['db_file', 'high_level_db']
     
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -183,7 +183,7 @@ class FT_SurfaceEnergy(FiretaskBase):
             raise SurfaceEnergyError('Some problems occurred in output list, '
                                      'probably results are not stored correctly '
                                      'in database: {}, collection: {}'
-                                     .format(p['database'], p['collection']))
+                                     .format(p['high_level_db'], p['collection']))
         SurfaceEnergyError.check_output(output_list)
         
         surfene = calculate_surface_energy(output_list, sym_surface=True)

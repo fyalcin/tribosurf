@@ -211,7 +211,7 @@ class SurfEneWF:
                                       miller=miller,
                                       entry=entry_surfene,
                                       db_file=db_file,
-                                      database=low_level)
+                                      high_level_db=False)
 
         fw_surfene = Firework([ft_surfene],
                               spec=spec,

@@ -480,7 +480,7 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
         uis['NELM'] = 100
         uis['ALGO'] = 'Fast'
     
-    if relax_type.startswith('bulk_') or relax_type.startswith('slab_'):
+    if relax_type.startswith('bulk_'):
         uis['IBRION'] = 1
     
     if relax_type.endswith('full_relax'):

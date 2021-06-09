@@ -171,7 +171,7 @@ def heterogeneous_wf(inputs):
                     RetrieveMatchedSlabs: [ComputeAdhesion]}
 
     WF_Name = 'TriboFlow ' + interface_name(mp_id_1, mat_1.get('miller'),
-                              mp_id_2, mat_2.get('miller')) +'_'+functional
+                              mp_id_2, mat_2.get('miller')) +' '+functional
 
     WF = Workflow(WF, Dependencies, name=WF_Name)
 

@@ -148,7 +148,7 @@
    },
    "SurfaceEnergy":{
       "db_file":null,
-      "high_level_db":true
+      "high_level_db":null
    },
    "cluster_params":{
       "file_output":false,
