@@ -4,6 +4,7 @@ Created on Wed Jun 17 15:59:59 2020
 @author: mwo
 """
 import monty
+import numpy as np
 from pprint import pprint, pformat
 
 from pymatgen.core.structure import Structure
@@ -62,7 +63,7 @@ class FT_StartPreRelax(FiretaskBase):
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
-        hl_db = self.get('high_level_db', 'triboflow')
+        hl_db = self.get('high_level_db', True)
 
         # Querying the structure from the high level database.
         nav_structure = StructureNavigator(
@@ -100,7 +101,8 @@ class FT_StartPreRelax(FiretaskBase):
             comp_params.update({"encut": encut, "k_dens": k_dens})
 
             tag = "CellShapeRelax-{}".format(str(uuid4()))
-            vis = get_custom_vasp_relax_settings(prim_struct, comp_params, 'bulk_pos_shape_relax')
+            vis = get_custom_vasp_relax_settings(prim_struct, comp_params,
+                                                 'bulk_pos_shape_relax')
             RelaxWF = dynamic_relax_swf([[prim_struct, vis, tag]])
 
             MoveResultsFW = Firework([FT_UpdatePrimStruct(functional=functional,
