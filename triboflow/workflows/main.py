@@ -8,12 +8,8 @@ from fireworks import Workflow, Firework
 
 from triboflow.fireworks.init_fws import InitWF
 from triboflow.firetasks.convergence import FT_StartConvo
-<<<<<<< HEAD
 from triboflow.firetasks.structure_manipulation import (
-    FT_StartSlabRelaxSWF, FT_MakeHeteroStructure, FT_StartPreRelax)
-=======
-from triboflow.firetasks.structure_manipulation import FT_MakeHeteroStructure
->>>>>>> 37-changin-the-initializing-firework
+    FT_MakeHeteroStructure, FT_StartPreRelax)
 from triboflow.firetasks.PES import FT_StartPESCalcSubWF
 from triboflow.firetasks.init_check import unbundle_input, material_from_mp
 from triboflow.firetasks.check_inputs import FT_UpdateCompParams
