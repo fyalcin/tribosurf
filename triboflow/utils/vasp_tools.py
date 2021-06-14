@@ -301,6 +301,9 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
     uis['EDIFF'] = 1.0e-6
     #uis['SYMPREC'] = 1e-06
     
+    if static_type.startswith('bulk_'):
+        uis['ALGO'] = 'Fast'
+    
     if static_type.endswith('from_scratch'):
         uis['ICHARG'] = 2
         uis['LAECHG'] = '.FALSE.'
@@ -323,6 +326,7 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
         uis['NELMDL'] = -10
     else:
         uis['NELMDL'] = -6
+        uis['NELM'] = 200
 
     if 'encut' in comp_parameters:
         uis['ENCUT'] = comp_parameters['encut']
@@ -471,11 +475,14 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
         # uis['BMIX'] = 0.0001
         # uis['AMIX_MAG'] = 0.8
         # uis['BMIX_MAG'] = 0.0001
-
     else:
         uis['NELMDL'] = -6
         uis['EDIFFG'] = -0.01
         uis['NELM'] = 100
+        uis['ALGO'] = 'Fast'
+    
+    if relax_type.startswith('bulk_'):
+        uis['IBRION'] = 1
     
     if relax_type.endswith('full_relax'):
         uis['ISIF'] = 3
@@ -508,9 +515,12 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
         if comp_parameters['is_metal']:
             uis['SIGMA'] = 0.2
             uis['ISMEAR'] = 1
-        else:
+        elif relax_type.startswith('bulk'):
             uis['SIGMA'] = 0.05
             uis['ISMEAR'] = -5
+        else:
+            uis['SIGMA'] = 0.1
+            uis['ISMEAR'] = 0
     else:
         uis['SIGMA'] = 0.1
         uis['ISMEAR'] = 0

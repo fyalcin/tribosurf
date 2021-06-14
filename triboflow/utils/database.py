@@ -18,6 +18,7 @@ import io
 import os
 from pathlib import Path, PurePosixPath
 import pickle
+import json
 from datetime import datetime
 from pathlib import Path, PurePosixPath
 import pymongo
@@ -65,8 +66,9 @@ class Navigator:
     db_file : str
         Path to the database.
 
-    high_level : str
-        High level database name.
+    high_level : str, or bool
+        High level database name. If set to True, name is taken from db.json,
+        if False, the low_level db is used.
 
     db : VaspCalcDb
         A VASP database type.
@@ -111,17 +113,22 @@ class Navigator:
 
     """
 
-    def __init__(self, db_file='localhost', high_level=None):
+    def __init__(self, db_file='auto', high_level=False):
         """
         Parameters
         ----------
         db_file : str, optional
-            Location where the database is saved. The default is 'localhost'.
+            Location of the .json file which contains the necessary info to
+            connect to the database (in general called db.json). The default
+            is 'auto', which looks for the db.json using the environmental
+            variable FW_CONFIG_FILE.
 
-        high_level : str or None, optional
+        high_level : str or True, or False, optional
             Decide whether to use an high level database or not, to store the
             data of the simulations. The name of that DB can be passed as a
-            string to high_level. The default is None.
+            string to high_level. It is also possible to just pass true, in
+            which case the default name is read from the db.json file.
+            The default is False.
 
         """
 
@@ -129,8 +136,18 @@ class Navigator:
         self.db = db
         self.path = db_path
         
-        if high_level is not None:
+        if isinstance(high_level, str):
             self.db = self.db.client[high_level]
+        elif high_level:
+            with open(db_path, 'r') as f:
+                db_dict = json.load(f)
+            try:
+                self.db = self.db.client[db_dict['high_level']]
+            except:
+                raise KeyError('You have not set the key for your '
+                               '"high_level" database in your db.json file. '
+                               'This is necessary for using TriboFlow, so '
+                               'please add it here: {}'.format(db_path))
 
     def __get_db(self, db_file):
         """ 
@@ -151,7 +168,7 @@ class Navigator:
 
         """
 
-        if db_file is None or db_file == 'localhost' or db_file == 'local':
+        if db_file == 'auto':
             if 'FW_CONFIG_FILE' in os.environ:
                 conf_file = os.environ['FW_CONFIG_FILE']
                 conf_path = conf_file.rstrip('FW_config.yaml')
@@ -164,8 +181,8 @@ class Navigator:
         try:
             vasp_db = VaspCalcDb.from_db_file(db_file)
         except: 
-            raise NavigatorError('The database file does not exist in path: {}'
-                                 .format(db_file))
+            raise NavigatorError('The database file at {} does not exist or is '
+                                 'not correctly written.'.format(db_file))
 
         log.info('Successfully connected to: {}.'.format(db_file))
         return vasp_db.db, db_file
@@ -1138,3 +1155,63 @@ def image_bytes_converter(data, to_image=True):
         data_conv = convert_image_to_bytes(data)
             
     return data_conv
+
+def get_low_and_high_db_names(parameters_dict={}):
+    """Return the high_level and low_level database names.
+    
+    If no parameters_dict is passed, or the information therein does not specify
+    strings for the database names, the db.json file is read from the config
+    directory (location in environmental variable FW_CONFIG_FILE).
+    
+
+    Parameters
+    ----------
+    parameters_dict : TYPE, optional
+        Parameters dictionary that can be passed and my include information
+        about the database names in the keys: 'low_level' and  'high_level'.
+        Generally read from default values using
+        triboflow.utils.utils.read_default_params. The default is {}.
+
+    Raises
+    ------
+    NavigatorError
+        If the config directory can not be found, an error is raised.
+
+    Returns
+    -------
+    low_out : str
+        Name of the low level database.
+    high_out : str
+        Name of the high level database.
+
+    """
+    if 'FW_CONFIG_FILE' in os.environ:
+        conf_file = os.environ['FW_CONFIG_FILE']
+        conf_path = conf_file.rstrip('FW_config.yaml')
+        db_file = conf_path + 'db.json'
+    else:
+        raise NavigatorError('Could not find "FW_CONFIG_FILE" environment '
+                             'variable.\nPlease make sure that your python'
+                             'environment is configured correctly.')
+    low_db = parameters_dict.get('low_level', 'auto')
+    high_db = parameters_dict.get('high_level', 'auto')
+    with open(db_file, 'r') as f:
+        db_dict = json.load(f)
+    low_name = db_dict.get('database')
+    high_name = db_dict.get('high_level')
+    
+    if not low_db:
+        low_out = low_name
+    elif low_db == 'auto':
+        low_out = low_name
+    else:
+        low_out = low_db
+    
+    if not high_db:
+        high_out = high_name
+    elif high_db == 'auto':
+        high_out = high_name
+    else:
+        high_out = high_db
+        
+    return low_out, high_out

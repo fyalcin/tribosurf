@@ -6,18 +6,16 @@ Created on Wed Jun 17 15:59:59 2020
 """
 
 from datetime import datetime
-from pprint import pprint, pformat
+from pprint import pformat
 
 from pymatgen.core.structure import Structure
-from pymatgen.io.vasp.inputs import Kpoints
-from pymatgen.io.vasp.sets import MPStaticSet
 from fireworks import FWAction, FiretaskBase, Firework, Workflow, FileWriteTask
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 from atomate.vasp.fireworks.core import StaticFW
 from atomate.vasp.powerups import add_modify_incar
 
-from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
+from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.check_convergence import is_list_converged
 from triboflow.utils.vasp_tools import (get_custom_vasp_static_settings,
     MeshFromDensity)
@@ -29,7 +27,8 @@ class FT_StartKPointConvo(FiretaskBase):
 
     _fw_name = 'Start Encut Convergence'
     required_params = ['mp_id', 'functional']
-    optional_params = ['db_file', 'k_dens_start', 'k_dens_incr', 'n_converge']
+    optional_params = ['db_file', 'k_dens_start', 'k_dens_incr', 'n_converge',
+                       'high_level_db']
 
     def run_task(self, fw_spec):
         from triboflow.workflows.subworkflows import converge_kpoints_swf
@@ -39,6 +38,7 @@ class FT_StartKPointConvo(FiretaskBase):
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
+        hl_db = self.get('high_level_db', True)
 
         k_dens_start = self.get('k_dens_start', 1.0)
         k_dens_incr = self.get('k_dens_incr', 0.1)
@@ -46,7 +46,7 @@ class FT_StartKPointConvo(FiretaskBase):
         
         nav_structure = StructureNavigator(
             db_file=db_file, 
-            high_level='triboflow')
+            high_level=hl_db)
         data = nav_structure.get_bulk_from_db(
             mp_id=mp_id, 
             functional=functional)
@@ -156,7 +156,7 @@ class FT_KpointsConvo(FiretaskBase):
                        'functional']
     optional_params = ['db_file', 'k_dens_start', 'k_dens_incr', 'n_converge',
                        'file_output', 'output_dir', 'remote_copy', 'server', 
-                        'user', 'port']
+                        'user', 'port', 'high_level_db']
 
     def run_task(self, fw_spec):
         
@@ -173,6 +173,7 @@ class FT_KpointsConvo(FiretaskBase):
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
+        hl_db = self.get('high_level_db', True)
             
         struct = self['structure']
         comp_params = self['comp_params']
@@ -276,7 +277,7 @@ class FT_KpointsConvo(FiretaskBase):
                             'total_energy@equiVol': final_E,
                             'comp_parameters.k_dens': final_k_dens}
 
-                nav_high = Navigator(db_file=db_file, high_level='triboflow')
+                nav_high = Navigator(db_file=db_file, high_level=hl_db)
                 nav_high.update_data(
                     collection=functional+'.bulk_data',
                     fltr={'mpid': flag},
@@ -373,6 +374,6 @@ class FT_KpointsConvo(FiretaskBase):
                     fltr={'tag': tag},
                     new_values={'$push': {'k_dens_list': k_dens,
                                           'k-meshes': kpoints.as_dict()},
-                                '$set': {'last_mesh': kpoints.kpts}})
+                                '$set': {'last_mesh': last_mesh}})
 
                 return FWAction(detours=K_convo_WF)

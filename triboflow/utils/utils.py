@@ -71,6 +71,11 @@ def read_json(jsonfile):
         data = json.load(f)  
     return data
 
+def load_defaults(file_location=project_folder+'/../',
+                  filename='defaults.json'):
+    data = read_json(file_location + filename)
+    return data
+
 def read_runtask_params(obj, fw_spec, required_params, optional_params,
                         default_file, default_key):
     """
@@ -467,7 +472,7 @@ def write_multiple_dict(data, entry, to_mongodb=True):
 # Retrieve structure and VASP output from DB
 # ============================================================================
 
-def retrieve_from_db(mp_id, collection, db_file=None, database=None, 
+def retrieve_from_db(mp_id, collection, db_file='auto', high_level_db=True, 
                      miller=None, entry=None, is_slab=False, pymatgen_obj=False):
     """
     Retrieve data from a selected database and collection. By specifing an entry
@@ -487,8 +492,8 @@ def retrieve_from_db(mp_id, collection, db_file=None, database=None,
         Location of the database. If it is None, it will be searched for a
         'localhost' on the hosting machine. The default is None.
 
-    database : str or None, optional
-        Database toquery. The default is None.
+    high_level_db : str or True, optional
+        Database toquery. The default is True, which will read from db.json
 
     miller : list, optional
         Miller index identifying the orientation of the slab. If it is not 
@@ -517,7 +522,7 @@ def retrieve_from_db(mp_id, collection, db_file=None, database=None,
     """
 
     # Call the navigator for retrieving structure
-    nav = Navigator(db_file=db_file, high_level=database)
+    nav = Navigator(db_file=db_file, high_level=high_level_db)
     
     # Define the filter (fltr) to be used
     fltr = {'mpid': mp_id}
@@ -541,7 +546,7 @@ def retrieve_from_db(mp_id, collection, db_file=None, database=None,
     return field, structure
 
 def retrieve_from_tag(collection, tag, tag_key='task_label', entry=None, 
-                      db_file=None, database=None):
+                      db_file='auto', high_level_db=False):
     """
     Retrieve a dictionary field out of the database based on the combination
     {tag_key : tag} as filter (fltr). Useful to retrieve quickly the results of a 
@@ -563,11 +568,11 @@ def retrieve_from_tag(collection, tag, tag_key='task_label', entry=None,
         Key or list of keys to be used to extract a piece of information or 
         multiple values from the `vasp_calc` dictionary. The default is None.
 
-    db_file : str or None
+    db_file : str or True, or False
         Location of the database. If it is None, it will be searched for a
-        'localhost' on the hosting machine. The default is None.
+        'localhost' on the hosting machine. The default is False.
 
-    database : str or None, optional
+    high_level_db : str or None, optional
         Database to query. The default is None.
 
     Returns
@@ -582,7 +587,7 @@ def retrieve_from_tag(collection, tag, tag_key='task_label', entry=None,
     """
 
     # Call the navigator and retrieve the simulation data from tag
-    nav = Navigator(db_file=db_file, high_level=database)    
+    nav = Navigator(db_file=db_file, high_level=high_level_db)    
     vasp_calc = nav.find_data(collection, {tag_key: tag})
     
     # Retrieve the correct dictionary and obtain the structure

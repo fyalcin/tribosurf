@@ -132,14 +132,14 @@ class FT_SurfaceEnergy(FiretaskBase):
     
     _fw_name = 'Surface Energy calculation'
     required_params = ['mp_id', 'collection', 'miller', 'entry']
-    optional_params = ['db_file', 'database']
+    optional_params = ['db_file', 'high_level_db']
     
     def run_task(self, fw_spec):
         """ Run the Firetask.
         """
 
         # Define the json file containing default values and read parameters
-        dfl = currentdir + '/defaults_fw.json'
+        dfl = currentdir + '/../defaults.json'
         p = read_runtask_params(self, fw_spec, self.required_params,
                                 self.optional_params, default_file=dfl,
                                 default_key="SurfaceEnergy")
@@ -172,7 +172,7 @@ class FT_SurfaceEnergy(FiretaskBase):
         SurfaceEnergyError.check_entry(p['entry'])
             
         # Call the navigator for retrieving the dictionary out of the DB
-        nav = Navigator(db_file=p['db_file'], high_level=p['database'])
+        nav = Navigator(db_file=p['db_file'], high_level=p['high_level_db'])
         dic = nav.find_data(collection=p['collection'], 
                             fltr={'mpid': p['mp_id'], 'miller': p['miller']})
 
@@ -183,7 +183,7 @@ class FT_SurfaceEnergy(FiretaskBase):
             raise SurfaceEnergyError('Some problems occurred in output list, '
                                      'probably results are not stored correctly '
                                      'in database: {}, collection: {}'
-                                     .format(p['database'], p['collection']))
+                                     .format(p['high_level_db'], p['collection']))
         SurfaceEnergyError.check_output(output_list)
         
         surfene = calculate_surface_energy(output_list, sym_surface=True)
@@ -211,7 +211,7 @@ class FT_SurfaceEnergy(FiretaskBase):
         info_dict = write_multiple_dict(surfene, entry)
     
         # Prepare the database and store the data one by one
-        nav = Navigator(db_file=p['db_file'], high_level=p['database'])
+        nav = Navigator(db_file=p['db_file'], high_level=p['high_level_db'])
         for d in info_dict:
             nav.update_data(p['collection'], 
                             {'mpid': p['mp_id'], 'miller': p['miller']}, 

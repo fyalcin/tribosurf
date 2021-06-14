@@ -40,6 +40,7 @@ from fireworks import (
     FileWriteTask, 
     explicit_serialize
 )
+from triboflow.workflows.base import dynamic_relax_swf
 from triboflow.utils.database import Navigator
 from triboflow.utils.utils import (
     read_runtask_params,
@@ -138,7 +139,7 @@ class FT_RelaxStructure(FiretaskBase):
         """ 
 
         # Define the json file containing default values and read parameters
-        dfl = currentdir + '/defaults_fw.json'
+        dfl = currentdir + '/../defaults.json'
         p = read_runtask_params(self,
                                 fw_spec, 
                                 self.required_params, 
@@ -188,7 +189,7 @@ class FT_RelaxStructure(FiretaskBase):
 
         # Retrieve the structure from the Database
         field, structure = retrieve_from_db(db_file=p['db_file'], 
-                                            database=p['database'], 
+                                            high_level_db=p['database'], 
                                             collection=p['collection'], 
                                             mp_id=p['mp_id'],
                                             miller=p['miller'],
@@ -239,19 +240,12 @@ class FT_RelaxStructure(FiretaskBase):
         
         # Set options for vasp
         vis = get_custom_vasp_relax_settings(structure, comp_params, p['relax_type'])
-        
-        # Create the Firework to run perform the simulation
-        if p['functional'] == 'SCAN':
-            fw = ScanOptimizeFW(structure=structure, name=tag, vasp_input_set=vis)
-        else:
-            fw = OptimizeFW(structure, name=tag, vasp_input_set=vis,
-                            half_kpts_first_relax=False)
 
         # Define the workflow name
         wf_name = p['mp_id'] + '_' + p['relax_type']
+        
+        wf = dynamic_relax_swf([[structure, vis, tag]], wf_name=wf_name)
 
-        # Use add_modify_incar to add KPAR and NCORE settings based on env_chk
-        wf = add_modify_incar(Workflow([fw], name=wf_name))
 
         return wf
 
@@ -370,7 +364,7 @@ class FT_MoveTagResults(FiretaskBase):
         """
 
         # Define the json file containing default values and read parameters
-        dfl = currentdir + '/defaults_fw.json'
+        dfl = currentdir + '/../defaults.json'
         p = read_runtask_params(self, 
                                 fw_spec,
                                 self.required_params,
@@ -419,7 +413,7 @@ class FT_MoveTagResults(FiretaskBase):
         if p['check_entry'] is not None:
             # Retrieve the structure from the Database
             _, check_dict = retrieve_from_db(db_file=p['db_file'], 
-                                             database=p['database_to'], 
+                                             high_level_db=p['database_to'], 
                                              collection=p['collection_to'], 
                                              mp_id=p['mp_id'],
                                              miller=p['miller'],
@@ -449,7 +443,7 @@ class FT_MoveTagResults(FiretaskBase):
                                             tag=p['tag'],
                                             tag_key=p['tag_key'],
                                             entry=p['entry_from'],
-                                            database=p['database_from'])
+                                            high_level_db=p['database_from'])
         
         return vasp_calc, info
     

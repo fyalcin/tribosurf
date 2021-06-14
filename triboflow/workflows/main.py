@@ -6,15 +6,19 @@ Created on Wed Jun 17 15:47:39 2020
 
 from fireworks import Workflow, Firework
 
-from triboflow.fireworks.common import check_inputs_fw
+from triboflow.fireworks.init_fws import InitWF
 from triboflow.firetasks.convergence import FT_StartConvo
+<<<<<<< HEAD
 from triboflow.firetasks.structure_manipulation import (
     FT_StartSlabRelaxSWF, FT_MakeHeteroStructure, FT_StartPreRelax)
+=======
+from triboflow.firetasks.structure_manipulation import FT_MakeHeteroStructure
+>>>>>>> 37-changin-the-initializing-firework
 from triboflow.firetasks.PES import FT_StartPESCalcSubWF
+from triboflow.firetasks.init_check import unbundle_input, material_from_mp
 from triboflow.firetasks.check_inputs import FT_UpdateCompParams
 from triboflow.firetasks.adhesion import (
     FT_RelaxMatchedSlabs, FT_RetrievMatchedSlabs, FT_StartAdhesionSWF)
-from triboflow.utils.database import NavigatorMP
 from triboflow.utils.structure_manipulation import interface_name
 from triboflow.firetasks.run_slabs_wfs import FT_SlabOptThick
 
@@ -32,35 +36,20 @@ def heterogeneous_wf(inputs):
     WF : FireWorks Workflow
         Main Triboflow workflow for heterogeneous interfaces.
 
-    """   
-    mat_1 = inputs.get('material_1')
-    mat_2 = inputs.get('material_2')
-    comp_params = inputs.get('computational_params')
-    inter_params = inputs.get('interface_params')
-    
-    if not all([mat_1, mat_2, comp_params, inter_params]):
-        raise SystemExit('The inputs-dictionary for this workflow must '
-                         'contain the following keys:\n'
-                         'material_1\nmaterial_2\ncomputational_params\n'
-                         'interface_params')
+    """ 
+    mat_1, mat_2, comp_params, inter_params = unbundle_input(inputs)
 
-    nav_mp = NavigatorMP()
-    struct_1, mp_id_1 = nav_mp.get_low_energy_structure(
-        chem_formula=mat_1.get('formula'),
-        mp_id=mat_1.get('mp_id'))
-    struct_2, mp_id_2 = nav_mp.get_low_energy_structure(
-        chem_formula=mat_2.get('formula'),
-        mp_id=mat_2.get('mp_id'))
+    struct_1, mp_id_1 = material_from_mp(mat_1)
+    struct_2, mp_id_2 = material_from_mp(mat_2)
     
     functional = comp_params.get('functional', 'PBE')
     
     WF = []
 
-    Initialize = check_inputs_fw(mat1_params=mat_1,
-                                 mat2_params=mat_2,
-                                 compparams=comp_params,
-                                 interface_params=inter_params,
-                                 FW_name='Check input parameters')
+    Initialize = InitWF.checkinp_hetero_interface(material_1=mat_1,
+                                                  material_2=mat_2,
+                                                  computational=comp_params,
+                                                  interface=inter_params)
     WF.append(Initialize)
 
     PreRelaxation_M1 = Firework(FT_StartPreRelax(mp_id=mp_id_1,
@@ -201,7 +190,7 @@ def heterogeneous_wf(inputs):
                     RetrieveMatchedSlabs: [ComputeAdhesion]}
 
     WF_Name = 'TriboFlow ' + interface_name(mp_id_1, mat_1.get('miller'),
-                                            mp_id_2, mat_2.get('miller'))
+                              mp_id_2, mat_2.get('miller')) +' '+functional
 
     WF = Workflow(WF, Dependencies, name=WF_Name)
 

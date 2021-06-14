@@ -57,7 +57,7 @@ class FT_StartPPESWF(FiretaskBase):
     """
 
     required_params = ['interface_name', 'functional', 'distance_list']
-    optional_params = ['db_file', 'structure_name', 'out_name']
+    optional_params = ['db_file', 'structure_name', 'out_name', 'high_level_db']
 
     def run_task(self, fw_spec):
         from triboflow.workflows.subworkflows import calc_ppes_swf
@@ -74,10 +74,11 @@ class FT_StartPPESWF(FiretaskBase):
         out_name = self.get('out_name', 'PPES@minimum')
         
         d_list = self.get('distance_list')
+        hl_db = self.get('high_level_db', True)
 
         nav_structure = StructureNavigator(
             db_file=db_file, 
-            high_level='triboflow')
+            high_level=hl_db)
         interface_dict = nav_structure.get_interface_from_db(
             name=name, 
             functional=functional)
@@ -137,7 +138,7 @@ class FT_DoPPESCalcs(FiretaskBase):
     """
 
     required_params = ['interface_name', 'functional', 'tag', 'distance_list']
-    optional_params = ['db_file', 'structure_name', 'out_name']
+    optional_params = ['db_file', 'structure_name', 'out_name', 'high_level_db']
 
     def run_task(self, fw_spec):
         name = self.get('interface_name')
@@ -150,10 +151,12 @@ class FT_DoPPESCalcs(FiretaskBase):
         structure_name = self.get('structure_name', 'relaxed_structure@min')
         
         d_list = self.get('distance_list')
+        hl_db = self.get('high_level_db', True)
+
         
         nav_structure = StructureNavigator(
             db_file=db_file,
-            high_level='triboflow')
+            high_level=hl_db)
         interface_dict = nav_structure.get_interface_from_db(
             name=name,
             functional=functional)            

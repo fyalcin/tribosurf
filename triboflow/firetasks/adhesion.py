@@ -31,7 +31,6 @@ class FT_RetrievMatchedSlabs(FiretaskBase):
                        'high_level_db']
     
     def run_task(self, fw_spec):
-        from triboflow.workflows.subworkflows import adhesion_energy_swf
         mp_id_1 = self.get('mp_id_1')
         mp_id_2 = self.get('mp_id_2')
         miller_1 = self.get('miller_1')
@@ -42,7 +41,7 @@ class FT_RetrievMatchedSlabs(FiretaskBase):
             db_file = env_chk('>>db_file<<', fw_spec)
         top_out_name = self.get('top_out_name', 'top_aligned_relaxed')
         bot_out_name = self.get('bottom_out_name', 'bottom_aligned_relaxed')
-        hl_db = self.get('high_level_db', 'triboflow')
+        hl_db = self.get('high_level_db', True)
         
         name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
         
@@ -78,7 +77,6 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
                        'bottom_in_name', 'bottom_out_name', 'high_level_db']
     
     def run_task(self, fw_spec):
-        from triboflow.workflows.subworkflows import adhesion_energy_swf
         mp_id_1 = self.get('mp_id_1')
         mp_id_2 = self.get('mp_id_2')
         miller_1 = self.get('miller_1')
@@ -91,7 +89,7 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
         top_out_name = self.get('top_out_name', 'top_aligned_relaxed')
         bot_in_name = self.get('bottom_in_name', 'bottom_aligned')
         bot_out_name = self.get('bottom_out_name', 'bottom_aligned_relaxed')
-        hl_db = self.get('high_level_db', 'triboflow')
+        hl_db = self.get('high_level_db', True)
         
         name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
 
@@ -101,7 +99,7 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
                                        fltr={'name': name})
         
         relaxed_top_present = interface_dict.get(top_out_name)
-        relaxed_bot_present = interface_dict.get(top_out_name)
+        relaxed_bot_present = interface_dict.get(bot_out_name)
         comp_params = interface_dict.get('comp_parameters', {})
         
         inputs = []
@@ -147,7 +145,7 @@ class FT_StartAdhesionSWF(FiretaskBase):
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
         adhesion_handle = self.get('adhesion_handle', 'adhesion_energy@min')
-        hl_db = self.get('high_level_db', 'triboflow')
+        hl_db = self.get('high_level_db', True)
             
         nav = Navigator(db_file, high_level=hl_db)
         
@@ -194,7 +192,7 @@ class FT_CalcAdhesion(FiretaskBase):
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
         out_name = self.get('out_name', 'adhesion_energy@min')
-        hl_db = self.get('high_level_db', 'triboflow')
+        hl_db = self.get('high_level_db', True)
         
         nav = Navigator(db_file=db_file)
         

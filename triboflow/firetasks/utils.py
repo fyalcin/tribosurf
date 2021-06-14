@@ -10,7 +10,6 @@ from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 
-from triboflow.utils.database import GetBulkFromDB, GetHighLevelDB
 from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.structure_manipulation import interface_name
 
@@ -41,7 +40,7 @@ class FT_ChooseCompParams(FiretaskBase):
     _fw_name = 'Choose Comp Params'
     required_params = ['mp_id_1', 'mp_id_2', 'miller_1', 'miller_2',
                        'functional']
-    optional_params = ['db_file']
+    optional_params = ['db_file', 'high_level_db']
 
     def run_task(self, fw_spec):
         
@@ -54,10 +53,11 @@ class FT_ChooseCompParams(FiretaskBase):
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
+        hl_db = self.get('high_level_db', True)
         
         nav_structure = StructureNavigator(
             db_file=db_file,
-            high_level='triboflow')
+            high_level=hl_db)
         data_1 = nav_structure.get_bulk_from_db(
             mp_id=mp_id_1, 
             functional=functional)
@@ -81,7 +81,7 @@ class FT_ChooseCompParams(FiretaskBase):
         
         nav_high = Navigator(
             db_file=db_file, 
-            high_level='triboflow')
+            high_level=hl_db)
         nav_high.update_data(
             collection=functional+'.interface_data', 
             fltr={'name': name},
@@ -96,17 +96,19 @@ class FT_PrintFromBulkDB(FiretaskBase):
 
     _fw_name = 'Print bulk data from DB'
     required_params = ['mp_id', 'functional']
-    optional_params = ['db_file']
+    optional_params = ['db_file', 'high_level_db']
 
     def run_task(self, fw_spec):
         
         db_file = self.get('db_file', env_chk('>>db_file<<', fw_spec))
         mp_id = self['mp_id']
         functional = self['functional']
+        
+        hl_db = self.get('high_level_db', True)
 
         nav_structure = StructureNavigator(
             db_file=db_file, 
-            high_level='triboflow')
+            high_level=hl_db)
         bulk_dict = nav_structure.get_bulk_from_db(
             mp_id=mp_id,
             functional=functional)
