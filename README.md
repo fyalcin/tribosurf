@@ -270,14 +270,16 @@ The input dictionary has to include the  4 keys, which each has to contain anoth
  - `computational_params = {'use_vdw': <True or False>}`
  - `interface_params = {'max_area': <Max crossection of the matched cell>}`
  
-It is pretty self explanatory what these input are for: The two materials need to be defined (note that just defining the formula will fetch the structure with the lowest energy that matches the formula! Provide an 'mp_id' key for a clear selection) and need a surface orientation. Van der Waals forces can be taken into account or disregarded, and a maximal tolerated cell cross section area (in Angstrom squared) needs to be given to avoid humongous cells during the interface matching process. All other inputs have default values, or are derived from the other ones if not especially provided.
+It is pretty self explanatory what these input are for: The two materials need to be defined (note that just defining the formula will fetch the structure with the lowest energy that matches the formula! Provide an 'mp_id' key for a clear selection) and need a surface orientation. Van der Waals forces can be taken into account or disregarded, and a maximal tolerated cell cross section area (in Angstrom squared) needs to be given to avoid humongous cells during the interface matching process. All other inputs have default values, which can be found (and modified on your own risk) in `triboflow/defaults.json` or are derived from the other ones if not especially provided.
 A full list of possible inputs with types are:
 1. material_1 (and material_2):
 	- formula (str)
 	- miller (list of int, or single str)
-	- mp_id (str)
-	- min_vacuum (float)
-	- min_thickness (float)
+	- mpid (str)
+	- thick_min (int)
+    - thick_max (int)
+	- thick_incr (int)
+	- vacuum (float)
 2. computational_params:
 	- use_vdw (bool, or str)
 	- volume_tolerance (float)
@@ -285,6 +287,10 @@ A full list of possible inputs with types are:
 	- use_spin (bool, or str)
 	- BM_tolerance (float)
 	- functional (str)
+	- encut (float)
+	- k_dens (float)
+	- is_metal (bool)
+	- surfene_thr (float)
 3. interface_params:
 	- max_area (float)
 	- interface_distance (float)
