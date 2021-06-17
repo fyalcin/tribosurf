@@ -97,7 +97,7 @@ class FT_StartPreRelax(FiretaskBase):
             # and updating with the optional inputs
             comp_params = data.get("comp_parameters")
             encut = self.get('encut', 1000)
-            k_dens = self.get('k_dens', 20)
+            k_dens = self.get('k_dens', 15)
             comp_params.update({"encut": encut, "k_dens": k_dens})
 
             tag = "CellShapeRelax-{}".format(str(uuid4()))

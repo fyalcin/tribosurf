@@ -107,14 +107,16 @@ class FTCheckInput(FiretaskBase):
         # Check vdw and spin usage and correct to bool input:
         true_list = ['true', 'True', 'TRUE', '.TRUE.', '.true.', True, 
                      'yes', 'Yes', 'YES', '.YES.', '.yes.']
-        if input_dict.get('use_vdw') in true_list:
-            out_dict['use_vdw'] = True
-        else:
-            out_dict['use_vdw'] = False
-        if input_dict.get('use_spin') in true_list:
-            out_dict['use_spin'] = True
-        else:
-            out_dict['use_spin'] = False
+        if input_dict.get('use_vdw'):
+            if input_dict.get('use_vdw') in true_list:
+                out_dict['use_vdw'] = True
+            else:
+                out_dict['use_vdw'] = False
+        if input_dict.get('use_spin'):        
+            if input_dict.get('use_spin') in true_list:
+                out_dict['use_spin'] = True
+            else:
+                out_dict['use_spin'] = False
         
         return FWAction(mod_spec=[{'_set': {output_dict_name: out_dict}}])
 
