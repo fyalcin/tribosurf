@@ -15,7 +15,32 @@ from triboflow.utils.structure_manipulation import (
 
 @explicit_serialize
 class FT_UpdateCompParams(FiretaskBase):
+    """ Update the comp-params for interface calculations after convergence.
 
+    This Firetask reads the converged bulk parameters from two materials and
+    updates the interface computational parameters so that the correct encut
+    and k-density values are used for the interface calculations. (The higher
+    of both converged value is taken of course.) The 'is_metal' flag for the
+    interface is also set depending if one or both constituents of the interface
+    are metallic.
+    
+    Parameters
+    ----------
+    mp_id_1 : str
+        MaterialsProject ID number for the first material
+    mp_id_2 : str
+        MaterialsProject ID number for the second material
+    miller_1 : str or [int]
+        Miller indices of the first material
+    miller_2 : str or [int]
+        Miller indices of the second material
+    functional : str
+        Functional with which the workflow is run. PBE or SCAN.
+    db_file : str, optional
+        Full path of the db.json file to be used. The default is to use
+        env_chk to find the file.
+    
+    """
     _fw_name = 'Update computational parameters in high level DB'
     required_params = ['mp_id_1', 'miller_1', 'mp_id_2', 'miller_2',
                        'functional']
@@ -83,7 +108,29 @@ class FT_UpdateCompParams(FiretaskBase):
 
 @explicit_serialize
 class FT_MakeInterfaceInDB(FiretaskBase):
+    """ Add an interface entry to the high_level database.
 
+    THIS IS A DEPRECIATED FIRETASK THAT HAS BEEN REPLACED BY:
+        FT_PutInterfaceInDB in triboflow.firetasks.init_db
+    Its function is to read some information from the fw_spec and create
+    an entry for the interface in the high level db.
+    
+    Parameters
+    ----------
+    mat1_data_loc : str
+        Location in the fw_spec where the data for material 1 are found.
+    mat2_data_loc : str
+        Location in the fw_spec where the data for material 2 are found.
+    comp_data_loc : str
+        Location in the fw_spec where the data for computational settings are
+        found.
+    interface_data_loc : str
+        Location in the fw_spec where the data for interface settings are
+        found.
+    db_file : str, optional
+        Full path of the db.json file to be used. The default is to use
+        env_chk to find the file.
+    """
     _fw_name = 'Make bulk entry into high level DB'
     required_params = ['mat1_data_loc', 'mat2_data_loc', 'comp_data_loc',
                        'interface_data_loc']
@@ -132,7 +179,24 @@ class FT_MakeInterfaceInDB(FiretaskBase):
 
 @explicit_serialize
 class FT_MakeSlabInDB(FiretaskBase):
+    """ Add a slab entry to the high_level database.
 
+    THIS IS A DEPRECIATED FIRETASK THAT HAS BEEN REPLACED BY:
+        FT_PutMaterialInDB in triboflow.firetasks.init_db
+    Its function is to read some information from the fw_spec and create
+    an entry for the slab in the high level db.
+    
+    Parameters
+    ----------
+    mat_data_loc : str
+        Location in the fw_spec where the data for a material are found.
+    comp_data_loc : str
+        Location in the fw_spec where the data for computational settings are
+        found.
+    db_file : str, optional
+        Full path of the db.json file to be used. The default is to use
+        env_chk to find the file.
+    """
     _fw_name = 'Make bulk entry into high level DB'
     required_params = ['mat_data_loc', 'comp_data_loc']
     optional_params = ['db_file']
@@ -187,7 +251,24 @@ class FT_MakeSlabInDB(FiretaskBase):
 
 @explicit_serialize
 class FT_MakeBulkInDB(FiretaskBase):
+    """ Add a bulk entry to the high_level database.
 
+    THIS IS A DEPRECIATED FIRETASK THAT HAS BEEN REPLACED BY:
+        FT_PutMaterialInDB in triboflow.firetasks.init_db
+    Its function is to read some information from the fw_spec and create
+    an entry for the slab in the high level db.
+    
+    Parameters
+    ----------
+    mat_data_loc : str
+        Location in the fw_spec where the data for a material are found.
+    comp_data_loc : str
+        Location in the fw_spec where the data for computational settings are
+        found.
+    db_file : str, optional
+        Full path of the db.json file to be used. The default is to use
+        env_chk to find the file.
+    """
     _fw_name = 'Make bulk entry into high level DB'
     required_params = ['mat_data_loc', 'comp_data_loc']
     optional_params = ['db_file']

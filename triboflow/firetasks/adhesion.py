@@ -23,8 +23,42 @@ from triboflow.workflows.base import dynamic_relax_swf
 from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
 
 
+
+
 @explicit_serialize
 class FT_RetrievMatchedSlabs(FiretaskBase):
+    """ Retrieve relaxed matched slabs and save them in the high_level database.
+
+    Get the relaxed aligned top and bottom slabs from the low level database
+    and save them in the interface_data collection of the high level database.
+    
+    Parameters
+    ----------
+    mp_id_1 : str
+        MaterialsProject ID number for the first material
+    mp_id_2 : str
+        MaterialsProject ID number for the second material
+    miller_1 : str or [int]
+        Miller indices of the first material
+    miller_2 : str or [int]
+        Miller indices of the second material
+    functional : str
+        Functional with which the workflow is run. PBE or SCAN.
+    db_file : str, optional
+        Full path of the db.json file to be used. The default is to use
+        env_chk to find the file.
+    top_out_name : str, optional
+        Name the relaxed top slab will have in the high-level database.
+        Defaults to 'top_aligned_relaxed'
+    bottom_out_name : str, optional
+        Name the relaxed bottom slab will have in the high-level database.
+        Defaults to 'bottom_aligned_relaxed'
+    high_level_db : str or True, optional
+        Name of the high_level database to use. Defaults to 'True', in which
+        case it is read from the db.json file.
+    """
+
+    
     required_params = ['mp_id_1', 'mp_id_2', 'miller_1', 'miller_2',
                        'functional']
     optional_params = ['db_file', 'top_out_name', 'bottom_out_name',
@@ -71,6 +105,42 @@ class FT_RetrievMatchedSlabs(FiretaskBase):
 
 @explicit_serialize
 class FT_RelaxMatchedSlabs(FiretaskBase):
+    """Start the relaxation of the matched slabs.
+
+    Get the aligned top and bottom slabs from the high level database and
+    start their relaxation runs.
+    
+    Parameters
+    ----------
+    mp_id_1 : str
+        MaterialsProject ID number for the first material
+    mp_id_2 : str
+        MaterialsProject ID number for the second material
+    miller_1 : str or [int]
+        Miller indices of the first material
+    miller_2 : str or [int]
+        Miller indices of the second material
+    functional : str
+        Functional with which the workflow is run. PBE or SCAN.
+    db_file : str, optional
+        Full path of the db.json file to be used. The default is to use
+        env_chk to find the file.
+    top_in_name : str, optional
+        Name the unrelaxed top slab has in the high-level database.
+        Defaults to 'top_aligned'
+    bottom_in_name : str, optional
+        Name the unrelaxed bottom slab has in the high-level database.
+        Defaults to 'bottom_aligned'
+    top_out_name : str, optional
+        Name the relaxed top slab will have in the high-level database.
+        Defaults to 'top_aligned_relaxed'
+    bottom_out_name : str, optional
+        Name the relaxed bottom slab will have in the high-level database.
+        Defaults to 'bottom_aligned_relaxed'
+    high_level_db : str or True, optional
+        Name of the high_level database to use. Defaults to 'True', in which
+        case it is read from the db.json file.
+    """
     required_params = ['mp_id_1', 'mp_id_2', 'miller_1', 'miller_2',
                        'functional']
     optional_params = ['db_file', 'top_in_name', 'top_out_name',
@@ -131,6 +201,34 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
         
 @explicit_serialize
 class FT_StartAdhesionSWF(FiretaskBase):
+    """Start an adhesion subworkflow.
+
+    Take relaxed top and bottom slabs of an interface, as well as the relaxed
+    interface structure (by default the one with the lowest energy) and compute
+    the adhesion energy through a subworkflow.
+    
+    Parameters
+    ----------
+    mp_id_1 : str
+        MaterialsProject ID number for the first material
+    mp_id_2 : str
+        MaterialsProject ID number for the second material
+    miller_1 : str or [int]
+        Miller indices of the first material
+    miller_2 : str or [int]
+        Miller indices of the second material
+    functional : str
+        Functional with which the workflow is run. PBE or SCAN.
+    db_file : str, optional
+        Full path of the db.json file to be used. The default is to use
+        env_chk to find the file.
+    adhesion_handle: str, optional
+        Flag under which the adhesion energy will be saved in the interface_data
+        collection of the high_level database.
+    high_level_db : str or True, optional
+        Name of the high_level database to use. Defaults to 'True', in which
+        case it is read from the db.json file.
+    """
     required_params = ['mp_id_1', 'mp_id_2', 'miller_1', 'miller_2',
                        'functional']
     optional_params = ['db_file', 'adhesion_handle', 'high_level_db']
@@ -175,6 +273,40 @@ class FT_StartAdhesionSWF(FiretaskBase):
 
 @explicit_serialize
 class FT_CalcAdhesion(FiretaskBase):
+    """Calculate the adhesion from the total energies of static calculations.
+    
+    Find the corresponding total energy calculations from the low_level database
+    and compute the adhesion energy using the formula:
+        E_abs = (top_energy + bot_energy) - inter_energy
+    The result is saved in the high_level database in J/m^2.
+    
+    Parameters
+    ----------
+    interface_name : str
+        Flag to find the interface entry in the high_level database. Created
+        by the 'interface_name' function in triboflow.firetasks.init_db.pyl
+    functional : str
+        Functional with which the workflow is run. PBE or SCAN.
+    top_label : str
+        Task_label in the low level database to find the total energy calculation
+        of the top slab.
+    bottom_label : str
+        Task_label in the low level database to find the total energy calculation
+        of the bottom slab.
+    interface_label : str
+        Task_label in the low level database to find the total energy calculation
+        of the interface.
+    db_file : str, optional
+        Full path of the db.json file to be used. The default is to use
+        env_chk to find the file.
+    out_name: str, optional
+        Key in the interface collection of the high_level database that
+        contains the calculated adhesion energy as value. Defaults to
+        'adhesion_energy@min'.
+    high_level_db : str or True, optional
+        Name of the high_level database to use. Defaults to 'True', in which
+        case it is read from the db.json file.
+    """
     
     required_params = ['interface_name', 'functional', 'top_label',
                        'bottom_label', 'interface_label']
