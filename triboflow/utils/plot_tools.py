@@ -108,7 +108,28 @@ def plot_slab_hs(hs, slab, to_fig=None):
 
 def plot_pes(data, lattice, to_fig=None, vmin=None, vmax=None):
     """
-    Plot the PES and eventually save it
+    Plots the PES and saves it to a file.
+
+    Parameters
+    ----------
+    data : list
+        3D array containing lateral positions and corresponding
+        adhesion energies required for the PES.
+    lattice : list
+        Deprecated.
+    to_fig : any, optional
+        Whether to save the result to a PNG file.
+        The default is None.
+    vmin : float, optional
+        Optional lower bound for the contour lines.
+        The default is None.
+    vmax : float, optional
+        Optional upper bound for the contour lines.
+        The default is None.
+
+    Returns
+    -------
+    None.
 
     """
 
