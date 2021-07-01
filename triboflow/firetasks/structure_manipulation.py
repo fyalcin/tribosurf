@@ -8,7 +8,6 @@ import numpy as np
 from pprint import pprint, pformat
 
 from pymatgen.core.structure import Structure
-from pymatgen.core.lattice import Lattice
 from pymatgen.core.surface import Slab
 from pymatgen.core.surface import SlabGenerator
 from pymatgen.io.vasp.inputs import Poscar
@@ -16,7 +15,7 @@ from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from fireworks import FWAction, FiretaskBase, Firework, Workflow, FileWriteTask
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
-from mpinterfaces.transformations import get_aligned_lattices, get_matching_lattices
+from mpinterfaces.transformations import get_aligned_lattices
 
 from triboflow.workflows.base import dynamic_relax_swf
 from triboflow.utils.database import Navigator, StructureNavigator
@@ -27,79 +26,7 @@ from triboflow.utils.structure_manipulation import (
 from triboflow.utils.file_manipulation import copy_output_files
 from uuid import uuid4
 
-class MatchInterface:
-   
-    def __init__(self,
-                 slab_1,
-                 slab_2,
-                 strain_factor_1,
-                 strain_factor_2,
-                 max_area,
-                 max_mismatch,
-                 max_angle_diff,
-                 r1r2_tol):
-        self.slab_1 = slab_1.copy()
-        self.slab_2 = slab_2.copy()
-        self.f1 = strain_factor_1
-        self.f2 = strain_factor_2
-        self.match_constrains = {'max_area': max_area,
-                                 'max_mismatch': max_mismatch,
-                                 'max_angle_diff': max_angle_diff,
-                                 'r1r2_tol': r1r2_tol
-                                 }
-        self.ltol = 0.05
 
-    def _get_matching_lattice(self):
-        
-        uv_opt0, uv_opt1 = get_matching_lattices(self.slab_1,
-                                                 self.slab_2,
-                                                 **self.match_constrains)
-        return uv_opt0, uv_opt1
-    
-    def _get_lattice(self, structure, uv):
-        latt = Lattice(np.array([uv[0][:],
-                                 uv[1][:],
-                                 structure.lattice.matrix[2, :]
-                                 ]
-                                ))
-        return latt
-    
-    def _get_supercell_matrix(self, structure, lattice):
-        _, __, scell = structure.lattice.find_mapping(lattice,
-                                ltol=self.ltol,
-                                atol=self.match_constrains['max_angle_diff'])
-        scell[2] = np.array([0, 0, 1])
-        return scell
-    
-    def get_lattices(self):
-        uv_1, uv_2 = self._get_matching_lattice()
-        latt_1 = self._get_lattice(self.slab_1, uv_1)
-        latt_2 = self._get_lattice(self.slab_2, uv_2)
-        return latt_1, latt_2
-    
-    def make_averaged_lattice(self):
-        sc1, sc2 = self.get_supercells()
-        l1, l2 = sc1.lattice, sc2.lattice
-        
-        a = np.average([l1.a, l2.a], weights=[self.f1, self.f2])
-        b = np.average([l1.b, l2.b], weights=[self.f1, self.f2])
-        c = np.average([l1.c, l2.c], weights=[self.f1, self.f2])
-        alpha = np.average([l1.alpha, l2.alpha], weights=[self.f1, self.f2])
-        beta = np.average([l1.beta, l2.beta], weights=[self.f1, self.f2])
-        gamma = np.average([l1.gamma, l2.gamma], weights=[self.f1, self.f2])
-        
-        av_latt = Lattice.from_parameters(a, b, c, alpha, beta, gamma)
-        return av_latt
-    
-    def get_supercells(self):
-        latt_1, latt_2 = self.get_lattices()
-        supercell_matrix_1 = self._get_supercell_matrix(self.slab_1, latt_1)
-        supercell_matrix_2 = self._get_supercell_matrix(self.slab_2, latt_2)
-        supercell_1 = self.slab_1.copy()
-        supercell_2 = self.slab_2.copy()
-        supercell_1.make_supercell(supercell_matrix_1)
-        supercell_2.make_supercell(supercell_matrix_2)
-        return supercell_1, supercell_2
 
 @explicit_serialize
 class FT_StartPreRelax(FiretaskBase):

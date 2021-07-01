@@ -7,7 +7,7 @@ Created on Wed Jun 30 12:56:41 2021
 """
 from mpinterfaces.transformations import get_aligned_lattices
 from pymatgen.core.surface import Slab
-from triboflow.firetasks.structure_manipulation import MatchInterface
+from triboflow.phys.interface_matcher import MatchInterface
 
 al111_dict = {'@module': 'pymatgen.core.surface',
  '@class': 'Slab',
@@ -154,7 +154,9 @@ cu111_dict = {'@module': 'pymatgen.core.surface',
  'energy': None}
 
 al111 = Slab.from_dict(al111_dict)
+al_bm = 76.50705929207275
 cu111 = Slab.from_dict(cu111_dict)
+cu_bm = 139.67909156673758
 match_params = {'max_area': 100.0,
                 'max_mismatch': 0.1,
                 'max_angle_diff': 1.5,
@@ -163,12 +165,12 @@ match_params = {'max_area': 100.0,
 
 Matcher = MatchInterface(slab_1=al111,
                          slab_2=cu111,
-                         strain_factor_1=1,
-                         strain_factor_2=1,
+                         strain_weight_1=al_bm,
+                         strain_weight_2=cu_bm,
                          **match_params)
 
 
-al111_new, cu111_new = Matcher.get_supercells()
+al111_new, cu111_new = Matcher.get_aligned_slabs()
 
 al111_old, cu111_old = get_aligned_lattices(
                 al111,
