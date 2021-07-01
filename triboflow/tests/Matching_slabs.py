@@ -158,9 +158,10 @@ al_bm = 76.50705929207275
 cu111 = Slab.from_dict(cu111_dict)
 cu_bm = 139.67909156673758
 match_params = {'max_area': 100.0,
-                'max_mismatch': 0.1,
-                'max_angle_diff': 1.5,
-                'r1r2_tol': 0.1
+                'max_mismatch': 0.05,
+                'max_angle_diff': 1.0,
+                'r1r2_tol': 0.1,
+                'best_match': 'area'
                 }
 
 Matcher = MatchInterface(slab_1=al111,
@@ -172,7 +173,7 @@ Matcher = MatchInterface(slab_1=al111,
 
 al111_new, cu111_new = Matcher.get_aligned_slabs()
 
-al111_old, cu111_old = get_aligned_lattices(
-                al111,
-                cu111,
-                **match_params)
+# al111_old, cu111_old = get_aligned_lattices(
+#                 al111,
+#                 cu111,
+#                 **match_params)
