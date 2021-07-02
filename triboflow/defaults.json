@@ -12,10 +12,11 @@
    },
    "interface_params":{
       "max_area":"NO_DEFAULT",
-      "interface_distance":2.0,
+      "interface_distance":"auto",
       "max_angle_diff":1.5,
       "max_mismatch":0.01,
-      "r1r2_tol":0.05
+      "r1r2_tol":0.02,
+      "best_match":"area"
    },
    "material_params":{
       "formula":"NO_DEFAULT",

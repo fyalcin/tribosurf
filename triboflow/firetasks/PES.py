@@ -322,7 +322,7 @@ class FT_FindHighSymmPoints(FiretaskBase):
         # interface.
         mirror = SymmOp.reflection(normal=[0,0,1], origin=[0, 0, 0])
         flipped_top = top_slab.copy()
-        flipped_top.apply_operation(mirror)
+        flipped_top.apply_operation(mirror, fractional=True)
         top_hsp_unique, top_hsp_all = get_slab_hs(flipped_top)
         
         bottom_hsp_unique, bottom_hsp_all = get_slab_hs(bot_slab)
