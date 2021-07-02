@@ -703,8 +703,8 @@ class FT_MakeHeteroStructure(FiretaskBase):
 # Pt111 matching the error appears for max_angle_diff > ~0.4!
 # Please see issue #25 on gitlab.
 # =============================================================================
-            if inter_params['max_angle_diff'] > 0.4:
-                inter_params['max_angle_diff'] = 0.4
+            # if inter_params['max_angle_diff'] > 0.4:
+            #     inter_params['max_angle_diff'] = 0.4
         
             MI = MatchInterface(slab_1=slab_1,
                                 slab_2=slab_2,
