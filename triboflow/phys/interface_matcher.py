@@ -164,15 +164,18 @@ class MatchInterface:
                              'r1r2_tol': r1r2_tol,
                              'best_match': best_match
                             }
-        self.inter_dist = interface_distance
         self.aligned_top_slab = None
         self.aligned_bot_slab = None
+        self.__get_interface_dist(interface_distance)
 
-    def __get_interface_dist(self):
-        if self.inter_dist == 'auto':
+    def __get_interface_dist(self, initial_distance):
+        try:
+            self.inter_dist = float(initial_distance)
+        except:
             av_spacing_1 = Shaper._get_average_layer_spacing(self.slab_1)
             av_spacing_2 = Shaper._get_average_layer_spacing(self.slab_2)
             self.inter_dist = np.mean([av_spacing_1, av_spacing_2])
+                
             
     def __flip_slab(self, slab):
         mirror = SymmOp.reflection(normal=[0,0,1], origin=[0, 0, 0])
@@ -362,10 +365,12 @@ class MatchInterface:
         return tcs, bcs
         
     def get_interface(self):
-        self.__get_interface_dist()
         tcs, bcs = self.get_centered_slabs()
         if not tcs and not bcs:
                 return None, None
         interface = stack_aligned_slabs(bcs, tcs)
         clean_interface = clean_up_site_properties(interface)
         return clean_interface
+    
+    def get_interface_distance(self):
+        return self.inter_dist

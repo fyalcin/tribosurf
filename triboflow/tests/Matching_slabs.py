@@ -503,7 +503,8 @@ match_params = {'max_area': 200.0,
                 'max_mismatch': 0.01,
                 'max_angle_diff': 1.5,
                 'r1r2_tol': 0.2,
-                'best_match': 'area'
+                'best_match': 'area',
+                'interface_distance': 'auto'
                 }
 
 Matcher = MatchInterface(slab_2=al111,
