@@ -24,7 +24,7 @@ from triboflow.utils.structure_manipulation import (
     interface_name, slab_from_structure, recenter_aligned_slabs, 
     stack_aligned_slabs, transfer_average_magmoms, clean_up_site_properties)
 from triboflow.utils.file_manipulation import copy_output_files
-from triboflow.phys.interface_matcher import MatchInterface
+from triboflow.phys.interface_matcher import InterfaceMatcher
 
 
 
@@ -703,10 +703,12 @@ class FT_MakeHeteroStructure(FiretaskBase):
 # Pt111 matching the error appears for max_angle_diff > ~0.4!
 # Please see issue #25 on gitlab.
 # =============================================================================
-            # if inter_params['max_angle_diff'] > 0.4:
-            #     inter_params['max_angle_diff'] = 0.4
+# =============================================================================
+# The new interface matching class seems to have resolved the above issue
+# completely. See issue #38 and now closed issue #25 on gitlab.
+# =============================================================================
         
-            MI = MatchInterface(slab_1=slab_1,
+            MI = InterfaceMatcher(slab_1=slab_1,
                                 slab_2=slab_2,
                                 strain_weight_1=bm_1,
                                 strain_weight_2=bm_2,

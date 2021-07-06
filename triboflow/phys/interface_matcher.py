@@ -3,8 +3,46 @@
 """
 Created on Thu Jul  1 16:39:05 2021
 
-@author: mwo
+Class and methods that deal with matching interface structures.
+
+The module contains:
+
+    ** InterfaceMatcher **:
+        Class to match two slabs to form an interface. The lattice search
+        (_find_lattice_match method) is done by the implementation of the
+        algorithm by Zur and McGill
+        (Journal of Applied Physics 55, 378 (1984); doi: 10.1063/1.333084)
+        as implemented in python in the MPInterfaces package
+        (Computational Materials Science 122 (2016) 183–190;
+        doi: 10.1016/j.commatsci.2016.05.020). However, in
+        contrast to the MPInterfaces implementation the strain put on the
+        lattices to get them to match is more flexible and achieved via a
+        weighted average.
+        The class contains the following modules, of which the last 4 alone
+        usually are providing enough flexibility for the user.
+            - __init__
+            - __get_interface_dist
+            - __flip_slab
+            - __assign_top_bottom
+            - __make_3d_lattice_from_2d_lattice
+            - __get_supercell_matrix
+            - _find_lattice_match
+            - _get_matching_lattices
+            - _get_matching_supercells
+            - get_aligned_slabs
+            - get_centered_slabs
+            - get_interface
+            - get_interface_distance
+
+    Functions:
+    - get_average_lattice
+    - are_slabs_aligned
+
+    Author: Michael Wolloch
+            michael.wolloch@univie.ac.at
+
 """
+
 import numpy as np
 import warnings
 from pymatgen.core.lattice import Lattice
@@ -82,7 +120,7 @@ def are_slabs_aligned(slab_1, slab_2, prec=12):
         return False
     
 
-class MatchInterface:
+class InterfaceMatcher:
    
     def __init__(self,
                  slab_1,
@@ -95,7 +133,7 @@ class MatchInterface:
                  r1r2_tol=0.02,
                  best_match='area',
                  interface_distance='auto'):
-        """Initialize the MatchInterface class
+        """Initialize the InterfaceMatcher class
         
         If the strain weights sum up to zero (which is not allowed for the
         averaging process) they will be internally reset to 1 and a warning
@@ -282,7 +320,7 @@ class MatchInterface:
                                  ]
                                 ))
         return latt
-    
+
     def __get_supercell_matrix(self, slab, lattice):
         """
         Return a matrix that can be used to construct a supercell.
@@ -472,7 +510,7 @@ class MatchInterface:
     
     def get_interface_distance(self):
         """
-        Return the interface distance of the MatchInterface class instance.
+        Return the interface distance of the InterfaceMatcher class instance.
 
         Returns
         -------
