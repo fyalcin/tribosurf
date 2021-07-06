@@ -135,6 +135,12 @@ class MatchInterface:
             Determines if the algorithm returns the matched slabs with the
             smallest mismatch within "max_area" or the smalles area within the
             other tolerance parameters. The default is "area"
+        interface_distance : int, float or str, optional
+            Determines the distance between the matched slabs if an interface
+            structure is returned. If the input can be transformed into a float,
+            that float will be used as the distance. If not, the distance will
+            be automatically computed as the average layer distance of the
+            two slabs. The default is "auto"
 
         Returns
         -------
@@ -166,9 +172,29 @@ class MatchInterface:
                             }
         self.aligned_top_slab = None
         self.aligned_bot_slab = None
+        # Set interface distance
         self.__get_interface_dist(interface_distance)
 
     def __get_interface_dist(self, initial_distance):
+        """
+        Set the interface distance for the class instance.
+        
+        If the input can be transformed into a float,
+        that float will be used as the distance. If not, the distance will
+        be automatically computed as the average layer distance of the
+        two slabs.
+
+        Parameters
+        ----------
+        initial_distance : any type possible
+            if transformable to a float, the float will be used, otherwise
+            automatic computation is done.
+
+        Returns
+        -------
+        None.
+
+        """
         try:
             self.inter_dist = float(initial_distance)
         except:
@@ -178,12 +204,47 @@ class MatchInterface:
                 
             
     def __flip_slab(self, slab):
+        """
+        Mirror a slab with the z=0 plane as the mirror plane.
+
+        Parameters
+        ----------
+        slab : pymatgen.core.surface.Slab
+           The input slab object to mirror
+
+        Returns
+        -------
+        flipped_slab : pymatgen.core.surface.Slab
+            The mirrored slab
+
+        """
         mirror = SymmOp.reflection(normal=[0,0,1], origin=[0, 0, 0])
         flipped_slab = slab.copy()
         flipped_slab.apply_operation(mirror, fractional=True)
         return flipped_slab
     
     def __assign_top_bottom(self, slab_1, slab_2):
+        """
+        Assign top and bottom slab based on the formula and miller index.
+        
+        This is just for consistency since above and below are of course
+        not meaningfull in a DFT context.
+
+        Parameters
+        ----------
+        slab_1 : pymatgen.core.surface.Slab
+            First slab
+        slab_2 : pymatgen.core.surface.Slab
+            Second slab
+
+        Returns
+        -------
+        top_slab : pymatgen.core.surface.Slab
+            Slab that was assigned to be on top.
+        bot_slab : pymatgen.core.surface.Slab
+            Slab that was assigned to be on the bottom.
+
+        """
         f1 = slab_1.composition.get_reduced_formula_and_factor()[0]
         m1 = ''.join(str(s) for s in slab_1.miller_index)
         f2 = slab_2.composition.get_reduced_formula_and_factor()[0]
@@ -320,6 +381,10 @@ class MatchInterface:
     def get_aligned_slabs(self):
         """
         Get alinged slabs that are stretched according to the supplied weights.
+        
+        The first slab returned will be flipped horizontally so that the side
+        facing the interface will be the one initially facing in the positive
+        z direction.
 
         Returns
         -------
@@ -355,6 +420,26 @@ class MatchInterface:
             return flipped_slab, bot_slab
         
     def get_centered_slabs(self):
+        """
+        Return slabs that are already positioned to form and interface around z=0.
+        
+        
+        The first slab returned will be flipped horizontally so that the side
+        facing the interface will be the one initially facing in the positive
+        z direction.
+
+        Returns
+        -------
+        None, None
+            Return None twice if no match is found with the parameters.
+        pymatgen.core.surface.Slab, pymatgen.core.surface.Slab
+            Two slabs that are fully matched, e.g. they have the same lattice
+            in x and y directions, z lattice vector may differ though! They
+            are positioned in such a way that the first slab will be half the
+            interface distance above z=0, while the second one will be
+            half that distance below z=0.
+
+        """
         if self.aligned_top_slab and self.aligned_bot_slab:
             top_slab, bot_slab = self.aligned_top_slab, self.aligned_bot_slab
         else:
@@ -365,6 +450,19 @@ class MatchInterface:
         return tcs, bcs
         
     def get_interface(self):
+        """
+        Return a interface slab object containing two matched slabs.
+        
+        They are correctly orientated and have a defined distance to each other.
+        The interface plane is z=0. The relative lateral position of the slabs
+        are random though.
+
+        Returns
+        -------
+        pymatgen.core.surface.Slab
+            Matched interface structure of two slabs.
+
+        """
         tcs, bcs = self.get_centered_slabs()
         if not tcs and not bcs:
                 return None, None
@@ -373,4 +471,13 @@ class MatchInterface:
         return clean_interface
     
     def get_interface_distance(self):
+        """
+        Return the interface distance of the MatchInterface class instance.
+
+        Returns
+        -------
+        float
+            Distance between the two slabs in Angstrom.
+
+        """
         return self.inter_dist
