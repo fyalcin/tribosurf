@@ -212,6 +212,7 @@ class InterfaceMatcher:
         self.aligned_bot_slab = None
         # Set interface distance
         self.__get_interface_dist(interface_distance)
+        
 
     def __get_interface_dist(self, initial_distance):
         """
@@ -261,6 +262,25 @@ class InterfaceMatcher:
         flipped_slab.apply_operation(mirror, fractional=True)
         return flipped_slab
     
+    def __get_formula_and_miller(self, slab):
+        """
+        Return a string combination of a reduced formula and miller indices.
+
+        Parameters
+        ----------
+        slab : pymatgen.core.surface.Slab
+            input slab
+
+        Returns
+        -------
+        str
+            Reduced formula plus miller indices
+
+        """
+        f, _ = slab.composition.get_reduced_formula_and_factor()
+        m = ''.join(str(s) for s in slab.miller_index)
+        return f+m
+    
     def __assign_top_bottom(self, slab_1, slab_2):
         """
         Assign top and bottom slab based on the formula and miller index.
@@ -283,13 +303,12 @@ class InterfaceMatcher:
             Slab that was assigned to be on the bottom.
 
         """
-        f1 = slab_1.composition.get_reduced_formula_and_factor()[0]
-        m1 = ''.join(str(s) for s in slab_1.miller_index)
-        f2 = slab_2.composition.get_reduced_formula_and_factor()[0]
-        m2 = ''.join(str(s) for s in slab_2.miller_index)
-        n1 = min(f1+m1, f2+m2)
-        n2 = max(f1+m1, f2+m2)
-        if f1+m1 == n1 and f2+m2 == n2:
+        n1 = self.__get_formula_and_miller(slab_1)
+        n2 = self.__get_formula_and_miller(slab_2)
+        opt1 = min(n1, n2)
+        opt2 = max(n1, n2)
+        
+        if n1 == opt1 and n2 == opt2:
             top_slab = slab_1
             bot_slab = slab_2
         else:
