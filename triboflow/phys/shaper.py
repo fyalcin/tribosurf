@@ -406,3 +406,26 @@ class Shaper():
         slab_copy = slab.copy()
         slab_copy.remove_sites(flat_list)
         return center_slab(slab_copy) if center else slab_copy
+    
+    @staticmethod
+    def _get_average_layer_spacing(slab):
+        """
+        Compute the average distance between the slabs layers disregarding the
+        vacuum region.
+
+        Parameters
+        ----------
+        slab : pymatgen.core.surface.Slab
+            Standard pymatgen Slab object.
+
+        Returns
+        -------
+        av_spacing : float
+            Average layer spacing
+
+        """
+        spacings = Shaper._get_layer_spacings(slab)
+        spacings_no_vac = np.delete(spacings,
+                np.where(spacings == Shaper._identify_regions(slab)['vacuum']))
+        av_spacing = np.mean(spacings_no_vac)
+        return av_spacing    
