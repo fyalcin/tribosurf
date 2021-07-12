@@ -161,8 +161,10 @@ class Shaper():
             as the respective region intervals in fractional coordinates.
 
         """
+        struct_cp = struct.copy()
+        center_slab(struct_cp)
         try:
-            slab_regs = get_slab_regions(struct)
+            slab_regs = get_slab_regions(struct_cp)
             vac_regs = multirange_diff([[0, 1]], slab_regs)
         except ValueError:
             slab_regs = [[0, 1]]
@@ -406,7 +408,7 @@ class Shaper():
         slab_copy = slab.copy()
         slab_copy.remove_sites(flat_list)
         return center_slab(slab_copy) if center else slab_copy
-    
+
     @staticmethod
     def _get_average_layer_spacing(slab):
         """
@@ -428,4 +430,4 @@ class Shaper():
         spacings_no_vac = np.delete(spacings,
                 np.where(spacings == Shaper._identify_regions(slab)['vacuum']))
         av_spacing = np.mean(spacings_no_vac)
-        return av_spacing    
+        return av_spacing
