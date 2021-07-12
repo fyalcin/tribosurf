@@ -35,16 +35,21 @@ import os
 from monty.json import jsanitize
 
 import numpy as np
-from pymatgen.core.surface import Slab
+from pymatgen.core.structure import Structure
 from fireworks import explicit_serialize, FiretaskBase, FWAction
 
-from triboflow.utils.database import Navigator
+from triboflow.utils.database import (
+    Navigator,
+    StructureNavigator,
+    get_low_and_high_db_names
+)
 from triboflow.utils.utils import (
     read_runtask_params,
     read_default_params,
     get_one_info_from_dict,
     retrieve_from_db
 )
+from triboflow.utils.structure_manipulation import slab_from_structure
 from triboflow.utils.errors import SlabOptThickError
 
 
@@ -80,11 +85,11 @@ class FT_SlabOptThick(FiretaskBase):
         intermediate calculations and raw data during will be saved here. If 
         nothing is passed the Firework database is used. The default is None.
 
-    high_level : str, optional
+    high_level : str, or None, optional
         Name of the table of the "high level" database, saved in db_file.
         The slab optimal thickness will be saved here. The slab energy and
         surface energy will be saved too if conv_kind is 'surfene'.
-        The default is 'triboflow'.
+        The default is None.
 
     conv_kind : str, optional
         Type of convergence to be performed. Allowed values are: 'surfene', 
@@ -127,10 +132,6 @@ class FT_SlabOptThick(FiretaskBase):
         database and to be used to build the slabs. Bulks are identified by 
         mp_id and functional but there might be different structures of the
         same material. The default is "structure_fromMP".
-
-    slab_entry : str or None, optional
-        Where to search for the information about the optimal thickness in the
-        slab dictionary in the high level database. The default is None.
     
     cluster_params : dict, optional
         Optional params to print data and/or interact with clusters. The default is {}.
@@ -147,20 +148,35 @@ class FT_SlabOptThick(FiretaskBase):
     optional_params = ['db_file', 'low_level', 'high_level', 'conv_kind',
                        'relax_type', 'thick_min', 'thick_max', 'thick_incr',
                        'vacuum', 'in_unit_planes', 'ext_index', 'conv_thr',
-                       'parallelization', 'bulk_entry', 'slab_entry', 
-                       'cluster_params', 'override']
+                       'parallelization', 'bulk_entry', 'cluster_params', 'override']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
         """ 
-
+        if type(self.get('miller')) == str:
+            miller = [int(k) for k in list(self.get('miller'))]
+        nav = StructureNavigator(db_file='auto', high_level=True)
+        slab_data = nav.get_slab_from_db(self.get('mp_id'),
+                                          self.get('functional'),
+                                          miller)
+        for key in self.optional_params:
+            if slab_data.get(key):
+                self[key] = slab_data.get(key)
+                
+        if not self.get('conv_thr'):
+            self['conv_thr'] = slab_data.get('comp_parameters').get('surfene_thr')
+            print(self['conv_thr'])
+        
         # Define the json file containing default values and read parameters
-        dfl = currentdir + '/defaults_fw.json'
+        dfl = currentdir + '/../defaults.json'
         p = read_runtask_params(self, fw_spec, self.required_params, self.optional_params,
                                 default_file=dfl, default_key="SlabOptThick")
-
+        
         # Check if a convergence calculation of the slab thickness is present
         is_done, comp_params = self.is_data(p, dfl)
+        
+        import pprint
+        pprint.pprint(p)
 
         # Start a subworkflow to converge the thickness if not already done
         if is_done and not p['override']:
@@ -191,7 +207,7 @@ class FT_SlabOptThick(FiretaskBase):
         """
 
         field, bulk = retrieve_from_db(p['mp_id'], collection=p['functional']+'.bulk_data',
-                                       db_file=p['db_file'], database=p['high_level'],
+                                       db_file=p['db_file'], high_level_db=True,
                                        entry=p['bulk_entry'], is_slab=False,
                                        pymatgen_obj=True)
         return bulk
@@ -218,16 +234,16 @@ class FT_SlabOptThick(FiretaskBase):
         
         # Retrieve the slab from the database
         field, _ = retrieve_from_db(mp_id=p['mp_id'], db_file=p['db_file'],
-                                    database=p['high_level'], miller=p['miller'],
+                                    high_level_db=True, miller=p['miller'],
                                     collection=p['functional']+'.slab_data',
                                     pymatgen_obj=False)
-        
+
         if field is not None:
             # Check if an optimal thickness has been already calculated
             is_done = field.get('opt_thickness', None)
 
             # Define the computational parameters of the slab
-            comp_params = field.get('comp_params', {})
+            comp_params = field.get('comp_parameters', {})
 
         else:
             is_done = False
@@ -398,7 +414,7 @@ class FT_StartThickConvo(FiretaskBase):
         """
 
         # Define the json file containing default values and read parameters
-        dfl = currentdir + '/defaults_fw.json'
+        dfl = currentdir + '/../defaults.json'
         p = read_runtask_params(self, fw_spec, self.required_params, 
                                 self.optional_params, default_file=dfl, 
                                 default_key="StartThickConvo")
@@ -413,13 +429,14 @@ class FT_StartThickConvo(FiretaskBase):
         from triboflow.workflows.surfene_wfs import SurfEneWF
 
         if p['conv_kind'] == 'surfene':
+            low_level_name, high_level_name = get_low_and_high_db_names(p)
             wf = SurfEneWF.conv_surface_energy(structure=p['structure'],
                                                mp_id=p['mp_id'], 
                                                miller=p['miller'], 
                                                functional=p['functional'],
                                                db_file=p['db_file'], 
-                                               low_level=p['low_level'],
-                                               high_level=p['high_level'],
+                                               low_level=low_level_name,
+                                               high_level=high_level_name,
                                                relax_type=p['relax_type'],
                                                comp_params=p['comp_params'],
                                                thick_min=p['thick_min'], 
@@ -456,7 +473,7 @@ class FT_EndThickConvo(FiretaskBase):
         """ 
 
         # Define the json file containing default values and read parameters
-        dfl = currentdir + '/defaults_fw.json'
+        dfl = currentdir + '/../defaults.json'
         p = read_runtask_params(self, fw_spec, self.required_params, 
                                 self.optional_params, default_file=dfl, 
                                 default_key="EndThickConvo")
@@ -515,7 +532,7 @@ class FT_EndThickConvo(FiretaskBase):
         """
 
         # Call the navigator for retrieving the thickness dict out of DB
-        nav = Navigator(db_file=p['db_file'], high_level=p['low_level'])
+        nav = Navigator(db_file=p['db_file'], high_level=False)
         thickness_dict = nav.find_data(p['functional'] + '.slab_data', 
                                        {'mpid': p['mp_id'], 
                                        'miller': p['miller']})['thickness']
@@ -639,36 +656,58 @@ class FT_EndThickConvo(FiretaskBase):
         index : int
             Index of the thickness indicating the optimal slab.
 
+        p : dict
+            Dictionary containing the FT arguments.
+
         """
 
         # Start the navigator to extract the data from the low level database
-        nav_low = Navigator(db_file=p['db_file'], high_level=p['low_level'])
+        nav_low = Navigator(db_file=p['db_file'], high_level=False)
         low_dict = nav_low.find_data(collection=p['functional'] + '.slab_data', 
-                                     filter={'mpid': p['mp_id'],
+                                     fltr={'mpid': p['mp_id'],
                                              'miller': p['miller']})
         
         # Start the navigator to store the data to the high level database
-        nav_high = Navigator(db_file=p['db_file'], high_level=p['high_level'])
+        nav_high = Navigator(db_file=p['db_file'], high_level=True)
         high_dict = nav_high.find_data(collection=p['functional'] + '.slab_data', 
-                                       filter={'mpid': p['mp_id'],
-                                               'miller': p['miller']})
+                                       fltr={'mpid': p['mp_id'],
+                                             'miller': p['miller']})
         
         # Extract the data to be saved in the database
         thickness_dict = get_one_info_from_dict(low_dict, ['thickness'])
-        input_dict = thickness_dict['data_' + str(index)]['input']
+        out_struct_dict = thickness_dict['data_' + str(index)]['output']['structure']
+        
+        # Convert out_struct_dict to slab (Issue in Atomate OptimizeFW, every
+        # structure that is simulated in that way is saved in tasks collection
+        # as a Structure)
+        output_slab = slab_from_structure(p['miller'], Structure.from_dict(out_struct_dict))
+
+        # Create an array containing the thickness vs surface energy info
+        thick_array = []
+        surfene_array = []
+        for k in thickness_dict.keys():
+            thick = int(k.split('_')[-1])
+            if thick != 0:
+                thick_array.append(thick)
+                surfene_array.append(thickness_dict[k]['output']['surface_energy'])
+
+        array = np.column_stack((thick_array, surfene_array))
+        thickness_dict['thick_surfene_array'] = array[np.argsort(array[:, 0])]
 
         # Prepare the dictionary for the update
         if high_dict is None:
-            store = {'formula': Slab.from_dict(input_dict).composition.reduced_formula,
+            store = {'formula': output_slab.composition.reduced_formula,
                      'mpid': p['mp_id'], 'miller': p['miller'],
-                     'thickness': thickness_dict, 'opt_thickness': int(index)}
+                     'thickness': thickness_dict, 'opt_thickness': int(index),
+                     'relaxed_slab': output_slab.as_dict()}
         else:
-            store = {'thickness': thickness_dict, 'opt_thickness': int(index)}     
+            store = {'thickness': thickness_dict, 'opt_thickness': int(index),
+                     'relaxed_slab': output_slab.as_dict()}
         store = jsanitize(store)
 
         # Update data
         nav_high.update_data(collection=p['functional'] + '.slab_data', 
-                             filter={'mpid': p['mp_id'], 'miller': p['miller']},
+                             fltr={'mpid': p['mp_id'], 'miller': p['miller']},
                              new_values={'$set': store}, upsert=True)
 
     def call_recursion(self, fw_spec, p):

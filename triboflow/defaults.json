@@ -1,20 +1,47 @@
-{
+{   
+    "comp_params":{
+      "use_vdw":"NO_DEFAULT",
+      "BM_tolerance":0.01,
+      "functional":"PBE",
+      "use_spin":true,
+      "volume_tolerance":0.001,
+      "encut":520,
+      "k_dens":12.5,
+      "surfene_thr":0.01,
+      "is_metal":null
+   },
+   "interface_params":{
+      "max_area":"NO_DEFAULT",
+      "interface_distance":"auto",
+      "max_angle_diff":1.5,
+      "max_mismatch":0.01,
+      "r1r2_tol":0.02,
+      "best_match":"area"
+   },
+   "material_params":{
+      "formula":"NO_DEFAULT",
+      "miller":"NO_DEFAULT",
+      "mpid":null,
+      "thick_min":4,
+      "thick_max":10,
+      "thick_incr":1,
+      "vacuum":25
+   },
    "SlabOptThick":{
       "db_file":null,
-      "low_level":null,
-      "high_level":"triboflow",
+      "low_level":"auto",
+      "high_level":null,
       "conv_kind":"surfene",
       "relax_type":"slab_pos_relax",
       "thick_min":4,
-      "thick_max":12,
-      "thick_incr":2,
-      "vacuum":10,
+      "thick_max":10,
+      "thick_incr":1,
+      "vacuum":25,
       "in_unit_planes":true,
       "ext_index":0,
-      "conv_thr":0.025,
-      "parallelization":null,
-      "bulk_entry":"structure_fromMP",
-      "slab_entry":null,
+      "conv_thr":0.01,
+      "parallelization":"low",
+      "bulk_entry":"structure_equiVol",
       "cluster_params":{
       
       },
@@ -22,12 +49,12 @@
    },
    "StartThickConvo":{
       "db_file":null,
-      "low_level":null,
-      "high_level":"triboflow",
+      "low_level":"auto",
+      "high_level":null,
       "conv_kind":"surfene",
       "relax_type":"slab_pos_relax",
       "comp_params":{
-         
+          
       },
       "thick_min":4,
       "thick_max":12,
@@ -44,8 +71,8 @@
    },
    "EndThickConvo":{
       "db_file":null,
-      "low_level":null,
-      "high_level":"triboflow",
+      "low_level":"auto",
+      "high_level":null,
       "spec":{},
       "functional":"PBE",
       "conv_kind":"surfene",
@@ -91,8 +118,8 @@
    },
    "MoveTagResults":{
       "db_file":null,
-      "database_from":null,
-      "database_to":"triboflow",
+      "database_from":"auto",
+      "database_to":null,
       "miller":null,
       "check_entry":null,
       "entry_to":[
@@ -122,7 +149,7 @@
    },
    "SurfaceEnergy":{
       "db_file":null,
-      "database":"triboflow"
+      "high_level_db":null
    },
    "cluster_params":{
       "file_output":false,
@@ -132,22 +159,5 @@
       "user":null,
       "port":null,
       "print_help":false
-   },
-   "comp_params":{
-      "BM_tolerance":0.01,
-      "energy_tolerance":0.001,
-      "functional":"PBE",
-      "use_spin":true,
-      "volume_tolerance":0.001
-   },
-   "interface_params":{
-      "interface_distance":2.0,
-      "max_angle_diff":1.5,
-      "max_mismatch":0.01,
-      "r1r2_tol":0.05
-   },
-   "material_params":{
-      "min_thickness":10.0,
-      "min_vacuum":25.0
    }
 }

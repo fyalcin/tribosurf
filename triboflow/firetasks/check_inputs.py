@@ -3,18 +3,44 @@
 Created on Mon Jun 22 12:29:28 2020
 @author: mwo
 """
-
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 
 from triboflow.utils.database import Navigator, StructureNavigator, NavigatorMP
-from triboflow.utils.structure_manipulation import interface_name
+from triboflow.utils.structure_manipulation import (
+    interface_name, transfer_average_magmoms)
 
 
 @explicit_serialize
 class FT_UpdateCompParams(FiretaskBase):
+    """ Update the comp-params for interface calculations after convergence.
 
+    This Firetask reads the converged bulk parameters from two materials and
+    updates the interface computational parameters so that the correct encut
+    and k-density values are used for the interface calculations. (The higher
+    of both converged value is taken of course.) The 'is_metal' flag for the
+    interface is also set depending if one or both constituents of the interface
+    are metallic.
+    
+    Parameters
+    ----------
+    mp_id_1 : str
+        MaterialsProject ID number for the first material
+    mp_id_2 : str
+        MaterialsProject ID number for the second material
+    miller_1 : str or [int]
+        Miller indices of the first material
+    miller_2 : str or [int]
+        Miller indices of the second material
+    functional : str
+        Functional with which the workflow is run. PBE or SCAN.
+    db_file : str, optional
+        Full path of the db.json file to be used. The default is to use
+        env_chk to find the file.
+    
+    """
     _fw_name = 'Update computational parameters in high level DB'
     required_params = ['mp_id_1', 'miller_1', 'mp_id_2', 'miller_2',
                        'functional']
@@ -41,10 +67,10 @@ class FT_UpdateCompParams(FiretaskBase):
         
         nav_structure = StructureNavigator(
             db_file=db_file, 
-            high_level='triboflow')
+            high_level=True)
         bulk_1 = nav_structure.get_bulk_from_db(
             mp_id=mp_id_1, 
-            function=functional)
+            functional=functional)
         bulk_2 = nav_structure.get_bulk_from_db(
             mp_id=mp_id_2,
             functional=functional
@@ -60,29 +86,51 @@ class FT_UpdateCompParams(FiretaskBase):
         metal_2 = bulk_2['comp_parameters']['is_metal']
         metal_inter = any((metal_1, metal_2))
 
-        nav_high = Navigator(db_file=db_file, high_level='triboflow')
+        nav_high = Navigator(db_file=db_file, high_level=True)
         nav_high.update_data(
             collection=functional+'.slab_data',
-            filter={'mpid': mp_id_1, 'miller': miller_1},
+            fltr={'mpid': mp_id_1, 'miller': miller_1},
             new_values={'$set': {'comp_parameters.encut': encut_1,
                                  'comp_parameters.k_dens': k_dens_1}})
         nav_high.update_data(
             collection=functional+'.slab_data',
-            filter={'mpid': mp_id_2, 'miller': miller_2},
+            fltr={'mpid': mp_id_2, 'miller': miller_2},
             new_values={'$set': {'comp_parameters.encut': encut_2,
                                  'comp_parameters.k_dens': k_dens_2}})
 
         inter_name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
         nav_high.update_data(
             collection=functional+'.interface_data',
-            filter={'name': inter_name},
+            fltr={'name': inter_name},
             new_values={'$set': {'comp_parameters.encut': encut_inter,
                                  'comp_parameters.k_dens': k_dens_inter,
                                  'comp_parameters.is_metal': metal_inter}})
 
 @explicit_serialize
 class FT_MakeInterfaceInDB(FiretaskBase):
+    """ Add an interface entry to the high_level database.
 
+    THIS IS A DEPRECIATED FIRETASK THAT HAS BEEN REPLACED BY:
+        FT_PutInterfaceInDB in triboflow.firetasks.init_db
+    Its function is to read some information from the fw_spec and create
+    an entry for the interface in the high level db.
+    
+    Parameters
+    ----------
+    mat1_data_loc : str
+        Location in the fw_spec where the data for material 1 are found.
+    mat2_data_loc : str
+        Location in the fw_spec where the data for material 2 are found.
+    comp_data_loc : str
+        Location in the fw_spec where the data for computational settings are
+        found.
+    interface_data_loc : str
+        Location in the fw_spec where the data for interface settings are
+        found.
+    db_file : str, optional
+        Full path of the db.json file to be used. The default is to use
+        env_chk to find the file.
+    """
     _fw_name = 'Make bulk entry into high level DB'
     required_params = ['mat1_data_loc', 'mat2_data_loc', 'comp_data_loc',
                        'interface_data_loc']
@@ -108,14 +156,14 @@ class FT_MakeInterfaceInDB(FiretaskBase):
             chem_formula=data2['formula'],
             mp_id=data2['mp_id'])
 
-        nav_high = Navigator(db_file=db_file, high_level='triboflow')
+        nav_high = Navigator(db_file=db_file, high_level=True)
 
         name = interface_name(mp_id_1, data1['miller'],
                               mp_id_2, data2['miller'])
 
         if nav_high.find_data(
                collection=functional+'.interface_data', 
-               data={'name': name}):
+               fltr={'name': name}):
 
             print('{} interface can not be added to {}.interface_data '
                   'collection because an interface with that name is already '
@@ -131,7 +179,24 @@ class FT_MakeInterfaceInDB(FiretaskBase):
 
 @explicit_serialize
 class FT_MakeSlabInDB(FiretaskBase):
+    """ Add a slab entry to the high_level database.
 
+    THIS IS A DEPRECIATED FIRETASK THAT HAS BEEN REPLACED BY:
+        FT_PutMaterialInDB in triboflow.firetasks.init_db
+    Its function is to read some information from the fw_spec and create
+    an entry for the slab in the high level db.
+    
+    Parameters
+    ----------
+    mat_data_loc : str
+        Location in the fw_spec where the data for a material are found.
+    comp_data_loc : str
+        Location in the fw_spec where the data for computational settings are
+        found.
+    db_file : str, optional
+        Full path of the db.json file to be used. The default is to use
+        env_chk to find the file.
+    """
     _fw_name = 'Make bulk entry into high level DB'
     required_params = ['mat_data_loc', 'comp_data_loc']
     optional_params = ['db_file']
@@ -155,18 +220,18 @@ class FT_MakeSlabInDB(FiretaskBase):
         bandgap = nav_mp.get_property_from_mp(
             mp_id=mp_id, 
             properties=['band_gap'])
-        bandgap = bandgap['bandgap']
+        bandgap = bandgap['band_gap']
 
-        if bandgap > 0.5:
+        if bandgap > 0.3:
             comp_data['is_metal'] = False
         else:
             comp_data['is_metal'] = True
 
-        nav_high = Navigator(db_file=db_file, high_level='triboflow')
+        nav_high = Navigator(db_file=db_file, high_level=True)
 
         if nav_high.find_data(
             collection=functional+'.slab_data',
-            filter={'mpid': mp_id, 'miller': data['miller']}):
+            fltr={'mpid': mp_id, 'miller': data['miller']}):
 
             print('{}-{} slab can not be added to {}.slab_data collection'
                   'because a material with MP-ID {} is already present.'
@@ -186,7 +251,24 @@ class FT_MakeSlabInDB(FiretaskBase):
 
 @explicit_serialize
 class FT_MakeBulkInDB(FiretaskBase):
+    """ Add a bulk entry to the high_level database.
 
+    THIS IS A DEPRECIATED FIRETASK THAT HAS BEEN REPLACED BY:
+        FT_PutMaterialInDB in triboflow.firetasks.init_db
+    Its function is to read some information from the fw_spec and create
+    an entry for the slab in the high level db.
+    
+    Parameters
+    ----------
+    mat_data_loc : str
+        Location in the fw_spec where the data for a material are found.
+    comp_data_loc : str
+        Location in the fw_spec where the data for computational settings are
+        found.
+    db_file : str, optional
+        Full path of the db.json file to be used. The default is to use
+        env_chk to find the file.
+    """
     _fw_name = 'Make bulk entry into high level DB'
     required_params = ['mat_data_loc', 'comp_data_loc']
     optional_params = ['db_file']
@@ -206,22 +288,27 @@ class FT_MakeBulkInDB(FiretaskBase):
         struct, mp_id = nav_mp.get_low_energy_structure(
             chem_formula=data['formula'], 
             mp_id=data['mp_id'])
+        # Make a primitive standard structure to ensure high symmetry.
+        sga = SpacegroupAnalyzer(struct)
+        prim_struct = sga.get_primitive_standard_structure()
+        # site properties are not retained, so we have to add magmom again.
+        prim_struct = transfer_average_magmoms(struct, prim_struct)
 
         bandgap = nav_mp.get_property_from_mp(
             mp_id=mp_id, 
             properties=['band_gap'])
-        bandgap = bandgap['bandgap']
+        bandgap = bandgap['band_gap']
 
-        if bandgap > 0.2:
+        if bandgap > 0.3:
             comp_data['is_metal'] = False
         else:
             comp_data['is_metal'] = True
         
-        nav_high = Navigator(db_file=db_file, high_level='triboflow')
+        nav_high = Navigator(db_file=db_file, high_level=True)
 
         if nav_high.find_data(
             collection=functional+'.bulk_data',
-            filter={'mpid': mp_id}):
+            fltr={'mpid': mp_id}):
 
             print('{} bulk can not be added to bulk_data collection because a'
                   'material with MP-ID {} is already present in the {} '
@@ -230,10 +317,11 @@ class FT_MakeBulkInDB(FiretaskBase):
         else:
             nav_high.insert_data(
                 collection=functional+'.bulk_data',
-                data={{'mpid': mp_id,
+                data={'mpid': mp_id,
                         'formula': data['formula'],
                         'structure_fromMP': struct.as_dict(),
-                        'comp_parameters': comp_data}})
+                        'primitive_structure': prim_struct.as_dict(),
+                        'comp_parameters': comp_data})
             return
 
 @explicit_serialize
@@ -275,11 +363,10 @@ class FT_CheckCompParamDict(FiretaskBase):
         #Edit this block according to need, but be careful with the defaults!
         #####################################################################
         essential_keys = ['use_vdw']
-        additional_keys = ['volume_tolerance', 'energy_tolerance', 'use_spin',
+        additional_keys = ['volume_tolerance', 'use_spin',
                            'BM_tolerance', 'functional']
         
         volume_tolerance_default = 0.001
-        energy_tolerance_default = 0.001
         functional_default = 'PBE'
         use_spin_default = True
         BM_tolerance_default = 0.01
@@ -337,11 +424,6 @@ class FT_CheckCompParamDict(FiretaskBase):
                     out_dict['volume_tolerance'] = float(input_dict[key])
                 else:
                     out_dict['volume_tolerance'] = volume_tolerance_default
-            if key == 'energy_tolerance':
-                if key in input_dict:
-                    out_dict['energy_tolerance'] = float(input_dict[key])
-                else:
-                    out_dict['energy_tolerance'] = energy_tolerance_default
             if key == 'functional':
                 if key in input_dict:
                     out_dict['functional'] = str(input_dict[key])
@@ -508,7 +590,9 @@ class FT_CheckMaterialInputDict(FiretaskBase):
                               'and use only the following parameters:\n')
                     out.write(str(known_keys))
                     out.write('\n')
-                raise SystemExit
+                raise SystemExit('The input parameter <'+str(key)+
+                              '> is not known. Please check your input file'
+                              'and use only the following parameters:\n')
             elif key == 'formula':
                 out_dict['formula'] = str(input_dict[key])
                 check_essential[key] = True

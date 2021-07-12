@@ -102,7 +102,7 @@ alias mongo_stop="mongod --shutdown --dbpath <YourMongoPath>/data/db"
 ### Configuring FireWorks<a name="configurefw"></a>
 Here we assume that the database is locally installed in the same conda environment, but the procedure is not much different if a cloud service like Atlas is used or if the database is hosted on a different server.
 
-1. Change into your `<YourPath>/config` folder and write a `db.json` file so FireWorks can access your database (If your database is not local, the "host" has to change of course, e.g. for a Atlas DB you might have something like `"mongodb+srv://cluster0-4bevc.mongodb.net"` instead of `"localhost"`):
+1. Change into your `<YourPath>/config` folder and write a `db.json` file so FireWorks can access your database (If your database is not local, the "host" has to change of course, e.g. for a Atlas DB you might have something like `"mongodb+srv://cluster0-4bevc.mongodb.net"` instead of `"localhost"`.) The "high_level" field is for the name of your high_level database which contains your results. Both "high_level" and "database" (FireWorks database) can be changed here if you want to do some testing later.
 <a name="dbjson"></a>
  ~~~
 {  
@@ -114,8 +114,9 @@ Here we assume that the database is locally installed in the same conda environm
 	"admin_password": "<RootPassword>",  
 	"readonly_user": "<ReadUser>",  
 	"readonly_password": "<ReadPassword>",  
-	"aliases": {}  
-	"authsource": "admin"  
+	"aliases": {},  
+	"authsource": "admin",
+    "high_level": "triboflow"
 }
 ~~~
 3. Test this by running the following python script inside your `<YourPath>/config` folder:
@@ -124,7 +125,8 @@ Here we assume that the database is locally installed in the same conda environm
 `x.reset()`
 `print("SUCCESS")`
 All is well if you see "SUCCESS" printed on screen.
-4. Now we setup the launchpad (A database where Fireworks are started from), using functionalities of FireWorks by typing `lpad init` and select the same database name, username (`<RootUser>`) and password as when you created the database. Keep the default (None) for the `ssl_ca_file` parameter, but enter `admin` as the `authsource` parameter as suggested by the prompt. You can check and modify the results by looking into `my_launchpad.yaml`. 
+4. Now we setup the launchpad (A database where Fireworks are started from), using functionalities of FireWorks by typing `lpad init` and select the same database name, username (`<RootUser>`) and password as when you created the database. Keep the default (None) for the `ssl_ca_file` parameter, but enter `admin` as the `authsource` parameter as suggested by the prompt. You can check and modify the results by looking into `my_launchpad.yaml`.
+    * In case we are using MongoDB Atlas `my_launchpad.yaml` must have all the settings set to `null` except for `authsource: admin`, `host: mongodb+srv://<username>:<password>@cluster...` (substitute to `username` and `password` the proper values), and `strm_lvl: INFO`. Note that here `host` has a different notation from the one set in `db.json`. For generating the proper host value log in the MongoDB Atlas webpage, select the cluster where the database is saved, and click on `CONNECT` option. Once clicked a menu with three options should pop up. Select `Connect your application` for getting the address to use as `host` in `my_launchpad.yaml`.
 5. Test this by typing `lpad -l my_launchpad.yaml reset`
 6. Now we will setup the local machine as a FireWorker, which is nothing else than a machine which can pull and execute calculations from the launchpad that are ready to run. It contains information about the database file, the command running VASP on this machine, and other information necessary to run VASP smoothly and efficiently on the local machine. For this we put a `my_fworker.yaml` file into the `<YourPath>/config` folder:
 ~~~
@@ -210,7 +212,7 @@ pps
 [Back to top](#toc)
 
 ## "Fixing" some issues in atomate<a name="fixingatomate"></a>
-Atomate supplies a buch of Fireworks and workflows that are used in TriboFlow. However, there are some bugs or maybe incomplete features, as it is quite commong for scientific software. We recommend to check the [corresponding issue on the Triboflow github](https://gitlab.com/triboteam/TriboFlow/-/issues/14) for current "fixes" to atomate. At the time of writing, the only thing to change is to slightly change the `OptimizeFW` and `StaticFW` Fireworks in `atomate.vasp.fireworks.core` to automatically copy the vdw_kernel.bindat of VASP to the execution directory if the vdw parameter in the [vasp input set](https://pymatgen.org/pymatgen.io.vasp.sets.html) passed to the Firework is not `None`. For that you have to add `vdw_kernel_dir=VDW_KERNEL_DIR,` in `def __init__` before `**kwargs` and copy the following lines before `t.append(RunVaspCustodian(...`, in the same manner that it is already done for `ScanOptimizeFW`:
+Atomate supplies a buch of Fireworks and workflows that are used in TriboFlow. However, there are some bugs or maybe incomplete features, as it is quite commong for scientific software. We recommend to check the [corresponding issue on the Triboflow github](https://gitlab.com/triboteam/TriboFlow/-/issues/14) for current "fixes" to atomate. At the time of writing, the only thing to change is to slightly change the `OptimizeFW`, `StaticFW`, and `TransmuterFW` Fireworks in `atomate.vasp.fireworks.core` to automatically copy the vdw_kernel.bindat of VASP to the execution directory if the vdw parameter in the [vasp input set](https://pymatgen.org/pymatgen.io.vasp.sets.html) passed to the Firework is not `None`. For that you have to add `vdw_kernel_dir=VDW_KERNEL_DIR,` in `def __init__` before `**kwargs` and copy the following lines before `t.append(RunVaspCustodian(...`, in the same manner that it is already done for `ScanOptimizeFW`:
 ```
 # Copy the pre-compiled VdW kernel for VASP, if required
 if vasp_input_set.vdw is not None:
@@ -268,14 +270,16 @@ The input dictionary has to include the  4 keys, which each has to contain anoth
  - `computational_params = {'use_vdw': <True or False>}`
  - `interface_params = {'max_area': <Max crossection of the matched cell>}`
  
-It is pretty self explanatory what these input are for: The two materials need to be defined (note that just defining the formula will fetch the structure with the lowest energy that matches the formula! Provide an 'mp_id' key for a clear selection) and need a surface orientation. Van der Waals forces can be taken into account or disregarded, and a maximal tolerated cell cross section area (in Angstrom squared) needs to be given to avoid humongous cells during the interface matching process. All other inputs have default values, or are derived from the other ones if not especially provided.
+It is pretty self explanatory what these input are for: The two materials need to be defined (note that just defining the formula will fetch the structure with the lowest energy that matches the formula! Provide an 'mp_id' key for a clear selection) and need a surface orientation. Van der Waals forces can be taken into account or disregarded, and a maximal tolerated cell cross section area (in Angstrom squared) needs to be given to avoid humongous cells during the interface matching process. All other inputs have default values, which can be found (and modified on your own risk) in `triboflow/defaults.json` or are derived from the other ones if not especially provided.
 A full list of possible inputs with types are:
 1. material_1 (and material_2):
 	- formula (str)
 	- miller (list of int, or single str)
-	- mp_id (str)
-	- min_vacuum (float)
-	- min_thickness (float)
+	- mpid (str)
+	- thick_min (int)
+    - thick_max (int)
+	- thick_incr (int)
+	- vacuum (float)
 2. computational_params:
 	- use_vdw (bool, or str)
 	- volume_tolerance (float)
@@ -283,6 +287,10 @@ A full list of possible inputs with types are:
 	- use_spin (bool, or str)
 	- BM_tolerance (float)
 	- functional (str)
+	- encut (float)
+	- k_dens (float)
+	- is_metal (bool)
+	- surfene_thr (float)
 3. interface_params:
 	- max_area (float)
 	- interface_distance (float)
@@ -293,7 +301,7 @@ A full list of possible inputs with types are:
 [Back to top](#toc)
 
 ### Looking at the results<a name="results"></a>
-The results of TribolFlow are saved in a separate MongoDB database, which nevertheless is hosted on the same server  (note that the `directoryPerDB: true` line in [`mongod.conf`](#mongodconf) assures that the results are stored in a different folder). This database of results is called "triboflow", in contrast to the "FireWorks" database that is used by FireWorks (see the [db.json](#dbjson) file). The results are stored in different [collections](https://docs.mongodb.com/manual/core/databases-and-collections/#databases), separated for the functional used (PBE, or SCAN) and then split between bulk, slab, and interfaces results. Data in the triboflow database can be queried of course directly from the [mongo shell](https://docs.mongodb.com/manual/mongo/), but it is probably more useful to use the python interface to MongoDB, [pymongo](https://pymongo.readthedocs.io/en/stable/). Some functions to aid with this are provided in the `triboflow.utils` module. To look quickly at single results or get a feel for how the data is structured in the database, it might be beneficial to install a GUI for MongoDB, like [Compass](https://www.mongodb.com/products/compass). (Note that you can use the web-GUI of Atlas when you are using this cloud based solution instead of a local installation of MongoDB.)
+The results of TribolFlow are saved in a separate MongoDB database, which nevertheless is hosted on the same server  (note that the `directoryPerDB: true` line in [`mongod.conf`](#mongodconf) assures that the results are stored in a different folder). This database of results is set in the [db.json](#dbjson) file under the key "high_level", while the "database" database is used by FireWorks to store all kinds of stuff. The results are stored in different [collections](https://docs.mongodb.com/manual/core/databases-and-collections/#databases), separated for the functional used (PBE, or SCAN) and then split between bulk, slab, and interfaces results. Data in the triboflow database can be queried of course directly from the [mongo shell](https://docs.mongodb.com/manual/mongo/), but it is probably more useful to use the python interface to MongoDB, [pymongo](https://pymongo.readthedocs.io/en/stable/). Some functions to aid with this are provided in the `triboflow.utils` module. To look quickly at single results or get a feel for how the data is structured in the database, it might be beneficial to install a GUI for MongoDB, like [Compass](https://www.mongodb.com/products/compass). (Note that you can use the web-GUI of Atlas when you are using this cloud based solution instead of a local installation of MongoDB.)
 
 Also note that there is a web-GUI provided by FireWorks where you can check out the Workflows and Fireworks in your FireWorks database. Just type `lpad web_gui` for that.
 

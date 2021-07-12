@@ -58,7 +58,7 @@ class FT_GenerateSlabs(FiretaskBase):
         """ 
 
         # Define the json file containing default values and read parameters
-        dfl = currentdir + '/defaults_fw.json'
+        dfl = currentdir + '/../defaults.json'
         p = read_runtask_params(self, fw_spec, self.required_params, self.optional_params,
                                 default_file=dfl, default_key="GenerateSlabs")
 
@@ -111,6 +111,6 @@ class FT_GenerateSlabs(FiretaskBase):
             # Clean the data and create a dictionary with the given path
             update_data = write_one_dict(s.as_dict(), en)
             nav.update_data(collection=p['collection'], 
-                            filter={'mpid': p['mp_id'], 'miller': hkl},
+                            fltr={'mpid': p['mp_id'], 'miller': hkl},
                             new_values={'$set': update_data},
                             upsert=True)

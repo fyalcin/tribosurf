@@ -21,8 +21,10 @@ __date__ = 'February 22nd, 2021'
 
 
 from pymatgen.core.surface import SlabGenerator
-from triboflow.phys.shaper import Shaper
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
+
+from triboflow.phys.shaper import Shaper
+from triboflow.utils.structure_manipulation import transfer_average_magmoms
 
 # ============================================================================
 # Functions to deal with crystalline slabs
@@ -34,7 +36,7 @@ def orient_bulk(structure, miller, thickness, primitive=False, lll_reduce=False,
     Orient a bulk unit cell along a direction identified by Miller indexes.
 
     """
-    
+
     # Generate the oriented bulk
     slabgen = SlabGenerator(initial_structure=structure,
                             miller_index=miller,
@@ -49,7 +51,7 @@ def orient_bulk(structure, miller, thickness, primitive=False, lll_reduce=False,
     return bulk_miller
 
 def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
-                   center_slab=True, primitive=False, lll_reduce=False,
+                   center_slab=True, primitive=True, lll_reduce=True,
                    in_unit_planes=True, ext_index=0, bonds=None, ftol=0.1, 
                    tol=0.1, repair=False, max_broken_bonds=0, symmetrize=False):
     """
@@ -65,9 +67,6 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
         miller : [0, 0, 1] or [[0, 0, 1], [1, 1, 1], [1, 1, 0]].
 
     """
-
-    # VALUES FOR TESTING ON THE CLUSTER, to be faster
-    lll_reduce = True
 
     # Manage the arguments type in order to have lists
     if isinstance(miller, list) and not all([isinstance(m, list) for m in miller]):
@@ -85,12 +84,16 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
         miller *= n
     # SlabGenerator expects conventional unit cell so we convert the structure accordingly.
     # As a result, we require input structure to be the primitive standard structure.
-    structure = SpacegroupAnalyzer(structure).get_conventional_standard_structure()
+    conv_structure = SpacegroupAnalyzer(structure).get_conventional_standard_structure()
+    structure = transfer_average_magmoms(structure, conv_structure)
 
     slabs = []
     for hkl, thk, vac in zip(miller, thickness, vacuum):
-
-        thk = 1 if thk == 0 else thk
+        
+        # If thk is zero, then we want to construct an oriented unit bulk by
+        # our conversion, so we define a "fake" thickness > 1 to be used to
+        # build the slabs, otherwise errors are raised by pymatgen
+        thk_gen = 1 if thk == 0 else thk
 
         slabgen = SlabGenerator(initial_structure=structure,
                                 miller_index=hkl,
@@ -99,7 +102,7 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
                                 lll_reduce=lll_reduce,
                                 max_normal_search=max([abs(index) for index in hkl]),
                                 in_unit_planes=in_unit_planes,
-                                min_slab_size=thk,
+                                min_slab_size=thk_gen,
                                 min_vacuum_size=vac)
 
         s = slabgen.get_slabs(bonds=bonds,
@@ -110,7 +113,7 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
                               symmetrize=symmetrize)
 
         # Case of an oriented bulk
-        if thk == 1:
+        if thk == 0:
             s = s[ext_index].oriented_unit_cell
 
         # Case of a slab

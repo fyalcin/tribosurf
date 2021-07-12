@@ -6,36 +6,38 @@ Created on Fri Jun 19 16:15:02 2020
 @author: mwo
 """
 
-from fireworks import LaunchPad, Firework, Workflow
+from fireworks import LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
 from triboflow.workflows.main import heterogeneous_wf
 
 
-inputs = {'material_1': {'formula': 'MgO',
-                         'miller': '001',
-                         'mp_id': 'mp-1918',
-                         'min_vacuum': 25,
-                         'min_thickness': 6
+inputs = {'material_1': {'formula': 'Ni',
+                         'miller': '111',
+                         'mpid': 'mp-23',
+                         'vacuum': 25,
+                         'thick_min': 3,
+                         'thick_max': 10,
+                         'thick_incr': 1,
                          },
-          'material_2': {'formula': 'FeRh',
+          'material_2': {'formula': 'C',
                          'miller': '001',
-                         'mp_id': 'mp-1265',
-                         'min_vacuum': 25,
-                         'min_thickness': 6
+                         'mpid': 'mp-48',
+                         'vacuum': 25,
+                         'thick_min': 4,
+                         'thick_max': 12,
+                         'thick_incr': 1
                          },
-          'computational_params':{'functional': 'PBE',
-                                  'energy_tolerance': 0.001,
+          'computational_params':{'functional': 'SCAN',
                                   'volume_tolerance': 0.001,
                                   'BM_tolerance': 0.01,
-                                  'use_vdw': 'False'},
+                                  'use_vdw': 'Yes',
+                                  'surfene_thr': 0.01},
           'interface_params':{'interface_distance': 2.5,
                               'max_area': 50,
-                              'r1r2_tol': 0.2,
+                              'r1r2_tol': 0.1,
                               'max_mismatch': 0.1
                               }
           }
-
-
 
 WF = heterogeneous_wf(inputs)
 

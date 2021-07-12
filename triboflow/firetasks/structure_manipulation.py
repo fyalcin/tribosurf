@@ -4,6 +4,8 @@ Created on Wed Jun 17 15:59:59 2020
 @author: mwo
 """
 import monty
+import numpy as np
+from uuid import uuid4
 from pprint import pprint, pformat
 
 from pymatgen.core.structure import Structure
@@ -14,17 +16,160 @@ from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from fireworks import FWAction, FiretaskBase, Firework, Workflow, FileWriteTask
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
-from atomate.vasp.powerups import add_modify_incar
-from atomate.vasp.fireworks.core import OptimizeFW, ScanOptimizeFW
-from mpinterfaces.transformations import get_aligned_lattices, \
-    get_interface # generate_all_configs
 
-from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
+from triboflow.workflows.base import dynamic_relax_swf
+from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
-from triboflow.utils.structure_manipulation import interface_name, \
-    slab_from_structure, recenter_aligned_slabs, stack_aligned_slabs
+from triboflow.utils.structure_manipulation import (
+    interface_name, slab_from_structure, recenter_aligned_slabs, 
+    stack_aligned_slabs, transfer_average_magmoms, clean_up_site_properties)
 from triboflow.utils.file_manipulation import copy_output_files
+from triboflow.phys.interface_matcher import InterfaceMatcher
 
+
+
+
+@explicit_serialize
+class FT_StartPreRelax(FiretaskBase):
+    """ Start a subworkflow as a detour to relax the cell shape and positions
+    of a primitive structure depending on lattice parameters, and then move
+    the optimized primitive structure to the high level database.
+
+    Parameters
+    ----------
+    mp_id : str
+        ID number for structures in the material project.
+    functional : str
+        functional that is used for the calculation.
+    db_file : str, optional
+        Full path to the db.json file which holds the location and access
+        credentials to the database. If not given uses env_chk.
+    encut : float, optional
+        Energy cutoff for the relaxation run. Defaults to 1000.
+    k_dens : int, optional
+        kpoint density in 1/Angstrom. Defaults to a (quite high) 20.
+    high_level_db : str, optional
+        Name of the high level database the structure should be queried in
+        and later the results written to. Defaults to 'triboflow'.
+    Returns
+    -------
+        Starts a subworkflow as a detour to the current workflow.
+    """
+    _fw_name = 'Start a cell shape relaxation'
+    required_params = ['mp_id', 'functional']
+    optional_params = ['db_file', 'encut', 'k_dens', 'high_level_db']
+
+    def run_task(self, fw_spec):
+        mp_id = self.get('mp_id')
+        functional = self.get('functional')
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
+        hl_db = self.get('high_level_db', True)
+
+        # Querying the structure from the high level database.
+        nav_structure = StructureNavigator(
+            db_file=db_file,
+            high_level=hl_db)
+        data = nav_structure.get_bulk_from_db(
+            mp_id=mp_id,
+            functional=functional)
+
+        prim_struct = data.get('primitive_structure')
+        if not prim_struct:
+            struct = data.get('structure_fromMP')
+            if not struct:
+                raise LookupError('No structure found in the database that can '
+                                  'be used as input for cell shape relaxation.')
+            struct = Structure.from_dict(struct)
+            prim_struct = SpacegroupAnalyzer(struct).get_primitive_standard_structure()
+            prim_struct = transfer_average_magmoms(struct, prim_struct)
+        else:
+            prim_struct = Structure.from_dict(prim_struct)
+
+        a = np.round(prim_struct.lattice.a, 6)
+        b = np.round(prim_struct.lattice.b, 6)
+        c = np.round(prim_struct.lattice.c, 6)
+
+        if data.get('pre_relaxed') or ((a == c) and (b == c)):
+            return FWAction(update_spec=fw_spec)
+        else:
+
+            # Querying the computational parameters from the high level database
+            # and updating with the optional inputs
+            comp_params = data.get("comp_parameters")
+            encut = self.get('encut', 1000)
+            k_dens = self.get('k_dens', 15)
+            comp_params.update({"encut": encut, "k_dens": k_dens})
+
+            tag = "CellShapeRelax-{}".format(str(uuid4()))
+            vis = get_custom_vasp_relax_settings(prim_struct, comp_params,
+                                                 'bulk_pos_shape_relax')
+            RelaxWF = dynamic_relax_swf([[prim_struct, vis, tag]])
+
+            MoveResultsFW = Firework([FT_UpdatePrimStruct(functional=functional,
+                                                          tag=tag, flag=mp_id,
+                                                          high_level_db=hl_db)],
+                                     name='Move pre-relaxed structure for {}'.
+                                     format(prim_struct.formula))
+            MoveResultsWF = Workflow([MoveResultsFW])
+
+            RelaxWF.append_wf(MoveResultsWF, RelaxWF.leaf_fw_ids)
+
+            return FWAction(detours=RelaxWF, update_spec=fw_spec)
+
+
+@explicit_serialize
+class FT_UpdatePrimStruct(FiretaskBase):
+    """ Update the primitive structure in the high level database.
+
+    Parameters
+    ----------
+    functional : str
+        functional that is used for the calculation.
+    tag : str
+        Unique identifier for the Optimize FW.
+    flag : str
+        An identifyer to find the results in the database. It is strongly
+        suggested to use the proper Materials-ID from the MaterialsProject
+        if it is known for the specific input structure. Otherwise use something
+        unique which you can find again.
+    db_file : str, optional
+        Full path to the db.json file which holds the location and access
+        credentials to the database. If not given uses env_chk.
+    Returns
+    -------
+        Moves the optimized primitive structure from the low level
+        database to the high level database.
+    """
+    _fw_name = 'Update primitive structure in the high level DB'
+    required_params = ['functional', 'tag', 'flag']
+    optional_params = ['db_file', 'high_level_db']
+
+    def run_task(self, fw_spec):
+        functional = self.get('functional')
+        tag = self.get('tag')
+        flag = self.get('flag')
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
+        hl_db = self.get('high_level_db', True)
+
+        nav = Navigator(db_file=db_file)
+        calc = nav.find_data('tasks', {'task_label': tag})
+        out = calc['output']
+
+        struct_dict = {'primitive_structure': out['structure'],
+                       'pre_relaxed': True}
+
+        nav_high = Navigator(db_file=db_file, high_level=hl_db)
+        nav_high.update_data(
+                    collection=functional+'.bulk_data',
+                    fltr={'mpid': flag},
+                    new_values={'$set': struct_dict},
+                    upsert=False)
+
+        return FWAction(update_spec=fw_spec)
 
 
 @explicit_serialize
@@ -63,7 +208,7 @@ class FT_StartSlabRelaxSWF(FiretaskBase):
     
     required_params = ['mp_id', 'miller', 'functional']
     optional_params = ['db_file', 'slab_struct_name', 'relax_type',
-                       'bulk_struct_name', 'slab_out_name']
+                       'bulk_struct_name', 'slab_out_name', 'high_level_db']
 
     def run_task(self, fw_spec):
         from triboflow.workflows.subworkflows import make_and_relax_slab_swf
@@ -71,10 +216,8 @@ class FT_StartSlabRelaxSWF(FiretaskBase):
         mp_id = self.get('mp_id')
         if type(self['miller']) == str:
             miller = [int(k) for k in list(self['miller'])]
-            miller_str = self['miller']
         else:
             miller = self['miller']
-            miller_str = ''.join(str(s) for s in self['miller'])
 
         functional = self.get('functional')
 
@@ -86,10 +229,11 @@ class FT_StartSlabRelaxSWF(FiretaskBase):
         relax_type = self.get('relax_type', 'slab_pos_relax')
         bulk_name = self.get('bulk_struct_name', 'structure_equiVol')
         slab_out_name = self.get('slab_out_name', 'relaxed_slab')
+        hl_db = self.get('high_level_db', True)
         
         nav_structure = StructureNavigator(
             db_file=db_file,
-            high_level='triboflow')
+            high_level=hl_db)
 
         data = nav_structure.get_bulk_from_db(
             mp_id=mp_id,
@@ -167,7 +311,7 @@ class FT_GetRelaxedSlab(FiretaskBase):
     """
     
     required_params = ['flag', 'miller', 'functional', 'tag']
-    optional_params = ['db_file', 'struct_out_name', 'file_output',
+    optional_params = ['db_file', 'struct_out_name', 'file_output', 'high_level_db',
                        'output_dir', 'remote_copy', 'server', 'user', 'port']
 
     def run_task(self, fw_spec):
@@ -175,10 +319,8 @@ class FT_GetRelaxedSlab(FiretaskBase):
         flag = self.get('flag')
         if type(self['miller']) == str:
             miller = [int(k) for k in list(self['miller'])]
-            miller_str = self['miller']
         else:
             miller = self['miller']
-            miller_str = ''.join(str(s) for s in self['miller'])
 
         functional = self.get('functional')
 
@@ -186,6 +328,7 @@ class FT_GetRelaxedSlab(FiretaskBase):
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
 
+        hl_db = self.get('high_level_db', True)
         out_name = self.get('struct_out_name', 'relaxed_slab')
         file_output = self.get('file_output', False)
         output_dir = self.get('output_dir', None)
@@ -197,7 +340,7 @@ class FT_GetRelaxedSlab(FiretaskBase):
         # Check if a relaxed slab is already in the DB entry
         nav_structure = StructureNavigator(
             db_file=db_file,
-            high_level='triboflow')
+            high_level=hl_db)
         slab_data = nav_structure.get_slab_from_db(
             mp_id=flag,
             functional=functional,
@@ -207,8 +350,8 @@ class FT_GetRelaxedSlab(FiretaskBase):
             # Get results from OptimizeFW
             nav = Navigator(db_file=db_file)
             vasp_calc = nav.find_data(
-                collection=nav.db.tasks, 
-                filter={'task_label': self['tag']})
+                collection='tasks', 
+                fltr={'task_label': self['tag']})
             relaxed_slab = Structure.from_dict(vasp_calc['output']['structure'])
             slab = Slab(relaxed_slab.lattice,
                         relaxed_slab.species_and_occu,
@@ -219,16 +362,16 @@ class FT_GetRelaxedSlab(FiretaskBase):
                         scale_factor=[[1,0,0], [0,1,0], [0,0,1]],
                         site_properties=relaxed_slab.site_properties)
             
-            nav_high = Navigator(db_file=db_file, high_level='triboflow')
+            nav_high = Navigator(db_file=db_file, high_level=hl_db)
             nav_high.update_data(
                 collection=functional+'.slab_data',
-                filter={'mpid': flag, 'miller': miller},
+                fltr={'mpid': flag, 'miller': miller},
                 new_values={'$set': {out_name: slab.as_dict()}})
         else:
             nav = Navigator(db_file=db_file)
             vasp_calc = nav.find_data(
-                collection=nav.db.tasks,
-                filter={'task_label': self['tag']})
+                collection='tasks',
+                fltr={'task_label': self['tag']})
 
             if  vasp_calc:
                 relaxed_slab = Structure.from_dict(vasp_calc['output']['structure'])
@@ -271,7 +414,7 @@ class FT_GetRelaxedSlab(FiretaskBase):
                                         output_dir=output_dir,
                                         remote_copy=remote_copy,
                                         server=server,
-                                        user=server,
+                                        user=user,
                                         port=port)
             FW = Firework([write_FT, copy_FT],
                           name='Copy SlabRelax SWF results')
@@ -319,7 +462,7 @@ class FT_StartSlabRelax(FiretaskBase):
     
     required_params = ['flag', 'miller', 'functional', 'tag']
     optional_params = ['db_file', 'comp_parameters', 'slab_struct_name',
-                       'relax_type']
+                       'relax_type', 'high_level_db']
 
     def run_task(self, fw_spec):
 
@@ -341,12 +484,13 @@ class FT_StartSlabRelax(FiretaskBase):
         slab_name = self.get('slab_struct_name', 'unrelaxed_slab')
         tag = self.get('tag')
         relax_type = self.get('relax_type', 'slab_pos_relax')
+        hl_db = self.get('high_level_db', True)
         
         nav_structure = StructureNavigator(
             db_file=db_file, 
-            high_level='triboflow')
+            high_level=hl_db)
         slab_data = nav_structure.get_slab_from_db(
-            mpi_id=flag,
+            mp_id=flag,
             functional=functional,
             miller=miller)
         
@@ -357,21 +501,12 @@ class FT_StartSlabRelax(FiretaskBase):
         if 'relaxed_slab' not in slab_data:
             vis = get_custom_vasp_relax_settings(slab_to_relax, comp_params,
                                                  relax_type)
-            if functional == 'SCAN':
-                FW = ScanOptimizeFW(structure=slab_to_relax,
-                                    name=tag,
-                                    vasp_input_set=vis)
-            else:
-                FW = OptimizeFW(slab_to_relax, name=tag,
-                                vasp_input_set=vis,
-                                half_kpts_first_relax=True)
+            inputs = [[slab_to_relax, vis, tag]]
             wf_name = formula+miller_str+'_'+relax_type
-
-            # Use add_modify_incar powerup to add KPAR and NCORE settings
-            # based on env_chk in my_fworker.yaml
-            Optimize_WF = add_modify_incar(Workflow([FW], name = wf_name))
-
-            return FWAction(detours=Optimize_WF)
+            WF = dynamic_relax_swf(inputs_list=inputs,
+                                   wf_name=wf_name)
+                        
+            return FWAction(detours=WF)
 
 @explicit_serialize
 class FT_MakeSlabInDB(FiretaskBase):
@@ -411,7 +546,7 @@ class FT_MakeSlabInDB(FiretaskBase):
     _fw_name = 'Make slab from bulk structure'
     required_params = ['bulk_structure', 'miller', 'flag', 'functional']
     optional_params = ['db_file', 'slab_struct_name', 'min_thickness',
-                       'min_vacuum']
+                       'min_vacuum', 'high_level_db']
     
     def run_task(self, fw_spec):
         
@@ -430,16 +565,18 @@ class FT_MakeSlabInDB(FiretaskBase):
         slab_name = self.get('slab_struct_name', 'unrelaxed_slab')
         min_thickness = self.get('min_thickness', 10)
         min_vacuum = self.get('min_vacuum', 25)
+        hl_db = self.get('high_level_db', True)
         
         # nav_structure = StructureNavigator(
         #     db_file=db_file,
-        #     high_level='triboflow')
+        #     high_level=hl_db)
         # slab_data = nav_structure.get_slab_from_db(
         #     mp_id=flag, 
         #     functional=functional,
         #     miller=miller)
         
         bulk_conv = SpacegroupAnalyzer(bulk_prim).get_conventional_standard_structure()
+        bulk_conv = transfer_average_magmoms(bulk_prim, bulk_conv)
         
         SG = SlabGenerator(initial_structure=bulk_conv,
                            miller_index=miller,
@@ -459,12 +596,12 @@ class FT_MakeSlabInDB(FiretaskBase):
         slab = SG.get_slabs(bonds=None, ftol=0.1, tol=0.1, max_broken_bonds=0,
                             symmetrize=False, repair=False)[0]
         
-        nav_high = Navigator(db_file=db_file, high_level='triboflow')
+        nav_high = Navigator(db_file=db_file, high_level=hl_db)
         slab_dict = monty.json.jsanitize(slab.as_dict(), allow_bson=True)
         nav_high.update_data(
             collection=functional+'.slab_data',
-            filter={'mpid': flag, 'miller': miller},
-            new_values={'$set': {'unrelaxed_slab': slab_dict}},
+            fltr={'mpid': flag, 'miller': miller},
+            new_values={'$set': {slab_name: slab_dict}},
             upsert=True)
 
         return
@@ -503,7 +640,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
     _fw_name = 'Make Hetero Structure'
     required_params = ['mp_id_1', 'miller_1', 'mp_id_2', 'miller_2',
                        'functional']
-    optional_params = ['db_file']
+    optional_params = ['db_file', 'high_level_db']
     
     def run_task(self, fw_spec):
 
@@ -522,21 +659,22 @@ class FT_MakeHeteroStructure(FiretaskBase):
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
+            
+        hl_db = self.get('high_level_db', True)
 
-        nav_high = Navigator(db_file=db_file, high_level='triboflow')
-        interface_name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
+        nav_high = Navigator(db_file=db_file, high_level=hl_db)
+        inter_name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
         inter_data = nav_high.find_data(
             collection=functional+'.interface_data',
-            filter={'name': interface_name})
+            fltr={'name': inter_name})
         
         inter_params = inter_data['interface_parameters']
-        comp_params = inter_data['comp_parameters']
 
         if not inter_data.get('unrelaxed_structure'):
             
             nav_structure = StructureNavigator(
                 db_file=db_file, 
-                high_level='triboflow')
+                high_level=hl_db)
             slab_1_dict = nav_structure.get_slab_from_db(
                 mp_id=mp_id_1,
                 functional=functional,
@@ -549,6 +687,11 @@ class FT_MakeHeteroStructure(FiretaskBase):
             slab_1 = Slab.from_dict(slab_1_dict['relaxed_slab'])
             slab_2 = Slab.from_dict(slab_2_dict['relaxed_slab'])
             
+            bulk_dat_1 = nav_structure.get_bulk_from_db(mp_id_1, functional)
+            bulk_dat_2 = nav_structure.get_bulk_from_db(mp_id_2, functional)
+            
+            bm_1 = bulk_dat_1['bulk_moduls']
+            bm_2 = bulk_dat_2['bulk_moduls']
 # =============================================================================
 # Running into crashes for max_angle_diff > ~1.5 for MPInterfaces 2020.6.19,
 # at least for certain interfaces. A match is found, but than there is a 
@@ -560,59 +703,29 @@ class FT_MakeHeteroStructure(FiretaskBase):
 # Pt111 matching the error appears for max_angle_diff > ~0.4!
 # Please see issue #25 on gitlab.
 # =============================================================================
-            if inter_params['max_angle_diff'] > 0.4:
-                inter_params['max_angle_diff'] = 0.4
+# =============================================================================
+# The new interface matching class seems to have resolved the above issue
+# completely. See issue #38 and now closed issue #25 on gitlab.
+# =============================================================================
         
-            bottom_aligned, top_aligned = get_aligned_lattices(
-                slab_1,
-                slab_2,
-                max_area=inter_params['max_area'],
-                max_mismatch=inter_params['max_mismatch'],
-                max_angle_diff=inter_params['max_angle_diff'],
-                r1r2_tol=inter_params['r1r2_tol'])
+            MI = InterfaceMatcher(slab_1=slab_1,
+                                slab_2=slab_2,
+                                strain_weight_1=bm_1,
+                                strain_weight_2=bm_2,
+                                **inter_params)
+            top_aligned, bottom_aligned = MI.get_centered_slabs()
         
-            if bottom_aligned:
-# ============================================================================
-# TODO: Find out if this is actually useful for the PES to return
-#       all the interface structures we need, or if another stacking function
-#       should be written with another input of lateral shifts.
-#       Check out AdsorbateSiteFinder of pymatgen.analysis.adsorption!!
-#       If generate all configs will work, we just have to remove the
-#       [0] index and move the whole list of structures to the spec.
-# EDIT (19.08.2020): It seems as if the code of MPInterfaces has been changed.
-#       Now the relevant function is called get_interface and not
-#       generate_all_configs any more, and only one Interface is returned... 
-# ============================================================================
-# ============================================================================
-                # hetero_interfaces = generate_all_configs(top_aligned,
-                hetero_interfaces = get_interface(
-                    bottom_aligned,
-                    top_aligned,
-                    nlayers_2d=1,
-                    nlayers_substrate=1,
-                    separation=inter_params['interface_distance'])
-        
-                # inter_slab = hetero_interfaces[0]
-                inter_slab = hetero_interfaces
+            if top_aligned and bottom_aligned:
                 
-                bottom_aligned = slab_from_structure(miller_1, bottom_aligned)
-                top_aligned = slab_from_structure(miller_2, top_aligned)
-                
-                # Center the top and bottom slabs around 0 and combine them
-                # again to an interface:
-                top_align, bot_align = recenter_aligned_slabs(
-                    top_aligned,
-                    bottom_aligned,
-                    d=inter_params['interface_distance'])
-                interface = stack_aligned_slabs(bot_align, top_align)
+                interface = MI.get_interface()
                 
                 inter_dict = interface.as_dict()
-                bottom_dict = bot_align.as_dict()
-                top_dict = top_align.as_dict()
+                bottom_dict = bottom_aligned.as_dict()
+                top_dict = top_aligned.as_dict()
 
                 nav_high.update_data(
                     collection=functional+'.interface_data',
-                    filter={'name': interface_name},
+                    fltr={'name': inter_name},
                     new_values={'$set': {'unrelaxed_structure': inter_dict,
                                          'bottom_aligned': bottom_dict,
                                          'top_aligned': top_dict}})
@@ -632,14 +745,14 @@ class FT_MakeHeteroStructure(FiretaskBase):
 
                     nav_high.update_data(
                         collection=functional+'.interface_data',
-                        filter={'name': interface_name},
+                        fltr={'name': interface_name},
                         new_values={'$set': 
                                        {'original_interface_params': 
                                             inter_params}})
 
                 nav_high.update_data(
                     collection=functional+'.interface_data',
-                    filter={'name': interface_name},
+                    fltr={'name': interface_name},
                     new_values={'$set': {'interface_parameters': new_params}})
 
                 new_fw = Firework(FT_MakeHeteroStructure(mp_id_1=mp_id_1,

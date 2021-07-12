@@ -37,7 +37,7 @@ import os
 from fireworks import FWAction, FiretaskBase, explicit_serialize
 
 from triboflow.utils.database import NavigatorMP
-from triboflow.utils.utils import read_json
+from triboflow.utils.utils import load_defaults
 
 
 currentdir = os.path.dirname(__file__)
@@ -68,10 +68,6 @@ class FTCheckInput(FiretaskBase):
     output_dict_name: list of str, optional
         Location of the output dictionary that is going to be put into the
         spec. The default is 'out_params'.
-
-    fw_name : str, optional
-        Give a custom name to the Firetask call.
-        The default is 'check '+read_key+' dictionary'
     
     Returns
     -------
@@ -89,18 +85,14 @@ class FTCheckInput(FiretaskBase):
     def run_task(self, fw_spec):
         """ Run the FireTask.
         """        
-
+        
         # Read the required and optional input parameters of the Firetask
         input_dict = self['input_dict']
         output_dict_name = self.get('output_dict_name', 'out_params')
         read_key = self['read_key']
-        #FTCheckInput._fw_name = self.get('fw_name', 
-        #                                 'check ' + read_key + ' dictionary')
         
         # Create the output dictionary to be stored in DB
-        input_keys = currentdir + '/input_keys.json'
-        defaults = currentdir + '/defaults.json'
-        out_dict = read_input_dict(input_dict, read_key, input_keys, defaults)
+        out_dict = read_input_dict(input_dict, read_key)
         
         # mpid of minimum energy structure is used as default for materials
         if 'mpid' in out_dict.keys() and out_dict['mpid'] is None:
@@ -111,6 +103,20 @@ class FTCheckInput(FiretaskBase):
         # Create a list out of a possible miller index string
         if 'miller' in out_dict.keys() and isinstance(out_dict['miller'], str):
             out_dict['miller'] = [int(k) for k in list(out_dict['miller'])]
+            
+        # Check vdw and spin usage and correct to bool input:
+        true_list = ['true', 'True', 'TRUE', '.TRUE.', '.true.', True, 
+                     'yes', 'Yes', 'YES', '.YES.', '.yes.']
+        if input_dict.get('use_vdw'):
+            if input_dict.get('use_vdw') in true_list:
+                out_dict['use_vdw'] = True
+            else:
+                out_dict['use_vdw'] = False
+        if input_dict.get('use_spin'):        
+            if input_dict.get('use_spin') in true_list:
+                out_dict['use_spin'] = True
+            else:
+                out_dict['use_spin'] = False
         
         return FWAction(mod_spec=[{'_set': {output_dict_name: out_dict}}])
 
@@ -120,7 +126,8 @@ class FTCheckInput(FiretaskBase):
 # ============================================================================
 
 
-def unbundle_input(inputs, keys=['material', 'comp_params', 'inter_params']):
+def unbundle_input(inputs, keys=['material_1', 'material_2',
+                                 'computational_params', 'interface_params']):
     """
     Read the input parameters and return the needed dictionaries for an
     interface made of two materials.
@@ -152,17 +159,18 @@ def unbundle_input(inputs, keys=['material', 'comp_params', 'inter_params']):
     """    
 
     # Get dicts containing material, computational and interfacial parameters
-    material = inputs.get(keys[0], None)
-    comp_params = inputs.get(keys[1], None)
-    inter_params = inputs.get(keys[2], None)
+    if list(inputs.keys()) != keys:
+        raise ValueError('The inputs dictionary provided does not contain '
+                         'the correct keys:\n'
+                         '{}\n != \n{}'.format(list(inputs.keys()), keys))
     
-    return material, comp_params, inter_params
+    return inputs.values()
 
-def material_from_mp(inputs):
+def material_from_mp(material_dict):
     """
     It reads the dictionary containing the input parameters for a material.
-    It should have at least two keys: `key` and `computational_parameters` and
-    download the corresponding structure from the MP database.
+    It needs at least the key: `formula`, providing also an mp_id is helpful. 
+    The corresponding structure from the MP database or the local structure list
 
     Parameters
     ----------
@@ -186,49 +194,31 @@ def material_from_mp(inputs):
         
     """
     
-    mat, comp_params, inter_params = unbundle_input(inputs, keys=inputs.keys())
-    
-    # Check if all the dictionaries are set correctly
-    if not all([mat, comp_params, inter_params]):
-        raise SystemExit('The inputs-dictionary for this workflow must '
-                         'contain the following keys:\n'
-                         'material_1\nmaterial_2\ncomputational_params\n'
-                         'interface_params')
-
     # Collect the data from Material's Project API
     nav_mp = NavigatorMP()
     
     struct, mpid = nav_mp.get_low_energy_structure(
-        chem_formula = mat.get('formula'), 
-        mp_id = mat.get('mpid'))
+        chem_formula = material_dict.get('formula'), 
+        mp_id = material_dict.get('mpid'))
     
-    functional = comp_params.get('functional', 'PBE')
-    
-    return struct, mpid, functional
+    return struct, mpid
 
 
 # ============================================================================
 # Check the content of dictionary and make them coherent
 # ============================================================================
 
-def read_input_dict(input_dict, read_key, input_keys='input_keys.json', 
-                    defaults='defaults.json'):
+def read_input_dict(input_dict, read_key):
     """
     Check the consistency of an input dictionary for a given read_key, compared
-    with two dictionaries containing a list of allowed keys and defaults values.
+    with a dictionary containing a list of allowed keys and default values.
 
     Parameters
     ----------
     input_dict : dict
         Dictionary with input data to be analyzed.
     read_key : str
-        Key to be read from params and defaults dictionaries.
-    input_keys : str, optional
-        Path to the dictionary containig the allowed list of keys. 
-        The default is 'input_keys.json'.
-    defaults : str, optional
-        Path to the dictionary containing some default values for the list of
-        keys coming from input keys. The default is 'defaults.json'.
+        Key to be read from defaults dictionary.
         
     Returns
     -------
@@ -238,15 +228,19 @@ def read_input_dict(input_dict, read_key, input_keys='input_keys.json',
     """
     
     # Read the essential&additional list of keys and default values
-    params = read_json(input_keys)
-    defaults = read_json(defaults)
+    defaults = load_defaults()
 
+    # Check if the read_key is known
+    if read_key not in list(defaults.keys()):
+        raise ValueError('There exist no default values for the selected key\n'
+                         '\t{}.\n Please choose from: {}'.format(
+                             read_key, list(defaults.keys())))
     # Extract the dictionary data
-    out_dict = dict_consistency(input_dict, params[read_key], defaults[read_key])
+    out_dict = dict_consistency(input_dict, defaults[read_key])
 
     return out_dict
 
-def dict_consistency(input_dict, params, defaults):
+def dict_consistency(input_dict, defaults):
     """
     Check the consistency of an input dictionary. Dependency of read_input_dict.
 
@@ -254,8 +248,6 @@ def dict_consistency(input_dict, params, defaults):
     ----------
     input_dict : dict
         Input dictionary to be checked.
-    params : dict
-        List of essentional and additional keys allowed for input dictionary.
     defaults : dict
         Default values to be used when not specified differently from the user.
 
@@ -276,8 +268,13 @@ def dict_consistency(input_dict, params, defaults):
     
     # Extract the input and parametric list of keys
     input_keys = list(input_dict.keys())
-    essential_keys = params['essential_keys']
-    additional_keys = params['additional_keys']
+    essential_keys = []
+    additional_keys = []
+    for key, value in defaults.items():
+        if value == "NO_DEFAULT":
+            essential_keys.append(key)
+        else:
+            additional_keys.append(key)
     known_keys = essential_keys + additional_keys
     
     out_dict = {}
@@ -285,8 +282,9 @@ def dict_consistency(input_dict, params, defaults):
     # If essential keys are not a subset of inputs, something is missing
     if not set(essential_keys).issubset(set(input_keys)): 
         raise SystemExit('At least an essential input parameter is missing.\n'
-                         '\tInput parameters: ' + input_keys + '\n'
-                         '\tEssential paremeters' + essential_keys + '\n')       
+                         '\tInput parameters: {}\n'
+                         '\tEssential paremeters: {}\n'.format(
+                             input_keys, essential_keys))       
         # file.write('At least an essential input parameter is missing. '
         #            'The following are required: ' + essential_keys)
         # raise SystemExit
@@ -294,8 +292,9 @@ def dict_consistency(input_dict, params, defaults):
     # If input keys are not a subset of known, at least one key is unknown
     if not set(input_keys).issubset(set(known_keys)):
         raise SystemExit('At least an input parameter is not known.\n'
-                         '\tInput parameters: ' + input_keys + '\n'
-                         '\tAllowed paremeters' + known_keys + '\n')       
+                         '\tInput parameters: {} \n'
+                         '\tAllowed paremeters: {} \n'.format(
+                             input_keys, known_keys))       
         # file.write('At least an input parameter is not known.\n'
         #            '\tInput parameters: ' + input_keys + '\n'
         #            '\tAllowed paremeters' + known_keys + '\n') 
