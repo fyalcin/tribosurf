@@ -39,6 +39,24 @@ import numpy as np
 import itertools
 
 
+def range_diff(r1, r2):
+    s1, e1 = r1
+    s2, e2 = r2
+    endpoints = sorted((s1, s2, e1, e2))
+    result = []
+    if endpoints[0] == s1:
+        result.append((endpoints[0], endpoints[1]))
+    if endpoints[3] == e1:
+        result.append((endpoints[2], endpoints[3]))
+    return result
+
+
+def multirange_diff(r1_list, r2_list):
+    for r2 in r2_list:
+        r1_list = list(itertools.chain(*[range_diff(r1, r2) for r1 in r1_list]))
+    return r1_list
+
+
 def attr_to_dict(obj, attrs):
     attr_dict = {attr: getattr(obj, attr, None) for attr in attrs}
     return attr_dict
@@ -49,7 +67,8 @@ class Shaper():
     @staticmethod
     def _get_layer_spacings(struct, tol=0.1):
         """
-        Simple method to calculate the thickness of the vacuum region.
+        Simple method to calculate the projected heights of the spacings
+        between layers in the given structure.
 
         Parameters
         ----------
@@ -65,6 +84,7 @@ class Shaper():
             along the surface normal direction in angstroms
 
         """
+
         # Layer info that contains the c-coordinates and sites
         layers = Shaper._get_layers(struct, tol)
 
@@ -81,7 +101,7 @@ class Shaper():
         # For slabs with the third lattice vector not along miller
         # direction, we need the projected height to also project the vacuum
         # height
-        proj_height = Shaper._get_hkl_projection(struct.lattice.matrix[2], struct)
+        proj_height = Shaper._get_proj_height(struct)
 
         return np.round([spacing*proj_height for spacing in d], 10)
 
@@ -112,19 +132,20 @@ class Shaper():
             to the first two lattice vectors of the passed structure.
 
         """
+
         proj_height = Shaper._get_hkl_projection(struct.lattice.matrix[2], struct)
         if region == "cell":
             return proj_height
         elif region == "slab" or region == "vacuum":
-            slab_regions = get_slab_regions(struct, min(struct.lattice.abc))
-            slab_height = sum([proj_height*(reg[1]-reg[0]) for reg in slab_regions])
+            regions = Shaper._identify_regions(struct)
+            slab_height = proj_height*sum([reg[1]-reg[0] for reg in regions['slab']])
             return slab_height if region == "slab" else proj_height - slab_height
         else:
             raise ValueError('Region must be one of "cell", "vacuum", or "slab"')
         return proj_height
 
     @staticmethod
-    def _identify_regions(struct, min_vac=4.0):
+    def _identify_regions(struct):
         """
         Internal method to identify regions in a given structure.
 
@@ -132,28 +153,21 @@ class Shaper():
         ----------
         struct : pymatgen.core.structure.Structure
             Main object in pymatgen to store structures.
-        min_vac : float, optional
-            Minimum thickness to identify a region as 'vacuum'.
-            The default is 4.0.
 
         Returns
         -------
         regions : dict
             Simple dictionary with keys as regions 'slab' and 'vacuum' and values
-            as the respective projected thickness values in angstroms.
+            as the respective region intervals in fractional coordinates.
 
         """
-        frac_coords_c = struct.frac_coords[:, 2]
-        struct_cp = struct.copy()
-        # To avoid issues with identifying vacuum region at the periodic boundary,
-        # we translate the structure in -c direction by the lowest c coordinate of
-        # its constituent sites. This way, we always start with a slab region.
-        struct_cp.translate_sites(list(range(len(struct_cp))), [0, 0, -min(frac_coords_c)])
-
-        spacings = Shaper._get_layer_spacings(struct_cp)
-        vac_region = sum([s for s in spacings if s > min_vac])
-        slab_region = sum(spacings) - vac_region
-        regions = {"vacuum": vac_region, "slab": slab_region}
+        try:
+            slab_regs = get_slab_regions(struct)
+            vac_regs = multirange_diff([[0, 1]], slab_regs)
+        except ValueError:
+            slab_regs = [[0, 1]]
+            vac_regs = [[0, 0]]
+        regions = {'slab': slab_regs, 'vacuum': vac_regs}
         return regions
 
     @staticmethod
@@ -165,8 +179,8 @@ class Shaper():
 
         Parameters
         ----------
-        slab : pymatgen.core.surface.Slab
-            Slab object that is to be reconstructed. Input object
+        struct : pymatgen.core.structure.Structure
+            Structure object that is to be reconstructed. Input object
             is not modified with this method.
         slab_thickness : int
             Desired slab thickness in number of layers. Layers will
@@ -175,14 +189,14 @@ class Shaper():
         vacuum_thickness : float
             Desired vacuum region thickness in Angstroms. Lattice
             parameters are modified in order to get the correct vacuum.
-        center : bool
+        center : bool, optional
             Whether to center the reconstructed slab between the vacuum region.
             The default is True.
 
         Returns
         -------
-        reconstructed_slab : pymatgen.core.surface.Slab
-            Reconstructed slab with the desired parameters.
+        reconstructed_struct : pymatgen.core.structure.Structure
+            Reconstructed structure with the desired parameters.
 
         """
         # Input slab is first centered for the cases where the slab spills
@@ -193,49 +207,79 @@ class Shaper():
         # the desired slab_thickness is reached
         struct_resized = Shaper._remove_layers(struct_centered, struct_thickness)
 
-        # Check if a Slab or Structure is passed and process accordingly
-        if 'miller_index' in vars(struct_resized):
+        # Vacuum region is modified to the desired thickness
+        reconstructed_struct = Shaper._modify_vacuum(struct_resized, vacuum_thickness)
+
+        return reconstructed_struct
+
+    @staticmethod
+    def _modify_vacuum(struct, vac_thick, method='to_value', center=True):
+        """
+        Method to modify the vacuum region in a structure.
+
+        Parameters
+        ----------
+        struct : pymatgen.core.structure.Structure
+            Main object in pymatgen to store structures.
+        vac_thick : float
+            Vacuum adjustment amount in Angstroms.
+        method : str, optional
+            Whether to set the vacuum to the desired value or adjust the
+            vacuum in the structure by the given value.
+            The default is 'to_value'.
+        center : bool, optional
+            Whether to center the slab in the resulting structure inside
+            the vacuum region.
+            The default is True.
+
+        Returns
+        -------
+        modified_struct : pymatgen.core.structure.Structure
+            Modified pymatgen Structure object.
+
+        """
+
+        # Check if a Slab or Structure is passed and proceed accordingly
+        if 'miller_index' in vars(struct):
             # Necessary slab attributes to reconstruct the Slab
             attrs = ["species", "miller_index", "oriented_unit_cell",
                      "shift", "scale_factor", "reorient_lattice",
                      "reconstruction", "site_properties", "energy"]
-            struct_params = attr_to_dict(struct_resized, attrs)
+            struct_params = attr_to_dict(struct, attrs)
             out_object = Slab
         else:
-            # Necessary structure attributed to reconstruct the Structure
+            # Necessary structure attributes to reconstruct the Structure
             attrs = ["species", "site_properties"]
-            struct_params = attr_to_dict(struct_resized, attrs)
+            struct_params = attr_to_dict(struct, attrs)
             out_object = Structure
 
         # To avoid issues with fractional coordinates when scaling vacuum,
         # cartesian coordinates are used
-        corrected_params = {'coords': struct_resized.cart_coords,
+        corrected_params = {'coords': struct.cart_coords,
                             'coords_are_cartesian': True}
         struct_params.update(corrected_params)
 
-        # Initial vacuum region is calculated
-        initial_vacuum = Shaper._get_proj_height(struct_resized, 'vacuum')
-
         # Lattice parameters are generated in order to be modified
         lat_attrs = ['a', 'b', 'c', 'alpha', 'beta', 'gamma']
-        lat_params = attr_to_dict(struct_resized.lattice, lat_attrs)
+        lat_params = attr_to_dict(struct.lattice, lat_attrs)
 
-        latvec = struct_resized.lattice.matrix
-        proj_height = Shaper._get_hkl_projection(latvec[2], struct_resized)
+        # latvec = struct.lattice.matrix
+        proj_height = Shaper._get_proj_height(struct)
 
         # 'c' parameter of the Lattice is modified to adjust vacuum
         # to the desired thickness
-        lat_params['c'] += (vacuum_thickness-initial_vacuum)*lat_params['c']/proj_height
+        if method == 'to_value':
+            initial_vac = Shaper._get_proj_height(struct, 'vacuum')
+            lat_params['c'] += (vac_thick-initial_vac)*lat_params['c']/proj_height
+        elif method == 'by_value':
+            lat_params['c'] += vac_thick*lat_params['c']/proj_height
+
         new_lat = Lattice.from_parameters(**lat_params)
 
-        # Reconstructed slab is generated from the resized slab parameters
-        # and modified Lattice, then centered again due to being off centered
-        # after layer removal and vacuum modification
-
-        reconstructed_struct = center_slab(out_object(new_lat, **struct_params)) \
+        modified_struct = center_slab(out_object(new_lat, **struct_params)) \
             if center else out_object(new_lat, **struct_params)
 
-        return reconstructed_struct
+        return modified_struct
 
     @staticmethod
     def _get_hkl_projection(vector, struct):
@@ -317,7 +361,8 @@ class Shaper():
         return layers
 
     @staticmethod
-    def _remove_layers(slab, num_layers, method='target', position='bottom'):
+    def _remove_layers(slab, num_layers, method='target', position='bottom',
+                       center=True):
         """
         Removes layers from the bottom of the slab while updating the number
         of bonds broken in the meantime.
@@ -335,6 +380,9 @@ class Shaper():
         position : string, optional
             Side on which the sites should be removed.
             Available options are 'top' and 'bottom'. The default is 'bottom'.
+        center : bool
+            Whether to center the slab in the vacuum after removing layers.
+            The default is 'True'.
 
         Returns
         -------
@@ -349,35 +397,12 @@ class Shaper():
         c_coords = sorted(layers.keys())
         if method == "layers":
             to_remove = c_coords[:num_layers] if position == "bottom" \
-                        else c_coords[num_layers:]
+                        else c_coords[len(c_coords)-num_layers:]
         elif method == "target":
             to_remove = c_coords[:len(c_coords)-num_layers] if position == "bottom" \
-                else c_coords[len(c_coords)-num_layers:]
+                else c_coords[num_layers:]
         indices_list = [layers[c_coord] for c_coord in to_remove]
         flat_list = [item for sublist in indices_list for item in sublist]
         slab_copy = slab.copy()
         slab_copy.remove_sites(flat_list)
-        return slab_copy
-
-    @staticmethod
-    def _get_average_layer_spacing(slab):
-        """
-        Compute the average distance between the slabs layers disregarding the
-        vacuum region.
-
-        Parameters
-        ----------
-        slab : pymatgen.core.surface.Slab
-            Standard pymatgen Slab object.
-
-        Returns
-        -------
-        av_spacing : float
-            Average layer spacing
-
-        """
-        spacings = Shaper._get_layer_spacings(slab)
-        spacings_no_vac = np.delete(spacings,
-                np.where(spacings == Shaper._identify_regions(slab)['vacuum']))
-        av_spacing = np.mean(spacings_no_vac)
-        return av_spacing
+        return center_slab(slab_copy) if center else slab_copy
