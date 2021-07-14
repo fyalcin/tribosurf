@@ -131,6 +131,7 @@ class InterfaceMatcher:
                  max_mismatch=0.01,
                  max_angle_diff=1.0,
                  r1r2_tol=0.02,
+                 vacuum_thickness=15,
                  best_match='area',
                  interface_distance='auto'):
         """Initialize the InterfaceMatcher class
@@ -208,13 +209,20 @@ class InterfaceMatcher:
                              'r1r2_tol': r1r2_tol,
                              'best_match': best_match
                             }
+        self.vacuum_thickness = vacuum_thickness
         self.aligned_top_slab = None
         self.aligned_bot_slab = None
         # Set interface distance
-        self.__get_interface_dist(interface_distance)
+        self.__set_interface_dist(interface_distance)
+        self.__set_lattice_z_length(slab_1, slab_2, vacuum_thickness)
         
+    def __set_lattice_z_length(self, slab1, slab2, vacuum_thickness):
+        z1 = Shaper._get_proj_height(slab1, 'slab')
+        z2 = Shaper._get_proj_height(slab2, 'slab')
+        self.vacuum_thickness = vacuum_thickness
+        self.z_length = z1 + z2 + self.inter_dist + vacuum_thickness
 
-    def __get_interface_dist(self, initial_distance):
+    def __set_interface_dist(self, initial_distance):
         """
         Set the interface distance for the class instance.
         
@@ -240,6 +248,7 @@ class InterfaceMatcher:
             av_spacing_1 = Shaper._get_average_layer_spacing(self.slab_1)
             av_spacing_2 = Shaper._get_average_layer_spacing(self.slab_2)
             self.inter_dist = np.mean([av_spacing_1, av_spacing_2])
+            print()
                 
             
     def __flip_slab(self, slab):
@@ -316,7 +325,7 @@ class InterfaceMatcher:
             bot_slab = slab_1
         return top_slab, bot_slab
             
-    def __make_3d_lattice_from_2d_lattice(self, slab, uv):
+    def __make_3d_lattice_from_2d_lattice(self, slab, uv, z_length=None):
         """
         Takes a slab and adds its third lattice vector to the 2D lattice that is also passed.
 
@@ -326,6 +335,9 @@ class InterfaceMatcher:
             slab from which the third lattice vector is taken
         uv : [np.array, np.array]
             2D lattice
+        z_length : float or None
+            Intended length of the z component of the third lattice vector. If
+            set to None the third lattice vector of the input slab is used.
 
         Returns
         -------
@@ -333,9 +345,13 @@ class InterfaceMatcher:
             Full 3D lattice
 
         """
+        if z_length:
+            third_lattic_vec = np.append(slab.lattice.matrix[2, :2], z_length)
+        else:
+            third_lattic_vec = slab.lattice.matrix[2, :]
         latt = Lattice(np.array([uv[0][:],
                                  uv[1][:],
-                                 slab.lattice.matrix[2, :]
+                                 third_lattic_vec
                                  ]
                                 ))
         return latt
@@ -407,6 +423,7 @@ class InterfaceMatcher:
             return None, None
         latt_1 = self.__make_3d_lattice_from_2d_lattice(self.slab_1, uv_1)
         latt_2 = self.__make_3d_lattice_from_2d_lattice(self.slab_2, uv_2)
+        
         return latt_1, latt_2
     
     
@@ -467,8 +484,12 @@ class InterfaceMatcher:
                                               sc2.lattice,
                                               self.w1,
                                               self.w2)
-            l1 = self.__make_3d_lattice_from_2d_lattice(sc1, new_lattice.matrix)
-            l2 = self.__make_3d_lattice_from_2d_lattice(sc2, new_lattice.matrix)
+            l1 = self.__make_3d_lattice_from_2d_lattice(sc1,
+                                                        new_lattice.matrix,
+                                                        self.z_length)
+            l2 = self.__make_3d_lattice_from_2d_lattice(sc2,
+                                                        new_lattice.matrix,
+                                                        self.z_length)
             sc1.lattice = l1
             sc2.lattice = l2
             top_slab, bot_slab = self.__assign_top_bottom(sc1, sc2)
@@ -525,7 +546,12 @@ class InterfaceMatcher:
                 return None, None
         interface = stack_aligned_slabs(bcs, tcs)
         clean_interface = clean_up_site_properties(interface)
-        return clean_interface
+        corrected_vacuum_interface = Shaper._modify_vacuum(clean_interface,
+                                                           self.vacuum_thickness,
+                                                           method='to_value',
+                                                           center=False)
+        
+        return clean_interface #corrected_vacuum_interface
     
     def get_interface_distance(self):
         """

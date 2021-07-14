@@ -648,12 +648,12 @@ cu111_dict = {'@module': 'pymatgen.core.surface',
  'reconstruction': None,
  'energy': None}
 
-slab1 = Slab.from_dict(ag111_dict)
+slab1 = Slab.from_dict(al111_dict)
 al_bm = 76.50705929207275
-slab2 = Slab.from_dict(pt111_dict)
+slab2 = Slab.from_dict(cu111_dict)
 cu_bm = 139.67909156673758
 match_params = {'max_area': 100.0,
-                'max_mismatch': 0.01,
+                'max_mismatch': 0.02,
                 'max_angle_diff': 1.5,
                 'r1r2_tol': 1,
                 'best_match': 'area',
@@ -662,8 +662,8 @@ match_params = {'max_area': 100.0,
 
 Matcher = InterfaceMatcher(slab_2=slab1,
                          slab_1=slab2,
-                         strain_weight_1=1,
-                         strain_weight_2=1,
+                         strain_weight_1=al_bm,
+                         strain_weight_2=cu_bm,
                          **match_params)
 
 
