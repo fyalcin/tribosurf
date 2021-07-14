@@ -648,16 +648,17 @@ cu111_dict = {'@module': 'pymatgen.core.surface',
  'reconstruction': None,
  'energy': None}
 
-slab1 = Slab.from_dict(al111_dict)
+slab1 = Slab.from_dict(alc111_dict)
 al_bm = 76.50705929207275
 slab2 = Slab.from_dict(cu111_dict)
 cu_bm = 139.67909156673758
-match_params = {'max_area': 100.0,
+match_params = {'max_area': 200.0,
                 'max_mismatch': 0.02,
                 'max_angle_diff': 1.5,
                 'r1r2_tol': 1,
                 'best_match': 'area',
-                'interface_distance': 'auto'
+                'interface_distance': 'auto',
+                'vacuum_thickness': 12
                 }
 
 Matcher = InterfaceMatcher(slab_2=slab1,
@@ -668,7 +669,10 @@ Matcher = InterfaceMatcher(slab_2=slab1,
 
 
 #al111_new, cu111_new = Matcher.get_aligned_slabs()
+top_aligned, bottom_aligned = Matcher.get_aligned_slabs()
+top_centered, bottom_centered = Matcher.get_centered_slabs()
 interface = Matcher.get_interface()
+
 
 # al111_old, cu111_old = get_aligned_lattices(
 #                 al111,

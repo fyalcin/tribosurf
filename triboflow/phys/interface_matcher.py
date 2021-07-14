@@ -47,6 +47,7 @@ import numpy as np
 import warnings
 from pymatgen.core.lattice import Lattice
 from pymatgen.core.operations import SymmOp
+from pymatgen.core.surface import center_slab, Slab
 from mpinterfaces.transformations import get_matching_lattices
 
 from triboflow.utils.structure_manipulation import (
@@ -118,7 +119,38 @@ def are_slabs_aligned(slab_1, slab_2, prec=12):
         return True
     else:
         return False
-    
+ 
+def flip_slab(slab):
+    """
+    Flip the z coordinates of the input slab by multiplying all z-coords with -1.
+
+    Parameters
+    ----------
+    slab : pymatgen.core.surface.Slab
+       The input slab object flip
+
+    Returns
+    -------
+    flipped_slab : pymatgen.core.surface.Slab
+        The flipped slab
+
+    """
+    flip_matrix = np.array([[1., 0., 0.],
+                            [0., 1., 0.],
+                            [0., 0., -1.]])
+    flipped_coords = np.dot(slab.cart_coords, flip_matrix)
+        
+    flipped_slab = Slab(lattice=slab.lattice,
+                        species=slab.species,
+                        coords=flipped_coords,
+                        miller_index=slab.miller_index,
+                        oriented_unit_cell=slab.oriented_unit_cell,
+                        shift=slab.shift,
+                        scale_factor=slab.scale_factor,
+                        reconstruction=slab.reconstruction,
+                        coords_are_cartesian=True,
+                        site_properties=slab.site_properties)
+    return center_slab(flipped_slab)
 
 class InterfaceMatcher:
    
@@ -199,10 +231,6 @@ class InterfaceMatcher:
                          'set to "area" instead!'.format(best_match))
             best_match = 'area'
             
-        self.slab_1 = slab_1.copy()
-        self.slab_2 = slab_2.copy()
-        self.w1 = strain_weight_1
-        self.w2 = strain_weight_2
         self.match_params = {'max_area': max_area,
                              'max_mismatch': max_mismatch,
                              'max_angle_diff': max_angle_diff,
@@ -212,15 +240,22 @@ class InterfaceMatcher:
         self.vacuum_thickness = vacuum_thickness
         self.aligned_top_slab = None
         self.aligned_bot_slab = None
+        # Assign top and bottom slabs with strain weights.
+        self.__assign_top_bottom(slab_1.copy(),
+                                 slab_2.copy(),
+                                 strain_weight_1,
+                                 strain_weight_2)
         # Set interface distance
         self.__set_interface_dist(interface_distance)
-        self.__set_lattice_z_length(slab_1, slab_2, vacuum_thickness)
+        # Set the vacua for the centered slabs to ensure correct vacuum for the
+        # interface
+        self.__set_vacua()
         
-    def __set_lattice_z_length(self, slab1, slab2, vacuum_thickness):
-        z1 = Shaper._get_proj_height(slab1, 'slab')
-        z2 = Shaper._get_proj_height(slab2, 'slab')
-        self.vacuum_thickness = vacuum_thickness
-        self.z_length = z1 + z2 + self.inter_dist + vacuum_thickness
+    def __set_vacua(self):
+        thickness_top = Shaper._get_proj_height(self.top_slab, 'slab')
+        thickness_bot = Shaper._get_proj_height(self.bot_slab, 'slab')
+        self.vacuum_top = thickness_bot + self.vacuum_thickness + self.inter_dist
+        self.vacuum_bot = thickness_top + self.vacuum_thickness + self.inter_dist
 
     def __set_interface_dist(self, initial_distance):
         """
@@ -245,31 +280,10 @@ class InterfaceMatcher:
         try:
             self.inter_dist = float(initial_distance)
         except:
-            av_spacing_1 = Shaper._get_average_layer_spacing(self.slab_1)
-            av_spacing_2 = Shaper._get_average_layer_spacing(self.slab_2)
-            self.inter_dist = np.mean([av_spacing_1, av_spacing_2])
-            print()
+            av_spacing_top = Shaper._get_average_layer_spacing(self.top_slab)
+            av_spacing_bot = Shaper._get_average_layer_spacing(self.bot_slab)
+            self.inter_dist = np.mean([av_spacing_top, av_spacing_bot])
                 
-            
-    def __flip_slab(self, slab):
-        """
-        Mirror a slab with the z=0 plane as the mirror plane.
-
-        Parameters
-        ----------
-        slab : pymatgen.core.surface.Slab
-           The input slab object to mirror
-
-        Returns
-        -------
-        flipped_slab : pymatgen.core.surface.Slab
-            The mirrored slab
-
-        """
-        mirror = SymmOp.reflection(normal=[0,0,1], origin=[0, 0, 0])
-        flipped_slab = slab.copy()
-        flipped_slab.apply_operation(mirror, fractional=True)
-        return flipped_slab
     
     def __get_formula_and_miller(self, slab):
         """
@@ -290,26 +304,29 @@ class InterfaceMatcher:
         m = ''.join(str(s) for s in slab.miller_index)
         return f+m
     
-    def __assign_top_bottom(self, slab_1, slab_2):
+    
+    def __assign_top_bottom(self, slab_1, slab_2, weight_1, weight_2):
         """
         Assign top and bottom slab based on the formula and miller index.
         
         This is just for consistency since above and below are of course
-        not meaningfull in a DFT context.
+        not meaningfull in a DFT context. Strain weights are assigned
+        accordingly as well.
 
         Parameters
         ----------
         slab_1 : pymatgen.core.surface.Slab
-            First slab
+            First slab.
         slab_2 : pymatgen.core.surface.Slab
-            Second slab
+            Second slab.
+        weight_1 : float
+            Weight for the strain distribution for slab 1.
+        weight_2 : float
+            Weight for the strain distribution for slab 2.
 
         Returns
         -------
-        top_slab : pymatgen.core.surface.Slab
-            Slab that was assigned to be on top.
-        bot_slab : pymatgen.core.surface.Slab
-            Slab that was assigned to be on the bottom.
+        None.
 
         """
         n1 = self.__get_formula_and_miller(slab_1)
@@ -318,14 +335,18 @@ class InterfaceMatcher:
         opt2 = max(n1, n2)
         
         if n1 == opt1 and n2 == opt2:
-            top_slab = slab_1
-            bot_slab = slab_2
+            self.top_slab = slab_1
+            self.top_weight = weight_1
+            self.bot_slab = slab_2
+            self.bot_weight = weight_2
         else:
-            top_slab = slab_2
-            bot_slab = slab_1
-        return top_slab, bot_slab
+            self.top_slab = slab_2
+            self.top_weight = weight_2
+            self.bot_slab = slab_1
+            self.bot_weight = weight_1
             
-    def __make_3d_lattice_from_2d_lattice(self, slab, uv, z_length=None):
+            
+    def __make_3d_lattice_from_2d_lattice(self, slab, uv):
         """
         Takes a slab and adds its third lattice vector to the 2D lattice that is also passed.
 
@@ -335,9 +356,6 @@ class InterfaceMatcher:
             slab from which the third lattice vector is taken
         uv : [np.array, np.array]
             2D lattice
-        z_length : float or None
-            Intended length of the z component of the third lattice vector. If
-            set to None the third lattice vector of the input slab is used.
 
         Returns
         -------
@@ -345,13 +363,10 @@ class InterfaceMatcher:
             Full 3D lattice
 
         """
-        if z_length:
-            third_lattic_vec = np.append(slab.lattice.matrix[2, :2], z_length)
-        else:
-            third_lattic_vec = slab.lattice.matrix[2, :]
+
         latt = Lattice(np.array([uv[0][:],
                                  uv[1][:],
-                                 third_lattic_vec
+                                 slab.lattice.matrix[2, :]
                                  ]
                                 ))
         return latt
@@ -379,6 +394,13 @@ class InterfaceMatcher:
         sc_matrix[2] = np.array([0, 0, 1])
         return sc_matrix
     
+    def _set_intended_vacuum(self, slab, vacuum):
+        return Shaper._modify_vacuum(slab,
+                                     vacuum,
+                                     method='to_value',
+                                     center=False)
+        
+    
     def _find_lattice_match(self):
         """
         Compute a matching lattice for heterogeneous interfaces.
@@ -400,8 +422,8 @@ class InterfaceMatcher:
 
         """
         
-        uv_opt1, uv_opt2 = get_matching_lattices(self.slab_1,
-                                                 self.slab_2,
+        uv_opt1, uv_opt2 = get_matching_lattices(self.top_slab,
+                                                 self.bot_slab,
                                                  **self.match_params)
         return uv_opt1, uv_opt2
     
@@ -421,10 +443,10 @@ class InterfaceMatcher:
         # Handle the possibility that no match is found
         if not uv_1 and not uv_2:
             return None, None
-        latt_1 = self.__make_3d_lattice_from_2d_lattice(self.slab_1, uv_1)
-        latt_2 = self.__make_3d_lattice_from_2d_lattice(self.slab_2, uv_2)
+        top_latt = self.__make_3d_lattice_from_2d_lattice(self.top_slab, uv_1)
+        bot_latt = self.__make_3d_lattice_from_2d_lattice(self.bot_slab, uv_2)
         
-        return latt_1, latt_2
+        return top_latt, bot_latt
     
     
     def _get_matching_supercells(self):
@@ -439,17 +461,17 @@ class InterfaceMatcher:
             Two slabs that are almost matched, but still need to be strained.
 
         """
-        latt_1, latt_2 = self._get_matching_lattices()
+        top_latt, bot_latt = self._get_matching_lattices()
         # Handle the possibility that no match is found
-        if not latt_1 and not latt_2:
+        if not top_latt and not bot_latt:
             return None, None
-        supercell_matrix_1 = self.__get_supercell_matrix(self.slab_1, latt_1)
-        supercell_matrix_2 = self.__get_supercell_matrix(self.slab_2, latt_2)
-        supercell_1 = self.slab_1.copy()
-        supercell_2 = self.slab_2.copy()
-        supercell_1.make_supercell(supercell_matrix_1)
-        supercell_2.make_supercell(supercell_matrix_2)
-        return supercell_1, supercell_2
+        supercell_matrix_top = self.__get_supercell_matrix(self.top_slab, top_latt)
+        supercell_matrix_bot = self.__get_supercell_matrix(self.bot_slab, bot_latt)
+        supercell_top = self.top_slab.copy()
+        supercell_bot = self.bot_slab.copy()
+        supercell_top.make_supercell(supercell_matrix_top)
+        supercell_bot.make_supercell(supercell_matrix_bot)
+        return supercell_top, supercell_bot
             
 
     def get_aligned_slabs(self):
@@ -469,33 +491,29 @@ class InterfaceMatcher:
             in x and y directions, z lattice vector may differ though!
 
         """
-        if are_slabs_aligned(self.slab_1, self.slab_2):
-            print("\nSlabs are already aligned!\n")
-            top_slab, bot_slab = self.__assign_top_bottom(self.slab_1, self.slab_2)
-            flipped_slab = self.__flip_slab(top_slab)
-            self.aligned_top_slab, self.aligned_bot_slab = flipped_slab, bot_slab
-            return flipped_slab, bot_slab
+        if are_slabs_aligned(self.top_slab, self.bot_slab):
+            print("\n  Slabs are already aligned!\n")
+            flipped_slab = center_slab(flip_slab(self.top_slab))
+            self.aligned_top_slab, self.aligned_bot_slab = flipped_slab, self.bot_slab
+            return self.aligned_top_slab, self.aligned_bot_slab
         else:
-            sc1, sc2 = self._get_matching_supercells()
+            sc_top, sc_bot = self._get_matching_supercells()
             # Return None, None if no match was found for the given parameters.
-            if not sc1 and not sc2:
+            if not sc_top and not sc_bot:
                 return None, None
-            new_lattice = get_average_lattice(sc1.lattice,
-                                              sc2.lattice,
-                                              self.w1,
-                                              self.w2)
-            l1 = self.__make_3d_lattice_from_2d_lattice(sc1,
-                                                        new_lattice.matrix,
-                                                        self.z_length)
-            l2 = self.__make_3d_lattice_from_2d_lattice(sc2,
-                                                        new_lattice.matrix,
-                                                        self.z_length)
-            sc1.lattice = l1
-            sc2.lattice = l2
-            top_slab, bot_slab = self.__assign_top_bottom(sc1, sc2)
-            flipped_slab = self.__flip_slab(top_slab)
-            self.aligned_top_slab, self.aligned_bot_slab = flipped_slab, bot_slab
-            return flipped_slab, bot_slab
+            new_lattice = get_average_lattice(sc_top.lattice,
+                                              sc_bot.lattice,
+                                              self.top_weight,
+                                              self.bot_weight)
+            l_top = self.__make_3d_lattice_from_2d_lattice(sc_top, new_lattice.matrix)
+            l_bot = self.__make_3d_lattice_from_2d_lattice(sc_bot, new_lattice.matrix)
+                                                        
+            sc_top.lattice = l_top
+            sc_bot.lattice = l_bot
+            
+            flipped_slab = center_slab(flip_slab(sc_top))
+            self.aligned_top_slab, self.aligned_bot_slab = flipped_slab, sc_bot
+            return self.aligned_top_slab, self.aligned_bot_slab        
         
     def get_centered_slabs(self):
         """
@@ -524,6 +542,8 @@ class InterfaceMatcher:
             top_slab, bot_slab = self.get_aligned_slabs()
         if not top_slab and not bot_slab:
                 return None, None
+        top_slab = self._set_intended_vacuum(top_slab, self.vacuum_top)
+        bot_slab = self._set_intended_vacuum(bot_slab, self.vacuum_bot)
         tcs, bcs = recenter_aligned_slabs(top_slab, bot_slab, d=self.inter_dist)
         return tcs, bcs
         
@@ -543,15 +563,11 @@ class InterfaceMatcher:
         """
         tcs, bcs = self.get_centered_slabs()
         if not tcs and not bcs:
-                return None, None
+                return None
         interface = stack_aligned_slabs(bcs, tcs)
         clean_interface = clean_up_site_properties(interface)
-        corrected_vacuum_interface = Shaper._modify_vacuum(clean_interface,
-                                                           self.vacuum_thickness,
-                                                           method='to_value',
-                                                           center=False)
         
-        return clean_interface #corrected_vacuum_interface
+        return clean_interface
     
     def get_interface_distance(self):
         """
