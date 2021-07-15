@@ -37,6 +37,7 @@ The module contains:
     Functions:
     - get_average_lattice
     - are_slabs_aligned
+    - flip_slab
 
     Author: Michael Wolloch
             michael.wolloch@univie.ac.at
@@ -46,7 +47,6 @@ The module contains:
 import numpy as np
 import warnings
 from pymatgen.core.lattice import Lattice
-from pymatgen.core.operations import SymmOp
 from pymatgen.core.surface import center_slab, Slab
 from mpinterfaces.transformations import get_matching_lattices
 
@@ -163,15 +163,20 @@ class InterfaceMatcher:
                  max_mismatch=0.01,
                  max_angle_diff=1.0,
                  r1r2_tol=0.02,
-                 vacuum_thickness=15,
+                 vacuum=15.0,
                  best_match='area',
                  interface_distance='auto'):
         """Initialize the InterfaceMatcher class
         
         If the strain weights sum up to zero (which is not allowed for the
-        averaging process) they will be internally reset to 1 and a warning
-        will be raised. Thus equal strain will be put on the slabs to form
-        the interface. 
+        averaging process), or one or both of them are negative, they will be
+        internally reset to 1 and a warning will be raised. In that case,
+        equal strain will be put on the slabs to form the interface. If
+        the default of "auto" is used for "interface_distance", the average
+        layer distance of both slabs is used for the interface spacing.
+        By default a small cell is prioritized in the lattice search, but
+        "best_match" can be set to "mismatch" to find the smallest possible
+        mismatch while staying below "max_area".
         
 
         Parameters
@@ -202,6 +207,9 @@ class InterfaceMatcher:
             Tolerance parameter related to the lattice search
             (abs(float(r1) * area1 - float(r2) * area2) / max_area <= r1r2_tol)
             The default is 0.02
+        vacuum : float, optional
+            Thickness of the vacuum layer for the final interface. The default
+            is 15.0
         best_match : 'area' or 'mismatch', optional
             Determines if the algorithm returns the matched slabs with the
             smallest mismatch within "max_area" or the smalles area within the
@@ -219,39 +227,97 @@ class InterfaceMatcher:
 
         """
         # handle inconsistent input
-        if not sum((strain_weight_1, strain_weight_2)):
-            warnings.warn('The sum of the weights is zero which is not allowed!\n'
-                          'The strain weights will both be reset to 1 and strain '
-                          'will be distributed evenly between the two materials.')
-            strain_weight_1 = 1
-            strain_weight_2 = 1
-        if best_match not in ['area', 'mismatch']:
-            warnings.warn('You have passed the "best_match" argument "{}", '
-                         'which is not in ["area", "mismatch"]. It will be '
-                         'set to "area" instead!'.format(best_match))
-            best_match = 'area'
-            
+        weight_1, weight_2, = self.__check_weights(strain_weight_1,
+                                                   strain_weight_2)
+        best_match = self.__check_best_match(best_match)
+                    
         self.match_params = {'max_area': max_area,
                              'max_mismatch': max_mismatch,
                              'max_angle_diff': max_angle_diff,
                              'r1r2_tol': r1r2_tol,
                              'best_match': best_match
                             }
-        self.vacuum_thickness = vacuum_thickness
+        self.vacuum_thickness = vacuum
         self.aligned_top_slab = None
         self.aligned_bot_slab = None
         # Assign top and bottom slabs with strain weights.
         self.__assign_top_bottom(slab_1.copy(),
                                  slab_2.copy(),
-                                 strain_weight_1,
-                                 strain_weight_2)
+                                 weight_1,
+                                 weight_2)
         # Set interface distance
         self.__set_interface_dist(interface_distance)
         # Set the vacua for the centered slabs to ensure correct vacuum for the
         # interface
         self.__set_vacua()
         
+    def __check_weights(self, strain_weight_1, strain_weight_2):
+        """
+        Check if the supplied strain weights are making sense and correct them if not.
+        
+
+        Parameters
+        ----------
+        strain_weight_1 : float
+            Weight 1
+        strain_weight_2 : float
+            weight 2
+
+        Returns
+        -------
+        float
+            Weight 1
+        float
+            Weight 2
+
+        """
+        if not sum((strain_weight_1, strain_weight_2)):
+            warnings.warn('The sum of the weights is zero which is not allowed!\n'
+                          'The strain weights will both be reset to 1 and strain '
+                          'will be distributed evenly between the two materials.')
+            return 1.0, 1.0
+        elif strain_weight_1 < 0 or strain_weight_2 < 0:
+            warnings.warn('One or both of the weights is negative which may '
+                          'lead to unforseen effects and is not allowed!\n'
+                          'The strain weights will both be reset to 1 and strain '
+                          'will be distributed evenly between the two materials.')
+            return 1.0, 1.0
+        else:
+            return strain_weight_1, strain_weight_2
+            
+    def __check_best_match(self, best_match):
+        """
+        Check and correct the passed value for "best_match" if needed.
+
+        Parameters
+        ----------
+        best_match : str
+            Select if small areas or best match should be prioritised in the
+            lattice search.
+
+        Returns
+        -------
+        str
+            either the input value of "best_match" or "area"
+
+        """
+        if best_match not in ['area', 'mismatch']:
+            warnings.warn('You have passed the "best_match" argument "{}", '
+                         'which is not in ["area", "mismatch"]. It will be '
+                         'set to "area" instead!'.format(best_match))
+            return 'area'
+        else:
+            return best_match
+    
     def __set_vacua(self):
+        """
+        Set the vacuum thickness for the top and bottom slabs.
+
+        Returns
+        -------
+        None.
+
+        """
         thickness_top = Shaper._get_proj_height(self.top_slab, 'slab')
         thickness_bot = Shaper._get_proj_height(self.bot_slab, 'slab')
         self.vacuum_top = thickness_bot + self.vacuum_thickness + self.inter_dist

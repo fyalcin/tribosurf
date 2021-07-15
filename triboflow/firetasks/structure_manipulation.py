@@ -739,7 +739,8 @@ class FT_MakeHeteroStructure(FiretaskBase):
                     'max_mismatch': inter_params['max_mismatch'] * f,
                     'max_angle_diff': inter_params['max_angle_diff'] * f,
                     'r1r2_tol': inter_params['r1r2_tol'] * f,
-                    'interface_distance': inter_params['interface_distance']}
+                    'interface_distance': inter_params['interface_distance'],
+                    'vacuum': inter_params['vacuum']}
             
                 if not inter_data.get('original_interface_params'):
 

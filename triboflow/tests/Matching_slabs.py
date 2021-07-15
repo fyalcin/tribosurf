@@ -658,13 +658,13 @@ match_params = {'max_area': 200.0,
                 'r1r2_tol': 1,
                 'best_match': 'area',
                 'interface_distance': 'auto',
-                'vacuum_thickness': 12
+                'vacuum': 12
                 }
 
 Matcher = InterfaceMatcher(slab_2=slab1,
                          slab_1=slab2,
-                         strain_weight_1=al_bm,
-                         strain_weight_2=cu_bm,
+                         strain_weight_1=1,
+                         strain_weight_2=1,
                          **match_params)
 
 

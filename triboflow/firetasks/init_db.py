@@ -204,7 +204,7 @@ def put_slab_in_db(data, comp_params, db_file):
                          'thick_min': data['thick_min'],
                          'thick_max': data['thick_max'],
                          'thick_incr': data['thick_incr'],
-                         'vacuum': data['vacuum'],
+                         'vacuum': comp_params['vacuum'],
                          'comp_parameters': comp_params})
     else:
         print('Entry for mpid:{} and miller:{} already found in {} collection. '
@@ -237,12 +237,21 @@ def put_inter_in_db(data_1, data_2, comp_params, inter_params, db_file):
                                                    db_file, metal_thr=None)
     name = interface_name(mp_id_1, data_1['miller'], mp_id_2, data_2['miller'])
     
+    # Add the vacuum thickness from the comp_params to the inter_params as
+    # it is now needed for the interface matching.
+    inter_params['vacuum'] = comp_params.get('vacuum')
+    
     # Load the interface structure into the high level DB
     nav = Navigator(db_file, high_level=True)
     prev_data = nav.find_data(functional+'.interface_data', {'name': name})
     if not prev_data:
         nav.insert_data(functional+'.interface_data', 
                              {'name': name,
+                              'mpids': (mp_id_1, mp_id_2),
+                              'formulae': (struct_1.composition.reduced_formula,
+                                           struct_2.composition.reduced_formula),
+                              'miller_indices': (data_1['miller'],
+                                                 data_2['miller']),
                               'comp_parameters': comp_params,
                               'interface_parameters': inter_params})
     else:
