@@ -10,11 +10,11 @@ from monty.json import jsanitize
 
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import Slab
-from pymatgen.core.operations import SymmOp
 from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 
+from triboflow.phys.interface_matcher import flip_slab
 from triboflow.phys.high_symmetry import (
     get_slab_hs, get_interface_hs, pbc_hspoints, fix_hs_dicts)
 from triboflow.phys.potential_energy_surface import get_pes
@@ -318,11 +318,9 @@ class FT_FindHighSymmPoints(FiretaskBase):
             db_file = env_chk('>>db_file<<', fw_spec)
         hl_db = self.get('high_level_db', True)
         
-        # Top slab needs to be mirrored to find the high symmetry points at the
+        # Top slab needs to be flipped to find the high symmetry points at the
         # interface.
-        mirror = SymmOp.reflection(normal=[0,0,1], origin=[0, 0, 0])
-        flipped_top = top_slab.copy()
-        flipped_top.apply_operation(mirror, fractional=True)
+        flipped_top = flip_slab(top_slab)
         top_hsp_unique, top_hsp_all = get_slab_hs(flipped_top)
         
         bottom_hsp_unique, bottom_hsp_all = get_slab_hs(bot_slab)

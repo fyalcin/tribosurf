@@ -151,6 +151,7 @@ def flip_slab(slab):
                         coords_are_cartesian=True,
                         site_properties=slab.site_properties)
     return center_slab(flipped_slab)
+    
 
 class InterfaceMatcher:
    
@@ -577,7 +578,7 @@ class InterfaceMatcher:
             sc_top.lattice = l_top
             sc_bot.lattice = l_bot
             
-            flipped_slab = center_slab(flip_slab(sc_top))
+            flipped_slab = flip_slab(sc_top)
             self.aligned_top_slab, self.aligned_bot_slab = flipped_slab, sc_bot
             return self.aligned_top_slab, self.aligned_bot_slab        
         
