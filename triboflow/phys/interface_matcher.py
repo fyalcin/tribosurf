@@ -668,3 +668,39 @@ class InterfaceMatcher:
 
         """
         return self.inter_dist
+
+    def get_strain(self):
+        """
+        Calculate the strains on the aligned top and bottom slabs by comparing
+        the unstrained lattices of the constituent slabs and final lattice
+        of the interface.
+
+        Returns
+        -------
+        dict
+            Dictionary with keys 'top' and 'bot' with the percentages of
+            strain in the two directions of the lattice vectors.
+
+        """
+        if getattr(self, 'strain', None):
+            return self.strain
+
+        if are_slabs_aligned(self.top_slab, self.bot_slab):
+            self.strain = {'top': [0, 0], 'bot': [0, 0]}
+            return self.strain
+
+        if not getattr(self, "interface", None):
+            self.get_interface()
+
+        u_top_latt = self.unstrained_top_lattice
+        u_bot_latt = self.unstrained_bot_lattice
+        inter_latt = self.interface.lattice
+
+        self.strain = {'top':
+                       np.round([100*(inter_latt.abc[i]-u_top_latt.abc[i])/u_top_latt.abc[i]
+                                 for i in range(2)], 3),
+                       'bot':
+                       np.round([100*(inter_latt.abc[i]-u_bot_latt.abc[i])/u_bot_latt.abc[i]
+                                 for i in range(2)], 3)}
+
+        return self.strain
