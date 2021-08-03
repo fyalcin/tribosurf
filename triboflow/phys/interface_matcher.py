@@ -151,6 +151,7 @@ def flip_slab(slab):
                         coords_are_cartesian=True,
                         site_properties=slab.site_properties)
     return center_slab(flipped_slab)
+    
 
 class InterfaceMatcher:
    
@@ -512,8 +513,29 @@ class InterfaceMatcher:
         top_latt = self.__make_3d_lattice_from_2d_lattice(self.top_slab, uv_1)
         bot_latt = self.__make_3d_lattice_from_2d_lattice(self.bot_slab, uv_2)
         
+        self.unstrained_top_lattice = top_latt
+        self.unstrained_bot_lattice = bot_latt
+        
         return top_latt, bot_latt
     
+    def _assign_position_site_properties(self):
+        """
+        Add site properties on the slabs to mark the sites of the interface.
+        
+        Site properties are set on both slabs under the 'interface_region' key
+        to facilitate the detection of sites belonging to the top or bottom
+        slab. This is useful to find the slabs again in the unified interface
+        object.
+
+        Returns
+        -------
+        None.
+
+        """
+        self.aligned_top_slab.add_site_property('interface_region',
+                ['top_slab' for i in range(self.aligned_top_slab.num_sites)])
+        self.aligned_bot_slab.add_site_property('interface_region',
+                ['bot_slab' for i in range(self.aligned_bot_slab.num_sites)])
     
     def _get_matching_supercells(self):
         """
@@ -561,7 +583,6 @@ class InterfaceMatcher:
             print("\n  Slabs are already aligned!\n")
             flipped_slab = center_slab(flip_slab(self.top_slab))
             self.aligned_top_slab, self.aligned_bot_slab = flipped_slab, self.bot_slab
-            return self.aligned_top_slab, self.aligned_bot_slab
         else:
             sc_top, sc_bot = self._get_matching_supercells()
             # Return None, None if no match was found for the given parameters.
@@ -577,9 +598,10 @@ class InterfaceMatcher:
             sc_top.lattice = l_top
             sc_bot.lattice = l_bot
             
-            flipped_slab = center_slab(flip_slab(sc_top))
+            flipped_slab = flip_slab(sc_top)
             self.aligned_top_slab, self.aligned_bot_slab = flipped_slab, sc_bot
-            return self.aligned_top_slab, self.aligned_bot_slab        
+        self._assign_position_site_properties()
+        return self.aligned_top_slab, self.aligned_bot_slab        
         
     def get_centered_slabs(self):
         """
@@ -631,9 +653,9 @@ class InterfaceMatcher:
         if not tcs and not bcs:
                 return None
         interface = stack_aligned_slabs(bcs, tcs)
-        clean_interface = clean_up_site_properties(interface)
+        self.interface = clean_up_site_properties(interface)
         
-        return clean_interface
+        return self.interface
     
     def get_interface_distance(self):
         """
@@ -646,3 +668,37 @@ class InterfaceMatcher:
 
         """
         return self.inter_dist
+
+    def get_strain(self):
+        """
+        Calculate the strains on the aligned top and bottom slabs by comparing
+        the unstrained lattices of the constituent slabs and final lattice
+        of the interface.
+
+        Returns
+        -------
+        dict
+            Dictionary with keys 'top' and 'bot' with the percentages of
+            strain in the two directions of the lattice vectors.
+
+        """
+        if hasattr(self, 'strain'):
+            return self.strain
+
+        if are_slabs_aligned(self.top_slab, self.bot_slab):
+            self.strain = {'top': [0, 0], 'bot': [0, 0]}
+            return self.strain
+
+        if not hasattr(self, 'interface'):
+            self.get_interface()
+
+        u_top_latt = self.unstrained_top_lattice
+        u_bot_latt = self.unstrained_bot_lattice
+        inter_latt = self.interface.lattice
+
+        self.strain = {'top': [100*(inter_latt.abc[i]-u_top_latt.abc[i])/u_top_latt.abc[i]
+                               for i in range(2)],
+                       'bot': [100*(inter_latt.abc[i]-u_bot_latt.abc[i])/u_bot_latt.abc[i]
+                               for i in range(2)]}
+
+        return self.strain

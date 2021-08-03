@@ -391,6 +391,11 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
         kpoints = KPTS.get_kpoints()
     uks = kpoints
     
+    if comp_parameters.get('functional') == 'LDA':
+        upf = 'LDA_54'
+    else:
+        upf = 'PBE_54'
+    
     if comp_parameters.get('functional') == 'SCAN':
         vis = MPScanStaticSet(structure, user_incar_settings = uis, vdw = vdw,
                               user_kpoints_settings = uks,
@@ -398,7 +403,7 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
     else:
         vis = MPStaticSet(structure, user_incar_settings = uis, vdw = vdw,
                           user_kpoints_settings = uks,
-                          user_potcar_functional = 'PBE_54')
+                          user_potcar_functional = upf)
         
     return vis
 
@@ -563,7 +568,12 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
                                force_gamma=True)
         kpoints = KPTS.get_kpoints()
     uks = kpoints
-        
+    
+    if comp_parameters.get('functional') == 'LDA':
+        upf = 'LDA_54'
+    else:
+        upf = 'PBE_54'
+    
     if 'functional' in comp_parameters:
         if comp_parameters['functional'] == 'SCAN':
             #Algo All does not play well with tetrahedron method
@@ -584,6 +594,6 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
     else:
         vis = MPRelaxSet(structure, user_incar_settings = uis, vdw = vdw,
                         user_kpoints_settings = uks,
-                        user_potcar_functional = 'PBE_54')
+                        user_potcar_functional = upf)
 
     return vis
