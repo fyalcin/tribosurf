@@ -19,7 +19,7 @@ from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \
 from triboflow.firetasks.PPES import FT_DoPPESCalcs, FT_FitPPES
 from triboflow.firetasks.adhesion import FT_CalcAdhesion
 from triboflow.utils.database import Navigator, NavigatorMP
-from triboflow.utils.vasp_tools import get_emin, get_custom_vasp_static_settings
+from triboflow.utils.vasp_tools import get_emin_and_emax, get_custom_vasp_static_settings
 
 
 def adhesion_energy_swf(top_slab,
@@ -600,8 +600,9 @@ def converge_swf(structure,
                 # next whole 25.
                 vis = get_custom_vasp_static_settings(structure, comp_parameters,
                                                       'bulk_from_scratch')
-                emin = get_emin(vis.potcar)
-                encut_start = int(25 * np.ceil(emin/25))
+                encut_dict = get_emin_and_emax(vis.potcar)
+                enmax = encut_dict['ENMAX']
+                encut_start = int(25 * np.ceil(enmax/25))
     elif conv_type == 'kpoints':
             name = 'Kpoint Convergence SWF of '+structure.composition.reduced_formula
     
