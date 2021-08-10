@@ -74,8 +74,12 @@ def plot_slab_hs(hs, slab, to_fig=None):
     
     plot_slab(slab, ax, scale=0.8, repeat=3, window=2.25, 
               draw_unit_cell=True, decay=0.2, adsorption_sites=False)
-    ax.set(xlim = ( -0.1*(a[0] + b[0]), 1.1*(a[0] + b[0]) ), 
-           ylim = ( -0.1*(a[1] + b[1]), 1.1*(a[1] + b[1]) ))
+    xlower = min(slab.lattice.matrix[:,0])
+    xupper = max([a[0] + b[0], a[0], b[0]])
+    ylower = min(slab.lattice.matrix[:,1])
+    yupper = max([a[1] + b[1], a[1], b[1]])
+    ax.set(xlim = ( xlower-0.5, xupper+0.5 ), 
+           ylim = ( ylower-0.5, yupper+0.5 ))
     
     # Add the HS sites with the proper labels
     for k in hs.keys():
@@ -87,7 +91,7 @@ def plot_slab_hs(hs, slab, to_fig=None):
             plt.plot(data[:,0], data[:,1], marker='o', markersize=12, mew=3, 
                      linestyle='', zorder=10000, label=k)
  
-    plt.legend(bbox_to_anchor=(1.025, 1), loc='upper left')
+    plt.legend(bbox_to_anchor=(1.025, 1), loc='upper left', prop={'size': 22})
     
     plt.rcParams.update({'font.size': 18})
     plt.tick_params(
@@ -106,7 +110,7 @@ def plot_slab_hs(hs, slab, to_fig=None):
     plt.show()
 
 
-def plot_pes(data, lattice, to_fig=None, vmin=None, vmax=None):
+def plot_pes(data, lattice, to_fig=None, vmin=None, vmax=None, plot_hs=None):
     """
     Plot the PES and eventually save it
 
@@ -136,12 +140,25 @@ def plot_pes(data, lattice, to_fig=None, vmin=None, vmax=None):
 
     #ax.quiver(0. , 0., 1., 0.,scale=1.,scale_units='inches',width=0.01,color='white')
     #ax.quiver(0. , 0., 0., 1.,scale=1.,scale_units='inches',width=0.01,color='white')
-    ax.plot(0.,0.,'w.',ms=7)
+    # ax.plot(0.,0.,'w.',ms=7)
     #ax.text(0.5,-0.5,'[1 0 1]',rotation='horizontal',color='white', fontsize=14)
     #ax.text(-0.5,1.,'[1 2 1]',rotation='vertical',color='white', fontsize=14)
     #ax.axis([-fact*min(a), fact*max(a), -fact*min(b), fact*max(b)])
-    plt.xlabel(r"distance ($\AA$)",fontsize=12,family='serif')
-    plt.ylabel(r"distance ($\AA$)",fontsize=12,family='serif')
+    plt.xlabel("distance (Å)",fontsize=12,family='serif')
+    plt.ylabel("distance (Å)",fontsize=12,family='serif')
+
+    # plot the cell and the combined unique high symmetry points over the PES plot
+    if plot_hs:
+        a = a/2
+        b = b/2
+        import matplotlib.patches as patches
+        x = [0, a[0], a[0]+b[0], b[0]]
+        y = [0, 0, b[1], a[1]+b[1], b[1]]
+        ax.add_patch(patches.Polygon(xy=list(zip(x,y)), fill=False, lw=2))
+        
+        for hsp, shift in plot_hs.items():
+             pt = shift[0]
+             plt.scatter(pt[0], pt[1], edgecolors='black', s=60)
 
     for zt1 in zt1.collections:
        zt1.set_edgecolor("face")
