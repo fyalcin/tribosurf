@@ -368,7 +368,7 @@ class Shaper():
         return layers
 
     @staticmethod
-    def _remove_layers(slab, num_layers, method='target', position='bottom',
+    def _remove_layers(slab, num_layers, tol=0.1, method='target', position='bottom',
                        center=True):
         """
         Removes layers from the bottom of the slab while updating the number
@@ -380,14 +380,17 @@ class Shaper():
             Standard pymatgen Slab object.
         num_layers : int
             Number of layers to remove from the structure
-        method : str
+        tol : float, optional
+            Tolerance to use in the identification of the layers. 
+            The default is 0.1.
+        method : str, optional
             Whether to remove num_layers or remove layers until the
             structure has num_layers number of layers in total.
             Options are 'target' and 'layers'. The default is 'target'.
         position : string, optional
             Side on which the sites should be removed.
             Available options are 'top' and 'bottom'. The default is 'bottom'.
-        center : bool
+        center : bool, optional
             Whether to center the slab in the vacuum after removing layers.
             The default is 'True'.
 
@@ -397,7 +400,7 @@ class Shaper():
             Copy of the input Slab structure with layers removed.
 
         """
-        layers = Shaper._get_layers(slab)
+        layers = Shaper._get_layers(slab, tol)
         if num_layers > len(layers):
             raise ValueError('Number of layers to remove/target can\'t exceed \
                              the number of layers in the given slab.')
