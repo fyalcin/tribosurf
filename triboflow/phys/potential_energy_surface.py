@@ -27,10 +27,10 @@ __date__ = 'February 8th, 2021'
 
 import numpy as np
 from scipy.interpolate import Rbf
+from scipy.interpolate import RBFInterpolator
 
 from triboflow.utils.phys_tools import replicate_points, generate_uniform_grid,\
     orthorombize, pbc_coordinates
-
 
 # =============================================================================
 # EVALUATION OF THE PES - MAIN
@@ -105,12 +105,14 @@ def get_pes(hs_all, E, cell, to_fig=None, point_density=20):
     
     # Interpolate the data with Radial Basis Function
     data_rep = replicate_points(data, cell, replicate_of=(3, 3) )
-    rbf = Rbf(data_rep[:, 0], data_rep[:, 1], data_rep[:, 2], function='cubic')
-    
+    # rbf = Rbf(data_rep[:, 0], data_rep[:, 1], data_rep[:, 2], function='cubic')
+    rbf = RBFInterpolator(data_rep[:,:2], data_rep[:, 2], kernel='cubic')
+   
     # Calculate the PES on a very dense and uniform grid. Useful for further 
     # analysis (MEP, shear strength) and to plot the PES
     coordinates = generate_uniform_grid(cell*2, density=point_density)
-    E_new = rbf(coordinates[:, 0], coordinates[:, 1])
+    # E_new = rbf(coordinates[:, 0], coordinates[:, 1])
+    E_new = rbf(coordinates[:,:2])
     pes_data = np.column_stack([coordinates[:, :2], E_new])
     
     min_x = min(coordinates[:,0])
@@ -124,7 +126,15 @@ def get_pes(hs_all, E, cell, to_fig=None, point_density=20):
     grid_x = np.arange(min_x, max_x, dist_x)
     grid_y = np.arange(min_y, max_y, dist_y)
     X, Y = np.meshgrid(grid_x, grid_y)
-    Z = rbf(X, Y)
+    
+    # n1 = X.shape[1]
+    # ix = da.from_array(X, chunks=(1, n1))
+    # iy = da.from_array(Y, chunks=(1, n1))
+    # iz = da.map_blocks(rbf, ix, iy)
+    # Z = iz.compute(scheduler='processes')
+    xy = np.vstack([X.ravel(), Y.ravel()]).T
+    Z = rbf(xy)
+    Z = np.reshape(Z, X.shape, order='C')
     
     to_plot = [X, Y, Z]
     
