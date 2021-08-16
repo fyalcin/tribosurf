@@ -695,10 +695,17 @@ class InterfaceMatcher:
         u_top_latt = self.unstrained_top_lattice
         u_bot_latt = self.unstrained_bot_lattice
         inter_latt = self.interface.lattice
+        
+        top_strain_ab = [100*(inter_latt.abc[i]-u_top_latt.abc[i])/u_top_latt.abc[i]
+                               for i in range(2)]
+        bot_strain_ab = [100*(inter_latt.abc[i]-u_bot_latt.abc[i])/u_bot_latt.abc[i]
+                               for i in range(2)]
+        
+        top_strain_gamma = (inter_latt.gamma-u_top_latt.gamma)
+      
+        bot_strain_gamma = (inter_latt.gamma-u_bot_latt.gamma)
 
-        self.strain = {'top': [100*(inter_latt.abc[i]-u_top_latt.abc[i])/u_top_latt.abc[i]
-                               for i in range(2)],
-                       'bot': [100*(inter_latt.abc[i]-u_bot_latt.abc[i])/u_bot_latt.abc[i]
-                               for i in range(2)]}
+        self.strain = {'top': {'a': top_strain_ab[0], 'b': top_strain_ab[1], 'gamma': top_strain_gamma},
+                       'bot': {'a': bot_strain_ab[0], 'b': bot_strain_ab[1], 'gamma': bot_strain_gamma}}
 
         return self.strain
