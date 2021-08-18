@@ -31,7 +31,7 @@ __date__ = 'April 21st, 2021'
 
 from pymatgen.core.structure import Structure
 from pymatgen.core.lattice import Lattice
-from pymatgen.core.surface import center_slab, Slab, get_slab_regions
+from pymatgen.core.surface import center_slab, Slab
 from scipy.cluster.hierarchy import fcluster, linkage
 from scipy.spatial.distance import squareform
 from collections import defaultdict
@@ -148,34 +148,6 @@ class Shaper():
         else:
             raise ValueError('Region must be one of "cell", "vacuum", or "slab"')
         return proj_height
-
-    # @staticmethod
-    # def _identify_regions(struct):
-    #     """
-    #     Internal method to identify regions in a given structure.
-
-    #     Parameters
-    #     ----------
-    #     struct : pymatgen.core.structure.Structure
-    #         Main object in pymatgen to store structures.
-
-    #     Returns
-    #     -------
-    #     regions : dict
-    #         Simple dictionary with keys as regions 'slab' and 'vacuum' and values
-    #         as the respective region intervals in fractional coordinates.
-
-    #     """
-    #     struct_cp = struct.copy()
-    #     center_slab(struct_cp)
-    #     try:
-    #         slab_regs = get_slab_regions(struct_cp)
-    #         vac_regs = multirange_diff([[0, 1]], slab_regs)
-    #     except ValueError:
-    #         slab_regs = [[0, 1]]
-    #         vac_regs = [[0, 0]]
-    #     regions = {'slab': slab_regs, 'vacuum': vac_regs}
-    #     return regions
 
     @staticmethod
     def reconstruct(struct, struct_thickness, vacuum_thickness, center=True):
