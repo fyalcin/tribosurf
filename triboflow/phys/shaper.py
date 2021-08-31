@@ -353,12 +353,14 @@ class Shaper():
         num_layers : int
             Number of layers to remove from the structure
         tol : float, optional
-            Tolerance to use in the identification of the layers. 
+            Tolerance value to use in the clustering of sites in the identification
+            of the layers. Minimum c-distance between sites to form a cluster
+            in angstroms.
             The default is 0.1.
         method : str, optional
-            Whether to remove num_layers or remove layers until the
-            structure has num_layers number of layers in total.
-            Options are 'target' and 'layers'. The default is 'target'.
+            Whether to remove a set number of layers or remove layers until
+            there remains a set number of layers. Options are 'target' and
+            'layers'. The default is 'target'.
         position : string, optional
             Side on which the sites should be removed.
             Available options are 'top' and 'bottom'. The default is 'bottom'.
@@ -373,9 +375,20 @@ class Shaper():
 
         """
         layers = Shaper._get_layers(slab, tol)
-        if num_layers > len(layers):
-            raise ValueError('Number of layers to remove/target can\'t exceed \
-                             the number of layers in the given slab.')
+        
+
+        if num_layers > len(layers) or num_layers < int(method == 'target'):
+                raise ValueError('Number of layers to target/remove can not '
+                                 'exceed the number of layers in the structure '
+                                 'or be less than 1 for "target" and 0 for "layers"')
+        elif hasattr(slab, 'oriented_unit_cell'):
+            ouc_layers = Shaper._get_layers(slab.oriented_unit_cell, tol)
+            if (method == 'target' and num_layers < len(ouc_layers)) or \
+                (method == 'layers' and num_layers > len(layers)-len(ouc_layers)):
+                    print('WARNING: Resultant slab has fewer number of layers '
+                          'than the oriented unit cell the slab was generated from. '
+                          'Check your values to make sure this is what you want.')
+                                    
         c_coords = sorted(layers.keys())
         if method == "layers":
             to_remove = c_coords[:num_layers] if position == "bottom" \
@@ -387,6 +400,7 @@ class Shaper():
         flat_list = [item for sublist in indices_list for item in sublist]
         slab_copy = slab.copy()
         slab_copy.remove_sites(flat_list)
+        
         return center_slab(slab_copy) if center else slab_copy
 
     @staticmethod
