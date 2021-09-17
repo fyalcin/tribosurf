@@ -217,7 +217,7 @@ def get_interface_hs(hs_1, hs_2, cell, to_array=False, z_red=True):
     if typ_1 == list:
         hs_1 = hs_dict_converter(hs_1, to_array=True)
         
-    typ_2 = list( set(type(k) for k in hs_1.values()) )[0]
+    typ_2 = list( set(type(k) for k in hs_2.values()) )[0]
     if typ_2 == list:
         hs_2 = hs_dict_converter(hs_2, to_array=True)
         
@@ -231,9 +231,12 @@ def get_interface_hs(hs_1, hs_2, cell, to_array=False, z_red=True):
                 shifts_stack.append( v2 - el_d1 )
                 
             hs[k1+'-'+k2] = np.concatenate(shifts_stack, axis=0)
-    
+
     hs = pbc_hspoints(hs, cell, to_array=to_array, z_red=z_red)
-        
+
+    hs = {k: np.round(v, 10) for k,v in hs.items()}
+    hs = {k: np.unique(v, axis=0) for k,v in hs.items()}
+    
     return hs
 
 
