@@ -8,14 +8,16 @@
       "encut":520,
       "k_dens":12.5,
       "surfene_thr":0.01,
+      "vacuum":15,
       "is_metal":null
    },
    "interface_params":{
       "max_area":"NO_DEFAULT",
-      "interface_distance":2.0,
+      "interface_distance":"auto",
       "max_angle_diff":1.5,
       "max_mismatch":0.01,
-      "r1r2_tol":0.05
+      "r1r2_tol":0.02,
+      "best_match":"area"
    },
    "material_params":{
       "formula":"NO_DEFAULT",
@@ -23,8 +25,7 @@
       "mpid":null,
       "thick_min":4,
       "thick_max":10,
-      "thick_incr":1,
-      "vacuum":25
+      "thick_incr":1
    },
    "SlabOptThick":{
       "db_file":null,
@@ -35,7 +36,7 @@
       "thick_min":4,
       "thick_max":10,
       "thick_incr":1,
-      "vacuum":25,
+      "vacuum":15,
       "in_unit_planes":true,
       "ext_index":0,
       "conv_thr":0.01,
@@ -58,7 +59,7 @@
       "thick_min":4,
       "thick_max":12,
       "thick_incr":2,
-      "vacuum":10,
+      "vacuum":15,
       "in_unit_planes":true,
       "ext_index":0,
       "parallelization":null,
@@ -82,7 +83,7 @@
       "thick_min":4,
       "thick_max":12,
       "thick_incr":2,
-      "vacuum":10,
+      "vacuum":15,
       "in_unit_planes":true,
       "ext_index":0,
       "conv_thr":0.025,
@@ -98,7 +99,7 @@
       "database":null,
       "thickness":4,
       "thick_bulk":4,
-      "vacuum":10,
+      "vacuum":15,
       "symmetrize":false,
       "ext_index":0,
       "in_unit_planes":true,

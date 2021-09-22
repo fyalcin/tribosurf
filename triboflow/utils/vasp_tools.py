@@ -168,14 +168,14 @@ class MeshFromDensity:
             return False
         
 
-def get_emin(potcar):
+def get_emin_and_emax(potcar):
     """
-    Return the minimal recommended  energy cutoff for a given Potcar object.
+    Return ENMIN and ENMAX energy cutoff for a given Potcar object.
     
     Unfortunately I don not think that pymatgen Potcars can access the data
     for the recommended cutoffs directly, so I write out a file first and
-    then scan for the ENMAX lines. The largest EMIN value found is returned
-    in the end.
+    then scan for the ENMAX lines. The largest EMIN and ENMAX values found are
+    returned in the end.
 
     Parameters
     ----------
@@ -184,19 +184,21 @@ def get_emin(potcar):
 
     Returns
     -------
-    float
-        The largest EMIN value of all species present in the potcar.
+    dict
+        The largest EMIN and ENMAX value of all species present in the potcar.
 
     """
 
     potcar.write_file('temp_potcar')
     with open('temp_potcar', 'r') as pot:
         emin = []
+        emax = []
         for l in pot:
             if l.strip().startswith('ENMAX'):
                 emin.append(float(l.split()[-2]))
+                emax.append(float(l.split()[2][:-1]))
     os.remove('temp_potcar')
-    return max(emin)
+    return {'ENMIN': max(emin), 'ENMAX': max(emax)}
  
 def get_generalized_kmesh(structure, k_dist, RemoveSymm=False, Vasp6=True):
     """Get a generalized Monkhorst Pack mesh for a given structure.
@@ -299,7 +301,7 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
     uis['SIGMA'] = 0.05
     uis['ISMEAR'] = -5
     uis['EDIFF'] = 1.0e-6
-    #uis['SYMPREC'] = 1e-06
+    uis['SYMPREC'] = 1e-04 #compat some issues that VASP 6.2 has with kpoint lattices
     
     if static_type.startswith('bulk_'):
         uis['ALGO'] = 'Fast'
@@ -391,6 +393,11 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
         kpoints = KPTS.get_kpoints()
     uks = kpoints
     
+    if comp_parameters.get('functional') == 'LDA':
+        upf = 'LDA_54'
+    else:
+        upf = 'PBE_54'
+    
     if comp_parameters.get('functional') == 'SCAN':
         vis = MPScanStaticSet(structure, user_incar_settings = uis, vdw = vdw,
                               user_kpoints_settings = uks,
@@ -398,7 +405,7 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
     else:
         vis = MPStaticSet(structure, user_incar_settings = uis, vdw = vdw,
                           user_kpoints_settings = uks,
-                          user_potcar_functional = 'PBE_54')
+                          user_potcar_functional = upf)
         
     return vis
 
@@ -455,7 +462,7 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
     uis['NELMIN'] = 5
     uis['EDIFF'] = 0.5E-5
     uis['LAECHG'] = '.FALSE.'
-    #uis['SYMPREC'] = 1e-06
+    uis['SYMPREC'] = 1e-04 #compat some issues that VASP 6.2 has with kpoint lattices
     
     if structure.num_sites < 20:
         uis['LREAL'] = '.FALSE.'
@@ -563,7 +570,12 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
                                force_gamma=True)
         kpoints = KPTS.get_kpoints()
     uks = kpoints
-        
+    
+    if comp_parameters.get('functional') == 'LDA':
+        upf = 'LDA_54'
+    else:
+        upf = 'PBE_54'
+    
     if 'functional' in comp_parameters:
         if comp_parameters['functional'] == 'SCAN':
             #Algo All does not play well with tetrahedron method
@@ -584,6 +596,6 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
     else:
         vis = MPRelaxSet(structure, user_incar_settings = uis, vdw = vdw,
                         user_kpoints_settings = uks,
-                        user_potcar_functional = 'PBE_54')
+                        user_potcar_functional = upf)
 
     return vis

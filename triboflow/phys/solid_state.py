@@ -114,7 +114,10 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
 
         # Case of an oriented bulk
         if thk == 0:
-            s = s[ext_index].oriented_unit_cell
+            s = s[ext_index].oriented_unit_cell.get_primitive_structure(
+                constrain_latt={'a': s[ext_index].lattice.a,
+                                'b':s[ext_index].lattice.b,
+                                'gamma':s[ext_index].lattice.gamma})
 
         # Case of a slab
         else:

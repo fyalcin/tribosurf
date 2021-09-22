@@ -122,7 +122,8 @@ def clean_up_site_properties(structure):
                     new_magmom.append(m)
             struct.add_site_property('magmom', new_magmom)
         else:
-            struct.remove_site_property(key)
+            if any(struct.site_properties[key]) == None:
+                struct.remove_site_property(key)
     return struct
 
 def stack_aligned_slabs(bottom_slab, top_slab, top_shift=[0,0,0]):
