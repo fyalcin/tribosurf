@@ -29,6 +29,5 @@ for mpid in mpids:
 
 WF = dynamic_relax_swf(inputs_list=input_list, wf_name='test_relax_wf',
                        add_static=True)
-
 lpad = LaunchPad.auto_load()
 lpad.add_wf(WF)
