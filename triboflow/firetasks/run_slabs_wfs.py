@@ -160,8 +160,8 @@ class FT_SlabOptThick(FiretaskBase):
                                           self.get('functional'),
                                           miller)
         for key in self.optional_params:
-            if slab_data.get(key):
-                self[key] = slab_data.get(key)
+            if slab_data['slab_parameters'].get(key):
+                self[key] = slab_data['slab_parameters'].get(key)
                 
         if not self.get('conv_thr'):
             self['conv_thr'] = slab_data.get('comp_parameters').get('surfene_thr')
