@@ -55,7 +55,7 @@ def calculate_surface_energy(output_list, sym_surface=True):
     for d in output_list[1:]:
         energy = d['energy']
         nsites = d['nsites']
-        surfene = np.append(surfene, 1.60218e1*(energy - energy_per_atom * nsites)/area)
+        surfene = np.append(surfene, 16.02176565*(energy - energy_per_atom * nsites)/area)
 
     # Divide the surface energies by two if the surfaces are symmetric
     if sym_surface:
