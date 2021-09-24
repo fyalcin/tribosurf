@@ -51,7 +51,7 @@ from triboflow.utils.utils import (
 )
 from triboflow.utils.structure_manipulation import slab_from_structure
 from triboflow.utils.errors import SlabOptThickError
-
+from triboflow.phys.shaper import Shaper
 
 currentdir = os.path.dirname(__file__)
 
@@ -682,6 +682,9 @@ class FT_EndThickConvo(FiretaskBase):
         # as a Structure)
         output_slab = slab_from_structure(p['miller'], Structure.from_dict(out_struct_dict))
 
+        opt_thickness = {'layers': int(index),
+                         'A': Shaper._get_proj_height(output_slab, 'slab')}
+
         # Create an array containing the thickness vs surface energy info
         thick_array = []
         surfene_array = []
@@ -698,10 +701,10 @@ class FT_EndThickConvo(FiretaskBase):
         if high_dict is None:
             store = {'formula': output_slab.composition.reduced_formula,
                      'mpid': p['mp_id'], 'miller': p['miller'],
-                     'thickness': thickness_dict, 'opt_thickness': int(index),
+                     'thickness': thickness_dict, 'opt_thickness': opt_thickness,
                      'relaxed_slab': output_slab.as_dict()}
         else:
-            store = {'thickness': thickness_dict, 'opt_thickness': int(index),
+            store = {'thickness': thickness_dict, 'opt_thickness': opt_thickness,
                      'relaxed_slab': output_slab.as_dict()}
         store = jsanitize(store)
 
