@@ -139,6 +139,10 @@ class FT_SlabOptThick(FiretaskBase):
     override : bool, optional
         Decide if the dft simulation should be done in any case, despite the
         possible presence of previous results.
+        
+    add_static : bool, optional
+       Selects if a static calculation is done after the relaxation. This
+       is useful for accurate total energies.
 
     """
     
@@ -148,7 +152,8 @@ class FT_SlabOptThick(FiretaskBase):
     optional_params = ['db_file', 'low_level', 'high_level', 'conv_kind',
                        'relax_type', 'thick_min', 'thick_max', 'thick_incr',
                        'vacuum', 'in_unit_planes', 'ext_index', 'conv_thr',
-                       'parallelization', 'bulk_entry', 'cluster_params', 'override']
+                       'parallelization', 'bulk_entry', 'cluster_params', 'override',
+                       'add_static']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -448,7 +453,8 @@ class FT_StartThickConvo(FiretaskBase):
                                                parallelization=p['parallelization'],
                                                recursion=p['recursion'],
                                                cluster_params=p['cluster_params'],
-                                               override=p['override'])
+                                               override=p['override'],
+                                               add_static=p['add_static'])
             return wf
 
         else:
