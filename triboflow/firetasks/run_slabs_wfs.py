@@ -321,7 +321,8 @@ class FT_SlabOptThick(FiretaskBase):
                          vacuum=p['vacuum'], in_unit_planes=p['in_unit_planes'],
                          ext_index=p['ext_index'], conv_thr=p['conv_thr'],
                          parallelization=p['parallelization'],
-                         cluster_params=cluster_params, override=p['override'])
+                         cluster_params=cluster_params, override=p['override'],
+                         add_static=p['add_static']]
 
         return wf
 
@@ -412,7 +413,8 @@ class FT_StartThickConvo(FiretaskBase):
     optional_params = ['db_file', 'low_level', 'high_level', 'conv_kind', 
                        'relax_type', 'comp_params', 'thick_min', 'thick_max', 
                        'thick_incr', 'vacuum', 'in_unit_planes', 'ext_index',
-                       'parallelization', 'recursion', 'cluster_params', 'override']
+                       'parallelization', 'recursion', 'cluster_params', 'override',
+                       'add_static']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -472,7 +474,7 @@ class FT_EndThickConvo(FiretaskBase):
                        'conv_kind', 'relax_type', 'comp_params', 'thick_min', 
                        'thick_max', 'thick_incr', 'vacuum', 'in_unit_planes', 
                        'ext_index', 'conv_thr', 'parallelization', 'cluster_params',
-                       'recursion', 'override']
+                       'recursion', 'override', 'add_static']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -743,6 +745,7 @@ class FT_EndThickConvo(FiretaskBase):
                          ext_index=p['ext_index'], conv_thr=p['conv_thr'], 
                          parallelization=p['parallelization'], 
                          recursion=p['recursion']+1, override=p['override'],
-                         cluster_params=p['cluster_params'])
+                         cluster_params=p['cluster_params'],
+                         add_static=p['add_static'])
 
         return wf
