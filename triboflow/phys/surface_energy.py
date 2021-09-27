@@ -46,8 +46,8 @@ def calculate_surface_energy(output_list, sym_surface=True):
     # Take out the energy per atom of the bulk    
     energy_per_atom = output_list[0]['energy_per_atom']
     
-    # Extract the surface area of the bulk (same as the slabs)
-    bulk_latvecs = Structure.from_dict(output_list[0]['structure']).lattice.matrix
+    # Calculate the surface area of a slab
+    bulk_latvecs = Structure.from_dict(output_list[1]['structure']).lattice.matrix
     area = np.linalg.norm(np.cross(bulk_latvecs[0], bulk_latvecs[1]))
     
     # Loop over the slab elements of output_list and calculate surface energy
