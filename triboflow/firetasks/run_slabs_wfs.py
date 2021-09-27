@@ -683,7 +683,7 @@ class FT_EndThickConvo(FiretaskBase):
         output_slab = slab_from_structure(p['miller'], Structure.from_dict(out_struct_dict))
 
         opt_thickness = {'layers': int(index),
-                         'A': Shaper._get_proj_height(output_slab, 'slab')}
+                         'angstroms': Shaper._get_proj_height(output_slab, 'slab')}
 
         # Create an array containing the thickness vs surface energy info
         thick_array = []
@@ -696,16 +696,21 @@ class FT_EndThickConvo(FiretaskBase):
 
         array = np.column_stack((thick_array, surfene_array))
         thickness_dict['thick_surfene_array'] = array[np.argsort(array[:, 0])]
+        opt_surfen = thickness_dict[f'data_{index}']['output']['surface_energy']
+        opt_surfen_dict = {'eV/A^2': opt_surfen*6.241509e-2,
+                           'J/m^2': opt_surfen}
 
         # Prepare the dictionary for the update
         if high_dict is None:
             store = {'formula': output_slab.composition.reduced_formula,
                      'mpid': p['mp_id'], 'miller': p['miller'],
                      'thickness': thickness_dict, 'opt_thickness': opt_thickness,
-                     'relaxed_slab': output_slab.as_dict()}
+                     'relaxed_slab': output_slab.as_dict(),
+                     'surface_energy': opt_surfen_dict}
         else:
             store = {'thickness': thickness_dict, 'opt_thickness': opt_thickness,
-                     'relaxed_slab': output_slab.as_dict()}
+                     'relaxed_slab': output_slab.as_dict(),
+                     'surface_energy': opt_surfen_dict}
         store = jsanitize(store)
 
         # Update data
