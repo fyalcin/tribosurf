@@ -322,7 +322,7 @@ class FT_SlabOptThick(FiretaskBase):
                          ext_index=p['ext_index'], conv_thr=p['conv_thr'],
                          parallelization=p['parallelization'],
                          cluster_params=cluster_params, override=p['override'],
-                         add_static=p['add_static']]
+                         add_static=p['add_static'])
 
         return wf
 
