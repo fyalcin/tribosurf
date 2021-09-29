@@ -12,7 +12,7 @@ The project is a collaboration between [Michael Wolloch](https://www.researchgat
 	  4. [Configuring FireWorks](#configurefw)
 	  5. [Configuring pymatgen](#configurepymatgen)
  2. [Testing your installation of FireWorks](#testing)
- 3. ["Fixing" some issues in atomate](#customatomate) 
+ 3. [A note about atomate](#customatomate) 
  4. [Using TriboFlow](#using)
 	 1. [Running a workflow](#runningawf)
 	 2. [Looking at the results](#results)
