@@ -24,13 +24,49 @@ from triboflow.utils.file_manipulation import copy_output_files
 
 @explicit_serialize
 class FT_StartConvo(FiretaskBase):
+    """ Starts a convergence subworkflow.
+
+    Starts either an energy cutoff or kpoint density convergence of a material
+    with a given MPID and functional through a subworkflow.
+
+    Parameters
+    ----------
+    conv_type : str
+        Either "kpoints" or "encut", depending on what to converge.
+    mp_id : str
+        MaterialsProject ID number for the material
+    functional : str
+        Functional with which the workflow is run. PBE or SCAN.
+    db_file : str, optional
+        Full path of the db.json file to be used. The default is to use
+        env_chk to find the file.
+    encut_start : float, optional
+        Starting encut value for the first run. Defaults to the largest EMIN
+        in the POTCAR.
+    encut_incr : float, optional
+        Increment for the encut during the convergence. Defaults to 25.
+    k_dens_start : float, optional
+        Starting kpoint density in 1/Angstrom. Defaults to 1.0
+    k_dens_incr : float, optional
+        Increment for the kpoint convergence. Can be set quite small since
+        there is a check in place to see if a new mesh is actually constructed
+        for each density. Defaults to 0.1.
+    n_converge : int, optional
+        Number of calculations that have to be inside the convergence
+        threshold for convergence to be reached. Defaults to 3.
+    high_level_db : str or True, optional
+        Name of the high_level database to use. Defaults to 'True', in which
+        case it is read from the db.json file.
+    """
+
     _fw_name = 'Start Encut or Kdensity Convergence'
     required_params = ['conv_type', 'mp_id', 'functional']
     optional_params = ['db_file', 'encut_start', 'encut_incr', 'k_dens_start',
                        'k_dens_incr', 'n_converge', 'high_level_db']
+
     def run_task(self, fw_spec):
         from triboflow.workflows.subworkflows import converge_swf
-        
+
         conv_type = self.get('conv_type')
         mp_id = self.get('mp_id')
         functional = self.get('functional')

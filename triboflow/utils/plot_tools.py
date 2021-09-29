@@ -112,7 +112,28 @@ def plot_slab_hs(hs, slab, to_fig=None):
 
 def plot_pes(data, lattice, to_fig=None, vmin=None, vmax=None, plot_hs=None):
     """
-    Plot the PES and eventually save it
+    Plots the PES and saves it to a file.
+
+    Parameters
+    ----------
+    data : list
+        3D array containing lateral positions and corresponding
+        adhesion energies required for the PES.
+    lattice : list
+        Deprecated.
+    to_fig : any, optional
+        Whether to save the result to a PNG file.
+        The default is None.
+    vmin : float, optional
+        Optional lower bound for the contour lines.
+        The default is None.
+    vmax : float, optional
+        Optional upper bound for the contour lines.
+        The default is None.
+
+    Returns
+    -------
+    None.
 
     """
 
@@ -208,22 +229,4 @@ def plot_uniform_grid(grid, cell, n_a, n_b):
     z = [0, a[2], a[2]+b[2], b[2],0]
     
     ax.plot(x, y, z)
-    plt.show()
-    
-def surfen_graph(surfen_list, conv_thr=0.01, plot_title=None):
-    import numpy as np
-    from matplotlib import pyplot as plt
-    data = np.asarray(surfen_list)
-    d=data.copy()
-    d[:,1] = (d[:,1] / d[-1,1] - 1) * 100
-    plt.plot(d[:,0],d[:,1],'ro:')
-    plt.ylabel('surface energy difference [%]')
-    plt.xlabel('Number of slab layers')
-    plt.hlines([-100*conv_thr, 100*conv_thr],
-               min(d[:,0]),
-               max(d[:,0]),
-               linestyles='dashed',
-               colors='k')
-    if plot_title:
-        plt.title(plot_title)
     plt.show()

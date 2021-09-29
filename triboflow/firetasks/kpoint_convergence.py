@@ -24,6 +24,35 @@ from triboflow.utils.file_manipulation import copy_output_files
 
 @explicit_serialize
 class FT_StartKPointConvo(FiretaskBase):
+    """ Starts a kpoint density convergence subworkflow.
+
+    THIS IS A DEPRECIATED FIRETASK THAT HAS BEEN REPLACED BY:
+        FT_StartConvo in triboflow.firetasks.convergence
+    Its function is to perform a kpoint density convergence of a given
+    material identified by its MPID with the given functional.
+
+    Parameters
+    ----------
+    mp_id : str
+        MaterialsProject ID number for the material
+    functional : str
+        Functional with which the workflow is run. PBE or SCAN.
+    db_file : str, optional
+        Full path of the db.json file to be used. The default is to use
+        env_chk to find the file.
+    k_dens_start : float, optional
+        Starting kpoint density in 1/Angstrom. Defaults to 1.0
+    k_dens_incr : float, optional
+        Increment for the kpoint convergence. Can be set quite small since
+        there is a check in place to see if a new mesh is actually constructed
+        for each density. Defaults to 0.1.
+    n_converge : int, optional
+        Number of calculations that have to be inside the convergence
+        threshold for convergence to be reached. Defaults to 3.
+    high_level_db : str or True, optional
+        Name of the high_level database to use. Defaults to 'True', in which
+        case it is read from the db.json file.
+    """
 
     _fw_name = 'Start Encut Convergence'
     required_params = ['mp_id', 'functional']
