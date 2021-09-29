@@ -23,17 +23,21 @@ from pymatgen.core.surface import Slab
 from fireworks import LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
 
-from triboflow.utils.database import Navigator, NavigatorMP
+from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
 from triboflow.workflows.surfene_wfs import SurfEneWF
 
 
 # Get the bulk from the online Database: Materials Project
-formula = 'Mg'
-mid = 'mp-110'
-nav_mp = NavigatorMP()
-structure, mid = nav_mp.get_low_energy_structure(
-   chem_formula=formula, 
-   mp_id=mid)
+nav = StructureNavigator('auto', True)
+mpid = 'mp-134'
+mat_dict = nav.get_bulk_from_db(functional='PBE', mp_id=mpid)
+structure = Structure.from_dict(mat_dict['primitive_structure'])
+# formula = 'Mg'
+# mid = 'mp-110'
+# nav_mp = NavigatorMP()
+# structure, mid = nav_mp.get_low_energy_structure(
+#    chem_formula=formula, 
+#    mp_id=mid)
 
 # Get the bulk from a local simple Poscar
 # structure = Structure.from_file('POSCAR')
@@ -42,12 +46,14 @@ structure, mid = nav_mp.get_low_energy_structure(
 # Surface generation tests
 wf = SurfEneWF.conv_surface_energy(
     structure=structure,
-    mp_id=mid,
+    mp_id=mpid,
     miller=[0, 0, 1],
     thick_min=2,
     thick_max=8,
     thick_incr=2,
-    parallelization=None)
+    parallelization=None,
+    add_static=True,
+    db_file='auto', low_level='FireWorks', high_level=True)
 
 # Launch the calculation
 lpad = LaunchPad.auto_load()
