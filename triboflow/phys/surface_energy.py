@@ -19,6 +19,7 @@ __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 22nd, 2021'
 
 import numpy as np
+from pymatgen.core.structure import Structure
 
 def calculate_surface_energy(output_list, sym_surface=True):
     """
@@ -44,13 +45,17 @@ def calculate_surface_energy(output_list, sym_surface=True):
 
     # Take out the energy per atom of the bulk    
     energy_per_atom = output_list[0]['energy_per_atom']
-
+    
+    # Calculate the surface area of a slab
+    bulk_latvecs = Structure.from_dict(output_list[1]['structure']).lattice.matrix
+    area = np.linalg.norm(np.cross(bulk_latvecs[0], bulk_latvecs[1]))
+    
     # Loop over the slab elements of output_list and calculate surface energy
     surfene = np.array([])
     for d in output_list[1:]:
         energy = d['energy']
         nsites = d['nsites']
-        surfene = np.append(surfene, energy - energy_per_atom * nsites)
+        surfene = np.append(surfene, 16.02176565*(energy - energy_per_atom * nsites)/area)
 
     # Divide the surface energies by two if the surfaces are symmetric
     if sym_surface:

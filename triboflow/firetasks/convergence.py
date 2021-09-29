@@ -17,7 +17,7 @@ from atomate.vasp.workflows.base.bulk_modulus import get_wf_bulk_modulus
 
 from triboflow.utils.database import Navigator, StructureNavigator, NavigatorMP
 from triboflow.utils.vasp_tools import (
-    get_custom_vasp_static_settings, get_emin, MeshFromDensity)
+    get_custom_vasp_static_settings, get_emin_and_emax, MeshFromDensity)
 from triboflow.utils.check_convergence import is_list_converged
 from triboflow.utils.file_manipulation import copy_output_files
 
@@ -300,8 +300,9 @@ class FT_Convo(FiretaskBase):
                                                   'bulk_from_scratch')
                     # Get the largest EMIN value of the potcar and round up to the
                     # next whole 25.
-                    emin = get_emin(vis.potcar)
-                    encut_start = int(25 * np.ceil(emin/25))
+                    encut_dict = get_emin_and_emax(vis.potcar)
+                    enmax = encut_dict['ENMAX']
+                    encut_start = int(25 * np.ceil(enmax/25))
                 comp_params['encut'] = encut_start
                 convo_list = [encut_start]
                 # Pass kspacing to ensure correct meshes for all deformations

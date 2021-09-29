@@ -127,12 +127,16 @@ class FT_RelaxStructure(FiretaskBase):
         corresponding to entry is extracted, if data['check_key'] does 
         exist then the DFT simulation is not done. If it is None, the simulation
         will be always started. The default is None.
+        
+    add_static : bool, optional
+       Selects if a static calculation is done after the relaxation. This
+       is useful for accurate total energies.
 
     """
 
     required_params = ['mp_id', 'functional', 'collection', 'entry', 'tag']
     optional_params = ['db_file', 'database', 'relax_type', 'comp_params', 
-                       'miller', 'struct_kind', 'check_key']
+                       'miller', 'struct_kind', 'check_key', 'add_static']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -234,9 +238,10 @@ class FT_RelaxStructure(FiretaskBase):
 
         # Check tag and computational parameters
         tag = p['tag']
-        comp_params = p['comp_params']
-        if not bool(comp_params):
+        comp_params = p.get('comp_params')
+        if not comp_params:
             comp_params = read_default_params(dfl, 'comp_params', comp_params)
+        add_static = p.get('add_static', False)
         
         # Set options for vasp
         vis = get_custom_vasp_relax_settings(structure, comp_params, p['relax_type'])
@@ -244,7 +249,9 @@ class FT_RelaxStructure(FiretaskBase):
         # Define the workflow name
         wf_name = p['mp_id'] + '_' + p['relax_type']
         
-        wf = dynamic_relax_swf([[structure, vis, tag]], wf_name=wf_name)
+        wf = dynamic_relax_swf(inputs_list=[[structure, vis, tag]],
+                               wf_name=wf_name,
+                               add_static=add_static)
 
 
         return wf

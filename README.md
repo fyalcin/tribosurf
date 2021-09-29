@@ -12,7 +12,7 @@ The project is a collaboration between [Michael Wolloch](https://www.researchgat
 	  4. [Configuring FireWorks](#configurefw)
 	  5. [Configuring pymatgen](#configurepymatgen)
  2. [Testing your installation of FireWorks](#testing)
- 3. ["Fixing" some issues in atomate](#fixingatomate) 
+ 3. ["Fixing" some issues in atomate](#customatomate) 
  4. [Using TriboFlow](#using)
 	 1. [Running a workflow](#runningawf)
 	 2. [Looking at the results](#results)
@@ -211,13 +211,8 @@ pps
 
 [Back to top](#toc)
 
-## "Fixing" some issues in atomate<a name="fixingatomate"></a>
-Atomate supplies a buch of Fireworks and workflows that are used in TriboFlow. However, there are some bugs or maybe incomplete features, as it is quite commong for scientific software. We recommend to check the [corresponding issue on the Triboflow github](https://gitlab.com/triboteam/TriboFlow/-/issues/14) for current "fixes" to atomate. At the time of writing, the only thing to change is to slightly change the `OptimizeFW`, `StaticFW`, and `TransmuterFW` Fireworks in `atomate.vasp.fireworks.core` to automatically copy the vdw_kernel.bindat of VASP to the execution directory if the vdw parameter in the [vasp input set](https://pymatgen.org/pymatgen.io.vasp.sets.html) passed to the Firework is not `None`. For that you have to add `vdw_kernel_dir=VDW_KERNEL_DIR,` in `def __init__` before `**kwargs` and copy the following lines before `t.append(RunVaspCustodian(...`, in the same manner that it is already done for `ScanOptimizeFW`:
-```
-# Copy the pre-compiled VdW kernel for VASP, if required
-if vasp_input_set.vdw is not None:
-    t.append(CopyFiles(from_dir=vdw_kernel_dir))
-```
+## A note about atomate<a name="customatomate"></a>
+Atomate supplies a buch of Fireworks and workflows that are used in TriboFlow. However, we have added a little more custom functionality to it. Mainly enabling the copy of the `vdw_kernel.bindat` file for `OptimizeFW`, `StaticFW` and `TransmuterFW` completely analogous to the way it was implemented in `ScanOptimizeFW` already. Another small modification concerns the copying of `WAVECAR` files from a relaxation to a `StaticFW`, which was not possible. TriboFlow automatically installs atomate from a forked repo, so those changes are implemented automatically during installation. Of course this is not an ideal solution, and we strive to have something similar implemented in the official atomate version, but so far we were not successful.
 
 [Back to top](#toc)
 

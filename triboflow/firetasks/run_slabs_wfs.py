@@ -51,7 +51,7 @@ from triboflow.utils.utils import (
 )
 from triboflow.utils.structure_manipulation import slab_from_structure
 from triboflow.utils.errors import SlabOptThickError
-
+from triboflow.phys.shaper import Shaper
 
 currentdir = os.path.dirname(__file__)
 
@@ -139,6 +139,10 @@ class FT_SlabOptThick(FiretaskBase):
     override : bool, optional
         Decide if the dft simulation should be done in any case, despite the
         possible presence of previous results.
+        
+    add_static : bool, optional
+       Selects if a static calculation is done after the relaxation. This
+       is useful for accurate total energies.
 
     """
     
@@ -148,7 +152,8 @@ class FT_SlabOptThick(FiretaskBase):
     optional_params = ['db_file', 'low_level', 'high_level', 'conv_kind',
                        'relax_type', 'thick_min', 'thick_max', 'thick_incr',
                        'vacuum', 'in_unit_planes', 'ext_index', 'conv_thr',
-                       'parallelization', 'bulk_entry', 'cluster_params', 'override']
+                       'parallelization', 'bulk_entry', 'cluster_params', 'override',
+                       'add_static']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -160,8 +165,8 @@ class FT_SlabOptThick(FiretaskBase):
                                           self.get('functional'),
                                           miller)
         for key in self.optional_params:
-            if slab_data.get(key):
-                self[key] = slab_data.get(key)
+            if slab_data['slab_parameters'].get(key):
+                self[key] = slab_data['slab_parameters'].get(key)
                 
         if not self.get('conv_thr'):
             self['conv_thr'] = slab_data.get('comp_parameters').get('surfene_thr')
@@ -316,7 +321,8 @@ class FT_SlabOptThick(FiretaskBase):
                          vacuum=p['vacuum'], in_unit_planes=p['in_unit_planes'],
                          ext_index=p['ext_index'], conv_thr=p['conv_thr'],
                          parallelization=p['parallelization'],
-                         cluster_params=cluster_params, override=p['override'])
+                         cluster_params=cluster_params, override=p['override'],
+                         add_static=p['add_static'])
 
         return wf
 
@@ -407,7 +413,8 @@ class FT_StartThickConvo(FiretaskBase):
     optional_params = ['db_file', 'low_level', 'high_level', 'conv_kind', 
                        'relax_type', 'comp_params', 'thick_min', 'thick_max', 
                        'thick_incr', 'vacuum', 'in_unit_planes', 'ext_index',
-                       'parallelization', 'recursion', 'cluster_params', 'override']
+                       'parallelization', 'recursion', 'cluster_params', 'override',
+                       'add_static']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -448,7 +455,8 @@ class FT_StartThickConvo(FiretaskBase):
                                                parallelization=p['parallelization'],
                                                recursion=p['recursion'],
                                                cluster_params=p['cluster_params'],
-                                               override=p['override'])
+                                               override=p['override'],
+                                               add_static=p['add_static'])
             return wf
 
         else:
@@ -466,7 +474,7 @@ class FT_EndThickConvo(FiretaskBase):
                        'conv_kind', 'relax_type', 'comp_params', 'thick_min', 
                        'thick_max', 'thick_incr', 'vacuum', 'in_unit_planes', 
                        'ext_index', 'conv_thr', 'parallelization', 'cluster_params',
-                       'recursion', 'override']
+                       'recursion', 'override', 'add_static']
 
     def run_task(self, fw_spec):
         """ Run the Firetask.
@@ -682,6 +690,9 @@ class FT_EndThickConvo(FiretaskBase):
         # as a Structure)
         output_slab = slab_from_structure(p['miller'], Structure.from_dict(out_struct_dict))
 
+        opt_thickness = {'layers': int(index),
+                         'angstroms': Shaper._get_proj_height(output_slab, 'slab')}
+
         # Create an array containing the thickness vs surface energy info
         thick_array = []
         surfene_array = []
@@ -693,16 +704,21 @@ class FT_EndThickConvo(FiretaskBase):
 
         array = np.column_stack((thick_array, surfene_array))
         thickness_dict['thick_surfene_array'] = array[np.argsort(array[:, 0])]
+        opt_surfen = thickness_dict[f'data_{index}']['output']['surface_energy']
+        opt_surfen_dict = {'eV/A^2': opt_surfen*6.241509e-2,
+                           'J/m^2': opt_surfen}
 
         # Prepare the dictionary for the update
         if high_dict is None:
             store = {'formula': output_slab.composition.reduced_formula,
                      'mpid': p['mp_id'], 'miller': p['miller'],
-                     'thickness': thickness_dict, 'opt_thickness': int(index),
-                     'relaxed_slab': output_slab.as_dict()}
+                     'thickness': thickness_dict, 'opt_thickness': opt_thickness,
+                     'relaxed_slab': output_slab.as_dict(),
+                     'surface_energy': opt_surfen_dict}
         else:
-            store = {'thickness': thickness_dict, 'opt_thickness': int(index),
-                     'relaxed_slab': output_slab.as_dict()}
+            store = {'thickness': thickness_dict, 'opt_thickness': opt_thickness,
+                     'relaxed_slab': output_slab.as_dict(),
+                     'surface_energy': opt_surfen_dict}
         store = jsanitize(store)
 
         # Update data
@@ -737,6 +753,7 @@ class FT_EndThickConvo(FiretaskBase):
                          ext_index=p['ext_index'], conv_thr=p['conv_thr'], 
                          parallelization=p['parallelization'], 
                          recursion=p['recursion']+1, override=p['override'],
-                         cluster_params=p['cluster_params'])
+                         cluster_params=p['cluster_params'],
+                         add_static=p['add_static'])
 
         return wf

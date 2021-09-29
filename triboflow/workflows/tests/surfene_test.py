@@ -20,29 +20,40 @@ from pathlib import Path, PurePosixPath
 
 from fireworks import LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
-
-from triboflow.utils.database import NavigatorMP
-from triboflow.workflows.surfene_wfs import SurfEneWF
+from pymatgen.core.structure import Structure
+from triboflow.utils.database import NavigatorMP, StructureNavigator
+from triboflow.workflows.slabs_wfs import SlabWF
 
 # Get the bulk
-formula = 'Cu'
-mid = 'mp-30'
-nav_mp = NavigatorMP()
+# formula = 'Cu'
+# mid = 'mp-30'
+# nav_mp = NavigatorMP()
+formula = 'Al'
+mid = 'mp-134'
+nav = StructureNavigator('auto', 'triboflow')
+bulk_dict = nav.get_bulk_from_db(mid, "PBE")
+structure = Structure.from_dict(bulk_dict['structure_equiVol'])
+comp_params = bulk_dict['comp_parameters']
 
-structure, mid = nav_mp.get_low_energy_structure(
-    chem_formula=formula, 
-    mp_id=mid)
+
+# structure, mid = nav_mp.get_low_energy_structure(
+#     chem_formula=formula, 
+#     mp_id=mid)
 
 # Surface generation tests
-wf = SurfEneWF.conv_surface_energy(
-    structure=structure, 
-    mp_id=mid, 
-    miller=[1, 0, 0],
-    thick_min=1, 
-    thick_max=1,
-    thick_incr=1)
+wf = SlabWF.conv_slabthick_surfene(
+    structure=structure,
+    mp_id=mid,
+    comp_params=comp_params,
+    miller=[1, 1, 1],
+    thick_min=3,
+    thick_max=18,
+    thick_incr=1,
+    parallelization='low',
+    vacuum=25,
+    conv_thr=0.01)
 
 # Launch the calculation
 lpad = LaunchPad.auto_load()
 lpad.add_wf(wf)
-rapidfire(lpad)
+#rapidfire(lpad)

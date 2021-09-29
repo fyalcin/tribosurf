@@ -5,6 +5,7 @@ Created on Wed Jun 17 15:59:59 2020
 """
 import monty
 import numpy as np
+from uuid import uuid4
 from pprint import pprint, pformat
 
 from pymatgen.core.structure import Structure
@@ -15,7 +16,6 @@ from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from fireworks import FWAction, FiretaskBase, Firework, Workflow, FileWriteTask
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
-from mpinterfaces.transformations import get_aligned_lattices
 
 from triboflow.workflows.base import dynamic_relax_swf
 from triboflow.utils.database import Navigator, StructureNavigator
@@ -24,7 +24,9 @@ from triboflow.utils.structure_manipulation import (
     interface_name, slab_from_structure, recenter_aligned_slabs, 
     stack_aligned_slabs, transfer_average_magmoms, clean_up_site_properties)
 from triboflow.utils.file_manipulation import copy_output_files
-from uuid import uuid4
+from triboflow.phys.interface_matcher import InterfaceMatcher
+
+
 
 
 @explicit_serialize
@@ -685,6 +687,11 @@ class FT_MakeHeteroStructure(FiretaskBase):
             slab_1 = Slab.from_dict(slab_1_dict['relaxed_slab'])
             slab_2 = Slab.from_dict(slab_2_dict['relaxed_slab'])
             
+            bulk_dat_1 = nav_structure.get_bulk_from_db(mp_id_1, functional)
+            bulk_dat_2 = nav_structure.get_bulk_from_db(mp_id_2, functional)
+            
+            bm_1 = bulk_dat_1['bulk_moduls']
+            bm_2 = bulk_dat_2['bulk_moduls']
 # =============================================================================
 # Running into crashes for max_angle_diff > ~1.5 for MPInterfaces 2020.6.19,
 # at least for certain interfaces. A match is found, but than there is a 
@@ -696,34 +703,25 @@ class FT_MakeHeteroStructure(FiretaskBase):
 # Pt111 matching the error appears for max_angle_diff > ~0.4!
 # Please see issue #25 on gitlab.
 # =============================================================================
-            if inter_params['max_angle_diff'] > 0.4:
-                inter_params['max_angle_diff'] = 0.4
+# =============================================================================
+# The new interface matching class seems to have resolved the above issue
+# completely. See issue #38 and now closed issue #25 on gitlab.
+# =============================================================================
         
-            bottom_aligned, top_aligned = get_aligned_lattices(
-                slab_1,
-                slab_2,
-                max_area=inter_params['max_area'],
-                max_mismatch=inter_params['max_mismatch'],
-                max_angle_diff=inter_params['max_angle_diff'],
-                r1r2_tol=inter_params['r1r2_tol'])
+            MI = InterfaceMatcher(slab_1=slab_1,
+                                slab_2=slab_2,
+                                strain_weight_1=bm_1,
+                                strain_weight_2=bm_2,
+                                **inter_params)
+            top_aligned, bottom_aligned = MI.get_centered_slabs()
         
-            if bottom_aligned:
+            if top_aligned and bottom_aligned:
                 
-                bottom_aligned = slab_from_structure(miller_1, bottom_aligned)
-                top_aligned = slab_from_structure(miller_2, top_aligned)
-                
-                # Center the top and bottom slabs around 0 and combine them
-                # again to an interface:
-                top_align, bot_align = recenter_aligned_slabs(
-                    top_aligned,
-                    bottom_aligned,
-                    d=inter_params['interface_distance'])
-                interface = stack_aligned_slabs(bot_align, top_align)
-                interface = clean_up_site_properties(interface)
+                interface = MI.get_interface()
                 
                 inter_dict = interface.as_dict()
-                bottom_dict = bot_align.as_dict()
-                top_dict = top_align.as_dict()
+                bottom_dict = bottom_aligned.as_dict()
+                top_dict = top_aligned.as_dict()
 
                 nav_high.update_data(
                     collection=functional+'.interface_data',
@@ -741,7 +739,8 @@ class FT_MakeHeteroStructure(FiretaskBase):
                     'max_mismatch': inter_params['max_mismatch'] * f,
                     'max_angle_diff': inter_params['max_angle_diff'] * f,
                     'r1r2_tol': inter_params['r1r2_tol'] * f,
-                    'interface_distance': inter_params['interface_distance']}
+                    'interface_distance': inter_params['interface_distance'],
+                    'vacuum': inter_params['vacuum']}
             
                 if not inter_data.get('original_interface_params'):
 

@@ -52,7 +52,7 @@ class SurfEneWF:
                             relax_type='slab_pos_relax', comp_params={}, thick_min=4, 
                             thick_max=12, thick_incr=2, vacuum=10, in_unit_planes=True, 
                             ext_index=0, cluster_params={}, parallelization=None,
-                            recursion=0, override=False):
+                            recursion=0, override=False, add_static=True):
         """
         Description of the method...
 
@@ -140,7 +140,8 @@ class SurfEneWF:
                                      comp_params=comp_params,
                                      miller=miller,
                                      struct_kind=struct_kind,
-                                     check_key=chkrel)
+                                     check_key=chkrel,
+                                     add_static=add_static)
 
             ft_2 = FT_MoveTagResults(mp_id=mp_id,
                                      collection_from='tasks',

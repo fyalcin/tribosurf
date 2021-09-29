@@ -62,7 +62,8 @@ class SlabWF:
                                thick_max=12, thick_incr=2, vacuum=10,
                                in_unit_planes=True, ext_index=0, conv_thr=0.025,
                                parallelization='low', recursion=0,
-                               cluster_params={}, override=False):
+                               cluster_params={}, override=False,
+                               add_static=True):
         """ 
         Function to set the computational and physical parameters and start a 
         workflow to converge the thickness of the provided slabs.
@@ -103,7 +104,8 @@ class SlabWF:
                                                   parallelization=parallelization,
                                                   recursion=recursion,
                                                   cluster_params=cluster_params,
-                                                  override=override)
+                                                  override=override,
+                                                  add_static=add_static)
 
         ft_end_thick_convo = FT_EndThickConvo(structure=structure,
                                               mp_id=mp_id, 
@@ -125,7 +127,8 @@ class SlabWF:
                                               parallelization=parallelization, 
                                               recursion=recursion,
                                               cluster_params=cluster_params,
-                                              override=override)
+                                              override=override,
+                                              add_static=add_static)
 
         # Set it to a firework and a workflow
         # TODO: Understand if it is possible to have a structure of this kind
