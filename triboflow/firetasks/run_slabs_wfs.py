@@ -51,7 +51,7 @@ from triboflow.utils.utils import (
 )
 from triboflow.utils.structure_manipulation import slab_from_structure
 from triboflow.utils.errors import SlabOptThickError
-
+from triboflow.phys.shaper import Shaper
 
 currentdir = os.path.dirname(__file__)
 
@@ -165,8 +165,8 @@ class FT_SlabOptThick(FiretaskBase):
                                           self.get('functional'),
                                           miller)
         for key in self.optional_params:
-            if slab_data.get(key):
-                self[key] = slab_data.get(key)
+            if slab_data['slab_parameters'].get(key):
+                self[key] = slab_data['slab_parameters'].get(key)
                 
         if not self.get('conv_thr'):
             self['conv_thr'] = slab_data.get('comp_parameters').get('surfene_thr')
@@ -690,6 +690,9 @@ class FT_EndThickConvo(FiretaskBase):
         # as a Structure)
         output_slab = slab_from_structure(p['miller'], Structure.from_dict(out_struct_dict))
 
+        opt_thickness = {'layers': int(index),
+                         'angstroms': Shaper._get_proj_height(output_slab, 'slab')}
+
         # Create an array containing the thickness vs surface energy info
         thick_array = []
         surfene_array = []
@@ -701,16 +704,21 @@ class FT_EndThickConvo(FiretaskBase):
 
         array = np.column_stack((thick_array, surfene_array))
         thickness_dict['thick_surfene_array'] = array[np.argsort(array[:, 0])]
+        opt_surfen = thickness_dict[f'data_{index}']['output']['surface_energy']
+        opt_surfen_dict = {'eV/A^2': opt_surfen*6.241509e-2,
+                           'J/m^2': opt_surfen}
 
         # Prepare the dictionary for the update
         if high_dict is None:
             store = {'formula': output_slab.composition.reduced_formula,
                      'mpid': p['mp_id'], 'miller': p['miller'],
-                     'thickness': thickness_dict, 'opt_thickness': int(index),
-                     'relaxed_slab': output_slab.as_dict()}
+                     'thickness': thickness_dict, 'opt_thickness': opt_thickness,
+                     'relaxed_slab': output_slab.as_dict(),
+                     'surface_energy': opt_surfen_dict}
         else:
-            store = {'thickness': thickness_dict, 'opt_thickness': int(index),
-                     'relaxed_slab': output_slab.as_dict()}
+            store = {'thickness': thickness_dict, 'opt_thickness': opt_thickness,
+                     'relaxed_slab': output_slab.as_dict(),
+                     'surface_energy': opt_surfen_dict}
         store = jsanitize(store)
 
         # Update data

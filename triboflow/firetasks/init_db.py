@@ -201,10 +201,10 @@ def put_slab_in_db(data, comp_params, db_file):
                         {'mpid': mp_id,
                          'formula': data['formula'],
                          'miller': data['miller'],
-                         'thick_min': data['thick_min'],
-                         'thick_max': data['thick_max'],
-                         'thick_incr': data['thick_incr'],
-                         'vacuum': comp_params['vacuum'],
+                         'slab_parameters': {'thick_min': data['thick_min'],
+                                             'thick_max': data['thick_max'],
+                                             'thick_incr': data['thick_incr'],
+                                             'vacuum': comp_params['vacuum']},
                          'comp_parameters': comp_params})
     else:
         print('Entry for mpid:{} and miller:{} already found in {} collection. '

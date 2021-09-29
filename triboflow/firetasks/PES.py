@@ -7,6 +7,7 @@ Created on Tue Oct 13 14:52:57 2020
 """
 from operator import itemgetter
 from monty.json import jsanitize
+import numpy as np
 
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import Slab
@@ -18,6 +19,7 @@ from triboflow.phys.interface_matcher import flip_slab
 from triboflow.phys.high_symmetry import (
     get_slab_hs, get_interface_hs, pbc_hspoints, fix_hs_dicts)
 from triboflow.phys.potential_energy_surface import get_pes
+from triboflow.phys.shaper import Shaper
 from triboflow.utils.plot_tools import plot_pes
 from triboflow.utils.database import (
     Navigator, StructureNavigator, convert_image_to_bytes)
@@ -150,12 +152,17 @@ class FT_ComputePES(FiretaskBase):
         E_unique = inter_dict['PES']['high_symmetry_points']['energy_list']
         all_hs = inter_dict['PES']['high_symmetry_points']['combined_all']
         cell = struct.lattice.matrix
-        
+
+        hsp_min = E_unique[0][0]
+        hsp_max = E_unique[-1][0]
+
         interpolation, E_list, pes_data, data, to_plot = get_pes(
             hs_all=all_hs,
             E=E_unique,
             cell=struct.lattice.matrix,
             to_fig=False)
+        
+        corrugation = max(pes_data[:,2])-min(pes_data[:,2])
         
         if file_output:
             data.dump('Computet_PES_data_'+name+'.dat')
@@ -172,7 +179,10 @@ class FT_ComputePES(FiretaskBase):
             new_values={'$set': {'PES.rbf': jsanitize(interpolation),
                                  'PES.all_energies': jsanitize(E_list),
                                  'PES.pes_data': jsanitize(pes_data),
-                                 'PES.image': pes_image_bytes}})
+                                 'PES.image': pes_image_bytes,
+                                 'corrugation': corrugation,
+                                 'hsp@min': hsp_min,
+                                 'hsp@max': hsp_max}})
 
 
 @explicit_serialize
@@ -226,6 +236,11 @@ class FT_RetrievePESEnergies(FiretaskBase):
         lateral_shifts = interface_dict['PES']['high_symmetry_points']['combined_unique']
         
         nav = Navigator(db_file=db_file)
+        ref_struct = Structure.from_dict(nav.find_data(
+            collection='tasks', 
+            fltr={ 'task_label': f'{tag}_{list(lateral_shifts)[0]}' })['output']['structure'])
+        area = np.linalg.norm(np.cross(ref_struct.lattice.matrix[0], ref_struct.lattice.matrix[1]))
+        
         energy_list=[]
         calc_output = {}
         for s in lateral_shifts.keys():
@@ -235,8 +250,9 @@ class FT_RetrievePESEnergies(FiretaskBase):
             vasp_calc = nav.find_data(
                 collection='tasks', 
                 fltr={'task_label': label})
-            energy = vasp_calc['output']['energy']
             struct = vasp_calc['output']['structure']
+            energy = vasp_calc['output']['energy']
+            energy *= 16.02176565/area
             energy_list.append([s, x_shift, y_shift, energy])
             calc_output[s] = {'energy': energy,
                               'relaxed_struct': struct,
@@ -252,8 +268,13 @@ class FT_RetrievePESEnergies(FiretaskBase):
         calc_max = nav.find_data(
             collection='tasks',
             fltr={'task_label': tag+'_'+max_stacking})
-        struct_min = calc_min['output']['structure']
-        struct_max = calc_max['output']['structure']
+        struct_min_dict = calc_min['output']['structure']
+        struct_max_dict = calc_max['output']['structure']
+
+        struct_min = Structure.from_dict(calc_min['output']['structure'])
+        struct_max = Structure.from_dict(calc_max['output']['structure'])
+        inter_dist_min = Shaper._get_layer_spacings(struct_min)[0]
+        inter_dist_max = Shaper._get_layer_spacings(struct_max)[0]
 
         nav_high = Navigator(db_file=db_file, high_level=hl_db)
         nav_high.update_data(
@@ -262,9 +283,13 @@ class FT_RetrievePESEnergies(FiretaskBase):
             new_values={
                 '$set': 
                     {'relaxed_structure@min': 
-                         struct_min,
+                         struct_min_dict,
                      'relaxed_structure@max': 
-                         struct_max,
+                         struct_max_dict,
+                     'interface_distance@min':
+                         inter_dist_min,
+                     'interface_distance@max':
+                         inter_dist_max,
                      'PES.calculations': 
                          calc_output,
                      'PES.high_symmetry_points.energy_list':
