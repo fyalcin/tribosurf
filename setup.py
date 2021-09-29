@@ -1,18 +1,14 @@
-
-import os
-
 from setuptools import setup
-
 
 if __name__ == "__main__":
     setup(
         name='triboflow',
-        version='0.1.0',
+        version='1.0.0',
         description='triboflow contains complex workflows for interface '
                     'tribology based on atomate and FireWorks.',
         long_description=open('README.md').read(),
-        url='https://gitlab.com/triboteam/fireflow',
-        author='Michael Wolloch, Gabriele Losi',
+        url='https://gitlab.com/triboteam/TriboFlow',
+        author='Michael Wolloch, Gabriele Losi, Omar Chehaimi, Firat Yalcin',
         author_email='michael.wolloch@univie.ac.at, gabriele.losi@unimore.it',
         license='Not public yet',
         install_requires=['atomate@git+https://github.com/MichaelWolloch/atomate.git',
