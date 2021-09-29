@@ -289,7 +289,10 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
     if static_type not in allowed_types:
         raise SystemExit('static type is not known. Please select from: {}'
                         .format(allowed_types))
-        
+    
+    SCAN_list = ['scan', 'rscan', 'r2scan','Scan', 'Rrscan', 'R2scan',
+                 'SCAN', 'RSCAN', 'R2SCAN']
+    
     #Set user incar settings:
     uis = {}
     uis['NEDOS'] = 3001
@@ -317,14 +320,14 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
     if structure.lattice.matrix[-1,1] > 50.0:
         uis['AMIN'] = 0.05
 
-    if comp_parameters.get('functional') == 'SCAN':
+    if comp_parameters.get('functional') in SCAN_list:
         uis['ISMEAR'] = 0
         uis['SIGMA'] = 0.1
 
     if static_type.startswith('slab_'):
         uis['NELMDL'] = -15
         uis['NELM'] = 200
-    elif comp_parameters.get('functional') == 'SCAN':
+    elif comp_parameters.get('functional') in SCAN_list:
         uis['NELMDL'] = -10
     else:
         uis['NELMDL'] = -6
@@ -343,7 +346,7 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
     #specified for vdw to work!
     if set(('use_vdw', 'functional')) <= comp_parameters.keys():
         if comp_parameters['use_vdw']:
-            if comp_parameters['functional'] == 'SCAN':
+            if comp_parameters.get('functional') in SCAN_list:
                 vdw = 'rVV10'
             else:
                 vdw = 'optB86b'
@@ -352,8 +355,8 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
     else:
         vdw = None
 
-    if comp_parameters.get('functional') == 'SCAN':
-        uis['METAGGA'] = 'SCAN'
+    if comp_parameters.get('functional') in SCAN_list:
+        uis['METAGGA'] = 'R2SCAN'
         uis['ALGO'] = 'All'
         uis['LELF'] = False #otherwise KPAR >1 crashes
         
@@ -398,7 +401,7 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
     else:
         upf = 'PBE_54'
     
-    if comp_parameters.get('functional') == 'SCAN':
+    if comp_parameters.get('functional') in SCAN_list:
         vis = MPScanStaticSet(structure, user_incar_settings = uis, vdw = vdw,
                               user_kpoints_settings = uks,
                               user_potcar_functional = 'PBE_54')
@@ -450,6 +453,9 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
     if relax_type not in allowed_types:
         raise SystemExit('relax type is not known. Please select from: {}'
                         .format(allowed_types))
+    
+    SCAN_list = ['scan', 'rscan', 'r2scan','Scan', 'Rrscan', 'R2scan',
+                 'SCAN', 'RSCAN', 'R2SCAN']
     
     #Set user incar settings:
     uis = {}
@@ -536,7 +542,7 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
     #specified for vdw to work!
     if set(('use_vdw', 'functional')) <= comp_parameters.keys():
         if comp_parameters['use_vdw']:
-            if comp_parameters['functional'] == 'SCAN':
+            if comp_parameters.get('functional') in SCAN_list:
                 vdw = 'rVV10'
             else:
                 vdw = 'optB86b'
@@ -577,13 +583,13 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
         upf = 'PBE_54'
     
     if 'functional' in comp_parameters:
-        if comp_parameters['functional'] == 'SCAN':
+        if comp_parameters.get('functional') in SCAN_list:
             #Algo All does not play well with tetrahedron method
             if 'is_metal' in comp_parameters:
                 if not comp_parameters['is_metal']:
                     uis['SIGMA'] = 0.1
                     uis['ISMEAR'] = 0
-            uis['METAGGA'] = 'SCAN'
+            uis['METAGGA'] = 'R2SCAN'
             uis['ALGO'] = 'All'
             uis['LELF'] = False #otherwise KPAR >1 crashes
             vis = MPScanRelaxSet(structure, user_incar_settings = uis,

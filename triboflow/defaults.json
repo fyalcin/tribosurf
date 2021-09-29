@@ -45,7 +45,8 @@
       "cluster_params":{
       
       },
-      "override":false
+      "override":false,
+      "add_static":true
    },
    "StartThickConvo":{
       "db_file":null,
@@ -67,7 +68,8 @@
       "cluster_params":{
          
       },
-      "override":false
+      "override":false,
+      "add_static":true
    },
    "EndThickConvo":{
       "db_file":null,
@@ -92,7 +94,8 @@
          
       },
       "recursion":0,
-      "override":false
+      "override":false,
+      "add_static":true
    },
    "GenerateSlabs":{
       "db_file":null,
@@ -114,7 +117,8 @@
       },
       "miller":null,
       "check_key":null,
-      "struct_kind":"bulk"
+      "struct_kind":"bulk",
+      "add_static": false
    },
    "MoveTagResults":{
       "db_file":null,

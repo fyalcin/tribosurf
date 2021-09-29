@@ -431,6 +431,8 @@ class FT_StartPESCalcs(FiretaskBase):
             inputs.append([clean_struct, vis, label])
                         
         wf_name = 'PES relaxations for: '+name
-        WF = dynamic_relax_swf(inputs_list = inputs, wf_name = wf_name)
+        WF = dynamic_relax_swf(inputs_list = inputs,
+                               wf_name = wf_name,
+                               add_static=True)
         
         return FWAction(detours = WF)
