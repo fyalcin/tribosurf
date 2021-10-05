@@ -208,7 +208,8 @@ class LoggingBase:
         console_formatter = logging.Formatter(log_format)
         console_handler.setFormatter(console_formatter)
 
-        console_logger.addHandler(console_handler)
+        if not console_logger.hasHandlers():
+            console_logger.addHandler(console_handler)
 
     def __initialize_file_logger_handler(self, name, file_level, path, 
                                          log_format):
@@ -236,7 +237,9 @@ class LoggingBase:
         file_formatter = logging.Formatter(log_format)
         file_handler.setFormatter(file_formatter)
 
-        file_logger.addHandler(file_handler)
+        if not file_logger.hasHandlers():
+            file_logger.addHandler(file_handler)
+            
     
     def debug(self, message):
         """ 
