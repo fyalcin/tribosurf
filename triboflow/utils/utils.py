@@ -76,6 +76,11 @@ def load_defaults(file_location=project_folder+'/../',
     data = read_json(file_location + filename)
     return data
 
+def load_homoatomic_materials(file_location=project_folder+'/../',
+                  filename='homoatomic_materials.json'):
+    data = read_json(file_location + filename)
+    return data
+
 def read_runtask_params(obj, fw_spec, required_params, optional_params,
                         default_file, default_key):
     """

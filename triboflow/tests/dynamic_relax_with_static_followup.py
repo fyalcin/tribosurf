@@ -16,7 +16,8 @@ from triboflow.utils.vasp_tools import get_custom_vasp_static_settings, get_cust
 
 nav = StructureNavigator('auto', True)
 
-mpids = ['mp-134', 'mp-13', 'mp-66']
+#mpids = ['mp-134', 'mp-13', 'mp-66']
+mpids = ['mp-13']
 input_list = []
 for mpid in mpids:
     mat_dict = nav.get_bulk_from_db(functional='PBE', mp_id=mpid)
