@@ -50,6 +50,42 @@ from atomate.utils.utils import env_chk
 # ============================================================================
 
 @explicit_serialize
+class FT_PutBulkInDB(FiretaskBase):
+    """ 
+    Put a bulk and the required slab from MP into the high level DB.
+    
+    Parameters
+    ----------
+    mat : str
+        Location of the dictionary with the material data in the spec.
+    comp_paramas : str
+        Location of the dictionary with computational parameters in the spec.
+    db_file : str
+        Location of the high level db on the working machine.
+    
+    """
+    
+    _fw_name = 'Make bulk and interface entry into high level DB'
+    required_params = ['mat', 'comp_params']
+    optional_params = ['db_file']
+    
+    def run_task(self, fw_spec):
+        """ Run the FireTask.
+        """
+
+        # Extract data from input dictionaries
+        data = fw_spec[self['mat']]
+        comp_params = fw_spec[self['comp_params']]
+        
+        # Locate the high level DB
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
+        
+        # Put bulk and slab in high level DB
+        put_bulk_in_db(data, comp_params, db_file)
+
+@explicit_serialize
 class FT_PutMaterialInDB(FiretaskBase):
     """ 
     Put a bulk and the required slab from MP into the high level DB.

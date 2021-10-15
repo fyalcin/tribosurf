@@ -27,6 +27,10 @@
       "thick_max":10,
       "thick_incr":1
    },
+   "bulk_params":{
+      "formula":"NO_DEFAULT",
+      "mpid":null
+   },
    "SlabOptThick":{
       "db_file":null,
       "low_level":"auto",

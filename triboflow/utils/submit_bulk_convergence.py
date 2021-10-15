@@ -74,11 +74,12 @@ if __name__ == "__main__":
     materials_dict = load_homoatomic_materials()
     materials_list =[]
 
-    for formula in ['Al', 'C', 'Si', 'Ge', 'Cu', 'Ag', 'Au', 'Ni', 'Fe', 'Ti', 'Co']:
+    for formula in ['Al', 'C', 'Si', 'Ge', 'Cu', 'Ag',
+                    'Au', 'Ni', 'Fe', 'Ti', 'Co']:
         mpid = materials_dict[formula]['mpids'][materials_dict[formula]['default']]
         materials_list.append({'formula': formula, 'mpid': mpid})
         workflow_list = []
     
     for mat in materials_list:
         workflow_list.append(get_bulk_convergence_wf(mat, computational_params))
-    #submit_multiple_wfs(workflow_list)
+    submit_multiple_wfs(workflow_list)
