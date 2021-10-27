@@ -99,12 +99,6 @@ def heterogeneous_wf(inputs):
                                                 functional=functional),
                             name='Consolidate computational parameters')
     WF.append(Final_Params)
-
-    # optional_params = ['db_file', 'low_level', 'high_level', 'conv_kind',
-    #                    'relax_type', 'thick_min', 'thick_max', 'thick_incr',
-    #                    'vacuum', 'in_unit_planes', 'ext_index', 'conv_thr',
-    #                    'parallelization', 'bulk_entry', 'slab_entry', 
-    #                    'cluster_params', 'override']
     
     MakeSlabs_M1 = Firework(FT_SlabOptThick(mp_id=mp_id_1,
                                             miller=mat_1.get('miller'),

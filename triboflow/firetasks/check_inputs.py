@@ -105,6 +105,62 @@ class FT_UpdateCompParams(FiretaskBase):
             new_values={'$set': {'comp_parameters.encut': encut_inter,
                                  'comp_parameters.k_dens': k_dens_inter,
                                  'comp_parameters.is_metal': metal_inter}})
+        
+@explicit_serialize
+class FT_CopyCompParamsToSlab(FiretaskBase):
+    """ Copy converged comp-params for slab calculations after bulk convergence.
+
+    This Firetask reads the converged bulk parameters from a bulk and copies it
+    to a slab.
+    
+    Parameters
+    ----------
+    mp_id : str
+        MaterialsProject ID number for the material
+    miller : str or [int]
+        Miller indices of the material
+    functional : str
+        Functional with which the workflow is run. PBE or SCAN.
+    db_file : str, optional
+        Full path of the db.json file to be used. The default is to use
+        env_chk to find the file.
+    
+    """
+    _fw_name = 'Update computational parameters in high level DB'
+    required_params = ['mp_id', 'miller', 'functional']
+    optional_params = ['db_file']
+
+    def run_task(self, fw_spec):
+
+        mp_id = self.get('mp_id')
+
+        if type(self['miller']) == str:
+            miller = [int(k) for k in list(self['miller'])]
+        else:
+            miller = self['miller']
+        
+        functional = self.get('functional')
+
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
+        
+        nav_structure = StructureNavigator(
+            db_file=db_file, 
+            high_level=True)
+        bulk = nav_structure.get_bulk_from_db(
+            mp_id=mp_id, 
+            functional=functional)
+
+        encut = bulk['comp_parameters']['encut']
+        k_dens = bulk['comp_parameters']['k_dens']
+
+        nav_high = Navigator(db_file=db_file, high_level=True)
+        nav_high.update_data(
+            collection=functional+'.slab_data',
+            fltr={'mpid': mp_id, 'miller': miller},
+            new_values={'$set': {'comp_parameters.encut': encut,
+                                 'comp_parameters.k_dens': k_dens}})
 
 @explicit_serialize
 class FT_MakeInterfaceInDB(FiretaskBase):
