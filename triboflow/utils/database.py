@@ -132,8 +132,9 @@ class Navigator:
 
         """
 
-        db, db_path = self.__get_db(db_file)
-        self.db = db
+        vasp_calc_db, db_path = self.__get_db(db_file)
+        self.vasp_calc_db = vasp_calc_db
+        self.db = vasp_calc_db.db
         self.path = db_path
         
         if isinstance(high_level, str):
@@ -148,7 +149,8 @@ class Navigator:
                                '"high_level" database in your db.json file. '
                                'This is necessary for using TriboFlow, so '
                                'please add it here: {}'.format(db_path))
-
+            
+        
     def __get_db(self, db_file):
         """ 
         Connect to the MongoDB database specified in the db_file. 
@@ -160,7 +162,7 @@ class Navigator:
         
         Returns
         -------
-        vasp_db.db : VaspCalcDb
+        vasp_db : VaspCalcDb
             VASP database object.
 
         db_file : str
@@ -169,14 +171,14 @@ class Navigator:
         """
 
         if db_file == 'auto':
-            if 'FW_CONFIG_FILE' in os.environ:
-                conf_file = os.environ['FW_CONFIG_FILE']
-                conf_path = conf_file.rstrip('FW_config.yaml')
-                db_file = conf_path + 'db.json'
-            else:
-                raise NavigatorError('Could not find "FW_CONFIG_FILE" environment '
-                                     'variable.\nPlease make sure that your python'
-                                     'environment is configured correctly.')
+             if 'FW_CONFIG_FILE' in os.environ:
+                 conf_file = os.environ['FW_CONFIG_FILE']
+                 conf_path = conf_file.rstrip('FW_config.yaml')
+                 db_file = conf_path + 'db.json'
+             else:
+                 raise NavigatorError('Could not find "FW_CONFIG_FILE" environment '
+                                      'variable.\nPlease make sure that your python'
+                                      'environment is configured correctly.')
 
         try:
             vasp_db = VaspCalcDb.from_db_file(db_file)
@@ -185,7 +187,7 @@ class Navigator:
                                  'not correctly written.'.format(db_file))
 
         log.info('Successfully connected to: {}.'.format(db_file))
-        return vasp_db.db, db_file
+        return vasp_db, db_file
     
     def __initialize_obj_collection(self, collection):
         """
@@ -500,6 +502,50 @@ class Navigator:
         else:
             log.critical('The current date is wrong!!! '
                          'No entries in the database have been removed.')
+            
+    def get_task_id(self, task_label):
+        """
+        Get the task_id number from a task_label string.
+
+        Parameters
+        ----------
+        task_label : str
+            Task label in the tasks collection.
+
+        Returns
+        -------
+        int
+            task_id of the task associated with the task_label
+
+        """
+        collection_obj = self.__initialize_obj_collection('tasks')
+        data = collection_obj.find_one({'task_label': task_label})
+        return data.get('task_id')
+    
+    def get_chgcar_from_label(self, label):
+        """
+        Get a pymatgen chgcar object from a task label
+
+        Parameters
+        ----------
+        label : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        """
+        vasp_calc_db = self.vasp_calc_db
+        task_id = self.get_task_id(label)
+        try:
+            chgcar = vasp_calc_db.get_chgcar(task_id)
+            return chgcar
+        except:
+            raise NavigatorError(f'Returning chgcar object for for task_label: "{label}" '
+                                 'failed. Probably no volumetric data was parsed.')
+        
 
 class TableTestNavigator(Navigator):
     """

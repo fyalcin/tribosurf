@@ -13,12 +13,14 @@ from triboflow.utils.database import StructureNavigator
 from triboflow.firetasks.charge_test import FT_GetCharge, FT_MakeChargeCalc
 
 from pymatgen.core.surface import Slab
+from pymatgen.core.structure import Structure
 
 nav = StructureNavigator('auto', True)
-slab_dict = nav.get_slab_from_db('mp-66', 'PBE', [1,1,1])
-slab = Slab.from_dict(slab_dict.get('relaxed_slab'))
+slab_dict = nav.get_slab_from_db('mp-134', 'PBE', [1,0,0])
+# slab = Slab.from_dict(slab_dict.get('relaxed_slab'))
+slab = Structure.from_dict(slab_dict['thickness']['data_12']['output']['structure'])
 comp_params = slab_dict.get('comp_parameters')
-calc_name = 'chargetestcalc_1'
+calc_name = f'interface_{slab.formula}'
 
     
 if __name__ == "__main__":

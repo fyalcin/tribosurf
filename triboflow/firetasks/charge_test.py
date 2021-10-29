@@ -16,6 +16,18 @@ from triboflow.utils.vasp_tools import get_custom_vasp_static_settings
 from triboflow.utils.database import Navigator
 
 
+def plot_charge_profile(chgcar, axis=2):
+    z=chgcar.zpoints
+    x=chgcar.structure.lattice.c*z
+    y=chgcar.get_average_along_axis(2)
+    from matplotlib import pyplot as plt
+    fig = plt.figure()
+    ax = plt.axes()
+    ax.plot(x, y)
+    fig.savefig(f'charge_profile_{chgcar.structure.formula}.png')
+    
+    
+
 @explicit_serialize
 class FT_MakeChargeCalc(FiretaskBase):
     
@@ -47,6 +59,8 @@ class FT_GetCharge(FiretaskBase):
     def run_task(self, fw_spec):
         label = self.get('calc_name')
         nav = Navigator()
-        calc = nav.find_data(collection='tasks',
-                             fltr={'task_label': label})
-        print(calc)
+        chgcar = nav.get_chgcar_from_label(label)
+        plot_charge_profile(chgcar)
+        
+        
+        
