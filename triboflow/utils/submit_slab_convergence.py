@@ -93,9 +93,9 @@ if __name__ == "__main__":
     materials_list =[]
     miller_list = ['100', '110', '111']
 
-    # for formula in ['Al', 'C', 'Si', 'Ge', 'Cu', 'Ag',
-    #                 'Au', 'Ni', 'Fe', 'Ti', 'Co']:
-    for formula in ['Al', 'C']:
+    for formula in ['Al', 'C', 'Si', 'Ge', 'Cu', 'Ag',
+                    'Au', 'Ni', 'Fe', 'Ti', 'Co']:
+    # for formula in ['Al', 'C']:
         mpid = materials_dict[formula]['mpids'][materials_dict[formula]['default']]
         mat_dict = {'formula': formula, 'mpid': mpid}
         for m in miller_list:
@@ -111,4 +111,4 @@ if __name__ == "__main__":
     
     for mat in materials_list:
         workflow_list.append(get_slab_convergence_wf(mat, computational_params))
-    submit_multiple_wfs(workflow_list)
+    #submit_multiple_wfs(workflow_list)
