@@ -40,6 +40,7 @@ __copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, Universi
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 22nd, 2021'
 
+import hashlib
 import os
 import json
 from uuid import uuid4
@@ -53,7 +54,6 @@ from atomate.utils.utils import env_chk
 from triboflow.utils.database import Navigator
 from triboflow.utils.errors import ReadParamsError, WriteParamsError
 
-
 project_folder = os.path.dirname(__file__)
 
 
@@ -61,20 +61,45 @@ project_folder = os.path.dirname(__file__)
 # Read input parameters from dictionaries and in Firetasks
 # ============================================================================
 
+
+def dict_to_hash(my_dict):
+    """
+    Creates a hash from the given dictionary to be used as a unique ID.
+
+    Parameters
+    ----------
+    my_dict : dict
+        Dictionary, should not be nested.
+
+    Returns
+    -------
+    hash_str : str
+        Hash value of the given dictionary in string format.
+
+    """
+    sorted_items = sorted(my_dict.items())
+    str_repr = repr(sorted_items).encode('utf-8')
+    hash_object = hashlib.sha1(str_repr)
+    hash_str = hash_object.hexdigest()
+    return hash_str
+
+
 def read_json(jsonfile):
     """
     Shortcut to easily read a json file.
         
     """
-    
+
     with open(jsonfile, 'r') as f:
-        data = json.load(f)  
+        data = json.load(f)
     return data
 
-def load_defaults(file_location=project_folder+'/../',
+
+def load_defaults(file_location=project_folder + '/../',
                   filename='defaults.json'):
     data = read_json(file_location + filename)
     return data
+
 
 def read_runtask_params(obj, fw_spec, required_params, optional_params,
                         default_file, default_key):
@@ -134,6 +159,7 @@ def read_runtask_params(obj, fw_spec, required_params, optional_params,
 
     return params
 
+
 def read_default_params(default_file, default_key, dict_params):
     """
     Read the default argument read from a JSON file and compare them with the
@@ -180,7 +206,7 @@ def read_default_params(default_file, default_key, dict_params):
     # Set the parameters, missing parameters are substituted with defaults
     for key, value in defaults.items():
         params[key] = dict_params.get(key, value)
-    
+
     return params
 
 
@@ -219,7 +245,7 @@ def get_one_info_from_dict(input_dict, entry):
     # Simply read a dictionary key
     if isinstance(entry, str):
         info = input_dict[entry]
-    
+
     # You can have multiple nested keys
     elif isinstance(entry, list):
         info = input_dict.copy()
@@ -230,6 +256,7 @@ def get_one_info_from_dict(input_dict, entry):
         ReadParamsError('Error in reading input_dict, entry is wrong.')
 
     return info
+
 
 def get_multiple_info_from_dict(input_dict, entry):
     """
@@ -273,11 +300,12 @@ def get_multiple_info_from_dict(input_dict, entry):
 
         else:
             info = get_one_info_from_dict(input_dict, entry)
-    
+
     else:
         info = get_one_info_from_dict(input_dict, entry)
-    
+
     return info
+
 
 def convert_dict_to_mongodb(input_dict):
     """
@@ -316,11 +344,11 @@ def convert_dict_to_mongodb(input_dict):
     {'key.data_1': 5}
 
     """
-    
+
     output_dict = {}
-    
+
     for key, val in input_dict.items():
-        
+
         if not isinstance(val, dict):
             output_dict[key] = val
             continue
@@ -336,6 +364,7 @@ def convert_dict_to_mongodb(input_dict):
                 del output_dict[new_key]
 
     return output_dict
+
 
 def write_one_dict(data, entry, to_mongodb=True):
     """
@@ -385,18 +414,19 @@ def write_one_dict(data, entry, to_mongodb=True):
 
     # You can have multiple nested keys
     elif isinstance(entry, list):
-        d = {entry[-1]: data}   
+        d = {entry[-1]: data}
         for key in entry[-2::-1]:
             d = {key: d}
-    
+
     else:
         WriteParamsError('Error in writing data, entry is wrong.')
-    
+
     # Convert the dictionary to suit MongoDB query
     if to_mongodb:
         d = convert_dict_to_mongodb(d)
-    
+
     return d
+
 
 def write_multiple_dict(data, entry, to_mongodb=True):
     """
@@ -447,7 +477,7 @@ def write_multiple_dict(data, entry, to_mongodb=True):
 
     # Extract many info at the same time 
     if isinstance(entry, list):
-        
+
         bool_1 = all([isinstance(n, list) for n in entry])  # All n are lists
         bool_2 = isinstance(data, (list, np.ndarray))  # Data is list-like
         bool_3 = len(data) == len(entry)  # Same length
@@ -464,7 +494,7 @@ def write_multiple_dict(data, entry, to_mongodb=True):
 
     else:
         d = write_one_dict(data, entry, to_mongodb)
-    
+
     return d
 
 
@@ -472,7 +502,7 @@ def write_multiple_dict(data, entry, to_mongodb=True):
 # Retrieve structure and VASP output from DB
 # ============================================================================
 
-def retrieve_from_db(mp_id, collection, db_file='auto', high_level_db=True, 
+def retrieve_from_db(mp_id, collection, db_file='auto', high_level_db=True,
                      miller=None, entry=None, is_slab=False, pymatgen_obj=False):
     """
     Retrieve data from a selected database and collection. By specifing an entry
@@ -523,15 +553,15 @@ def retrieve_from_db(mp_id, collection, db_file='auto', high_level_db=True,
 
     # Call the navigator for retrieving structure
     nav = Navigator(db_file=db_file, high_level=high_level_db)
-    
+
     # Define the filter (fltr) to be used
     fltr = {'mpid': mp_id}
     if miller is not None:
         fltr.update({'miller': miller})
-    
+
     # Extract data from the database
     field = nav.find_data(collection=collection, fltr=fltr)
-    
+
     structure = None
     if field is not None and entry is not None:
         try:
@@ -545,7 +575,8 @@ def retrieve_from_db(mp_id, collection, db_file='auto', high_level_db=True,
 
     return field, structure
 
-def retrieve_from_tag(collection, tag, tag_key='task_label', entry=None, 
+
+def retrieve_from_tag(collection, tag, tag_key='task_label', entry=None,
                       db_file='auto', high_level_db=False):
     """
     Retrieve a dictionary field out of the database based on the combination
@@ -587,14 +618,14 @@ def retrieve_from_tag(collection, tag, tag_key='task_label', entry=None,
     """
 
     # Call the navigator and retrieve the simulation data from tag
-    nav = Navigator(db_file=db_file, high_level=high_level_db)    
+    nav = Navigator(db_file=db_file, high_level=high_level_db)
     vasp_calc = nav.find_data(collection, {tag_key: tag})
-    
+
     # Retrieve the correct dictionary and obtain the structure
     info = None
     if entry is not None:
         info = get_multiple_info_from_dict(vasp_calc, entry)
-    
+
     return vasp_calc, info
 
 
@@ -614,8 +645,9 @@ def create_tags(prefix):
 
     else:
         tag = prefix + '_' + str(uuid4())
-    
+
     return tag
+
 
 def get_miller_str(miller):
     """
@@ -623,6 +655,7 @@ def get_miller_str(miller):
 
     """
     return ''.join(str(s) for s in miller)
+
 
 def select_struct_func(struct_kind):
     """
@@ -638,10 +671,11 @@ def select_struct_func(struct_kind):
         func = Slab
     else:
         ValueError("Wrong argument: struct_kind. Allowed values: "
-                   "'bulk', 'slab'. Given value: {}".format(struct_kind)) 
+                   "'bulk', 'slab'. Given value: {}".format(struct_kind))
     return func
 
-def save_calctags(tag, collection, formula=None, mpid=None, miller=None, 
+
+def save_calctags(tag, collection, formula=None, mpid=None, miller=None,
                   name=None, db_file=None, database='triboflow'):
     """
     Store in a csv file the tags of a calculation which was succesfully done by
@@ -649,7 +683,7 @@ def save_calctags(tag, collection, formula=None, mpid=None, miller=None,
     to the results data stored in the low level datababase.
 
     """
-    
+
     # Check the folder containing calculation tags, if not present create it
     folder_object = PurePosixPath(project_folder)
     folder = str(folder_object.parent.parent.parent) + '/results/'
@@ -662,7 +696,7 @@ def save_calctags(tag, collection, formula=None, mpid=None, miller=None,
         path = Path(folder)
         if not path.is_dir():
             raise RuntimeError('The creation of struct path has failed!')
-            
+
     # Create the path to the csv file
     path = str(path)
     csv_file = path + '/calc_tags.csv'
@@ -670,9 +704,9 @@ def save_calctags(tag, collection, formula=None, mpid=None, miller=None,
                'db_file', 'database', 'collection']
 
     # Create the new row for the Dataframe 
-    df_new = pd.DataFrame([[tag, formula, mpid, miller, name, db_file, 
-                           database, collection]], columns=columns)
-    
+    df_new = pd.DataFrame([[tag, formula, mpid, miller, name, db_file,
+                            database, collection]], columns=columns)
+
     # Check if the csv table does exist, if not create it, else append df_new
     if not os.path.exists(csv_file):
         df_new.to_csv(csv_file, index=False)

@@ -8,6 +8,7 @@ from pymatgen.io.vasp.sets import (MPRelaxSet, MPScanRelaxSet, MPStaticSet,
 
 from triboflow.utils.file_manipulation import remove_matching_files
 
+
 class MeshFromDensity:
     """
     Class to find classic Monkhorst-Pack meshes which may
@@ -17,7 +18,7 @@ class MeshFromDensity:
     the lower symmetry conditions.
     
     """
-    
+
     def __init__(self,
                  structure,
                  target_density,
@@ -51,21 +52,20 @@ class MeshFromDensity:
 
         """
 
-        
         self.struct = structure.copy()
         self.dens = target_density
         self.compare_dens = compare_density
         self.min_vac = min_vac
         self.force_gamma = force_gamma
-        self.klm  = structure.lattice.reciprocal_lattice.abc
-        
+        self.klm = structure.lattice.reciprocal_lattice.abc
+
         if is_slab == True:
             self.slab = True
         elif is_slab in ['Auto', 'auto', 'automatic', 'Automatic']:
             self.slab = 'detect_automatically'
         else:
             self.slab = False
-    
+
     def __make_mesh(self, density):
         """Return the subdivisions along each lattice vector.
         
@@ -88,15 +88,15 @@ class MeshFromDensity:
             Kpoint devisions along b3
 
         """
-        
+
         k, l, m = self.klm
-        k1 = math.ceil(k*density)
-        k2 = math.ceil(l*density)
-        k3 = math.ceil(m*density)       
+        k1 = math.ceil(k * density)
+        k2 = math.ceil(l * density)
+        k3 = math.ceil(m * density)
         if self._is_slab():
             k3 = 1
         return (k1, k2, k3)
-       
+
     def _is_slab(self):
         """Figures out if the passed structure is a slab.
         
@@ -109,7 +109,7 @@ class MeshFromDensity:
             True if the structure is considered a slab, False if not.
 
         """
-        
+
         if self.slab == True:
             return True
         elif self.slab == 'detect_automatically':
@@ -117,7 +117,7 @@ class MeshFromDensity:
             z_coords = []
             for s in self.struct.sites:
                 z_coords.append(s.coords[2])
-        
+
             thickness = max(z_coords) - min(z_coords)
             if z_axis - thickness >= self.min_vac:
                 return True
@@ -125,7 +125,7 @@ class MeshFromDensity:
                 return False
         else:
             return False
-    
+
     def get_kpoints(self):
         """Return a Kpoint object with the desired density of kpoints.
 
@@ -135,18 +135,18 @@ class MeshFromDensity:
             Monkhorst-Pack or Gamma centered mesh.
 
         """
-        
+
         mesh = self.__make_mesh(self.dens)
         is_hexagonal = self.struct.lattice.is_hexagonal()
-        #has_odd = any(i % 2 == 1 for i in mesh)
-        
+        # has_odd = any(i % 2 == 1 for i in mesh)
+
         if is_hexagonal or self.force_gamma:
             kpoints = Kpoints.gamma_automatic(kpts=mesh)
         else:
             kpoints = Kpoints.monkhorst_automatic(kpts=mesh)
-        
+
         return kpoints
-    
+
     def are_meshes_the_same(self):
         """Compares conventional Monkhorst-Pack meshes and Gamma centered meshes.
         
@@ -159,14 +159,14 @@ class MeshFromDensity:
             True if meshes are the same, False otherwise.
 
         """
-        
+
         mesh_1 = self.__make_mesh(self.dens)
         mesh_2 = self.__make_mesh(self.compare_dens)
         if mesh_1 == mesh_2:
             return True
         else:
             return False
-        
+
 
 def get_emin_and_emax(potcar):
     """
@@ -199,7 +199,8 @@ def get_emin_and_emax(potcar):
                 emax.append(float(l.split()[2][:-1]))
     os.remove('temp_potcar')
     return {'ENMIN': max(emin), 'ENMAX': max(emax)}
- 
+
+
 def get_generalized_kmesh(structure, k_dist, RemoveSymm=False, Vasp6=True):
     """Get a generalized Monkhorst Pack mesh for a given structure.
     
@@ -225,25 +226,25 @@ def get_generalized_kmesh(structure, k_dist, RemoveSymm=False, Vasp6=True):
 
     """
 
-    precalc = ['MINDISTANCE = '+str(k_dist),
-                'MINTOTALKPOINTS = 4',
-                'GAPDISTANCE = 6 ',
-                'MONOCLINIC_SEARCH_DEPTH = 2500',
-                'TRICLINIC_SEARCH_DEPTH = 1500']
+    precalc = ['MINDISTANCE = ' + str(k_dist),
+               'MINTOTALKPOINTS = 4',
+               'GAPDISTANCE = 6 ',
+               'MONOCLINIC_SEARCH_DEPTH = 2500',
+               'TRICLINIC_SEARCH_DEPTH = 1500']
     if Vasp6:
         precalc.append('WRITE_LATTICE_VECTORS = True')
-                
+
     if RemoveSymm in ['STRUCTURAL', 'TIME_REVERSAL', 'ALL']:
-        precalc.append('REMOVE_SYMMETRY = '+RemoveSymm)
+        precalc.append('REMOVE_SYMMETRY = ' + RemoveSymm)
     with open('PRECALC', 'w') as out:
         for line in precalc:
-            out.write(line+'\n')
+            out.write(line + '\n')
 
     magmom_list = structure.site_properties.get('magmom')
     if magmom_list:
         with open('INCAR', 'w') as out:
             out.write('ISPIN = 2')
-            out.write('MAGMOM = '+' '.join(str(m) for m in magmom_list))
+            out.write('MAGMOM = ' + ' '.join(str(m) for m in magmom_list))
 
     structure.to(fmt='poscar', filename='POSCAR')
     get_kpoints_file = subprocess.Popen('getKPoints')
@@ -252,6 +253,7 @@ def get_generalized_kmesh(structure, k_dist, RemoveSymm=False, Vasp6=True):
     remove_matching_files(['KPOINTS*', 'POSCAR*', 'INCAR', 'PRECALC'])
 
     return KPTS
+
 
 def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
                                     k_dens_default=12.5):
@@ -284,16 +286,16 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
     """
 
     allowed_types = ['bulk_from_scratch', 'bulk_follow_up', 'bulk_nscf',
-                    'slab_from_scratch', 'slab_follow_up', 'slab_nscf']
-    
+                     'slab_from_scratch', 'slab_follow_up', 'slab_nscf']
+
     if static_type not in allowed_types:
         raise SystemExit('static type is not known. Please select from: {}'
-                        .format(allowed_types))
-    
-    SCAN_list = ['scan', 'rscan', 'r2scan','Scan', 'Rrscan', 'R2scan',
+                         .format(allowed_types))
+
+    SCAN_list = ['scan', 'rscan', 'r2scan', 'Scan', 'Rrscan', 'R2scan',
                  'SCAN', 'RSCAN', 'R2SCAN']
-    
-    #Set user incar settings:
+
+    # Set user incar settings:
     uis = {}
     uis['NEDOS'] = 3001
     uis['PREC'] = 'Accurate'
@@ -304,20 +306,20 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
     uis['SIGMA'] = 0.05
     uis['ISMEAR'] = -5
     uis['EDIFF'] = 1.0e-6
-    uis['SYMPREC'] = 1e-04 #compat some issues that VASP 6.2 has with kpoint lattices
-    
+    uis['SYMPREC'] = 1e-04  # compat some issues that VASP 6.2 has with kpoint lattices
+
     if static_type.startswith('bulk_'):
         uis['ALGO'] = 'Fast'
-    
+
     if static_type.endswith('from_scratch'):
         uis['ICHARG'] = 2
         uis['LAECHG'] = '.FALSE.'
-    
+
     if structure.num_sites < 20:
         uis['LREAL'] = '.FALSE.'
-        
-    #Adjust mixing for slabs that have a very large c axis:
-    if structure.lattice.matrix[-1,1] > 50.0:
+
+    # Adjust mixing for slabs that have a very large c axis:
+    if structure.lattice.matrix[-1, 1] > 50.0:
         uis['AMIN'] = 0.05
 
     if comp_parameters.get('functional') in SCAN_list:
@@ -342,8 +344,8 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
         else:
             uis['ISPIN'] = 1
 
-    #set van der Waals functional. Note that as of now, 'functional' must be
-    #specified for vdw to work!
+    # set van der Waals functional. Note that as of now, 'functional' must be
+    # specified for vdw to work!
     if set(('use_vdw', 'functional')) <= comp_parameters.keys():
         if comp_parameters['use_vdw']:
             if comp_parameters.get('functional') in SCAN_list:
@@ -358,8 +360,8 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
     if comp_parameters.get('functional') in SCAN_list:
         uis['METAGGA'] = 'R2SCAN'
         uis['ALGO'] = 'All'
-        uis['LELF'] = False #otherwise KPAR >1 crashes
-        
+        uis['LELF'] = False  # otherwise KPAR >1 crashes
+
     if static_type.endswith('follow_up'):
         uis['ISTART'] = 1
         uis['LREAL'] = '.FALSE.'
@@ -369,7 +371,7 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
         uis['LREAL'] = '.FALSE.'
         uis['ICHARG'] = 11
         uis['NELMDL'] = -1
-        
+
     if 'kspacing' in comp_parameters:
         uis['KSPACING'] = comp_parameters['kspacing']
         uis['KGAMMA'] = True
@@ -395,22 +397,23 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
                                force_gamma=True)
         kpoints = KPTS.get_kpoints()
     uks = kpoints
-    
+
     if comp_parameters.get('functional') == 'LDA':
         upf = 'LDA_54'
     else:
         upf = 'PBE_54'
-    
+
     if comp_parameters.get('functional') in SCAN_list:
-        vis = MPScanStaticSet(structure, user_incar_settings = uis, vdw = vdw,
-                              user_kpoints_settings = uks,
-                              user_potcar_functional = 'PBE_54')
+        vis = MPScanStaticSet(structure, user_incar_settings=uis, vdw=vdw,
+                              user_kpoints_settings=uks,
+                              user_potcar_functional='PBE_54')
     else:
-        vis = MPStaticSet(structure, user_incar_settings = uis, vdw = vdw,
-                          user_kpoints_settings = uks,
-                          user_potcar_functional = upf)
-        
+        vis = MPStaticSet(structure, user_incar_settings=uis, vdw=vdw,
+                          user_kpoints_settings=uks,
+                          user_potcar_functional=upf)
+
     return vis
+
 
 def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
                                    k_dens_default=12.5):
@@ -449,15 +452,15 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
                      'slab_shape_relax', 'slab_pos_relax',
                      'interface_shape_relax', 'interface_pos_relax',
                      'interface_z_relax']
-    
+
     if relax_type not in allowed_types:
         raise SystemExit('relax type is not known. Please select from: {}'
-                        .format(allowed_types))
-    
-    SCAN_list = ['scan', 'rscan', 'r2scan','Scan', 'Rrscan', 'R2scan',
+                         .format(allowed_types))
+
+    SCAN_list = ['scan', 'rscan', 'r2scan', 'Scan', 'Rrscan', 'R2scan',
                  'SCAN', 'RSCAN', 'R2SCAN']
-    
-    #Set user incar settings:
+
+    # Set user incar settings:
     uis = {}
     uis['NEDOS'] = 3001
     uis['PREC'] = 'Accurate'
@@ -468,20 +471,20 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
     uis['NELMIN'] = 5
     uis['EDIFF'] = 0.5E-5
     uis['LAECHG'] = '.FALSE.'
-    uis['SYMPREC'] = 1e-04 #compat some issues that VASP 6.2 has with kpoint lattices
-    
+    uis['SYMPREC'] = 1e-04  # compat some issues that VASP 6.2 has with kpoint lattices
+
     if structure.num_sites < 20:
         uis['LREAL'] = '.FALSE.'
 
-    #Adjust mixing for slabs that have a very large c axis:
-    if structure.lattice.matrix[-1,1] > 50.0:
+    # Adjust mixing for slabs that have a very large c axis:
+    if structure.lattice.matrix[-1, 1] > 50.0:
         uis['AMIN'] = 0.05
 
     if relax_type.startswith('slab_') or relax_type.startswith('interface_'):
         uis['NELMDL'] = -15
         uis['EDIFFG'] = -0.015
         uis['NELM'] = 200
-        #Use a slightly slower but more stable algorithm for the electrons
+        # Use a slightly slower but more stable algorithm for the electrons
         uis['ALGO'] = 'Normal'
         # Turn on linear mixing
         # uis['AMIX'] = 0.2
@@ -493,17 +496,17 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
         uis['EDIFFG'] = -0.01
         uis['NELM'] = 100
         uis['ALGO'] = 'Fast'
-    
+
     if relax_type.startswith('bulk_'):
         uis['IBRION'] = 1
-    
+
     if relax_type.endswith('full_relax'):
         uis['ISIF'] = 3
     elif relax_type.endswith('pos_relax'):
         uis['ISIF'] = 2
     elif relax_type.endswith('z_relax'):
         uis['ISIF'] = 2
-        #Set up selective dynamics array for the structrues site property
+        # Set up selective dynamics array for the structrues site property
         sd_array = []
         for i in range(len(structure.sites)):
             sd_array.append([False, False, True])
@@ -538,8 +541,8 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
         uis['SIGMA'] = 0.1
         uis['ISMEAR'] = 0
 
-    #set van der Waals functional. Note that as of now, 'functional' must be
-    #specified for vdw to work!
+    # set van der Waals functional. Note that as of now, 'functional' must be
+    # specified for vdw to work!
     if set(('use_vdw', 'functional')) <= comp_parameters.keys():
         if comp_parameters['use_vdw']:
             if comp_parameters.get('functional') in SCAN_list:
@@ -550,7 +553,7 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
             vdw = None
     else:
         vdw = None
-        
+
     if 'kspacing' in comp_parameters:
         uis['KSPACING'] = comp_parameters['kspacing']
         uis['KGAMMA'] = True
@@ -576,32 +579,32 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
                                force_gamma=True)
         kpoints = KPTS.get_kpoints()
     uks = kpoints
-    
+
     if comp_parameters.get('functional') == 'LDA':
         upf = 'LDA_54'
     else:
         upf = 'PBE_54'
-    
+
     if 'functional' in comp_parameters:
         if comp_parameters.get('functional') in SCAN_list:
-            #Algo All does not play well with tetrahedron method
+            # Algo All does not play well with tetrahedron method
             if 'is_metal' in comp_parameters:
                 if not comp_parameters['is_metal']:
                     uis['SIGMA'] = 0.1
                     uis['ISMEAR'] = 0
             uis['METAGGA'] = 'R2SCAN'
             uis['ALGO'] = 'All'
-            uis['LELF'] = False #otherwise KPAR >1 crashes
-            vis = MPScanRelaxSet(structure, user_incar_settings = uis,
-                                vdw = vdw, user_kpoints_settings = uks,
-                                user_potcar_functional = 'PBE_54')
+            uis['LELF'] = False  # otherwise KPAR >1 crashes
+            vis = MPScanRelaxSet(structure, user_incar_settings=uis,
+                                 vdw=vdw, user_kpoints_settings=uks,
+                                 user_potcar_functional='PBE_54')
         else:
-            vis = MPRelaxSet(structure, user_incar_settings = uis, vdw = vdw,
-                            user_kpoints_settings = uks,
-                            user_potcar_functional = 'PBE_54')
+            vis = MPRelaxSet(structure, user_incar_settings=uis, vdw=vdw,
+                             user_kpoints_settings=uks,
+                             user_potcar_functional='PBE_54')
     else:
-        vis = MPRelaxSet(structure, user_incar_settings = uis, vdw = vdw,
-                        user_kpoints_settings = uks,
-                        user_potcar_functional = upf)
+        vis = MPRelaxSet(structure, user_incar_settings=uis, vdw=vdw,
+                         user_kpoints_settings=uks,
+                         user_potcar_functional=upf)
 
     return vis
