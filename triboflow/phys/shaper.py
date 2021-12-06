@@ -522,9 +522,31 @@ class Shaper():
         return bonds
 
     @staticmethod
-    def _get_c_ranges(struct):
+    def _get_c_ranges(struct, nn_method='all'):
+        """
+        Calculates all the bonds in the given structure
+
+        Parameters
+        ----------
+        struct : pymatgen.core.structure.Structure
+            Pymatgen Structure object.
+        nn_method: str, optional
+            Nearest-neighbor algorithm to be used. Currently supports
+            'all' and 'BNN'. For more info, check out BrunnerNN documentation.
+
+        Returns
+        -------
+        c_ranges : list
+            List with elements describing every bond in the structure, with
+            the endpoints of the bond and the bond valence values for each bond.
+
+        """
         cr = CovalentRadius().radius
-        nn_list = struct.get_all_neighbors(max(struct.lattice.abc))
+        if nn_method == 'all':
+            nn_list = struct.get_all_neighbors(max(struct.lattice.abc))
+        elif nn_method == 'BNN':
+            BNN = BrunnerNN_real(cutoff=max(struct.lattice.abc))
+            nn_list = BNN.get_all_nn_info(struct)
         c_ranges = []
         for s_index, site in enumerate(struct):
             for nn in nn_list[s_index]:
@@ -551,22 +573,45 @@ class Shaper():
         b = 0.37
         R_0 = r1 + r2
         return np.exp((R_0 - bond_dist) / b)
+    
+    @staticmethod
+    def get_surface_area(struct):
+        mat = struct.lattice.matrix
+        return np.linalg.norm(np.cross(mat[0], mat[1]))
 
     @staticmethod
-    def _bonds_by_shift(slab, SG, tol=0.1):
-        ouc = Shaper.get_constrained_ouc(slab)
-        c_ranges = Shaper._get_c_ranges(ouc)
+    def _bonds_by_shift(SG, nn_method='all', tol=0.1):
+        """
+        Calculates the bond valence sums of the broken bonds corresponding to
+        all the possible shifts
+
+        Parameters
+        ----------
+        SG : pymatgen.core.surface.SlabGenerator
+            Pymatgen SlabGenerator object to extract the possible shifts in a
+            specific orientation.
+        tol : float, optional
+            Tolerance value used in the layering of sites in units of Angstroms.
+            The default is 0.1.
+
+        Returns
+        -------
+        bbs : dict
+            Dictionary with keys as shifts and values as the bond valence sum of the
+            broken bonds at each shift, scaled by the area of the x-y plane.
+
+        """
+        ouc = SG.oriented_unit_cell
+        area = Shaper.get_surface_area(ouc)
+        c_ranges = Shaper._get_c_ranges(ouc, nn_method)
         shifts = np.round(SG._calculate_possible_shifts(tol=tol), 4)
         bbs = {}
         for shift in shifts:
             bbs[shift] = 0
             for c_range in c_ranges:
                 if c_range[0] < shift < c_range[1]:
-                    # if shift == 0.2500000000000001:
-                    #     print(c_range[2])
                     bbs[shift] += c_range[2][3]
-                    # bbs[shift] += 1
-            bbs[shift] = np.round(bbs[shift], 4)
+            bbs[shift] = np.round(bbs[shift], 4)/area
         return bbs
 
     @staticmethod
@@ -625,6 +670,20 @@ class Shaper():
 
     @staticmethod
     def identify_slab(slab):
+        """
+        Identifies the symmetry and the stoichiometry of the given slab.
+
+        Parameters
+        ----------
+        slab : pymatgen.core.surface.Slab
+            Pymatgen Slab object.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the symmetry and stoichiometry info.
+
+        """
         sym = slab.is_symmetric()
         bulk_ref = slab.oriented_unit_cell
         slab_comp = slab.composition.reduced_composition
@@ -634,8 +693,43 @@ class Shaper():
 
     @staticmethod
     def generate_slabs(bulk_conv, sg_params):
+        """
+        Generates slabs with the given parameters.
 
-        tol = sg_params.get('tol', 0.1)
+        Parameters
+        ----------
+        bulk_conv : pymatgen.core.structure.Structure
+            Conventional standard bulk structure from which to generate
+            slabs from.
+        sg_params : dict
+            Parameters to be used in the SlabGenerator.
+            Required keys are:
+                miller,
+                slab_thick,
+                vac_thick,
+                mns, (max_normal_search)
+                tol
+            Optional keys are:
+                lll_reduce,
+                center_slab,
+                in_unit_planes,
+                prim,
+                minimize_bv
+            
+            For more info about the description of these parameters,
+            refer to the documentation of pymatgen.core.surface.SlabGenerator.
+                
+
+        Returns
+        -------
+        slabs : list
+            List of all the slabs (unique terminations) generated with the given
+            parameters
+        SG : pymatgen.core.surface.SlabGenerator
+            Pymatgen SlabGenerator object used to generate the slabs.
+
+        """
+        tol = sg_params.get('tol')
         slab_thick = sg_params.get('slab_thick')
         vac_thick = sg_params.get('vac_thick')
         minimize_bv = sg_params.get('minimize_bv')
@@ -653,6 +747,8 @@ class Shaper():
                            primitive=sg_params.get('prim', True),
                            max_normal_search=max_normal_search,
                            reorient_lattice=True)
+        
+        nn_method = 'all'
 
         slabs = SG.get_slabs(bonds=None,
                              ftol=0.1,
@@ -661,7 +757,7 @@ class Shaper():
                              symmetrize=sg_params.get('symmetrize', False),
                              repair=False)
 
-        bbs = Shaper._bonds_by_shift(slabs[0], SG, tol)
+        bbs = Shaper._bonds_by_shift(SG, nn_method, tol)
 
         slabs = [Shaper.reconstruct(slab, slab_thick, vac_thick, tol=tol,
                                     minimize_bv=minimize_bv, bbs=bbs)
@@ -674,6 +770,21 @@ class Shaper():
 
     @staticmethod
     def get_constrained_ouc(slab):
+        """
+        Finds the constrained oriented unit cell of a Slab object. The constraints
+        are the a and b parameters of the slab, along with the gamma angle.
+
+        Parameters
+        ----------
+        slab : pymatgen.core.surface.Slab
+            Pymatgen Slab object whose oriented unit cell we want to constrain.
+
+        Returns
+        -------
+        ouc : pymatgen.core.structure.Structure
+            Constrained oriented unit cell of the input Slab.
+
+        """
         constraints = {'a': slab.lattice.a,
                        'b': slab.lattice.b,
                        'gamma': slab.lattice.gamma}
