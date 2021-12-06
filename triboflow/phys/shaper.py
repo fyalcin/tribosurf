@@ -151,32 +151,6 @@ class Shaper():
         else:
             raise ValueError('Region must be one of "cell", "vacuum", or "slab"')
 
-    # @staticmethod
-    # def _identify_regions(struct):
-    #     """
-    #     Internal method to identify regions in a given structure.
-
-    #     Parameters
-    #     ----------
-    #     struct : pymatgen.core.structure.Structure
-    #         Main object in pymatgen to store structures.
-
-    #     Returns
-    #     -------
-    #     regions : dict
-    #         Simple dictionary with keys as regions 'slab' and 'vacuum' and values
-    #         as the respective region intervals in fractional coordinates.
-
-    #     """
-    #     try:
-    #         slab_regs = get_slab_regions(struct)
-    #         vac_regs = multirange_diff([[0, 1]], slab_regs)
-    #     except ValueError:
-    #         slab_regs = [[0, 1]]
-    #         vac_regs = [[0, 0]]
-    #     regions = {'slab': slab_regs, 'vacuum': vac_regs}
-    #     return regions
-
     @staticmethod
     def reconstruct(struct, struct_thickness, vacuum_thickness, tol=0.1, minimize_bv=True,
                     center=True, **kwargs):
@@ -546,37 +520,6 @@ class Shaper():
                     bonds[(sp1, sp2)] = (dist + dtol, w)
         # bonds = {k: v[0] for k, v in bonds.items() if abs(v[1]-wmax)/wmax <= wtol}
         return bonds
-
-    # @staticmethod
-    # def _get_c_ranges(struct):
-    #     cr = CovalentRadius().radius
-    #     # cr_dict = {str(el): cr[str(el)] for el in np.unique(struct.species)}
-
-    #     BNN = BrunnerNN_real(cutoff=max(struct.lattice.abc))
-    #     nn_list = BNN.get_all_nn_info(struct)
-
-    #     c_ranges = []
-    #     for s_index, site in enumerate(struct):
-    #         for nn in nn_list[s_index]:
-    #             nn_site = nn['site']
-    #             c_range = np.round(sorted([site.frac_coords[2], nn_site.frac_coords[2]]), 3)
-    #             if c_range[0] != c_range[1]:
-    #                 nn_site_index = nn['site_index']
-    #                 sp1 = str(struct.species[s_index])
-    #                 sp2 = str(struct.species[nn_site_index])
-    #                 dist = np.linalg.norm(site.coords - nn_site.coords)
-    #                 dist = nn_site.nn_distance
-    #                 bv = Shaper._get_bv(cr[sp1], cr[sp2], dist)
-    #                 bv = ((sp1, s_index), (sp2, nn_site_index), dist, bv)
-    #                 if c_range[0] < 0:
-    #                     c_ranges.append((0, c_range[1], bv))
-    #                     c_ranges.append((c_range[0] + 1, 1, bv))
-    #                 elif c_range[1] > 1:
-    #                     c_ranges.append((c_range[0], 1, bv))
-    #                     c_ranges.append((0, c_range[1] - 1, bv))
-    #                 else:
-    #                     c_ranges.append((c_range[0], c_range[1], bv))
-    #     return c_ranges
 
     @staticmethod
     def _get_c_ranges(struct):
