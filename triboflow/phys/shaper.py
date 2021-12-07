@@ -692,7 +692,7 @@ class Shaper():
         return {'symmetric': sym, 'stoichiometric': sto}
 
     @staticmethod
-    def generate_slabs(bulk_conv, sg_params):
+    def generate_slabs(bulk_conv, sg_params, reconstruct=True):
         """
         Generates slabs with the given parameters.
 
@@ -707,7 +707,7 @@ class Shaper():
                 miller,
                 slab_thick,
                 vac_thick,
-                mns, (max_normal_search)
+                max_normal_search,
                 tol
             Optional keys are:
                 lll_reduce,
@@ -715,10 +715,21 @@ class Shaper():
                 in_unit_planes,
                 prim,
                 minimize_bv
-            
+
             For more info about the description of these parameters,
             refer to the documentation of pymatgen.core.surface.SlabGenerator.
-                
+        reconstruct : bool, optional
+            Context: Pymatgen's slab generation algorithm works by replicating the
+            oriented unit cell(OUC) a number of times to each the minimum slab size.
+            However, it does not determine the number of layers in the OUC correctly.
+            This leads to much larger slabs than one asks for, but it ensures that
+            the terminations of the top and bottom are always complementary, which
+            can be useful at times.
+
+            This tag determines whether to remove layers from the bottom until
+            the desired thickness is reached. It also modifies the vacuum by
+            modifying the c parameter so that we have the desired vacuum.
+            The default is 'True'.
 
         Returns
         -------
@@ -729,12 +740,12 @@ class Shaper():
             Pymatgen SlabGenerator object used to generate the slabs.
 
         """
-        tol = sg_params.get('tol')
+        miller = sg_params.get('miller')
         slab_thick = sg_params.get('slab_thick')
         vac_thick = sg_params.get('vac_thick')
         minimize_bv = sg_params.get('minimize_bv')
-        miller = sg_params.get('miller')
-        mns = sg_params.get('mns')
+
+        mns = sg_params.get('max_normal_search')
         max_normal_search = max([abs(m) for m in miller]) if mns == 'max' else mns
 
         SG = SlabGenerator(initial_structure=bulk_conv,
@@ -743,25 +754,23 @@ class Shaper():
                            min_vacuum_size=vac_thick,
                            lll_reduce=sg_params.get('lll_reduce', True),
                            center_slab=sg_params.get('center_slab', True),
-                           in_unit_planes=True,
+                           in_unit_planes=sg_params.get('in_unit_planes', True),
                            primitive=sg_params.get('prim', True),
                            max_normal_search=max_normal_search,
                            reorient_lattice=True)
-        
+
         nn_method = 'all'
 
-        slabs = SG.get_slabs(bonds=None,
-                             ftol=0.1,
-                             tol=tol,
-                             max_broken_bonds=0,
-                             symmetrize=sg_params.get('symmetrize', False),
-                             repair=False)
+        tol = sg_params.get('tol')
+        slabs = SG.get_slabs(tol=tol,
+                             symmetrize=sg_params.get('symmetrize', False))
 
         bbs = Shaper._bonds_by_shift(SG, nn_method, tol)
 
-        slabs = [Shaper.reconstruct(slab, slab_thick, vac_thick, tol=tol,
-                                    minimize_bv=minimize_bv, bbs=bbs)
-                 for slab in slabs]
+        if reconstruct:
+            slabs = [Shaper.reconstruct(slab, slab_thick, vac_thick, tol=tol,
+                                        minimize_bv=minimize_bv, bbs=bbs)
+                     for slab in slabs]
 
         for slab in slabs:
             slab.energy = bbs[np.round(slab.shift, 4)]
