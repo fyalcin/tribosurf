@@ -175,8 +175,8 @@ class FT_SlabOptOrientation(FiretaskBase):
         fltr = {'mpid': mpid}
 
         FW1 = Firework(
-            FT_PutSurfenInputsIntoDB(inputs_list=inputs_list, sg_params=sg_params, fltr=fltr, coll=coll,
-                                     db_file=db_file, high_level=high_level),
+            FT_PutSurfenInputsIntoDB(inputs_list=inputs_list, sg_params=sg_params, comp_params=comp_params,
+                                     fltr=fltr, coll=coll, db_file=db_file, high_level=high_level),
             name=f"Generate surface energy inputs for {mpid} with {functional} and put in DB")
 
         FW2 = Firework(
@@ -275,19 +275,20 @@ class FT_PutSurfenInputsIntoDB(FiretaskBase):
 
     """
     _fw_name = "Put the structures and computational parameters for the surface energy calculation into the DB"
-    required_params = ['inputs_list', 'sg_params', 'fltr', 'coll']
+    required_params = ['inputs_list', 'sg_params', 'comp_params', 'fltr', 'coll']
     optional_params = ['db_file', 'high_level']
 
     def run_task(self, fw_spec):
         inputs_list = self.get('inputs_list')
         sg_params = self.get('sg_params')
+        comp_params = self.get('comp_params')
         fltr = self.get('fltr')
         coll = self.get('coll')
 
         db_file = self.get('db_file', 'auto')
         high_level = self.get('high_level', True)
 
-        put_surfen_inputs_into_db(inputs_list, sg_params, fltr, coll, db_file, high_level)
+        put_surfen_inputs_into_db(inputs_list, sg_params, comp_params, fltr, coll, db_file, high_level)
 
         return FWAction(update_spec=fw_spec)
 

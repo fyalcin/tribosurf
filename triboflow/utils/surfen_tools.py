@@ -390,7 +390,7 @@ def generate_surfen_entries(fltr, coll, db_file='auto', high_level=True):
                     upsert=True)
 
 
-def put_surfen_inputs_into_db(inputs_list, sg_params, fltr, coll, db_file='auto', high_level=True):
+def put_surfen_inputs_into_db(inputs_list, sg_params, comp_params, fltr, coll, db_file='auto', high_level=True):
     """
     Writes all the inputs and parameters for surface energy calculations described in
     the inputs_list into the database to be later updated with the surface energies.
@@ -405,6 +405,9 @@ def put_surfen_inputs_into_db(inputs_list, sg_params, fltr, coll, db_file='auto'
         by inputting a Slab and a SlabGenerator corresponding to this Slab object.
     sg_params : dict
         Parameters to be used in the SlabGenerator.
+    comp_params : dict
+        Computational parameters used in the calculations. Saved here for easy troubleshooting
+        possible calculation issues.
     fltr : dict
         Filter to use when looking up results in the database. Generally involves the mpid.
     coll : str
@@ -440,8 +443,8 @@ def put_surfen_inputs_into_db(inputs_list, sg_params, fltr, coll, db_file='auto'
             fltr=fltr,
             new_values={'$set': {loc_slab + '.structure': slab.as_dict(),
                                  loc_slab + '.slab_params': slab_params,
-                                 loc_slab + '.sg_params': sg_params
-                                 # loc_slab + '.comp_params': comp_params
+                                 loc_slab + '.sg_params': sg_params,
+                                 loc_slab + '.comp_params': comp_params
                                  }},
             upsert=True)
 
