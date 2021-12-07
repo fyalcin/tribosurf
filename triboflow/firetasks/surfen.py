@@ -55,15 +55,13 @@ class FT_RelaxSurfaceEnergyInputs(FiretaskBase):
             hkl = slab['slab_params']['hkl']
             bvs = slab['slab_params']['bvs']
             for entry in slab.get('inputs'):
-                WF_calc = Workflow.from_dict(entry.get('WF'))
-
                 tag = entry.get('tag')
                 loc = entry.get('loc')
-
                 result = get_entry_by_loc(nav, fltr_high, coll, loc).get('output')
-
                 if result:
                     continue
+
+                WF_calc = Workflow.from_dict(entry.get('WF'))
                 WF_move = Workflow([Firework(FT_MoveResults(tag=tag,
                                                             fltr=fltr_high,
                                                             coll=coll,
@@ -128,21 +126,21 @@ class FT_SlabOptOrientation(FiretaskBase):
     """
 
     _fw_name = "Generate necessary structures for surface energy calculation and relax them."
-    required_params = ['mpid', 'functional']
+    required_params = ['mpid', 'functional', 'sg_params']
     optional_params = ['db_file', 'high_level', 'max_index',
-                       'comp_params', 'sg_params', 'bvs_method',
+                       'comp_params', 'bvs_method',
                        'bvs_param', 'override', 'fake']
 
     def run_task(self, fw_spec):
         mpid = self.get('mpid')
         functional = self.get('functional')
+        sg_params = self.get('sg_params')
 
         db_file = self.get('db_file', 'auto')
         high_level = self.get('high_level', True)
         max_index = self.get('max_index', 1)
         comp_params_user = self.get('comp_params', {})
 
-        sg_params = self.get('sg_params')
         bvs_method = self.get('bvs_method', 'tolerance')
         bvs_param = self.get('bvs_param', 0.2)
 
@@ -328,120 +326,3 @@ class FT_GenerateSurfenEntries(FiretaskBase):
         generate_surfen_entries(fltr, coll, db_file, high_level)
 
         return FWAction(update_spec=fw_spec)
-
-
-@explicit_serialize
-class FT_SlabOptOrientation(FiretaskBase):
-    """
-    Starts a Workflow that will find the lowest energy orientation of a material
-    desribed by its MaterialsProject ID given certain constraints.
-
-    Parameters
-    ----------
-    mpid : str
-        ID of the material in the MaterialsProject database.
-    functional : TYPE
-        Which functional to use; has to be 'PBE' or 'SCAN'.
-    db_file : TYPE, optional
-        Full path of the db.json. The default is 'auto'.
-    high_level : TYPE, optional
-        Whether to query the results from the high level database or not.
-        The default is True.
-    max_index : int, optional
-        Maximum miller up to which unique orientations will be searched.
-        The default is 2.
-    comp_params : dict
-        Computational parameters for the VASP simulations. If not set, default
-        parameters will be used instead. The default is {}.
-    sg_params : dict
-        Parameters to be used in the SlabGenerator.
-    bvs_method : str, optional
-        Filtering method that is used in conjunction with the bond valence sums.
-        'threshold' with a 'bvs_param' provided in the kwargs will filter out slabs
-        with bond valence sums (1+bvs_param)*bvs_min where bvs_min is the minimum
-        bond valence sum of all the slabs.
-        'all' will proceed with all the slabs generated regardless of their bond
-        valence sum.
-        'min_N' with a 'bvs_param' will take the slabs with the bvs_param lowest
-        bond valence sums.
-        The default is 'threshold'.
-    override : bool
-        Whether or not to run the workflow even though there exists an
-        "opt_orientation" key in the slab entry for this specific material.
-        Useful when one wants to have access to the surface energies of different
-        terminations in order to generate the Wulff shape for example.
-
-    """
-
-    _fw_name = "Generate necessary structures for surface energy calculation and relax them."
-    required_params = ['mpid', 'functional']
-    optional_params = ['db_file', 'high_level', 'max_index',
-                       'comp_params', 'sg_params', 'bvs_method',
-                       'bvs_param', 'override', 'fake']
-
-    def run_task(self, fw_spec):
-        mpid = self.get('mpid')
-        functional = self.get('functional')
-
-        db_file = self.get('db_file', 'auto')
-        high_level = self.get('high_level', True)
-        max_index = self.get('max_index', 1)
-        comp_params_user = self.get('comp_params', {})
-
-        sg_params = self.get('sg_params')
-        bvs_method = self.get('bvs_method', 'tolerance')
-        bvs_param = self.get('bvs_param', 0.2)
-
-        override = self.get('override', False)
-        fake = self.get('fake', False)
-
-        nav_high = Navigator(db_file, high_level=True)
-
-        comp_params = nav_high.find_data(f'{functional}.bulk_data', {'mpid': mpid})['comp_parameters']
-        comp_params.update(comp_params_user)
-
-        slab_dict = nav_high.find_data(f'{functional}.slab_data.LEO', {'mpid': mpid})
-
-        if slab_dict:
-            opt_orientation = slab_dict.get('opt_slab')
-            if opt_orientation and not override:
-                return FWAction(update_spec=fw_spec)
-
-        inputs_list = get_surfen_inputs_from_mpid(mpid,
-                                                  functional,
-                                                  sg_params,
-                                                  db_file,
-                                                  high_level,
-                                                  max_index,
-                                                  comp_params,
-                                                  bvs_method,
-                                                  bvs_param=bvs_param)
-
-        inputs_list = generate_surfen_wfs_from_inputs(inputs_list, comp_params, fake)
-
-        coll = f'{functional}.slab_data.LEO'
-        fltr = {'mpid': mpid}
-
-        FW1 = Firework(
-            FT_PutSurfenInputsIntoDB(inputs_list=inputs_list, sg_params=sg_params, fltr=fltr, coll=coll,
-                                     db_file=db_file, high_level=high_level),
-            name=f"Generate surface energy inputs for {mpid} with {functional} and put in DB")
-
-        FW2 = Firework(
-            FT_RelaxSurfaceEnergyInputs(inputs_list=inputs_list, fltr=fltr, coll=coll, db_file=db_file,
-                                        high_level=high_level),
-            name=f"Generate and relax surface energy inputs for {mpid} with {functional}")
-
-        FW3 = Firework(
-            FT_WriteSurfaceEnergies(inputs_list=inputs_list, fltr=fltr, coll=coll, db_file=db_file,
-                                    high_level=high_level),
-            name=f"Calculate the surface energies for {mpid} with {functional} and put into DB")
-
-        FW4 = Firework(
-            FT_GenerateSurfenEntries(fltr=fltr, coll=coll, db_file=db_file, high_level=high_level),
-            name=f"Update the consolidated surface energy list for {mpid} with {functional}")
-
-        WF = Workflow([FW1, FW2, FW3, FW4], {FW1: [FW2], FW2: [FW3], FW3: [FW4]},
-                      name=f'Compute surface energies of likely low energy orientations of {mpid} with {functional}')
-
-        return FWAction(detours=WF)

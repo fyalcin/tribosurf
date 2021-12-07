@@ -67,12 +67,12 @@ lpad = LaunchPad.auto_load()
 
 FT = FT_SlabOptOrientation(mpid=mpid,
                            functional=functional,
+                           sg_params=sg_params,
                            db_file=db_file,
                            max_index=max_index,
                            high_level=high_level,
                            comp_params=comp_params,
                            bvs_method=bvs_method,
-                           sg_params=sg_params,
                            bvs_param=bvs_param,
                            override=override,
                            fake=fake)
