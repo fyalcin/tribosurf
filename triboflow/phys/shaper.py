@@ -720,7 +720,7 @@ class Shaper():
             refer to the documentation of pymatgen.core.surface.SlabGenerator.
         reconstruct : bool, optional
             Context: Pymatgen's slab generation algorithm works by replicating the
-            oriented unit cell(OUC) a number of times to each the minimum slab size.
+            oriented unit cell(OUC) a number of times to reach the minimum slab size.
             However, it does not determine the number of layers in the OUC correctly.
             This leads to much larger slabs than one asks for, but it ensures that
             the terminations of the top and bottom are always complementary, which
