@@ -692,7 +692,7 @@ class Shaper():
         return {'symmetric': sym, 'stoichiometric': sto}
 
     @staticmethod
-    def generate_slabs(bulk_conv, sg_params, reconstruct=True):
+    def generate_slabs(bulk_conv, sg_params, reconstruct=True, to_file=False):
         """
         Generates slabs with the given parameters.
 
@@ -720,7 +720,7 @@ class Shaper():
             refer to the documentation of pymatgen.core.surface.SlabGenerator.
         reconstruct : bool, optional
             Context: Pymatgen's slab generation algorithm works by replicating the
-            oriented unit cell(OUC) a number of times to reach the minimum slab size.
+            oriented unit cell(OUC) a number of times to each the minimum slab size.
             However, it does not determine the number of layers in the OUC correctly.
             This leads to much larger slabs than one asks for, but it ensures that
             the terminations of the top and bottom are always complementary, which
@@ -731,6 +731,10 @@ class Shaper():
             modifying the c parameter so that we have the desired vacuum.
             The default is 'True'.
 
+        to_file : bool, optional
+            Whether to export the generated structures as VASP formatted files.
+            Filenames are in thr format {formula}_{miller_index}_{termination_index}.
+            The default is 'False'.
         Returns
         -------
         slabs : list
@@ -741,41 +745,53 @@ class Shaper():
 
         """
         miller = sg_params.get('miller')
+        if not isinstance(miller[0], tuple):
+            miller = [miller]
+
         slab_thick = sg_params.get('slab_thick')
         vac_thick = sg_params.get('vac_thick')
         minimize_bv = sg_params.get('minimize_bv')
-
         mns = sg_params.get('max_normal_search')
-        max_normal_search = max([abs(m) for m in miller]) if mns == 'max' else mns
 
-        SG = SlabGenerator(initial_structure=bulk_conv,
-                           miller_index=miller,
-                           min_slab_size=slab_thick,
-                           min_vacuum_size=vac_thick,
-                           lll_reduce=sg_params.get('lll_reduce', True),
-                           center_slab=sg_params.get('center_slab', True),
-                           in_unit_planes=sg_params.get('in_unit_planes', True),
-                           primitive=sg_params.get('prim', True),
-                           max_normal_search=max_normal_search,
-                           reorient_lattice=True)
+        SG_dict = {}
+        slabs_list = []
+        for m in miller:
+            max_normal_search = max([abs(i) for i in m]) if mns == 'max' else mns
+            SG = SlabGenerator(initial_structure=bulk_conv,
+                               miller_index=m,
+                               min_slab_size=slab_thick,
+                               min_vacuum_size=vac_thick,
+                               lll_reduce=sg_params.get('lll_reduce', True),
+                               center_slab=sg_params.get('center_slab', True),
+                               in_unit_planes=sg_params.get('in_unit_planes', True),
+                               primitive=sg_params.get('prim', True),
+                               max_normal_search=max_normal_search,
+                               reorient_lattice=True)
 
-        nn_method = 'all'
+            nn_method = 'all'
+            tol = sg_params.get('tol')
+            bbs = Shaper._bonds_by_shift(SG, nn_method, tol)
+            slabs = SG.get_slabs(tol=tol, symmetrize=sg_params.get('symmetrize', False))
 
-        tol = sg_params.get('tol')
-        slabs = SG.get_slabs(tol=tol,
-                             symmetrize=sg_params.get('symmetrize', False))
+            if reconstruct:
+                slabs = [Shaper.reconstruct(slab, slab_thick, vac_thick, tol=tol,
+                                            minimize_bv=minimize_bv, bbs=bbs)
+                         for slab in slabs]
 
-        bbs = Shaper._bonds_by_shift(SG, nn_method, tol)
+            for slab in slabs:
+                slab.energy = bbs[np.round(slab.shift, 4)]
 
-        if reconstruct:
-            slabs = [Shaper.reconstruct(slab, slab_thick, vac_thick, tol=tol,
-                                        minimize_bv=minimize_bv, bbs=bbs)
-                     for slab in slabs]
+            if to_file:
+                formula = slabs[0].composition.reduced_formula
+                for index, slab in enumerate(slabs):
+                    hkl = slab.miller_index
+                    slab.to('poscar', f'{formula}_{hkl}_{index}.vasp')
 
-        for slab in slabs:
-            slab.energy = bbs[np.round(slab.shift, 4)]
+            slabs_list += slabs
+            SG_dict[m] = SG
 
-        return slabs, SG
+        return slabs_list, SG_dict
+
 
     @staticmethod
     def get_constrained_ouc(slab):
