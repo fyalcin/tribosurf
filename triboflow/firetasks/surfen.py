@@ -126,23 +126,23 @@ class FT_SlabOptOrientation(FiretaskBase):
     """
 
     _fw_name = "Generate necessary structures for surface energy calculation and relax them."
-    required_params = ['mpid', 'functional', 'sg_params']
-    optional_params = ['db_file', 'high_level', 'max_index',
-                       'comp_params', 'bvs_method',
-                       'bvs_param', 'override', 'fake']
+    required_params = ['mpid', 'functional', 'sg_params', 'sg_filter']
+    optional_params = ['db_file', 'high_level', 'comp_params', 'override', 'fake']
 
     def run_task(self, fw_spec):
         mpid = self.get('mpid')
         functional = self.get('functional')
         sg_params = self.get('sg_params')
+        sg_filter = self.get('sg_filter')
+        print(sg_params)
 
         db_file = self.get('db_file', 'auto')
         high_level = self.get('high_level', True)
-        max_index = self.get('max_index', 1)
+        # max_index = self.get('max_index', 1)
         comp_params_user = self.get('comp_params', {})
 
-        bvs_method = self.get('bvs_method', 'tolerance')
-        bvs_param = self.get('bvs_param', 0.2)
+        # bvs_method = self.get('bvs_method', 'tolerance')
+        # bvs_param = self.get('bvs_param', 0.2)
 
         override = self.get('override', False)
         fake = self.get('fake', False)
@@ -162,12 +162,9 @@ class FT_SlabOptOrientation(FiretaskBase):
         inputs_list = get_surfen_inputs_from_mpid(mpid,
                                                   functional,
                                                   sg_params,
+                                                  sg_filter,
                                                   db_file,
-                                                  high_level,
-                                                  max_index,
-                                                  comp_params,
-                                                  bvs_method,
-                                                  bvs_param=bvs_param)
+                                                  high_level)
 
         inputs_list = generate_surfen_wfs_from_inputs(inputs_list, comp_params, fake)
 

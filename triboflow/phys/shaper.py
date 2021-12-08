@@ -745,9 +745,10 @@ class Shaper():
 
         """
         miller = sg_params.get('miller')
-        if not isinstance(miller[0], tuple):
-            miller = [miller]
-
+        if isinstance(miller[0], int):
+            miller = [(*miller,)]
+        else:
+            miller = [(*m,) for m in miller]
         slab_thick = sg_params.get('slab_thick')
         vac_thick = sg_params.get('vac_thick')
         minimize_bv = sg_params.get('minimize_bv')

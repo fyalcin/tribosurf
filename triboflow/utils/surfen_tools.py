@@ -88,9 +88,9 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=''):
         the slab itself, and the substructures needed in surface energy calculation.
 
     """
-    from triboflow.phys.shaper import Shaper
     # symmetry and stoichiometry of the input slab is identified in order to add
     # the correct calculations to the inputs_dict
+    nn_method = 'all'
     id_slab = Shaper.identify_slab(slab)
     sym = id_slab['symmetric']
     sto = id_slab['stoichiometric']
@@ -135,7 +135,7 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=''):
     if not sym:
         # For asymmetric slabs, we need the periodicity in the layering to figure out
         # if the top and bottom terminations are complementary.
-        bbs = Shaper._bonds_by_shift(slab, SG, tol)
+        bbs = Shaper._bonds_by_shift(SG, nn_method, tol)
         bvs, indices = np.unique(list(bbs.values()), return_index=True)
         periodicity = len(bvs)
 
@@ -183,12 +183,10 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=''):
 def get_surfen_inputs_from_mpid(mpid,
                                 functional,
                                 sg_params,
+                                sg_filter,
                                 db_file='auto',
                                 high_level=True,
-                                max_index=2,
-                                comp_params_user={},
-                                bvs_method='threshold',
-                                **kwargs):
+                                comp_params_user={}):
     """
     Generates an input dictionary that contains all the necessary information about
     the slabs that are consistent with the given parameters for which surface energy
@@ -242,7 +240,7 @@ def get_surfen_inputs_from_mpid(mpid,
 
     coll = f'{functional}.bulk_data'
     bulk_conv = get_conv_bulk_from_mpid(mpid, coll, db_file='auto', high_level=True)
-    candidates = generate_candidate_slabs(bulk_conv, sg_params, max_index, bvs_method, **kwargs)
+    candidates = generate_candidate_slabs(bulk_conv, sg_params, sg_filter)
     tol = sg_params.get('tol')
     inputs_list = [get_surfen_inputs_from_slab(c[0], c[1], tol) for c in candidates]
     ## TODO: should I put the mpid info somewhere in inputs_list? What about comp_params? Does it belong here?
@@ -372,18 +370,22 @@ def generate_surfen_entries(fltr, coll, db_file='auto', high_level=True):
     surfen_dict = {}
     for hkl, miller_data in data['miller_list'].items():
         tmp_hkl = {}
+        rel_str = {}
         for uid, slab_data in miller_data.items():
             surfen = slab_data['surface_energy']
             surfen_arr = [surfen['top'], surfen['bottom']]
             tmp_hkl[uid] = surfen_arr
+            rel_str[uid] = {k: v['output']['structure'] for k, v in
+                            slab_data['calcs'].items() if k.endswith('relax')}
         min_uid = min(tmp_hkl, key=tmp_hkl.get)
         min_surfen = min(tmp_hkl.values())
         params = ['structure', 'comp_params', 'slab_params']
-        params_dict = {k: v for k, v in miller_data[min_uid].items() if k in params}
         surfen_dict[hkl] = {'top': min_surfen[0],
                             'bottom': min_surfen[1],
                             'uid': min_uid}
-        surfen_dict[hkl].update(params_dict)
+        params_dict = {k: v for k, v in miller_data[min_uid].items() if k in params}
+        relaxed_structure = rel_str[min_uid]
+        surfen_dict[hkl].update({'relaxed_structure': relaxed_structure}, **params_dict)
 
     nav.update_data(collection=coll,
                     fltr=fltr,
@@ -510,12 +512,9 @@ def get_calc_wf(struct, vis, tag, fake=False):
     return WF
 
 
-
 def generate_candidate_slabs(bulk_conv,
                              sg_params,
-                             max_index=2,
-                             bvs_method='threshold',
-                             **kwargs):
+                             sg_filter):
     """
     Generates slabs within certain constraints from a given bulk structure.
 
@@ -547,9 +546,10 @@ def generate_candidate_slabs(bulk_conv,
         List of all the (Slab, SlabGenerator) tuples that satisfy the constraints.
 
     """
-    u_hkl = get_symmetrically_distinct_miller_indices(bulk_conv, max_index)
-    # u_hkl = [(1, 1, 1)]
-    sg_params.update({'miller': u_hkl})
+    max_index = sg_params.get('max_index')
+    if max_index:
+        u_hkl = get_symmetrically_distinct_miller_indices(bulk_conv, max_index)
+        sg_params.update({'miller': u_hkl})
     slabs_list, SG_dict = Shaper.generate_slabs(bulk_conv, sg_params)
     bvs = [slab.energy for slab in slabs_list]
 
@@ -560,14 +560,15 @@ def generate_candidate_slabs(bulk_conv,
     # formula = slabs_list[0].composition.reduced_formula
     # for index, slab in enumerate(slabs_list):
     #     miller = ''.join([str(m) for m in slab.miller_index])
-    #     slab.to('poscar', f'/home/firat/{formula}_{miller}_{index}_lll_{lll}_prim_{prim}_sym_{sym}_mns_{mns}.vasp')
+    #     slab.to('poscar', f'~/{formula}_{miller}_{index}_lll_{lll}_prim_{prim}_sym_{sym}_mns_{mns}.vasp')
 
-    if bvs_method == 'threshold':
-        bvs_tol = kwargs.get('bvs_param')
+    method = sg_filter.get('method')
+    if method == 'bvs_threshold':
+        bvs_tol = sg_filter.get('bvs_param')
         min_bvs = min(bvs)
         filtered_slabs = [slab for slab in slabs_list if slab.energy / min_bvs - 1 < bvs_tol]
-    elif bvs_method == 'min_N':
-        N = kwargs.get('bvs_param')
+    elif method == 'min_N':
+        N = sg_filter.get('bvs_param')
         if N < len(slabs_list):
             sorted_ind = np.argsort(bvs)
             filtered_slabs = [slabs_list[i] for i in sorted_ind[:N]]

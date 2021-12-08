@@ -20,7 +20,8 @@ max_index = 3
 
 override = True
 
-sg_params = {'symmetrize': False,
+sg_params = {'miller': [(1, 1, 0)],
+             'symmetrize': False,
              'slab_thick': 15,
              'vac_thick': 15,
              'prim': True,
@@ -28,6 +29,8 @@ sg_params = {'symmetrize': False,
              'minimize_bv': True,
              'tol': 0.1,
              'mns': 1}
+
+sg_filter = {'method': 'all'}
 
 bvs_method = 'all'
 bvs_param = 1
@@ -68,12 +71,10 @@ lpad = LaunchPad.auto_load()
 FT = FT_SlabOptOrientation(mpid=mpid,
                            functional=functional,
                            sg_params=sg_params,
+                           sg_filter=sg_filter,
                            db_file=db_file,
-                           max_index=max_index,
                            high_level=high_level,
                            comp_params=comp_params,
-                           bvs_method=bvs_method,
-                           bvs_param=bvs_param,
                            override=override,
                            fake=fake)
 
