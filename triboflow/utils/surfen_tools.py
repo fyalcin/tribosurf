@@ -567,7 +567,7 @@ def generate_candidate_slabs(bulk_conv,
         bvs_tol = sg_filter.get('bvs_param')
         min_bvs = min(bvs)
         filtered_slabs = [slab for slab in slabs_list if slab.energy / min_bvs - 1 < bvs_tol]
-    elif method == 'min_N':
+    elif method == 'bvs_min_N':
         N = sg_filter.get('bvs_param')
         if N < len(slabs_list):
             sorted_ind = np.argsort(bvs)
