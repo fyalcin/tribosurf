@@ -542,7 +542,8 @@ def generate_candidate_slabs(bulk_conv,
         List of all the (Slab, SlabGenerator) tuples that satisfy the constraints.
 
     """
-    slabs_list, SG_dict = Shaper.generate_slabs(bulk_conv, sg_params)
+    reconstruct = sg_params.get('reconstruct', True)
+    slabs_list, SG_dict = Shaper.generate_slabs(bulk_conv, sg_params, reconstruct)
     bvs = [slab.energy for slab in slabs_list]
 
     # lll = sg_params.get('lll_reduce')
