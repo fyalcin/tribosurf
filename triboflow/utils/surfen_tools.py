@@ -522,22 +522,19 @@ def generate_candidate_slabs(bulk_conv,
     bulk_conv : pymatgen.core.structure.Structure
         Conventional standard bulk structure used in the SlabGenerator.
     sg_params : dict
-        Parameters used in the SlabGenerator.
-    max_index : int, optional
-        Maximum miller up to which unique orientations will be searched.
-        The default is 2.
-    bvs_method : str, optional
-        Filtering method that is used in conjunction with the bond valence sums.
-        'threshold' with a 'bvs_param' provided in the kwargs will filter out slabs
-        with bond valence sums (1+bvs_param)*bvs_min where bvs_min is the minimum
-        bond valence sum of all the slabs.
-        'all' will proceed with all the slabs generated regardless of their bond
-        valence sum.
-        'min_N' with a 'bvs_param' will take the slabs with the bvs_param lowest
-        bond valence sums.
-        The default is 'threshold'.
-    **kwargs : dict
-        Dictionary containing the bond valence sum filtering parameter 'bvs_param'
+        Dict of parameters used in the SlabGenerator. For info about required
+        and optional keys, refer to Shaper.generate_slabs()
+    sg_filter : dict
+        Dict of parameters used to filter the generated slabs.
+        Required keys are:
+            method
+            <method_prefix>_param
+        where currently the only implemented methods are 'bvs_threshold' and
+        'bvs_min_N'. 'bvs_threshold' filters out slabs with energy attributes
+        within a threshold of the minimum value of the energy across all slabs,
+        while 'bvs_min_N' filters out N lowest energy slabs. Energy here refers
+        to the bond valence sums of broken bonds when the slabs are generated,
+        and can be accessed by slab.energy.
 
     Returns
     -------
