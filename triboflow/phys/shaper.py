@@ -31,7 +31,7 @@ __date__ = 'April 21st, 2021'
 
 from pymatgen.core.structure import Structure
 from pymatgen.core.lattice import Lattice
-from pymatgen.core.surface import center_slab, Slab, SlabGenerator
+from pymatgen.core.surface import center_slab, Slab, SlabGenerator, get_symmetrically_distinct_miller_indices
 from pymatgen.analysis.local_env import BrunnerNN_real
 from pymatgen.analysis.molecule_structure_comparator import CovalentRadius
 from pymatgen.io.cif import CifParser
@@ -744,11 +744,15 @@ class Shaper():
             Pymatgen SlabGenerator object used to generate the slabs.
 
         """
-        miller = sg_params.get('miller')
-        if isinstance(miller[0], int):
-            miller = [(*miller,)]
+        max_index = sg_params.get('max_index')
+        if max_index:
+            miller = get_symmetrically_distinct_miller_indices(bulk_conv, max_index)
         else:
-            miller = [(*m,) for m in miller]
+            miller = sg_params.get('miller')
+            if isinstance(miller[0], int):
+                miller = [(*miller,)]
+            else:
+                miller = [(*m,) for m in miller]
         slab_thick = sg_params.get('slab_thick')
         vac_thick = sg_params.get('vac_thick')
         minimize_bv = sg_params.get('minimize_bv')
@@ -785,8 +789,10 @@ class Shaper():
             if to_file:
                 formula = slabs[0].composition.reduced_formula
                 for index, slab in enumerate(slabs):
-                    hkl = slab.miller_index
-                    slab.to('poscar', f'{formula}_{hkl}_{index}.vasp')
+                    hkl = ''.join([str(i) for i in slab.miller_index])
+                    area = np.round(slab.surface_area, 2)
+
+                    slab.to('poscar', f'{formula}_{hkl}_{area}_{index}.vasp')
 
             slabs_list += slabs
             SG_dict[m] = SG

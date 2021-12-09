@@ -12,7 +12,6 @@ import numpy as np
 from atomate.vasp.fireworks import StaticFW
 from atomate.vasp.powerups import add_modify_incar
 from fireworks import Firework, Workflow
-from pymatgen.core.surface import get_symmetrically_distinct_miller_indices
 
 from triboflow.firetasks.fv import FT_fake_vasp
 from triboflow.phys.shaper import Shaper
@@ -546,10 +545,6 @@ def generate_candidate_slabs(bulk_conv,
         List of all the (Slab, SlabGenerator) tuples that satisfy the constraints.
 
     """
-    max_index = sg_params.get('max_index')
-    if max_index:
-        u_hkl = get_symmetrically_distinct_miller_indices(bulk_conv, max_index)
-        sg_params.update({'miller': u_hkl})
     slabs_list, SG_dict = Shaper.generate_slabs(bulk_conv, sg_params)
     bvs = [slab.energy for slab in slabs_list]
 

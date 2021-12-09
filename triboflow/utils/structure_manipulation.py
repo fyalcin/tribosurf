@@ -5,6 +5,7 @@ from pymatgen.core.sites import PeriodicSite
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import SlabGenerator, Slab
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
+from pymatgen.ext.matproj import MPRester
 
 from triboflow.utils.database import NavigatorMP, Navigator
 
@@ -99,7 +100,11 @@ def get_conv_bulk_from_mpid(mpid, coll, db_file='auto', high_level=True):
     nav = Navigator(db_file, high_level)
     bulk_dict = nav.find_data(coll, {'mpid': mpid})
     if bulk_dict is None:
-        raise ValueError(f'Bulk entry for {mpid} not found in {high_level}')
+        with MPRester() as mpr:
+            bulk_conv = mpr.get_structure_by_material_id(material_id=mpid,
+                                                         conventional_unit_cell=True)
+        return bulk_conv
+        # raise ValueError(f'Bulk entry for {mpid} not found in {high_level}')
 
     bulk_struct = bulk_dict.get('structure_equiVol')
     if bulk_struct is None:

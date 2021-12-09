@@ -27,8 +27,9 @@ sg_params = {'miller': [(1, 1, 0)],
              'prim': True,
              'lll_reduce': True,
              'minimize_bv': True,
+             'max_index': 2,
              'tol': 0.1,
-             'mns': 1}
+             'mns': 'max'}
 
 sg_filter = {'method': 'all'}
 
