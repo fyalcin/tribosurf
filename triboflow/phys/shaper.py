@@ -204,11 +204,8 @@ class Shaper():
                 layers_to_remove -= periodicity
             struct_resized = Shaper._remove_layers(struct_centered, layers_to_remove,
                                                    tol=tol, method='layers')
-            if struct_resized.composition.reduced_composition != struct_centered.composition.reduced_composition:
-                print('hey')
         else:
             struct_resized = Shaper._remove_layers(struct_centered, struct_thickness, tol=tol)
-
         # Vacuum region is modified to the desired thickness
         reconstructed_struct = Shaper._modify_vacuum(struct_resized, vacuum_thickness)
 
