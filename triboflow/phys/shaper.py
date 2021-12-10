@@ -152,7 +152,7 @@ class Shaper():
             raise ValueError('Region must be one of "cell", "vacuum", or "slab"')
 
     @staticmethod
-    def reconstruct(struct, struct_thickness, vacuum_thickness, tol=0.1, minimize_bv=True,
+    def reconstruct(struct, struct_thickness, vacuum_thickness, tol=0.1, minimize_bv=False,
                     center=True, **kwargs):
         """
         Reconstruct the input slab with the desired slab thickness in
@@ -211,8 +211,6 @@ class Shaper():
 
         # Vacuum region is modified to the desired thickness
         reconstructed_struct = Shaper._modify_vacuum(struct_resized, vacuum_thickness)
-        if reconstructed_struct.composition.reduced_composition != struct_centered.composition.reduced_composition:
-            print('hey')
 
         return reconstructed_struct
 
