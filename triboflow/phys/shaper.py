@@ -537,10 +537,11 @@ class Shaper():
 
         """
         cr = CovalentRadius().radius
+        cutoff = 2*max([cr[a] for a in np.unique([str(a) for a in struct.species])])
         if nn_method == 'all':
-            nn_list = struct.get_all_neighbors(max(struct.lattice.abc))
+            nn_list = struct.get_all_neighbors(r=cutoff)
         elif nn_method == 'BNN':
-            BNN = BrunnerNN_real(cutoff=max(struct.lattice.abc))
+            BNN = BrunnerNN_real(cutoff=cutoff)
             nn_list = BNN.get_all_nn_info(struct)
         c_ranges = []
         for s_index, site in enumerate(struct):

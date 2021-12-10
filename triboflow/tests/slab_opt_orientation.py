@@ -20,7 +20,7 @@ max_index = 3
 
 override = True
 
-sg_params = {'miller': [(1, 1, 1)],
+sg_params = {'miller': [(3, 1, 1)],
              'symmetrize': False,
              'slab_thick': 10,
              'vac_thick': 15,
@@ -35,7 +35,7 @@ sg_filter = {'method': 'all'}
 
 bvs_method = 'all'
 bvs_param = 1
-fake = True
+fake = False
 
 lpad = LaunchPad.auto_load()
 
