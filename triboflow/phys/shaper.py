@@ -537,7 +537,7 @@ class Shaper():
 
         """
         cr = CovalentRadius().radius
-        cutoff = 2*max([cr[a] for a in np.unique([str(a) for a in struct.species])])
+        cutoff = 2 * max([a[0] for a in list(Shaper._get_bonds(struct).values())])
         if nn_method == 'all':
             nn_list = struct.get_all_neighbors(r=cutoff)
         elif nn_method == 'BNN':
@@ -569,7 +569,7 @@ class Shaper():
         b = 0.37
         R_0 = r1 + r2
         return np.exp((R_0 - bond_dist) / b)
-    
+
     @staticmethod
     def get_surface_area(struct):
         mat = struct.lattice.matrix
@@ -607,7 +607,7 @@ class Shaper():
             for c_range in c_ranges:
                 if c_range[0] < shift < c_range[1]:
                     bbs[shift] += c_range[2][3]
-            bbs[shift] = np.round(bbs[shift], 4)/area
+            bbs[shift] = np.round(bbs[shift], 4) / area
         return bbs
 
     @staticmethod
@@ -794,7 +794,6 @@ class Shaper():
             SG_dict[m] = SG
 
         return slabs_list, SG_dict
-
 
     @staticmethod
     def get_constrained_ouc(slab):
