@@ -8,24 +8,21 @@ Created on Mon Oct  4 16:12:32 2021
 
 from fireworks import LaunchPad
 from triboflow.workflows.main import heterogeneous_wf
-from triboflow.utils.utils import load_homoatomic_materials
 
-materials_dict = load_homoatomic_materials()
-materials_list =[]
-
-# for formula in ['Al', 'C', 'Si', 'Ge', 'Cu', 'Ag',
-#                 'Au', 'Ni', 'Fe', 'Ti', 'Co']:
-for formula in ['Al', 'Cu', 'Si', 'C']:
-    mpid = materials_dict[formula]['mpids'][materials_dict[formula]['default']]
-    materials_list.append({'formula': formula, 'mpid': mpid})
+materials = {'Al': {'mpid': 'mp-134'},
+             'Cu': {'mpid': 'mp-30'},
+             'Fe': {'mpid': 'mp-13'}}
+             #'C': {'mpid': 'mp-66',
+              #     'thick_min': 4,
+              #     'thick_inc': 2}}
 
 miller_indices = ['100', '110', '111']
 
 default_thickness_params = {'thick_min': 4,
-                            'thick_max': 12,
+                            'thick_max': 14,
                             'thick_incr': 1,}
 
-computational_params = {'functional': 'PBE',
+computational_params = {'functional': 'SCAN',
                    'volume_tolerance': 0.001,
                    'BM_tolerance': 0.01,
                    'use_vdw': False,
@@ -38,23 +35,21 @@ interface_params = {'max_area': 100,
                     'max_angle_diff': 1.0}
 
 
-def create_triboflow_inputs(materials_list,
+def create_triboflow_inputs(materials,
                             miller_indices,
                             default_thickness_params,
                             computational_params,
                             interface_params):
     
     slabs = []
-    for mat in materials_list:
-        mpid = mat.get('mpid')
-        formula = mat.get('formula')
+    for k, v in materials.items():
+        mpid = v.pop('mpid')
         for miller in miller_indices:
-            m1 = {'formula': formula,
+            m1 = {'formula': k,
                   'mpid': mpid,
                   'miller': miller}
             m1.update(default_thickness_params)
-            if formula in ['C', 'Si', 'Ge'] and miller == '111':
-                m1['thick_incr'] = 2
+            m1.update(v)
             slabs.append(m1)
         
         inputs_list = []
@@ -80,7 +75,7 @@ def submit_multiple_wfs(inputs_list):
         lpad.add_wf(WF)
 
 if __name__ == "__main__":
-    inputs_list = create_triboflow_inputs(materials_list=materials_list,
+    inputs_list = create_triboflow_inputs(materials=materials,
                                           miller_indices=miller_indices,
                                           computational_params=computational_params,
                                           interface_params=interface_params,
