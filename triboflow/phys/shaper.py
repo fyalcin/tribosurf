@@ -607,7 +607,7 @@ class Shaper():
             for c_range in c_ranges:
                 if c_range[0] < shift < c_range[1]:
                     bbs[shift] += c_range[2][3]
-            bbs[shift] = np.round(bbs[shift], 4) / area
+            bbs[shift] = np.round(bbs[shift] / area, 4)
         return bbs
 
     @staticmethod
