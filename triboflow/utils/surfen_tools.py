@@ -97,6 +97,7 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
     ouc = Shaper.get_constrained_ouc(slab)
     ouc_layers = len(Shaper._get_layers(ouc, tol))
     slab_layers = len(Shaper._get_layers(slab, tol))
+    slab_thickness = Shaper._get_proj_height(slab, 'slab')
     ouc_input = generate_input_dict(ouc, 'relax', 'ouc')
     millerstr = ''.join([str(i) for i in slab.miller_index])
     inputs_dict = {'struct': slab,
@@ -105,7 +106,8 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
                    'slab_params': {'sym': sym,
                                    'sto': sto,
                                    'layer_tol': tol,
-                                   'num_layers': slab_layers,
+                                   'thickness_layers': slab_layers,
+                                   'thickness_A': slab_thickness,
                                    'hkl': millerstr,
                                    'bvs': slab.energy,
                                    'area': slab.surface_area}}
