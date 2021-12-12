@@ -10,8 +10,8 @@ from pymatgen.ext.matproj import MPRester
 from triboflow.utils.database import NavigatorMP, Navigator
 
 
-def get_SG_from_mpid(mpid, miller, db_file='auto', high_level=True, min_slab=15, min_vac=15, lll_reduce=True,
-                     center=True, in_unit_planes=True, prim=True, reorient_lattice=True):
+def get_SG_from_mpid(mpid, functional, miller, db_file='auto', high_level=True, min_slab=15, min_vac=15,
+                     lll_reduce=True, center=True, in_unit_planes=True, prim=True, reorient_lattice=True):
     """
     Generates the SlabGenerator for the given material, miller index and other parameters.
 
@@ -19,6 +19,10 @@ def get_SG_from_mpid(mpid, miller, db_file='auto', high_level=True, min_slab=15,
     ----------
     mpid : str
         Unique MaterialsProject ID describing the structure.
+    functional : str
+        Functional used for the bulk calculation. Used for accessing
+        the correct collection in the database to load the conventional
+        standard structure.
     miller : list
         Desired orientation of the SlabGenerator object.
     db_file : str, optional
@@ -58,7 +62,8 @@ def get_SG_from_mpid(mpid, miller, db_file='auto', high_level=True, min_slab=15,
         Pymatgen SlabGenerator object with the given parameters.
 
     """
-    bulk_conv = get_conv_bulk_from_mpid(mpid, db_file, high_level)
+    coll = f'{functional}.bulk_data'
+    bulk_conv = get_conv_bulk_from_mpid(mpid, coll, db_file, high_level)
     max_normal_search = max([abs(m) for m in miller])
     SG = SlabGenerator(bulk_conv, miller, min_slab, min_vac, lll_reduce, center, in_unit_planes, prim,
                        max_normal_search, reorient_lattice)
@@ -118,7 +123,7 @@ def get_conv_bulk_from_mpid(mpid, coll, db_file='auto', high_level=True):
     return bulk_conv
 
 
-def slab_from_file(filename, mpid, miller, db_file='auto', high_level=True):
+def slab_from_file(filename, mpid, functional, miller, db_file='auto', high_level=True):
     """
     Loads up a surface from a file (can be CIF, VASP, POSCAR ..) and turn it
     into a pymatgen Slab object.
@@ -129,6 +134,9 @@ def slab_from_file(filename, mpid, miller, db_file='auto', high_level=True):
         Full path of the file to be loaded.
     mpid : str
         Unique MaterialsProject ID describing the structure.
+    functional : str
+        Functional used in the bulk calculation. Used to generate
+        the correct SlabGenerator.
     miller : list
         Desired orientation of the SlabGenerator object to be used in the
         generation of the Slab.
@@ -149,7 +157,7 @@ def slab_from_file(filename, mpid, miller, db_file='auto', high_level=True):
 
     """
     struct = Structure.from_file(filename)
-    SG = get_SG_from_mpid(mpid, miller, db_file, high_level)
+    SG = get_SG_from_mpid(mpid, functional, miller, db_file, high_level)
     slab = Slab(lattice=struct.lattice, species=struct.species, coords=struct.frac_coords, miller_index=miller,
                 oriented_unit_cell=SG.oriented_unit_cell, shift=0, scale_factor=np.eye(3))
     return slab, SG

@@ -3,7 +3,7 @@ from fireworks import LaunchPad
 
 from triboflow.firetasks.surfen import FT_SurfEnFromFile
 
-filename = './Al-(100).cif'
+filename = '/home/fs71411/firaty/al100.cif'
 miller = (1, 0, 0)
 mpid = 'mp-134'
 functional = 'PBE'

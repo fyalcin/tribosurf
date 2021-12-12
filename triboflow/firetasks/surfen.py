@@ -30,7 +30,7 @@ class FT_SurfEnFromFile(FiretaskBase):
         comp_params = nav.find_data('PBE.bulk_data', {'mpid': mpid}).get('comp_parameters')
         comp_params.update(comp_params_user)
 
-        slab, SG = slab_from_file(filename, mpid, miller, db_file, high_level)
+        slab, SG = slab_from_file(filename, mpid, functional, miller, db_file, high_level)
 
         inputs_list = get_surfen_inputs_from_slab(slab, SG, custom_id=custom_id)
         inputs_list = generate_surfen_wfs_from_inputs(inputs_list, comp_params)
