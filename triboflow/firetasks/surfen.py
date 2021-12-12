@@ -33,6 +33,8 @@ class FT_SurfEnFromFile(FiretaskBase):
         slab, SG = slab_from_file(filename, mpid, functional, miller, db_file, high_level)
 
         inputs_list = get_surfen_inputs_from_slab(slab, SG, custom_id=custom_id)
+        if not isinstance(inputs_list, list):
+            inputs_list = [inputs_list]
         inputs_list = generate_surfen_wfs_from_inputs(inputs_list, comp_params)
 
         fltr = {'mpid': mpid}
