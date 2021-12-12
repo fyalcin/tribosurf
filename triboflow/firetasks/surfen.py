@@ -41,14 +41,20 @@ class FT_SurfEnFromFile(FiretaskBase):
         coll = f'{functional}.slab_data.LEO'
 
         FW1 = Firework(
+            FT_PutSurfenInputsIntoDB(inputs_list=inputs_list, sg_params={}, comp_params=comp_params,
+                                     fltr=fltr, coll=coll, db_file=db_file, high_level=high_level),
+            name=f"Generate surface energy inputs for {mpid} with {functional} and put in DB")
+
+        FW2 = Firework(
             FT_RelaxSurfaceEnergyInputs(inputs_list=inputs_list, fltr=fltr, coll=coll, db_file=db_file,
                                         high_level=high_level),
             name=f"Generate and relax surface energy inputs for {mpid} with {functional}")
-        FW2 = Firework(
+
+        FW3 = Firework(
             FT_WriteSurfaceEnergies(inputs_list=inputs_list, fltr=fltr, coll=coll, db_file=db_file,
                                     high_level=high_level),
             name=f"Calculate the surface energies for {mpid} with {functional} and put into DB")
-        WF = Workflow([FW1, FW2], {FW1: [FW2]})
+        WF = Workflow([FW1, FW2, FW3], {FW1: [FW2], FW2: [FW3]})
 
         return FWAction(detours=WF)
 
