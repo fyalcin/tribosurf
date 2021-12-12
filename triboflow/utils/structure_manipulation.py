@@ -152,7 +152,7 @@ def slab_from_file(filename, mpid, miller, db_file='auto', high_level=True):
     SG = get_SG_from_mpid(mpid, miller, db_file, high_level)
     slab = Slab(lattice=struct.lattice, species=struct.species, coords=struct.frac_coords, miller_index=miller,
                 oriented_unit_cell=SG.oriented_unit_cell, shift=0, scale_factor=np.eye(3))
-    return slab
+    return slab, SG
 
 
 def transfer_average_magmoms(magnetic_struct, struct_without_magmoms):

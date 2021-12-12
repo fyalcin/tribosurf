@@ -61,7 +61,7 @@ def generate_input_dict(struct, calc_type, tag):
     return input_dict
 
 
-def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=''):
+def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
     """
     Generates a dictionary containing all the sub structures needed to compute the
     surface energy of the given slab.

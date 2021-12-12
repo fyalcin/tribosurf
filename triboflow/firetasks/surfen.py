@@ -3,8 +3,52 @@ from fireworks.utilities.fw_utilities import explicit_serialize
 
 from triboflow.firetasks.utils import FT_MoveResults
 from triboflow.utils.database import Navigator
+from triboflow.utils.structure_manipulation import slab_from_file
 from triboflow.utils.surfen_tools import get_surfen_inputs_from_mpid, generate_surfen_wfs_from_inputs, \
-    write_surface_energies_to_db, put_surfen_inputs_into_db, generate_surfen_entries, get_entry_by_loc
+    write_surface_energies_to_db, put_surfen_inputs_into_db, generate_surfen_entries, get_entry_by_loc, \
+    get_surfen_inputs_from_slab
+
+
+@explicit_serialize
+class FT_SurfEnFromFile(FiretaskBase):
+    _fw_name = 'Calculates the surface energy of the slab loaded from a file.'
+    required_params = ['filename', 'miller', 'mpid', 'functional']
+    optional_params = ['db_file', 'high_level', 'custom_id', 'comp_params']
+
+    def run_task(self, fw_spec):
+        filename = self.get('filename')
+        miller = self.get('miller')
+        mpid = self.get('mpid')
+        functional = self.get('functional')
+
+        db_file = self.get('db_file', 'auto')
+        high_level = self.get('high_level', True)
+        custom_id = self.get('custom_id')
+        comp_params_user = self.get('comp_params')
+
+        nav = Navigator(db_file, high_level)
+        comp_params = nav.find_data('PBE.bulk_data', {'mpid': mpid}).get('comp_parameters')
+        comp_params.update(comp_params_user)
+
+        slab, SG = slab_from_file(filename, mpid, miller, db_file, high_level)
+
+        inputs_list = get_surfen_inputs_from_slab(slab, SG, custom_id=custom_id)
+        inputs_list = generate_surfen_wfs_from_inputs(inputs_list, comp_params)
+
+        fltr = {'mpid': mpid}
+        coll = f'{functional}.slab_data.LEO'
+
+        FW1 = Firework(
+            FT_RelaxSurfaceEnergyInputs(inputs_list=inputs_list, fltr=fltr, coll=coll, db_file=db_file,
+                                        high_level=high_level),
+            name=f"Generate and relax surface energy inputs for {mpid} with {functional}")
+        FW2 = Firework(
+            FT_WriteSurfaceEnergies(inputs_list=inputs_list, fltr=fltr, coll=coll, db_file=db_file,
+                                    high_level=high_level),
+            name=f"Calculate the surface energies for {mpid} with {functional} and put into DB")
+        WF = Workflow([FW1, FW2], {FW1: [FW2]})
+
+        return FWAction(detours=WF)
 
 
 @explicit_serialize
@@ -34,7 +78,7 @@ class FT_RelaxSurfaceEnergyInputs(FiretaskBase):
         FWAction that detours to a Workflow containing the Fireworks that will perform
         the VASP calculations.
     """
-    _fw_name = "some random name"
+    _fw_name = "Perform various VASP calculations on the structures in order to calculate surface energy."
     required_params = ['inputs_list', 'fltr', 'coll']
     optional_params = ['db_file', 'high_level']
 
@@ -47,7 +91,7 @@ class FT_RelaxSurfaceEnergyInputs(FiretaskBase):
 
         flag = list(fltr_high.values())[0]
 
-        nav = Navigator(db_file, high_level=high_level)
+        nav_high = Navigator(db_file, high_level=high_level)
         nav_low = Navigator(db_file, high_level=False)
 
         WF_list = []
@@ -57,7 +101,7 @@ class FT_RelaxSurfaceEnergyInputs(FiretaskBase):
             for entry in slab.get('inputs'):
                 tag = entry.get('tag')
                 loc = entry.get('loc')
-                result = get_entry_by_loc(nav, fltr_high, coll, loc).get('output')
+                result = get_entry_by_loc(nav_high, fltr_high, coll, loc).get('output')
                 if result:
                     continue
 
