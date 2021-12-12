@@ -152,7 +152,7 @@ class Shaper():
             raise ValueError('Region must be one of "cell", "vacuum", or "slab"')
 
     @staticmethod
-    def reconstruct(struct, struct_thickness, vacuum_thickness, tol=0.1, minimize_bv=False,
+    def reconstruct(struct, slab_thickness, vacuum_thickness, tol=0.1, minimize_bv=False,
                     center=True, **kwargs):
         """
         Reconstruct the input slab with the desired slab thickness in
@@ -171,6 +171,8 @@ class Shaper():
         vacuum_thickness : float
             Desired vacuum region thickness in Angstroms. Lattice
             parameters are modified in order to get the correct vacuum.
+        tol : float, optional
+            Tolerance value for layering of sites. Used in counting of the layers.
         minimize_bv : bool, optional
             Whether to minimize the bond valence sum of broken bonds when
             removing layers. The default is True.
@@ -197,7 +199,7 @@ class Shaper():
             spacings = [spacing for spacing in Shaper._get_layer_spacings(struct_centered, tol) if spacing < 4.0]
             num_layers = len(Shaper._get_layers(struct_centered, tol))
             layers_to_remove = int(periodicity * np.floor((num_layers
-                                                           - struct_thickness) / periodicity))
+                                                           - slab_thickness) / periodicity))
             while initial_thickness - sum(spacings[:layers_to_remove]) < 10:
                 if layers_to_remove < 0:
                     raise ValueError('you must choose a bigger slab')
@@ -205,7 +207,7 @@ class Shaper():
             struct_resized = Shaper._remove_layers(struct_centered, layers_to_remove,
                                                    tol=tol, method='layers')
         else:
-            struct_resized = Shaper._remove_layers(struct_centered, struct_thickness, tol=tol)
+            struct_resized = Shaper._remove_layers(struct_centered, slab_thickness, tol=tol)
         # Vacuum region is modified to the desired thickness
         reconstructed_struct = Shaper._modify_vacuum(struct_resized, vacuum_thickness)
 
