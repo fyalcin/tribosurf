@@ -256,7 +256,7 @@ def get_generalized_kmesh(structure, k_dist, RemoveSymm=False, Vasp6=True):
 
 
 def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
-                                    k_dens_default=12.5):
+                                    k_dens_default=12.5, ups={'W': 'W_sv'}):
     """Make custom vasp settings for static calculations.
     
     Parameters
@@ -273,7 +273,12 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
     k_dens_default : float, optional
         Specifies the default kpoint density if no k_dens or kspacing key
         is found in the comp_parameters dictionary. The default is 12.5
-
+    ups : dict, optional
+        Specify user potcar settings, e.g. which potcar to choose for which
+        element. The default is there to fix an issue with tungsten, where
+        MP uses W_pv, which is depreciated by VASP and replaced with W_sv.
+        The default is {'W': 'W_sv'}
+        
     Raises
     ------
     SystemExit
@@ -329,6 +334,14 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
     if static_type.startswith('slab_'):
         uis['NELMDL'] = -15
         uis['NELM'] = 200
+        # set dipole corrections.
+        try:
+            uis['DIPOL'] = list(structure.center_of_mass)
+            uis['IDIPOL'] = 3
+            uis['EPSILON'] = comp_parameters.get('epsilon', 1.0)
+        except:
+            uis['IDIPOL'] = 3
+            uis['EPSILON'] = comp_parameters.get('epsilon', 1.0)
     elif comp_parameters.get('functional') in SCAN_list:
         uis['NELMDL'] = -10
     else:
@@ -406,17 +419,19 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
     if comp_parameters.get('functional') in SCAN_list:
         vis = MPScanStaticSet(structure, user_incar_settings=uis, vdw=vdw,
                               user_kpoints_settings=uks,
-                              user_potcar_functional='PBE_54')
+                              user_potcar_functional='PBE_54',
+                              user_potcar_settings=ups)
     else:
         vis = MPStaticSet(structure, user_incar_settings=uis, vdw=vdw,
                           user_kpoints_settings=uks,
-                          user_potcar_functional=upf)
+                          user_potcar_functional=upf,
+                          user_potcar_settings=ups)
 
     return vis
 
 
 def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
-                                   k_dens_default=12.5):
+                                   k_dens_default=12.5, ups={'W': 'W_sv'}):
     """Make custom vasp settings for relaxations.
     
     Parameters
@@ -433,6 +448,11 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
     k_dens_default : float, optional
         Specifies the default kpoint density if no k_dens or kspacing key
         is found in the comp_parameters dictionary. The default is 12.5
+    ups : dict, optional
+        Specify user potcar settings, e.g. which potcar to choose for which
+        element. The default is there to fix an issue with tungsten, where
+        MP uses W_pv, which is depreciated by VASP and replaced with W_sv.
+        The default is {'W': 'W_sv'}
 
     Raises
     ------
@@ -491,6 +511,14 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
         # uis['BMIX'] = 0.0001
         # uis['AMIX_MAG'] = 0.8
         # uis['BMIX_MAG'] = 0.0001
+        # set dipole corrections.
+        try:
+            uis['DIPOL'] = list(structure.center_of_mass)
+            uis['IDIPOL'] = 3
+            uis['EPSILON'] = comp_parameters.get('epsilon', 1.0)
+        except:
+            uis['IDIPOL'] = 3
+            uis['EPSILON'] = comp_parameters.get('epsilon', 1.0)
     else:
         uis['NELMDL'] = -6
         uis['EDIFFG'] = -0.01
@@ -597,14 +625,17 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
             uis['LELF'] = False  # otherwise KPAR >1 crashes
             vis = MPScanRelaxSet(structure, user_incar_settings=uis,
                                  vdw=vdw, user_kpoints_settings=uks,
-                                 user_potcar_functional='PBE_54')
+                                 user_potcar_functional='PBE_54',
+                                 user_potcar_settings=ups)
         else:
             vis = MPRelaxSet(structure, user_incar_settings=uis, vdw=vdw,
                              user_kpoints_settings=uks,
-                             user_potcar_functional='PBE_54')
+                             user_potcar_functional='PBE_54',
+                             user_potcar_settings=ups)
     else:
         vis = MPRelaxSet(structure, user_incar_settings=uis, vdw=vdw,
                          user_kpoints_settings=uks,
-                         user_potcar_functional=upf)
+                         user_potcar_functional=upf,
+                         user_potcar_settings=ups)
 
     return vis
