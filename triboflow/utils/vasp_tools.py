@@ -291,7 +291,8 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
     """
 
     allowed_types = ['bulk_from_scratch', 'bulk_follow_up', 'bulk_nscf',
-                     'slab_from_scratch', 'slab_follow_up', 'slab_nscf']
+                     'slab_from_scratch', 'slab_follow_up', 'slab_nscf',
+                     'bulk_epsilon_from_scratch', 'bulk_epsilon_follow_up']
 
     if static_type not in allowed_types:
         raise SystemExit('static type is not known. Please select from: {}'
@@ -415,6 +416,14 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
         upf = 'LDA_54'
     else:
         upf = 'PBE_54'
+        
+    if static_type.startswith('bulk_epsilon'):
+        uis['LEPSILON'] = True
+        uis['KPAR'] = 2
+        if comp_parameters.get('is_metal', False):
+            uis['LPEAD'] = False
+        else:
+            uis['LPEAD'] = True
 
     if comp_parameters.get('functional') in SCAN_list:
         vis = MPScanStaticSet(structure, user_incar_settings=uis, vdw=vdw,
