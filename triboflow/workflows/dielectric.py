@@ -16,6 +16,22 @@ from triboflow.utils.vasp_tools import get_custom_vasp_static_settings
 
 @explicit_serialize
 class FT_GetEpsilon(FiretaskBase):
+    """
+    Firetask to read out the dielectric tensor from a vasp run.
+    
+    Parameters
+    ----------
+    label : str
+        Task label to query for in the tasks collection of the Fireworks database.
+    db_file : str, optional
+        Full path of the db.json. The default is 'auto'.
+    
+    Returns
+    -------
+    FWAction that updates the spec with the dielectric tensor and the average
+    value of its diagonal elements.
+    
+    """
     _fw_name = 'Read the static dielectric constant'
     required_params = ['label']
     optional_params = ['db_file']
@@ -36,6 +52,32 @@ class FT_GetEpsilon(FiretaskBase):
 
 @explicit_serialize
 class FT_UpdateCompParams(FiretaskBase):
+    """
+    Firetask to update computational parameters for bulk and/or slabs
+    
+    Parameters
+    ----------
+    mpid : str
+        Material Project's material identifier ID.
+    functional : str
+        Functional for the identification of the high_level db.
+    new_params : list
+        List of strings that identify the new keys that should be written to
+        the computational parameters.
+    db_file : str, optional
+        Full path of the db.json. The default is 'auto'.
+    update_bulk : bool, optional
+        If the bulk entry for the given mpid should be updated.
+        The default is True.
+    update_slabs : bool, optional
+        If the slab entries matching a given mpid should be updated (all miller
+        indices. The default is False.
+    high_level_db : str or bool, optional
+        If a string is given, the high-level database will be chosen based on
+        that string. If True, the db.json file will be used to determine the
+        name of the high_level_db. The default is True.
+
+    """
     _fw_name = 'Update computational parameters'
     required_params = ['mpid', 'functional', 'new_params']
     optional_params = ['db_file', 'update_bulk', 'update_slabs',
@@ -81,12 +123,55 @@ def dielectric_constant_swf(structure,
                             hl_db=True,
                             update_bulk=True,
                             update_slabs=False):
+    """
+    Subworkflow that calculates dielectric properties and updates the comp_parameters.
+
+    Parameters
+    ----------
+    structure : pymatgen.core.structure.Structure
+        The structure for which the dielectric porperties are calculated.
+    mpid : str
+        Material Project's material identifier ID of the structure passed.
+    flag : str
+        Will be used to name the FW of the vasp calc and later to find it in the
+        tasks collection.
+    comp_parameters : dict, optional
+        Dictionary of computational parameters. Used to set up the vasp input
+        set. The default is {}.
+    spec : dict, optional
+        fw_spec that can be passed to the FWs. The default is {}.
+    functional : str, optional
+        Functional for the calculation. Usually SCAN or PBE. Used to select
+        the output collection in the high level db. The default is 'PBE'.
+    db_file : str, optional
+        Path to a db.json file. If 'auto', the standard config folder is used.
+        The default is 'auto'.
+    hl_db : str or bool, optional
+        If a string is given, the high-level database will be chosen based on
+        that string. If True, the db.json file will be used to determine the
+        name of the high_level_db. The default is True.
+    update_bulk : bool, optional
+        If the bulk entry for the given mpid should be updated.
+        The default is True.
+    update_slabs : bool, optional
+        If the slab entries matching a given mpid should be updated (all miller
+        indices. The default is False.
+
+    Returns
+    -------
+    WF : fireworks.core.firework.Workflow
+        The dielectric subworkflow.
+
+    """
     
     #check if epsilon is already calculated for that material.
-    nav_high = StructureNavigator(db_file=db_file, 
-                                  high_level=hl_db)
-    bulk_data = nav_high.get_bulk_from_db(mpid, functional)
-    epsilon = bulk_data['comp_parameters'].get('epsilon', False)
+    try:
+        nav_high = StructureNavigator(db_file=db_file, 
+                                      high_level=hl_db)
+        bulk_data = nav_high.get_bulk_from_db(mpid, functional)
+        epsilon = bulk_data['comp_parameters'].get('epsilon', False)
+    except:
+        epsilon = False
     
     formula = structure.composition.reduced_formula
     wf_name = f'Dielectric calculation WF for {formula} {mpid}'
