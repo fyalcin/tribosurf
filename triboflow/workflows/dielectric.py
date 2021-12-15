@@ -57,7 +57,7 @@ class FT_StartConvo(FiretaskBase):
         functional = self.get('functional')
         db_file = self.get('db_file')
         update_bulk = self.get('update_bulk', True)
-        update_slabs = self.get('update_slabs', False)
+        update_slabs = self.get('update_slabs', True)
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
         hl_db = self.get('high_level_db', True)

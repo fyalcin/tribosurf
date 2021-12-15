@@ -18,9 +18,112 @@ from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \
     FT_StartSlabRelax, FT_GetRelaxedSlab
 from triboflow.firetasks.PPES import FT_DoPPESCalcs, FT_FitPPES
 from triboflow.firetasks.adhesion import FT_CalcAdhesion
-from triboflow.utils.database import Navigator, NavigatorMP
+from triboflow.firetasks.utils import FT_UpdateCompParams
+from triboflow.firetasks.dielectric import FT_GetEpsilon
+from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
 from triboflow.utils.vasp_tools import get_emin_and_emax, get_custom_vasp_static_settings
 
+
+def dielectric_constant_swf(structure,
+                            mpid,
+                            flag, 
+                            comp_parameters={}, 
+                            spec={},
+                            functional='PBE', 
+                            db_file='auto',
+                            hl_db=True,
+                            update_bulk=True,
+                            update_slabs=False):
+    """
+    Subworkflow that calculates dielectric properties and updates the comp_parameters.
+
+    Parameters
+    ----------
+    structure : pymatgen.core.structure.Structure
+        The structure for which the dielectric porperties are calculated.
+    mpid : str
+        Material Project's material identifier ID of the structure passed.
+    flag : str
+        Will be used to name the FW of the vasp calc and later to find it in the
+        tasks collection.
+    comp_parameters : dict, optional
+        Dictionary of computational parameters. Used to set up the vasp input
+        set. The default is {}.
+    spec : dict, optional
+        fw_spec that can be passed to the FWs. The default is {}.
+    functional : str, optional
+        Functional for the calculation. Usually SCAN or PBE. Used to select
+        the output collection in the high level db. The default is 'PBE'.
+    db_file : str, optional
+        Path to a db.json file. If 'auto', the standard config folder is used.
+        The default is 'auto'.
+    hl_db : str or bool, optional
+        If a string is given, the high-level database will be chosen based on
+        that string. If True, the db.json file will be used to determine the
+        name of the high_level_db. The default is True.
+    update_bulk : bool, optional
+        If the bulk entry for the given mpid should be updated.
+        The default is True.
+    update_slabs : bool, optional
+        If the slab entries matching a given mpid should be updated (all miller
+        indices. The default is False.
+
+    Returns
+    -------
+    WF : fireworks.core.firework.Workflow
+        The dielectric subworkflow.
+
+    """
+    
+    #check if epsilon is already calculated for that material.
+    try:
+        nav_high = StructureNavigator(db_file=db_file, 
+                                      high_level=hl_db)
+        bulk_data = nav_high.get_bulk_from_db(mpid, functional)
+        epsilon = bulk_data['comp_parameters'].get('epsilon', False)
+    except:
+        epsilon = False
+    
+    formula = structure.composition.reduced_formula
+    wf_name = f'Dielectric calculation WF for {formula} {mpid}'
+    
+    if not epsilon:
+        vis = get_custom_vasp_static_settings(structure,
+                                              comp_parameters,
+                                              'bulk_epsilon_from_scratch')
+        Calc_Eps_FW = StaticFW(structure=structure,
+                               name=flag,
+                               vasp_input_set=vis)
+    
+        Get_Eps_FT = FT_GetEpsilon(label=flag, db_file=db_file)
+
+        Update_Data_FT = FT_UpdateCompParams(mpid=mpid,
+                                             functional=functional,
+                                             new_params=['epsilon'],
+                                             update_bulk=update_bulk,
+                                             update_slabs=update_slabs,
+                                             db_file=db_file,
+                                             high_level_db=hl_db)
+        Update_FW = Firework(tasks=[Get_Eps_FT, Update_Data_FT],
+                             spec=spec,
+                             name=flag+'_update_high_level')
+    
+        WF = Workflow([Calc_Eps_FW, Update_FW], {Calc_Eps_FW: [Update_FW]},
+                      name=wf_name)
+    else:
+        spec.update({'epsilon': epsilon})
+        Update_Data_FT = FT_UpdateCompParams(mpid=mpid,
+                                             functional=functional,
+                                             new_params=['epsilon'],
+                                             update_bulk=update_bulk,
+                                             update_slabs=update_slabs,
+                                             db_file=db_file,
+                                             high_level_db=hl_db)
+        Update_FW = Firework(tasks=[Update_Data_FT],
+                             spec=spec,
+                             name=flag+'_update_high_level')
+        WF = Workflow([Update_FW], name=wf_name)
+    return WF
 
 def adhesion_energy_swf(top_slab,
                         bottom_slab,

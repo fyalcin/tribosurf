@@ -16,6 +16,68 @@ from triboflow.utils.surfen_tools import move_result
 
 
 @explicit_serialize
+class FT_UpdateCompParams(FiretaskBase):
+    """
+    Firetask to update computational parameters for bulk and/or slabs
+    
+    Parameters
+    ----------
+    mpid : str
+        Material Project's material identifier ID.
+    functional : str
+        Functional for the identification of the high_level db.
+    new_params : list
+        List of strings that identify the new keys that should be written to
+        the computational parameters.
+    db_file : str, optional
+        Full path of the db.json. The default is 'auto'.
+    update_bulk : bool, optional
+        If the bulk entry for the given mpid should be updated.
+        The default is True.
+    update_slabs : bool, optional
+        If the slab entries matching a given mpid should be updated (all miller
+        indices. The default is False.
+    high_level_db : str or bool, optional
+        If a string is given, the high-level database will be chosen based on
+        that string. If True, the db.json file will be used to determine the
+        name of the high_level_db. The default is True.
+
+    """
+    _fw_name = 'Update computational parameters'
+    required_params = ['mpid', 'functional', 'new_params']
+    optional_params = ['db_file', 'update_bulk', 'update_slabs',
+                       'high_level_db']
+    def run_task(self, fw_spec):
+
+        mpid = self.get('mpid')
+        functional = self.get('functional')
+        new_params = self.get('new_params')
+        update_bulk = self.get('update_bulk', True)
+        update_slabs = self.get('update_slabs', False)
+        db_file = self.get('db_file', 'auto')
+        hl_db = self.get('high_level_db', True)
+        
+        nav_high = StructureNavigator(db_file=db_file, 
+                                           high_level=hl_db)
+        #get values from spec:
+        new_data = {'$set': {}}
+        for param in new_params:
+            new_data['$set'][f'comp_parameters.{param}'] = fw_spec.get(param, None)
+            
+        if update_bulk:
+            nav_high.update_data(collection=functional+'.bulk_data',
+                                 fltr={'mpid': mpid},
+                                 new_values=new_data,
+                                 upsert=False)
+           
+        if update_slabs:
+            nav_high.update_many_data(collection=functional+'.slab_data',
+                                      fltr={'mpid': mpid},
+                                      new_values=new_data,
+                                      upsert=False)
+        return
+
+@explicit_serialize
 class FT_MoveResults(FiretaskBase):
     """
     Firetask to move the result of a VASP calculation from the Fireworks database to the destination.
