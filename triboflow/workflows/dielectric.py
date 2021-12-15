@@ -46,30 +46,29 @@ class FT_UpdateCompParams(FiretaskBase):
         functional = self.get('functional')
         new_params = self.get('new_params')
         update_bulk = self.get('update_bulk', True)
-        update_slabs = self.get('update_bulk', False)
+        update_slabs = self.get('update_slabs', False)
         db_file = self.get('db_file', 'auto')
         hl_db = self.get('high_level_db', True)
         
-        nav_structure = StructureNavigator(db_file=db_file, 
+        nav_high = StructureNavigator(db_file=db_file, 
                                            high_level=hl_db)
-        
         #get values from spec:
-        new_data = {}
+        new_data = {'$set': {}}
         for param in new_params:
-            new_data[param] = fw_spec.get(param, None)
+            new_data['$set'][f'comp_parameters.{param}'] = fw_spec.get(param, None)
             
-        
         if update_bulk:
-            nav_structure.update_data(collection=functional+'.bulk_data',
-                                      fltr={'mpid': mpid},
-                                      new_values=new_data,
-                                      upsert=False)
+            nav_high.update_data(collection=functional+'.bulk_data',
+                                 fltr={'mpid': mpid},
+                                 new_values=new_data,
+                                 upsert=False)
+           
         if update_slabs:
-            nav_structure.update_data(collection=functional+'.slab_data',
+            nav_high.update_many_data(collection=functional+'.slab_data',
                                       fltr={'mpid': mpid},
                                       new_values=new_data,
                                       upsert=False)
-        return FWAction(update_spec=fw_spec)
+        return
         
 
 def dielectric_constant_swf(structure,
@@ -78,34 +77,54 @@ def dielectric_constant_swf(structure,
                             comp_parameters={}, 
                             spec={},
                             functional='PBE', 
-                            db_file=None,
+                            db_file='auto',
                             hl_db=True,
                             update_bulk=True,
                             update_slabs=False):
     
+    #check if epsilon is already calculated for that material.
+    nav_high = StructureNavigator(db_file=db_file, 
+                                  high_level=hl_db)
+    bulk_data = nav_high.get_bulk_from_db(mpid, functional)
+    epsilon = bulk_data['comp_parameters'].get('epsilon', False)
+    
     formula = structure.composition.reduced_formula
-    wf_name = f'Dielectric constant calculation workflow for {formula}'
+    wf_name = f'Dielectric calculation WF for {formula} {mpid}'
     
-    vis = get_custom_vasp_static_settings(structure,
-                                          comp_parameters,
-                                          'bulk_epsilon_from_scratch',
-                                          name=flag)
-    Calc_Eps_FW = StaticFW(structure=structure,
-                           name=flag,
-                           vasp_input_set=vis)
+    if not epsilon:
+        vis = get_custom_vasp_static_settings(structure,
+                                              comp_parameters,
+                                              'bulk_epsilon_from_scratch')
+        Calc_Eps_FW = StaticFW(structure=structure,
+                               name=flag,
+                               vasp_input_set=vis)
     
-    Get_Eps_FT = FT_GetEpsilon(label=flag, db_file=db_file)
-    Update_Data_FT = FT_UpdateCompParams(mpid=mpid,
-                                         functional=functional,
-                                         new_params='epsilon',
-                                         update_bulk=update_bulk,
-                                         update_slabs=update_slabs,
-                                         db_file=db_file,
-                                         hl_db=hl_db)
-    Update_FW = Firework(tasks=[Get_Eps_FT, Update_Data_FT],
-                         spec=spec,
-                         name=flag+'_update_high_level')
+        Get_Eps_FT = FT_GetEpsilon(label=flag, db_file=db_file)
+
+        Update_Data_FT = FT_UpdateCompParams(mpid=mpid,
+                                             functional=functional,
+                                             new_params=['epsilon'],
+                                             update_bulk=update_bulk,
+                                             update_slabs=update_slabs,
+                                             db_file=db_file,
+                                             high_level_db=hl_db)
+        Update_FW = Firework(tasks=[Get_Eps_FT, Update_Data_FT],
+                             spec=spec,
+                             name=flag+'_update_high_level')
     
-    WF = Workflow([Calc_Eps_FW, Update_FW], {Calc_Eps_FW: [Update_FW]},
-                  name=wf_name)
+        WF = Workflow([Calc_Eps_FW, Update_FW], {Calc_Eps_FW: [Update_FW]},
+                      name=wf_name)
+    else:
+        spec.update({'epsilon': epsilon})
+        Update_Data_FT = FT_UpdateCompParams(mpid=mpid,
+                                             functional=functional,
+                                             new_params=['epsilon'],
+                                             update_bulk=update_bulk,
+                                             update_slabs=update_slabs,
+                                             db_file=db_file,
+                                             high_level_db=hl_db)
+        Update_FW = Firework(tasks=[Update_Data_FT],
+                             spec=spec,
+                             name=flag+'_update_high_level')
+        WF = Workflow([Update_FW], name=wf_name)
     return WF
