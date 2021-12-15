@@ -12,7 +12,7 @@ from fireworks import LaunchPad
 
 from pymatgen.core.structure import Structure
 
-from triboflow.utils.database import StructureNavigator
+from triboflow.utils.database import StructureNavigator, NavigatorMP
 from triboflow.workflows.dielectric import dielectric_constant_swf
 
 
@@ -23,6 +23,7 @@ nav = StructureNavigator('auto', True)
 struct_dict = nav.get_bulk_from_db(mpid, functional)
 struct = Structure.from_dict(struct_dict['structure_equiVol'])
 comp_params = struct_dict['comp_parameters']
+
 
 flag = 'test_dielectric_WF_'+str(uuid4())
 
