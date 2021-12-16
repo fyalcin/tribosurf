@@ -11,16 +11,16 @@ from fireworks.core.rocket_launcher import rapidfire
 from triboflow.workflows.main import heterogeneous_wf
 
 
-inputs = {'material_1': {'formula': 'Al',
+inputs = {'material_1': {'formula': 'ZnCu',
                          'miller': '111',
-                         'mpid': 'mp-134',
+                         'mpid': 'mp-987',
                          'thick_min': 3,
-                         'thick_max': 10,
+                         'thick_max': 12,
                          'thick_incr': 1,
                          },
-          'material_2': {'formula': 'Zr',
+          'material_2': {'formula': 'WC',
                          'miller': '001',
-                         'mpid': 'mp-131',
+                         'mpid': 'mp-13136',
                          'thick_min': 4,
                          'thick_max': 10,
                          'thick_incr': 1
