@@ -6,7 +6,9 @@ from pymatgen.core.structure import Structure
 from pymatgen.core.surface import SlabGenerator, Slab
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.ext.matproj import MPRester
+from pymatgen.transformations.standard_transformations import DeformStructureTransformation
 
+from triboflow.phys.shaper import Shaper
 from triboflow.utils.database import NavigatorMP, Navigator
 
 
@@ -158,8 +160,14 @@ def slab_from_file(filename, mpid, functional, miller, db_file='auto', high_leve
     """
     struct = Structure.from_file(filename)
     SG = get_SG_from_mpid(mpid, functional, miller, db_file, high_level)
+    tmp_slab = SG.get_slabs()[0]
+    ouc = Shaper.get_constrained_ouc(tmp_slab)
+    scale_factor = struct.lattice.a/ouc.lattice.a
+    scale_array = ((scale_factor, 0, 0), (0, scale_factor, 0), (0, 0, scale_factor))
+    deformer = DeformStructureTransformation(deformation=scale_array)
+    scaled_ouc = deformer.apply_transformation(ouc)
     slab = Slab(lattice=struct.lattice, species=struct.species, coords=struct.frac_coords, miller_index=miller,
-                oriented_unit_cell=SG.oriented_unit_cell, shift=0, scale_factor=np.eye(3))
+                oriented_unit_cell=scaled_ouc, shift=0, scale_factor=SG.slab_scale_factor)
     return slab, SG
 
 
