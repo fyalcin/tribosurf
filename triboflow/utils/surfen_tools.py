@@ -448,8 +448,7 @@ def put_surfen_inputs_into_db(inputs_list, sg_params, comp_params, fltr, coll, d
             new_values={'$set': {loc_slab + '.structure': slab.as_dict(),
                                  loc_slab + '.slab_params': slab_params,
                                  loc_slab + '.sg_params': sg_params,
-                                 loc_slab + '.comp_params': comp_params
-                                 }},
+                                 loc_slab + '.comp_params': comp_params}},
             upsert=True)
 
 

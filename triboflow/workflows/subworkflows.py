@@ -12,6 +12,7 @@ from fireworks import Workflow, Firework
 from atomate.vasp.fireworks import StaticFW
 from atomate.vasp.powerups import add_modify_incar
 
+from triboflow.firetasks.surfen import FT_PutSurfenInputsIntoDB, FT_RelaxSurfaceEnergyInputs, FT_WriteSurfaceEnergies
 from triboflow.fireworks.common import run_pes_calc_fw, make_pes_fw
 from triboflow.firetasks.convergence import FT_Convo
 from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \
@@ -21,6 +22,7 @@ from triboflow.firetasks.adhesion import FT_CalcAdhesion
 from triboflow.firetasks.utils import FT_UpdateCompParams
 from triboflow.firetasks.dielectric import FT_GetEpsilon
 from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
+from triboflow.utils.surfen_tools import get_surfen_inputs_from_mpid, generate_surfen_wfs_from_inputs
 from triboflow.utils.vasp_tools import get_emin_and_emax, get_custom_vasp_static_settings
 
 
@@ -797,5 +799,50 @@ def converge_swf(structure,
     FW_C = Firework(FT_EncutConvo, spec=spec,
                     name=name)
     WF = Workflow([FW_C], name=name)
+
+    return WF
+
+
+def surface_energy_swf(mpid,
+                       functional,
+                       sg_params,
+                       sg_filter,
+                       db_file,
+                       high_level,
+                       comp_params_user):
+    nav_high = Navigator(db_file, high_level=True)
+
+    comp_params = nav_high.find_data(f'{functional}.bulk_data', {'mpid': mpid})['comp_parameters']
+    comp_params.update(comp_params_user)
+
+    inputs_list = get_surfen_inputs_from_mpid(mpid,
+                                              functional,
+                                              sg_params,
+                                              sg_filter,
+                                              db_file,
+                                              high_level)
+
+    inputs_list = generate_surfen_wfs_from_inputs(inputs_list, comp_params)
+
+    coll = f'{functional}.slab_data.LEO'
+    fltr = {'mpid': mpid}
+
+    FW1 = Firework(
+        FT_PutSurfenInputsIntoDB(inputs_list=inputs_list, sg_params=sg_params, comp_params=comp_params,
+                                 fltr=fltr, coll=coll, db_file=db_file, high_level=high_level),
+        name=f"Generate surface energy inputs for {mpid} with {functional} and put in DB")
+
+    FW2 = Firework(
+        FT_RelaxSurfaceEnergyInputs(inputs_list=inputs_list, fltr=fltr, coll=coll, db_file=db_file,
+                                    high_level=high_level),
+        name=f"Generate and relax surface energy inputs for {mpid} with {functional}")
+
+    FW3 = Firework(
+        FT_WriteSurfaceEnergies(inputs_list=inputs_list, fltr=fltr, coll=coll, db_file=db_file,
+                                high_level=high_level),
+        name=f"Calculate the surface energies for {mpid} with {functional} and put into DB")
+
+    WF = Workflow(fireworks=[FW1, FW2, FW3], links_dict={FW1: [FW2], FW2: [FW3]},
+                  name=f"Surface energy SWF for {mpid} with {functional}.")
 
     return WF
