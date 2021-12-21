@@ -216,7 +216,7 @@ class Shaper():
         if vacuum_thickness:
             reconstructed_struct = Shaper._modify_vacuum(struct_resized, vacuum_thickness)
 
-        if not slab_thickness or vacuum_thickness:
+        if not slab_thickness and vacuum_thickness:
             print(f'Warning! You chose to keep the slab and vacuum thicknesses as they are'
                   'during reconstruction. Make sure this is what you want.')
             reconstructed_struct = struct_centered if center else struct
