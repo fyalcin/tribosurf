@@ -113,6 +113,8 @@ class FT_RelaxSurfaceEnergyInputs(FiretaskBase):
                 if result:
                     continue
 
+                comp = str(entry.get('struct').composition)
+                calc_tag = entry.get('calc_tag')
                 WF_calc = Workflow.from_dict(entry.get('WF'))
                 WF_move = Workflow([Firework(FT_MoveResults(tag=tag,
                                                             fltr=fltr_high,
@@ -120,8 +122,8 @@ class FT_RelaxSurfaceEnergyInputs(FiretaskBase):
                                                             loc=loc,
                                                             db_file=db_file,
                                                             high_level=high_level),
-                                             name=f"Move {flag}-{hkl}-{bvs} results.")],
-                                   name=f"Move {flag}-{hkl}-{bvs} results.")
+                                             name=f"Move {comp}-{hkl}-{calc_tag} results FW.")],
+                                   name=f"Move {comp}-{hkl}-{calc_tag} results WF.")
 
                 fltr_low = {'task_label': tag}
                 result_low = nav_low.find_data('tasks', fltr_low)
