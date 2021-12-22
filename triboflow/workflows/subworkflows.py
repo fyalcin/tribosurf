@@ -22,7 +22,7 @@ from triboflow.firetasks.adhesion import FT_CalcAdhesion
 from triboflow.firetasks.utils import FT_UpdateCompParams
 from triboflow.firetasks.dielectric import FT_GetEpsilon
 from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
-from triboflow.utils.surfen_tools import get_surfen_inputs_from_mpid, generate_surfen_wfs_from_inputs
+from triboflow.utils.surfen_tools import get_surfen_inputs_from_mpid
 from triboflow.utils.vasp_tools import get_emin_and_emax, get_custom_vasp_static_settings
 
 
@@ -819,10 +819,9 @@ def surface_energy_swf(mpid,
                                               functional,
                                               sg_params,
                                               sg_filter,
+                                              comp_params,
                                               db_file,
                                               high_level)
-
-    inputs_list = generate_surfen_wfs_from_inputs(inputs_list, comp_params)
 
     coll = f'{functional}.slab_data.LEO'
     fltr = {'mpid': mpid}
@@ -833,8 +832,8 @@ def surface_energy_swf(mpid,
         name=f"Generate surface energy inputs for {mpid} with {functional} and put in DB")
 
     FW2 = Firework(
-        FT_RelaxSurfaceEnergyInputs(inputs_list=inputs_list, fltr=fltr, coll=coll, db_file=db_file,
-                                    high_level=high_level),
+        FT_RelaxSurfaceEnergyInputs(inputs_list=inputs_list, fltr=fltr, coll=coll, comp_params=comp_params,
+                                    db_file=db_file, high_level=high_level),
         name=f"Generate and relax surface energy inputs for {mpid} with {functional}")
 
     FW3 = Firework(
