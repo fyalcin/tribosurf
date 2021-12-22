@@ -97,20 +97,20 @@ class FT_RelaxSurfaceEnergyInputs(FiretaskBase):
         db_file = self.get('db_file', 'auto')
         high_level = self.get('high_level', True)
 
-        flag = list(fltr_high.values())[0]
-
         nav_high = Navigator(db_file, high_level=high_level)
         nav_low = Navigator(db_file, high_level=False)
 
         WF_list = []
         for slab in inputs_list:
             hkl = slab['slab_params']['hkl']
-            bvs = slab['slab_params']['bvs']
             for entry in slab.get('inputs'):
                 tag = entry.get('tag')
                 loc = entry.get('loc')
-                result = get_entry_by_loc(nav_high, fltr_high, coll, loc).get('output')
-                if result:
+
+                # If the calculation is already in the high_level database, we skip this
+                # particular slab
+                result_high = get_entry_by_loc(nav_high, fltr_high, coll, loc).get('output')
+                if result_high:
                     continue
 
                 comp = str(entry.get('struct').composition)
