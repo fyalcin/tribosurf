@@ -156,7 +156,7 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
             inputs_dict['inputs'] += [slab_static_input]
 
             if slab_layers % periodicity != 0:
-                inputs_dict['slab_params'].update({'comp': True})
+                inputs_dict['slab_params'].update({'comp': False})
                 # For non-stoichiometric slabs, we need the stoichiometric versions in order
                 # to calculate the cleavage energy which is a component in the surface energy
                 # calculation.
@@ -173,6 +173,7 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
                 sto_slab_bot_input = generate_input_dict(sto_slab_bot, 'static', 'sto_slab_bot')
                 inputs_dict['inputs'] += [sto_slab_top_input, sto_slab_bot_input]
             else:
+                inputs_dict['slab_params'].update({'comp': True})
                 sto_slab = SG.get_slab(slab.shift, tol)
                 sto_slab_layers = len(Shaper._get_layers(sto_slab, tol))
                 layers_to_remove = int(ouc_layers * np.floor((sto_slab_layers - slab_layers) / ouc_layers))
