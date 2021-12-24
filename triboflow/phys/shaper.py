@@ -741,7 +741,7 @@ class Shaper():
 
         to_file : bool, optional
             Whether to export the generated structures as VASP formatted files.
-            Filenames are in thr format {formula}_{miller_index}_{termination_index}.
+            Filenames are in the format {formula}_{miller_index}_{termination_index}.
             The default is 'False'.
         Returns
         -------
