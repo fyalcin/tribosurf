@@ -99,6 +99,7 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
     ouc_layers = len(Shaper._get_layers(ouc, tol))
     slab_layers = len(Shaper._get_layers(slab, tol))
     slab_thickness = Shaper._get_proj_height(slab, 'slab')
+    vac_thickness = np.round(Shaper._get_proj_height(slab, 'vacuum'), 3)
     ouc_input = generate_input_dict(ouc, 'relax', 'ouc')
     millerstr = ''.join([str(i) for i in slab.miller_index])
     inputs_dict = {'struct': slab,
@@ -109,6 +110,7 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
                                    'layer_tol': tol,
                                    'thickness_layers': slab_layers,
                                    'thickness_A': slab_thickness,
+                                   'vac_thickness_A': vac_thickness,
                                    'hkl': millerstr,
                                    'bvs': slab.energy,
                                    'area': slab.surface_area}}
@@ -129,7 +131,9 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
         # and the number of layers removed is an integer multiple of the number of layers
         # in the oriented unit cell to preserve stoichiometry
         layers_to_remove = int(ouc_layers * np.floor((sto_slab_layers - slab_layers) / ouc_layers))
-        sto_slab = Shaper._remove_layers(sto_slab, layers_to_remove, tol, method='layers')
+        target_layers = sto_slab_layers - layers_to_remove
+        sto_slab = Shaper.reconstruct(sto_slab, target_layers, vac_thickness, tol)
+        # sto_slab = Shaper._remove_layers(sto_slab, layers_to_remove, tol, method='layers')
         sto_slab_input = generate_input_dict(sto_slab, 'static', 'sto_slab')
         slab_relax_input = generate_input_dict(slab, 'relax', 'slab_relax')
         slab_static_input = generate_input_dict(slab, 'static', 'slab_static')
@@ -167,8 +171,11 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
                 sto_slab_bot = SG.get_slab(all_shifts[bot_shift_index], tol)
                 sto_slab_layers = len(Shaper._get_layers(sto_slab_top, tol))
                 layers_to_remove = int(ouc_layers * np.floor((sto_slab_layers - slab_layers) / ouc_layers))
-                sto_slab_top = Shaper._remove_layers(sto_slab_top, layers_to_remove, tol, method='layers')
-                sto_slab_bot = Shaper._remove_layers(sto_slab_bot, layers_to_remove, tol, method='layers')
+                target_layers = sto_slab_layers - layers_to_remove
+                sto_slab_top = Shaper.reconstruct(sto_slab_top, target_layers, vac_thickness, tol)
+                sto_slab_bot = Shaper.reconstruct(sto_slab_bot, target_layers, vac_thickness, tol)
+                # sto_slab_top = Shaper._remove_layers(sto_slab_top, layers_to_remove, tol, method='layers')
+                # sto_slab_bot = Shaper._remove_layers(sto_slab_bot, layers_to_remove, tol, method='layers')
                 sto_slab_top_input = generate_input_dict(sto_slab_top, 'static', 'sto_slab_top')
                 sto_slab_bot_input = generate_input_dict(sto_slab_bot, 'static', 'sto_slab_bot')
                 inputs_dict['inputs'] += [sto_slab_top_input, sto_slab_bot_input]
@@ -177,7 +184,9 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
                 sto_slab = SG.get_slab(slab.shift, tol)
                 sto_slab_layers = len(Shaper._get_layers(sto_slab, tol))
                 layers_to_remove = int(ouc_layers * np.floor((sto_slab_layers - slab_layers) / ouc_layers))
-                sto_slab = Shaper._remove_layers(sto_slab, layers_to_remove, tol, method='layers')
+                target_layers = sto_slab_layers - layers_to_remove
+                sto_slab = Shaper.reconstruct(sto_slab, target_layers, vac_thickness, tol)
+                # sto_slab = Shaper._remove_layers(sto_slab, layers_to_remove, tol, method='layers')
                 sto_slab_input = generate_input_dict(sto_slab, 'static', 'sto_slab')
                 inputs_dict['inputs'] += [sto_slab_input]
     return inputs_dict
