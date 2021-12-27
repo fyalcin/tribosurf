@@ -809,7 +809,8 @@ def surface_energy_swf(mpid,
                        sg_filter,
                        db_file,
                        high_level,
-                       comp_params_user):
+                       comp_params_user,
+                       custom_id=None):
     nav_high = Navigator(db_file, high_level=True)
 
     comp_params = nav_high.find_data(f'{functional}.bulk_data', {'mpid': mpid})['comp_parameters']
@@ -820,6 +821,7 @@ def surface_energy_swf(mpid,
                                               sg_params,
                                               sg_filter,
                                               comp_params,
+                                              custom_id,
                                               db_file,
                                               high_level)
 

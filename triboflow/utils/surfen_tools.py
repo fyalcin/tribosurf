@@ -197,6 +197,7 @@ def get_surfen_inputs_from_mpid(mpid,
                                 sg_params,
                                 sg_filter,
                                 comp_params,
+                                custom_id=None,
                                 db_file='auto',
                                 high_level=True):
     """
@@ -240,7 +241,7 @@ def get_surfen_inputs_from_mpid(mpid,
     bulk_conv = get_conv_bulk_from_mpid(mpid, coll, db_file, high_level)
     candidates = generate_candidate_slabs(bulk_conv, sg_params, sg_filter)
     tol = sg_params.get('tol')
-    inputs_list = [get_surfen_inputs_from_slab(c[0], c[1], tol) for c in candidates]
+    inputs_list = [get_surfen_inputs_from_slab(c[0], c[1], tol, custom_id) for c in candidates]
     inputs_list = update_inputs_list(inputs_list, comp_params)
 
     return inputs_list
