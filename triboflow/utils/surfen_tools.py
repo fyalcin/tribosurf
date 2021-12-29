@@ -297,7 +297,7 @@ def move_result(tag, fltr, coll, loc, custom_dict={}, db_file='auto', high_level
     nav_high.update_data(
         collection=coll,
         fltr=fltr,
-        new_values={'$set': {loc: out}},
+        new_values={'$set': {loc + f'.{k}': v for k, v in out.items()}},
         upsert=True)
 
 
@@ -332,13 +332,14 @@ def write_surface_energies_to_db(inputs_list, fltr, coll, db_file='auto', high_l
     nav = Navigator(db_file, high_level)
 
     for slab_dict in inputs_list:
-        surf_en = calculate_surface_energy_gen(slab_dict, fltr, coll)
+        surf_en, ens = calculate_surface_energy_gen(slab_dict, fltr, coll)
         loc = slab_dict['inputs'][0]['loc'][:3]
         loc = '.'.join(loc)
         nav.update_data(
             collection=coll,
             fltr=fltr,
-            new_values={'$set': {loc + '.surface_energy': surf_en}},
+            new_values={'$set': {loc + '.surface_energy': surf_en,
+                                 loc + '.surfen_components': ens}},
             upsert=True)
 
 
@@ -656,12 +657,15 @@ def calculate_surface_energy_gen(slab_dict, fltr, coll, db_file='auto', high_lev
                              'energy': output['energy'],
                              'energy_per_atom': output['energy_per_atom']}
 
+    ens = {}
     bulk_en = en_dict['ouc']['energy_per_atom']
     if sym and sto:
-        slab_en = en_dict['slab_relax']['energy']
+        slab_relax_en = en_dict['slab_relax']['energy']
         nsites = en_dict['slab_relax']['nsites']
-        surf_en_top = slab_en - nsites * bulk_en
+        surf_en_top = (slab_relax_en - nsites * bulk_en)/2
         surf_en_bot = surf_en_top
+        ens['surf_en_top'] = surf_en_top
+        ens['surf_en_bot'] = surf_en_bot
 
     if sym and not sto:
         slab_relax_en = en_dict['slab_relax']['energy']
@@ -670,11 +674,13 @@ def calculate_surface_energy_gen(slab_dict, fltr, coll, db_file='auto', high_lev
 
         sto_slab_nsites = en_dict['sto_slab']['nsites']
 
-        E_cle = sto_slab_en - sto_slab_nsites * bulk_en
-        E_rel = slab_relax_en - slab_static_en
+        E_cle = (sto_slab_en - sto_slab_nsites * bulk_en)/2
+        E_rel = (slab_relax_en - slab_static_en)/2
 
         surf_en_top = E_cle + E_rel
         surf_en_bot = surf_en_top
+        ens['E_cle'] = E_cle
+        ens['E_rel'] = E_rel
 
     if not sym:
         slab_tf_relax_en = en_dict['slab_top_fixed_relax']['energy']
@@ -685,19 +691,24 @@ def calculate_surface_energy_gen(slab_dict, fltr, coll, db_file='auto', high_lev
         if sto:
             surf_en_top = slab_bf_relax_en - nsites * bulk_en
             surf_en_bot = slab_tf_relax_en - nsites * bulk_en
+            ens['surf_en_top'] = surf_en_top
+            ens['surf_en_bot'] = surf_en_bot
         else:
             slab_static_en = en_dict['slab_static']['energy']
             E_rel_top = slab_bf_relax_en - slab_static_en
             E_rel_bot = slab_tf_relax_en - slab_static_en
+            ens['E_rel_top'] = E_rel_top
+            ens['E_rel_bot'] = E_rel_bot
 
             if comp:
                 sto_slab_en = en_dict['sto_slab']['energy']
                 sto_slab_nsites = en_dict['sto_slab']['nsites']
 
-                E_cle = sto_slab_en - sto_slab_nsites * bulk_en
+                E_cle = (sto_slab_en - sto_slab_nsites * bulk_en)/2
 
                 surf_en_top = E_cle + E_rel_top
                 surf_en_bot = E_cle + E_rel_bot
+                ens['E_cle'] = E_cle
             else:
                 sto_slab_top_en = en_dict['sto_slab_top']['energy']
                 sto_slab_bot_en = en_dict['sto_slab_bot']['energy']
@@ -705,16 +716,18 @@ def calculate_surface_energy_gen(slab_dict, fltr, coll, db_file='auto', high_lev
                 sto_slab_top_nsites = en_dict['sto_slab_top']['nsites']
                 sto_slab_bot_nsites = en_dict['sto_slab_bot']['nsites']
 
-                E_cle_top = sto_slab_top_en - sto_slab_top_nsites * bulk_en
-                E_cle_bot = sto_slab_bot_en - sto_slab_bot_nsites * bulk_en
+                E_cle_top = (sto_slab_top_en - sto_slab_top_nsites * bulk_en)/2
+                E_cle_bot = (sto_slab_bot_en - sto_slab_bot_nsites * bulk_en)/2
 
                 surf_en_top = E_cle_top + E_rel_top
                 surf_en_bot = E_cle_bot + E_rel_bot
+                ens['E_cle_top_term'] = E_cle_top
+                ens['E_cle_bot_term'] = E_cle_bot
 
-    surf_en_top *= 16.02176565 / (2 * area)
-    surf_en_bot *= 16.02176565 / (2 * area)
+    surf_en_top *= 16.02176565 / area
+    surf_en_bot *= 16.02176565 / area
 
-    return {'top': surf_en_top, 'bottom': surf_en_bot}
+    return {'top': surf_en_top, 'bottom': surf_en_bot}, ens
 
 
 def update_inputs_list(inputs_list, comp_params):
