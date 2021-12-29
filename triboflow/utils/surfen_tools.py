@@ -139,12 +139,6 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
         slab_static_input = generate_input_dict(slab, 'static', 'slab_static')
         inputs_dict['inputs'] += [slab_relax_input, slab_static_input, sto_slab_input]
     if not sym:
-        # For asymmetric slabs, we need the periodicity in the layering to figure out
-        # if the top and bottom terminations are complementary.
-        bbs = Shaper._bonds_by_shift(SG, nn_method, tol)
-        bvs, indices = np.unique(list(bbs.values()), return_index=True)
-        periodicity = len(bvs)
-
         # Asymmetric slabs have different surface energies on the top and the bottom,
         # which means we need to relax those regions separately.
         slab_tf = Shaper.fix_regions(slab, tol, fix_type='top_half')
@@ -152,12 +146,16 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
 
         slab_tf_input = generate_input_dict(slab_tf, 'relax', 'slab_top_fixed_relax')
         slab_bf_input = generate_input_dict(slab_bf, 'relax', 'slab_bot_fixed_relax')
+        slab_static_input = generate_input_dict(slab, 'static', 'slab_static')
 
-        inputs_dict['inputs'] += [slab_tf_input, slab_bf_input]
+        inputs_dict['inputs'] += [slab_tf_input, slab_bf_input, slab_static_input]
 
         if not sto:
-            slab_static_input = generate_input_dict(slab, 'static', 'slab_static')
-            inputs_dict['inputs'] += [slab_static_input]
+            # For asymmetric slabs, we need the periodicity in the layering to figure out
+            # if the top and bottom terminations are complementary.
+            bbs = Shaper._bonds_by_shift(SG, nn_method, tol)
+            bvs, indices = np.unique(list(bbs.values()), return_index=True)
+            periodicity = len(bvs)
 
             if slab_layers % periodicity != 0:
                 inputs_dict['slab_params'].update({'comp': False})
@@ -662,7 +660,7 @@ def calculate_surface_energy_gen(slab_dict, fltr, coll, db_file='auto', high_lev
     if sym and sto:
         slab_relax_en = en_dict['slab_relax']['energy']
         nsites = en_dict['slab_relax']['nsites']
-        surf_en_top = (slab_relax_en - nsites * bulk_en)/2
+        surf_en_top = (slab_relax_en - nsites * bulk_en) / 2
         surf_en_bot = surf_en_top
         ens['surf_en_top'] = surf_en_top
         ens['surf_en_bot'] = surf_en_bot
@@ -674,8 +672,8 @@ def calculate_surface_energy_gen(slab_dict, fltr, coll, db_file='auto', high_lev
 
         sto_slab_nsites = en_dict['sto_slab']['nsites']
 
-        E_cle = (sto_slab_en - sto_slab_nsites * bulk_en)/2
-        E_rel = (slab_relax_en - slab_static_en)/2
+        E_cle = (sto_slab_en - sto_slab_nsites * bulk_en) / 2
+        E_rel = (slab_relax_en - slab_static_en) / 2
 
         surf_en_top = E_cle + E_rel
         surf_en_bot = surf_en_top
@@ -685,26 +683,25 @@ def calculate_surface_energy_gen(slab_dict, fltr, coll, db_file='auto', high_lev
     if not sym:
         slab_tf_relax_en = en_dict['slab_top_fixed_relax']['energy']
         slab_bf_relax_en = en_dict['slab_bot_fixed_relax']['energy']
+        slab_static_en = en_dict['slab_static']['energy']
 
-        nsites = en_dict['slab_bot_fixed_relax']['nsites']
+        E_rel_top = slab_bf_relax_en - slab_static_en
+        E_rel_bot = slab_tf_relax_en - slab_static_en
+        ens['E_rel_top'] = E_rel_top
+        ens['E_rel_bot'] = E_rel_bot
 
         if sto:
-            surf_en_top = slab_bf_relax_en - nsites * bulk_en
-            surf_en_bot = slab_tf_relax_en - nsites * bulk_en
-            ens['surf_en_top'] = surf_en_top
-            ens['surf_en_bot'] = surf_en_bot
+            nsites = en_dict['slab_bot_fixed_relax']['nsites']
+            E_cle = (slab_static_en - nsites * bulk_en) / 2
+            surf_en_top = E_cle + E_rel_top
+            surf_en_bot = E_cle + E_rel_bot
+            ens['E_cle'] = E_cle
         else:
-            slab_static_en = en_dict['slab_static']['energy']
-            E_rel_top = slab_bf_relax_en - slab_static_en
-            E_rel_bot = slab_tf_relax_en - slab_static_en
-            ens['E_rel_top'] = E_rel_top
-            ens['E_rel_bot'] = E_rel_bot
-
             if comp:
                 sto_slab_en = en_dict['sto_slab']['energy']
                 sto_slab_nsites = en_dict['sto_slab']['nsites']
 
-                E_cle = (sto_slab_en - sto_slab_nsites * bulk_en)/2
+                E_cle = (sto_slab_en - sto_slab_nsites * bulk_en) / 2
 
                 surf_en_top = E_cle + E_rel_top
                 surf_en_bot = E_cle + E_rel_bot
@@ -716,8 +713,8 @@ def calculate_surface_energy_gen(slab_dict, fltr, coll, db_file='auto', high_lev
                 sto_slab_top_nsites = en_dict['sto_slab_top']['nsites']
                 sto_slab_bot_nsites = en_dict['sto_slab_bot']['nsites']
 
-                E_cle_top = (sto_slab_top_en - sto_slab_top_nsites * bulk_en)/2
-                E_cle_bot = (sto_slab_bot_en - sto_slab_bot_nsites * bulk_en)/2
+                E_cle_top = (sto_slab_top_en - sto_slab_top_nsites * bulk_en) / 2
+                E_cle_bot = (sto_slab_bot_en - sto_slab_bot_nsites * bulk_en) / 2
 
                 surf_en_top = E_cle_top + E_rel_top
                 surf_en_bot = E_cle_bot + E_rel_bot
