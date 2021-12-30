@@ -10,7 +10,7 @@ from fireworks import LaunchPad
 
 from triboflow.workflows.subworkflows import surface_energy_swf
 
-mpid = 'mp-1279'
+mpid = 'mp-219'
 functional = 'PBE'
 db_file = 'auto'
 high_level = True
@@ -18,19 +18,19 @@ comp_params = {}
 override = True
 fake = False
 
-sg_params = {'miller': [(1, 0, 0)],
+sg_params = {'miller': [(0, 0, 1)],
              'symmetrize': False,
-             'slab_thick': 10,
+             'slab_thick': 12,
              'vac_thick': 15,
              'prim': True,
              'lll_reduce': True,
              'minimize_bv': True,
-             # 'max_index': 2,
+             'max_index': 1,
              'tol': 0.1,
-             'max_normal_search': 'max'}
+             'max_normal_search': 'max',
+             'reconstruct': True}
 
-sg_filter = {'method': 'bvs_min_N',
-             'bvs_param': 1}
+sg_filter = {'method': 'all'}
 
 lpad = LaunchPad.auto_load()
 

@@ -18,14 +18,14 @@ comp_params = {}
 override = True
 fake = False
 
-sg_params = {'miller': [(3, 1, 1)],
+sg_params = {#'miller': [(3, 1, 1)],
              'symmetrize': False,
-             'slab_thick': 15,
+             'slab_thick': 14,
              'vac_thick': 15,
              'prim': True,
              'lll_reduce': True,
              'minimize_bv': True,
-             # 'max_index': 2,
+             'max_index': 2,
              'tol': 0.1,
              'max_normal_search': 'max'}
 
