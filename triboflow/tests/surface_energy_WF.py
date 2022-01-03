@@ -8,13 +8,13 @@ Created on Tue Oct 19 11:28:20 2021
 
 from fireworks import LaunchPad, Workflow, Firework
 
+from triboflow.firetasks.convergence import FT_StartConvo
+from triboflow.firetasks.dielectric import FT_StartDielectric
 from triboflow.firetasks.init_check import FTCheckInput, material_from_mp
+from triboflow.firetasks.init_check import unbundle_input
 from triboflow.firetasks.init_db import FT_PutMaterialInDB
 from triboflow.firetasks.structure_manipulation import FT_StartPreRelax
-from triboflow.workflows.subworkflows import surface_energy_swf
-from triboflow.firetasks.dielectric import FT_StartDielectric
-from triboflow.firetasks.convergence import FT_StartConvo
-from triboflow.firetasks.init_check import unbundle_input
+from triboflow.firetasks.surfen import FT_StartSurfaceEnergy
 
 lpad = LaunchPad.auto_load()
 
@@ -23,9 +23,9 @@ high_level = True
 override = True
 fake = False
 
-inputs = {'material': {'formula': 'ZnCu',
+inputs = {'material': {'formula': 'Si',
                        'miller': '111',
-                       'mpid': 'mp-987',
+                       'mpid': 'mp-149',
                        'thick_min': 3,
                        'thick_max': 12,
                        'thick_incr': 1,
@@ -36,14 +36,14 @@ inputs = {'material': {'formula': 'ZnCu',
                           'use_vdw': 'No',
                           'surfene_thr': 0.01,
                           'vacuum': 12},
-          'sg_params': {'miller': [(0, 0, 1)],
+          'sg_params': {'miller': [(1, 1, 0)],
                         'symmetrize': False,
                         'slab_thick': 12,
                         'vac_thick': 15,
                         'prim': True,
                         'lll_reduce': True,
                         'minimize_bv': True,
-                        'max_index': 1,
+                        # 'max_index': 1,
                         'tol': 0.1,
                         'max_normal_search': 'max',
                         'reconstruct': True},
@@ -98,21 +98,21 @@ CalcDielectric = Firework(FT_StartDielectric(mp_id=mpid,
                                              update_slabs=False),
                           name=f'Start dielectric SWF for {material["formula"]}')
 
-WF1 = Workflow([InitFW, PreRelaxation, ConvergeEncut, ConvergeKpoints, CalcDielectric],
-               {InitFW: [PreRelaxation],
-                PreRelaxation: [ConvergeEncut],
-                ConvergeEncut: [ConvergeKpoints],
-                ConvergeKpoints: [CalcDielectric]})
+SurfaceEnergy = Firework(FT_StartSurfaceEnergy(mpid=mpid,
+                                               functional=functional,
+                                               sg_params=sg_params,
+                                               sg_filter=sg_filter,
+                                               db_file=db_file,
+                                               high_level=high_level,
+                                               comp_params_user=comp_params_user,
+                                               custom_id=None),
+                         name=f'Start surface energy SWF for {material["formula"]}')
 
-WF2 = surface_energy_swf(mpid=mpid,
-                         functional=functional,
-                         sg_params=sg_params,
-                         sg_filter=sg_filter,
-                         db_file=db_file,
-                         high_level=high_level,
-                         comp_params_user=comp_params_user,
-                         custom_id=None)
+WF = Workflow([InitFW, PreRelaxation, ConvergeEncut, ConvergeKpoints, CalcDielectric, SurfaceEnergy],
+              {InitFW: [PreRelaxation],
+               PreRelaxation: [ConvergeEncut],
+               ConvergeEncut: [ConvergeKpoints],
+               ConvergeKpoints: [CalcDielectric],
+               CalcDielectric: [SurfaceEnergy]})
 
-WF1.append_wf(WF2, WF1.leaf_fw_ids)
-
-lpad.add_wf(WF1)
+lpad.add_wf(WF)
