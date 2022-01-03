@@ -14,7 +14,7 @@ from triboflow.firetasks.init_check import FTCheckInput, material_from_mp
 from triboflow.firetasks.init_check import unbundle_input
 from triboflow.firetasks.init_db import FT_PutMaterialInDB
 from triboflow.firetasks.structure_manipulation import FT_StartPreRelax
-from triboflow.firetasks.surfen import FT_StartSurfaceEnergy
+from triboflow.firetasks.surfen_main import FT_StartSurfaceEnergy
 
 lpad = LaunchPad.auto_load()
 

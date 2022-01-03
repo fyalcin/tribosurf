@@ -8,7 +8,7 @@ Created on Tue Oct 19 11:28:20 2021
 
 from fireworks import Firework, Workflow
 from fireworks import LaunchPad
-from triboflow.firetasks.surfen import FT_SlabOptOrientation
+from triboflow.firetasks.surfen_tools import FT_SlabOptOrientation
 
 mpid = 'mp-149'
 functional = 'PBE'

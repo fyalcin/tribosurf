@@ -1,7 +1,7 @@
 from fireworks import Firework, Workflow
 from fireworks import LaunchPad
 
-from triboflow.firetasks.surfen import FT_SurfEnFromFile
+from triboflow.firetasks.surfen_tools import FT_SurfEnFromFile
 
 #filename = '/home/fs71411/firaty/al100.cif'
 #miller = (1, 0, 0)
