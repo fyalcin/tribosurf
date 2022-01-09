@@ -140,19 +140,18 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
             slab_static_input = generate_input_dict(slab, 'static', 'slab_static')
             inputs_dict['inputs'] += [slab_relax_input, slab_static_input, sto_slab_input]
     else:
-        if sto:
         # Asymmetric slabs have different surface energies on the top and the bottom,
         # which means we need to relax those regions separately.
-            slab_tf = Shaper.fix_regions(slab, tol, fix_type='top_half')
-            slab_bf = Shaper.fix_regions(slab, tol, fix_type='bottom_half')
+        slab_tf = Shaper.fix_regions(slab, tol, fix_type='top_half')
+        slab_bf = Shaper.fix_regions(slab, tol, fix_type='bottom_half')
 
-            slab_tf_input = generate_input_dict(slab_tf, 'relax', 'slab_top_fixed_relax')
-            slab_bf_input = generate_input_dict(slab_bf, 'relax', 'slab_bot_fixed_relax')
-            slab_static_input = generate_input_dict(slab, 'static', 'slab_static')
+        slab_tf_input = generate_input_dict(slab_tf, 'relax', 'slab_top_fixed_relax')
+        slab_bf_input = generate_input_dict(slab_bf, 'relax', 'slab_bot_fixed_relax')
+        slab_static_input = generate_input_dict(slab, 'static', 'slab_static')
 
-            inputs_dict['inputs'] += [slab_tf_input, slab_bf_input, slab_static_input]
+        inputs_dict['inputs'] += [slab_tf_input, slab_bf_input, slab_static_input]
 
-        else:
+        if not sto:
             # For asymmetric slabs, we need the periodicity in the layering to figure out
             # if the top and bottom terminations are complementary.
             bbs = Shaper._bonds_by_shift(SG, nn_method, tol)
