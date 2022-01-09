@@ -660,30 +660,31 @@ def calculate_surface_energy_gen(slab_dict, fltr, coll, db_file='auto', high_lev
 
     ens = {}
     bulk_en = en_dict['ouc']['energy_per_atom']
-    if sym and sto:
+    if sym:
         slab_relax_en = en_dict['slab_relax']['energy']
-        nsites = en_dict['slab_relax']['nsites']
-        surf_en_top = (slab_relax_en - nsites * bulk_en) / 2
-        surf_en_bot = surf_en_top
-        ens['surf_en_top'] = surf_en_top
-        ens['surf_en_bot'] = surf_en_bot
+        if sto:
+            nsites = en_dict['slab_relax']['nsites']
+            surf_en_top = (slab_relax_en - nsites * bulk_en) / 2
+            surf_en_bot = surf_en_top
+            ens['surf_en_top'] = surf_en_top
+            ens['surf_en_bot'] = surf_en_bot
 
-    if sym and not sto:
-        slab_relax_en = en_dict['slab_relax']['energy']
-        slab_static_en = en_dict['slab_static']['energy']
-        sto_slab_en = en_dict['sto_slab']['energy']
+        else:
+            slab_relax_en = en_dict['slab_relax']['energy']
+            slab_static_en = en_dict['slab_static']['energy']
+            sto_slab_en = en_dict['sto_slab']['energy']
 
-        sto_slab_nsites = en_dict['sto_slab']['nsites']
+            sto_slab_nsites = en_dict['sto_slab']['nsites']
 
-        E_cle = (sto_slab_en - sto_slab_nsites * bulk_en) / 2
-        E_rel = (slab_relax_en - slab_static_en) / 2
+            E_cle = (sto_slab_en - sto_slab_nsites * bulk_en) / 2
+            E_rel = (slab_relax_en - slab_static_en) / 2
 
-        surf_en_top = E_cle + E_rel
-        surf_en_bot = surf_en_top
-        ens['E_cle'] = E_cle
-        ens['E_rel'] = E_rel
+            surf_en_top = E_cle + E_rel
+            surf_en_bot = surf_en_top
+            ens['E_cle'] = E_cle
+            ens['E_rel'] = E_rel
 
-    if not sym:
+    else:
         slab_tf_relax_en = en_dict['slab_top_fixed_relax']['energy']
         slab_bf_relax_en = en_dict['slab_bot_fixed_relax']['energy']
         slab_static_en = en_dict['slab_static']['energy']
