@@ -116,12 +116,10 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
                                    'area': slab.surface_area}}
 
     if sym:
-        if sto:
-            # Easiest case, a simple relaxation followed by a static calculation are
-            # needed for the slab and the oriented unit cell
-            slab_input = generate_input_dict(slab, 'relax', 'slab_relax')
-            inputs_dict['inputs'] += [slab_input]
-        else:
+        slab_relax_input = generate_input_dict(slab, 'relax', 'slab_relax')
+        inputs_dict['inputs'] += [slab_relax_input]
+
+        if not sto:
             # for non-stoichiometric slabs, we need the cleavage energy for which we need
             # a stoichiometric version of the slab with terminations that are complementary
             # to each other, this is done by SlabGenerator.get_slab() which always creates
@@ -136,9 +134,8 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
             sto_slab = Shaper.reconstruct(sto_slab, target_layers, vac_thickness, tol)
             # sto_slab = Shaper._remove_layers(sto_slab, layers_to_remove, tol, method='layers')
             sto_slab_input = generate_input_dict(sto_slab, 'static', 'sto_slab')
-            slab_relax_input = generate_input_dict(slab, 'relax', 'slab_relax')
             slab_static_input = generate_input_dict(slab, 'static', 'slab_static')
-            inputs_dict['inputs'] += [slab_relax_input, slab_static_input, sto_slab_input]
+            inputs_dict['inputs'] += [slab_static_input, sto_slab_input]
     else:
         # Asymmetric slabs have different surface energies on the top and the bottom,
         # which means we need to relax those regions separately.
