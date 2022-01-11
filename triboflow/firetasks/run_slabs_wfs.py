@@ -160,10 +160,12 @@ class FT_SlabOptThick(FiretaskBase):
         """ 
         if type(self.get('miller')) == str:
             miller = [int(k) for k in list(self.get('miller'))]
+        else:
+            miller = self.get('miller')
         nav = StructureNavigator(db_file='auto', high_level=True)
         slab_data = nav.get_slab_from_db(self.get('mp_id'),
-                                          self.get('functional'),
-                                          miller)
+                                         self.get('functional'),
+                                         miller)
         for key in self.optional_params:
             if slab_data['slab_parameters'].get(key):
                 self[key] = slab_data['slab_parameters'].get(key)

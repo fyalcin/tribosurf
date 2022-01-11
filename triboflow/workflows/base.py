@@ -50,7 +50,7 @@ def scan_relax_with_static(struct, vis, name):
     fw_2 = ScanOptimizeFW(vasp_input_set_params=vis_params,
                           parents = fw_1, prev_calc_loc=True,
                           name=name+'_SCAN_relax')
-    static_vis.user_incar_settings['EDIFF'] = 1e-08
+    static_vis.user_incar_settings['EDIFF'] = 0.5e-06
     static_vis.user_incar_settings['ISMEAR'] = -5
     static_vis.user_incar_settings['ALGO'] = 'Normal'
     static_vis.user_incar_settings['SIGMA'] = 0.05
@@ -60,6 +60,7 @@ def scan_relax_with_static(struct, vis, name):
     static_vis_params = {'user_incar_settings': static_vis.user_incar_settings,
                          'user_kpoints_settings': static_vis.user_kpoints_settings,
                          'user_potcar_functional': static_vis.potcar_functional,
+                         'user_potcar_settings': static_vis.user_potcar_settings,
                          'vdw': static_vis.vdw}
     fw_3 = StaticFW(vasp_input_set_params=static_vis_params,
                               parents = fw_2, prev_calc_loc=True,
@@ -95,7 +96,7 @@ def pbe_relax_with_static(struct, vis, name):
     vis.user_incar_settings['LWAVE'] = True
     static_vis = deepcopy(vis)
     static_vis.user_incar_settings['ISMEAR'] = -5
-    static_vis.user_incar_settings['EDIFF'] = 1e-08
+    static_vis.user_incar_settings['EDIFF'] = 1e-07
     static_vis.user_incar_settings['SIGMA'] = 0.05
     static_vis.user_incar_settings['ISTART'] = 1
     static_vis.user_incar_settings['ICHARG'] = 0
@@ -103,6 +104,7 @@ def pbe_relax_with_static(struct, vis, name):
     vis_params = {'user_incar_settings': static_vis.user_incar_settings,
                   'user_kpoints_settings': vis.user_kpoints_settings,
                   'user_potcar_functional': vis.potcar_functional,
+                  'user_potcar_settings': vis.user_potcar_settings,
                   'vdw': vis.vdw}
 
     fw_1 = OptimizeFW(structure=struct,
@@ -144,6 +146,7 @@ def scan_relax(struct, vis, name):
     vis_params = {'user_incar_settings': vis.user_incar_settings,
                   'user_kpoints_settings': vis.user_kpoints_settings,
                   'user_potcar_functional': vis.potcar_functional,
+                  'user_potcar_settings': vis.user_potcar_settings,
                   'vdw': vis.vdw}
     fw_1 = ScanOptimizeFW(structure=struct, name=name+'_PBEsolPreCalc',
                           vasp_input_set=gga_vis,

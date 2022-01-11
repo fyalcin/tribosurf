@@ -327,6 +327,12 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
     if static_type.startswith('slab_'):
         uis['NELMDL'] = -15
         uis['NELM'] = 200
+        # set dipole corrections.
+        try:
+            uis['DIPOL'] = list(structure.center_of_mass)
+            uis['IDIPOL'] = 3
+        except:
+            uis['IDIPOL'] = 3
     elif comp_parameters.get('functional') in SCAN_list:
         uis['NELMDL'] = -10
     else:
@@ -404,11 +410,13 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
     if comp_parameters.get('functional') in SCAN_list:
         vis = MPScanStaticSet(structure, user_incar_settings = uis, vdw = vdw,
                               user_kpoints_settings = uks,
-                              user_potcar_functional = 'PBE_54')
+                              user_potcar_functional = 'PBE_54',
+                              user_potcar_settings={'W': 'W_sv'})
     else:
         vis = MPStaticSet(structure, user_incar_settings = uis, vdw = vdw,
                           user_kpoints_settings = uks,
-                          user_potcar_functional = upf)
+                          user_potcar_functional = upf,
+                          user_potcar_settings={'W': 'W_sv'})
         
     return vis
 
@@ -488,6 +496,14 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
         # uis['BMIX'] = 0.0001
         # uis['AMIX_MAG'] = 0.8
         # uis['BMIX_MAG'] = 0.0001
+        # set dipole corrections.
+        # set dipole corrections.
+        try:
+            uis['DIPOL'] = list(structure.center_of_mass)
+            uis['IDIPOL'] = 3
+        except:
+            uis['IDIPOL'] = 3
+
     else:
         uis['NELMDL'] = -6
         uis['EDIFFG'] = -0.01
@@ -594,14 +610,17 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
             uis['LELF'] = False #otherwise KPAR >1 crashes
             vis = MPScanRelaxSet(structure, user_incar_settings = uis,
                                 vdw = vdw, user_kpoints_settings = uks,
-                                user_potcar_functional = 'PBE_54')
+                                user_potcar_functional = 'PBE_54',
+                                user_potcar_settings={'W': 'W_sv'})
         else:
             vis = MPRelaxSet(structure, user_incar_settings = uis, vdw = vdw,
                             user_kpoints_settings = uks,
-                            user_potcar_functional = 'PBE_54')
+                            user_potcar_functional = 'PBE_54',
+                            user_potcar_settings={'W': 'W_sv'})
     else:
         vis = MPRelaxSet(structure, user_incar_settings = uis, vdw = vdw,
                         user_kpoints_settings = uks,
-                        user_potcar_functional = upf)
+                        user_potcar_functional = upf,
+                        user_potcar_settings={'W': 'W_sv'})
 
     return vis

@@ -25,7 +25,6 @@ Here we assume that you install Triboflow within a virtual python environment. W
  1. Make sure that you have conda installed or download and install miniconda from [here](https://docs.conda.io/en/latest/miniconda.html).
  2. Update conda and then create a new python 3 environment named "TriboFlow" (or whatever you decide) by typing `conda update conda` followed by `conda create --name TriboFlow python=3`
  3. Switch to your new environment: `conda activate TriboFlow`
- 4. Now install some fundamental packages with conda: `conda install numpy scipy matplotlib ipython vtk dnspython maggma -c conda-forge`
 
 
 [Back to top](#toc)
@@ -96,7 +95,6 @@ alias mongo_stop="mongod --shutdown --dbpath <YourMongoPath>/data/db"
 1. Select a location where you want to have your TriboFlow files located. We will assume this is `<YourPath>`. Now create two subfolders: `<YourPath>/config` for your configuration files and `<YourPath>/pps` for your pseudopotentials.
 2. In the same folder we will now download the TriboFlow files from gitlab (using ssh to facilitate automatic login with ssh-keys) by typing `git clone git@gitlab.com:triboteam/TriboFlow.git`. This will (for now) only work if your gitlab account has authorisation!
 3. You should now see a folder `<YourPath>/TriboFlow`. `cd` into it and run `pip install -e .` to install TriboFlow and all the other packages that are required to run it into your active conda environment. 
-4. If there is an error that the directory is not installable, there might not yet be a setup.py file in the master branch. Checkout a development branch by typing `git checkout development` to switch the branch and run `pip install -e .` again.
 
 [Back to top](#toc)
 ### Configuring FireWorks<a name="configurefw"></a>

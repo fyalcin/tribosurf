@@ -31,7 +31,8 @@ from fireworks import Firework
 from triboflow.firetasks.init_check import FTCheckInput
 from triboflow.firetasks.init_db import (
     FT_PutMaterialInDB, 
-    FT_PutInterfaceInDB
+    FT_PutInterfaceInDB,
+    FT_PutBulkInDB
 )
 
 class InitWF:
@@ -160,5 +161,94 @@ class InitWF:
         
         fw = Firework([ft_mat, ft_computation, ft_interface, ft_mat_db, 
                        ft_interface_db], name = fw_name)
+        
+        return fw
+    
+    @staticmethod
+    def checkinp_bulk_convo(material, computational,
+                            fw_name='Check input parameters'):
+        """
+        Create a Fireworks to check if the necessary input for a workflow 
+        to converge bulk parameters are given and assignes default values to
+        optional parameters. 
+        Input parameters are checked for correct type and location in the spec.
+        
+        Parameters
+        ----------
+        material : list of str
+            Keys list in fw_spec pointing to the input dict of the material.
+
+        computational : list of str
+            Keys list in fw_spec pointing to the computational parameters.
+
+        fw_name : str
+            Name of the returned FireWork
+    
+        Returns
+        -------
+        fw : fireworks.core.firework.Firework
+            Firework that checks all input parameters for an heterogeneous WF.
+            
+        """# Put the parameters to build the interface in DB
+        ft_interface_db = FT_PutInterfaceInDB(mat_1 = 'mat', mat_2 = 'mat',
+                                             comp_params = 'comp',
+                                             inter_params = 'inter')
+        
+        # Firetasks checking the material parameters
+        ft_mat = FTCheckInput(input_dict = material, read_key = 'bulk_params',
+                               output_dict_name = 'mat')
+        
+        # Firetask checking the computational parameters
+        ft_computation = FTCheckInput(input_dict = computational, 
+                                      read_key = 'comp_params',
+                                      output_dict_name = 'comp')
+        
+        # Put materials bulk and slab in DB
+        ft_mat_db = FT_PutBulkInDB(mat = 'mat', comp_params = 'comp')
+        
+        fw = Firework([ft_mat, ft_computation, ft_mat_db], name = fw_name)
+        
+        return fw
+    
+    @staticmethod
+    def checkinp_slab_convo(material, computational,
+                                fw_name='Check input parameters'):
+        """
+        Create a Fireworks to check if the necessary input for a homogeneous
+        workflow are given and assignes default values to optional parameters. 
+        Input parameters are checked for correct type and location in the spec.
+        
+        Parameters
+        ----------
+        material : list of str
+            Keys list in fw_spec pointing to the input dict of the material.
+
+        computational : list of str
+            Keys list in fw_spec pointing to the computational parameters.
+
+        fw_name : str
+            Name of the returned FireWork
+    
+        Returns
+        -------
+        fw : fireworks.core.firework.Firework
+            Firework that checks all input parameters for an slab convergence WF.
+            
+        """
+        
+        # Firetasks checking the material parameters
+        ft_mat = FTCheckInput(input_dict = material, read_key = 'material_params',
+                               output_dict_name = 'mat')
+        
+        # Firetask checking the computational parameters
+        ft_computation = FTCheckInput(input_dict = computational, 
+                                      read_key = 'comp_params',
+                                      output_dict_name = 'comp')
+        
+        # Put materials bulk and slab in DB
+        ft_mat_db = FT_PutMaterialInDB(mat = 'mat', comp_params = 'comp')
+        
+        
+        fw = Firework([ft_mat, ft_computation, ft_mat_db], name = fw_name)
         
         return fw
