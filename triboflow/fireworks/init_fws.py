@@ -65,7 +65,7 @@ class InitWF:
             Keys list in fw_spec pointing to the interface parameters, which
             are needed for interface matching.
 
-        fw_name : strMaterial
+        fw_name : str
             Name of the returned FireWork.
     
         Returns

@@ -528,13 +528,13 @@ class Navigator:
 
         Parameters
         ----------
-        label : TYPE
-            DESCRIPTION.
+        label : str
+            task label
 
         Returns
         -------
-        TYPE
-            DESCRIPTION.
+        pymatgen.io.vasp.outputs.Chgcar
+            A pymatgen chgcar object
 
         """
         vasp_calc_db = self.vasp_calc_db
