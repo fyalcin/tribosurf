@@ -11,7 +11,7 @@ from fireworks import LaunchPad, Workflow, Firework
 from triboflow.firetasks.dielectric import FT_StartDielectric
 
 
-mpid = 'mp-1265'
+mpid = 'mp-149'
 functional = 'PBE'
 
 FT = FT_StartDielectric(mp_id=mpid, functional=functional)
