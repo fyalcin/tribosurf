@@ -215,12 +215,26 @@ class Shaper():
         # Vacuum region is modified to the desired thickness
         if vacuum_thickness:
             reconstructed_struct = Shaper._modify_vacuum(struct_resized, vacuum_thickness)
+        else:
+            reconstructed_struct = struct_resized
 
-        if not slab_thickness and vacuum_thickness:
+        if not slab_thickness and not vacuum_thickness:
             print(f'Warning! You chose to keep the slab and vacuum thicknesses as they are'
                   'during reconstruction. Make sure this is what you want.')
             reconstructed_struct = struct_centered if center else struct
 
+        bbs = kwargs.get('bbs')
+        if bbs:
+            layers_initial = len(Shaper._get_layers(struct_centered, tol))
+            layers_resized = len(Shaper._get_layers(reconstructed_struct, tol))
+            diff = layers_initial - layers_resized
+            shifts = list(bbs.keys())
+            top_shift = np.round(reconstructed_struct.shift, 4)
+            top_shift_index = shifts.index(top_shift)
+            bot_shift = shifts[(top_shift_index - diff) % len(shifts)]
+            top_bvs = bbs[top_shift]
+            bot_bvs = bbs[bot_shift]
+            reconstructed_struct.energy = {'top': top_bvs, 'bottom': bot_bvs}
         return reconstructed_struct
 
     @staticmethod
@@ -791,8 +805,8 @@ class Shaper():
                                             minimize_bv=minimize_bv, bbs=bbs)
                          for slab in slabs]
 
-            for slab in slabs:
-                slab.energy = bbs[np.round(slab.shift, 4)]
+            # for slab in slabs:
+            #     slab.energy = bbs[np.round(slab.shift, 4)]
 
             if to_file:
                 formula = slabs[0].composition.reduced_formula
