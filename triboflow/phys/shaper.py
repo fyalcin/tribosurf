@@ -152,7 +152,7 @@ class Shaper():
             raise ValueError('Region must be one of "cell", "vacuum", or "slab"')
 
     @staticmethod
-    def reconstruct(struct, slab_thickness, vacuum_thickness, tol=0.1, minimize_bv=False,
+    def reconstruct(struct, slab_thickness=None, vacuum_thickness=None, tol=0.1, minimize_bv=False,
                     center=True, **kwargs):
         """
         Reconstruct the input slab with the desired slab thickness in
@@ -190,26 +190,36 @@ class Shaper():
         # outside the box from the top and the bottom
         struct_centered = center_slab(struct.copy(sanitize=True))
         initial_thickness = Shaper._get_proj_height(struct_centered, 'slab')
-        # Layers (containing sites) are removed from the bottom until
-        # the desired slab_thickness is reached
-        if minimize_bv:
-            bbs = kwargs['bbs']
-            bvs, indices = np.unique(list(bbs.values()), return_index=True)
-            periodicity = len(bvs)
-            spacings = [spacing for spacing in Shaper._get_layer_spacings(struct_centered, tol) if spacing < 4.0]
-            num_layers = len(Shaper._get_layers(struct_centered, tol))
-            layers_to_remove = int(periodicity * np.floor((num_layers
-                                                           - slab_thickness) / periodicity))
-            while initial_thickness - sum(spacings[:layers_to_remove]) < 10:
-                if layers_to_remove < 0:
-                    raise ValueError('you must choose a bigger slab')
-                layers_to_remove -= periodicity
-            struct_resized = Shaper._remove_layers(struct_centered, layers_to_remove,
-                                                   tol=tol, method='layers')
+
+        if slab_thickness:
+            # Layers (containing sites) are removed from the bottom until
+            # the desired slab_thickness is reached
+            if minimize_bv:
+                bbs = kwargs['bbs']
+                bvs, indices = np.unique(list(bbs.values()), return_index=True)
+                periodicity = len(bvs)
+                spacings = [spacing for spacing in Shaper._get_layer_spacings(struct_centered, tol) if spacing < 4.0]
+                num_layers = len(Shaper._get_layers(struct_centered, tol))
+                layers_to_remove = int(periodicity * np.floor((num_layers
+                                                               - slab_thickness) / periodicity))
+                while initial_thickness - sum(spacings[:layers_to_remove]) < 10:
+                    if layers_to_remove < 0:
+                        raise ValueError('you must choose a bigger slab')
+                    layers_to_remove -= periodicity
+                struct_resized = Shaper._remove_layers(struct_centered, layers_to_remove,
+                                                       tol=tol, method='layers')
+            else:
+                struct_resized = Shaper._remove_layers(struct_centered, slab_thickness, tol=tol)
         else:
-            struct_resized = Shaper._remove_layers(struct_centered, slab_thickness, tol=tol)
+            struct_resized = struct_centered
         # Vacuum region is modified to the desired thickness
-        reconstructed_struct = Shaper._modify_vacuum(struct_resized, vacuum_thickness)
+        if vacuum_thickness:
+            reconstructed_struct = Shaper._modify_vacuum(struct_resized, vacuum_thickness)
+
+        if not slab_thickness and vacuum_thickness:
+            print(f'Warning! You chose to keep the slab and vacuum thicknesses as they are'
+                  'during reconstruction. Make sure this is what you want.')
+            reconstructed_struct = struct_centered if center else struct
 
         return reconstructed_struct
 
@@ -731,7 +741,7 @@ class Shaper():
 
         to_file : bool, optional
             Whether to export the generated structures as VASP formatted files.
-            Filenames are in thr format {formula}_{miller_index}_{termination_index}.
+            Filenames are in the format {formula}_{miller_index}_{termination_index}.
             The default is 'False'.
         Returns
         -------
