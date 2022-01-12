@@ -8,6 +8,7 @@ from fireworks import Workflow, Firework
 
 from triboflow.fireworks.init_fws import InitWF
 from triboflow.firetasks.convergence import FT_StartConvo
+from triboflow.firetasks.dielectric import FT_StartDielectric
 from triboflow.firetasks.structure_manipulation import (
     FT_MakeHeteroStructure, FT_StartPreRelax)
 from triboflow.firetasks.PES import FT_StartPESCalcSubWF
@@ -92,6 +93,21 @@ def heterogeneous_wf(inputs):
                                      .format(mat_2['formula']))
     WF.append(ConvergeKpoints_M2)
     
+    CalcDielectric_M1 = Firework(FT_StartDielectric(mp_id=mp_id_1,
+                                                    functional=functional,
+                                                    update_bulk=True,
+                                                    update_slabs=True),
+                                 name=f'Start dielectric SWF for {mat_1["formula"]}')
+    WF.append(CalcDielectric_M1)
+    
+    CalcDielectric_M2 = Firework(FT_StartDielectric(mp_id=mp_id_2,
+                                                    functional=functional,
+                                                    update_bulk=True,
+                                                    update_slabs=True),
+                                 name=f'Start dielectric SWF for {mat_2["formula"]}')
+    WF.append(CalcDielectric_M2)
+    
+    
     Final_Params = Firework(FT_UpdateCompParams(mp_id_1=mp_id_1,
                                                 mp_id_2=mp_id_2,
                                                 miller_1=mat_1.get('miller'),
@@ -169,8 +185,10 @@ def heterogeneous_wf(inputs):
                     PreRelaxation_M2: [ConvergeEncut_M2],
                     ConvergeEncut_M1: [ConvergeKpoints_M1],
                     ConvergeEncut_M2: [ConvergeKpoints_M2],
-                    ConvergeKpoints_M1: [Final_Params],
-                    ConvergeKpoints_M2: [Final_Params],
+                    ConvergeKpoints_M1: [CalcDielectric_M1],
+                    ConvergeKpoints_M2: [CalcDielectric_M2],
+                    CalcDielectric_M1: [Final_Params],
+                    CalcDielectric_M2: [Final_Params],
                     Final_Params: [MakeSlabs_M1, MakeSlabs_M2],
                     MakeSlabs_M1: [MakeInterface],
                     MakeSlabs_M2: [MakeInterface],

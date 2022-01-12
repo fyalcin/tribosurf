@@ -12,6 +12,115 @@ from atomate.utils.utils import env_chk
 
 from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.structure_manipulation import interface_name
+from triboflow.utils.surfen_tools import move_result
+
+
+@explicit_serialize
+class FT_UpdateCompParams(FiretaskBase):
+    """
+    Firetask to update computational parameters for bulk and/or slabs
+    
+    Parameters
+    ----------
+    mpid : str
+        Material Project's material identifier ID.
+    functional : str
+        Functional for the identification of the high_level db.
+    new_params : list
+        List of strings that identify the new keys that should be written to
+        the computational parameters.
+    db_file : str, optional
+        Full path of the db.json. The default is 'auto'.
+    update_bulk : bool, optional
+        If the bulk entry for the given mpid should be updated.
+        The default is True.
+    update_slabs : bool, optional
+        If the slab entries matching a given mpid should be updated (all miller
+        indices. The default is False.
+    high_level_db : str or bool, optional
+        If a string is given, the high-level database will be chosen based on
+        that string. If True, the db.json file will be used to determine the
+        name of the high_level_db. The default is True.
+
+    """
+    _fw_name = 'Update computational parameters'
+    required_params = ['mpid', 'functional', 'new_params']
+    optional_params = ['db_file', 'update_bulk', 'update_slabs',
+                       'high_level_db']
+    def run_task(self, fw_spec):
+
+        mpid = self.get('mpid')
+        functional = self.get('functional')
+        new_params = self.get('new_params')
+        update_bulk = self.get('update_bulk', True)
+        update_slabs = self.get('update_slabs', False)
+        db_file = self.get('db_file', 'auto')
+        hl_db = self.get('high_level_db', True)
+        
+        nav_high = StructureNavigator(db_file=db_file, 
+                                           high_level=hl_db)
+        #get values from spec:
+        new_data = {'$set': {}}
+        for param in new_params:
+            new_data['$set'][f'comp_parameters.{param}'] = fw_spec.get(param, None)
+            
+        if update_bulk:
+            nav_high.update_data(collection=functional+'.bulk_data',
+                                 fltr={'mpid': mpid},
+                                 new_values=new_data,
+                                 upsert=False)
+           
+        if update_slabs:
+            nav_high.update_many_data(collection=functional+'.slab_data',
+                                      fltr={'mpid': mpid},
+                                      new_values=new_data,
+                                      upsert=False)
+        return
+
+@explicit_serialize
+class FT_MoveResults(FiretaskBase):
+    """
+    Firetask to move the result of a VASP calculation from the Fireworks database to the destination.
+
+    Parameters
+    ----------
+    tag : str
+        Task label to query for in the tasks collection of the Fireworks database.
+    fltr : dict
+        Filter dictionary that is used to query for the destination in the database.
+    coll : str
+        Collection to move the results into in the destination database.
+    loc : str
+        Location in the collection the results should be written to.
+    custom_dict : dict, optional
+        Custom dictionary to write into the destination. The default is {}.
+    db_file : str, optional
+        Full path of the db.json. The default is 'auto'.
+    high_level : str, optional
+        Whether to query the results from the high level database or not. The default is True.
+
+    Returns
+    -------
+    FWAction that just updates the spec.
+
+    """
+    _fw_name = "Move the results from the tag to the entry found by flag."
+    required_params = ['tag', 'fltr', 'coll', 'loc']
+    optional_params = ['custom_dict', 'db_file', 'high_level']
+
+    def run_task(self, fw_spec):
+        tag = self.get('tag')
+        fltr = self.get('fltr')
+        coll = self.get('coll')
+        loc = self.get('loc')
+
+        custom_dict = self.get('custom_dict', {})
+        db_file = self.get('db_file', 'auto')
+        high_level = self.get('high_level', True)
+
+        move_result(tag, fltr, coll, loc, custom_dict, db_file, high_level)
+
+        return FWAction(update_spec=fw_spec)
 
 
 @explicit_serialize
@@ -36,14 +145,13 @@ class FT_ChooseCompParams(FiretaskBase):
     -------
     FWAction that modifies the spec for the next firewoks at the out_loc.
     """
-    
+
     _fw_name = 'Choose Comp Params'
     required_params = ['mp_id_1', 'mp_id_2', 'miller_1', 'miller_2',
                        'functional']
     optional_params = ['db_file', 'high_level_db']
 
     def run_task(self, fw_spec):
-        
         mp_id_1 = self.get('mp_id_1')
         mp_id_2 = self.get('mp_id_2')
         miller_1 = self.get('miller_1')
@@ -54,36 +162,36 @@ class FT_ChooseCompParams(FiretaskBase):
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
         hl_db = self.get('high_level_db', True)
-        
+
         nav_structure = StructureNavigator(
             db_file=db_file,
             high_level=hl_db)
         data_1 = nav_structure.get_bulk_from_db(
-            mp_id=mp_id_1, 
+            mp_id=mp_id_1,
             functional=functional)
         data_2 = nav_structure.get_bulk_from_db(
-            mp_id=mp_id_2, 
+            mp_id=mp_id_2,
             functional=functional)
-        
+
         k_dens1 = data_1['comp_parameters']['k_dens']
         k_dens2 = data_2['comp_parameters']['k_dens']
         encut1 = data_1['comp_parameters']['encut']
         encut2 = data_2['comp_parameters']['encut']
-        
+
         metal_1 = data_1['comp_parameters']['is_metal']
         metal_2 = data_2['comp_parameters']['is_metal']
-        
+
         k_dens = max(k_dens1, k_dens2)
         encut = max(encut1, encut2)
         metal = any((metal_1, metal_2))
-            
+
         name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
-        
+
         nav_high = Navigator(
-            db_file=db_file, 
+            db_file=db_file,
             high_level=hl_db)
         nav_high.update_data(
-            collection=functional+'.interface_data', 
+            collection=functional + '.interface_data',
             fltr={'name': name},
             new_values={'$set': {'comp_parameters.k_dens': k_dens,
                                  'comp_parameters.encut': encut,
@@ -93,21 +201,19 @@ class FT_ChooseCompParams(FiretaskBase):
 
 @explicit_serialize
 class FT_PrintFromBulkDB(FiretaskBase):
-
     _fw_name = 'Print bulk data from DB'
     required_params = ['mp_id', 'functional']
     optional_params = ['db_file', 'high_level_db']
 
     def run_task(self, fw_spec):
-        
         db_file = self.get('db_file', env_chk('>>db_file<<', fw_spec))
         mp_id = self['mp_id']
         functional = self['functional']
-        
+
         hl_db = self.get('high_level_db', True)
 
         nav_structure = StructureNavigator(
-            db_file=db_file, 
+            db_file=db_file,
             high_level=hl_db)
         bulk_dict = nav_structure.get_bulk_from_db(
             mp_id=mp_id,
@@ -115,7 +221,7 @@ class FT_PrintFromBulkDB(FiretaskBase):
         print('')
         pprint(bulk_dict)
         print('')
-        
+
 
 @explicit_serialize
 class FT_PassSpec(FiretaskBase):
@@ -123,9 +229,9 @@ class FT_PassSpec(FiretaskBase):
     
     If the key_list contatins only '_all', update the whole spec!
     """
-    
+
     _fw_name = 'Pass Spec'
-    required_params=['key_list']
+    required_params = ['key_list']
 
     def run_task(self, fw_spec):
 
@@ -151,14 +257,14 @@ class FT_PrintSpec(FiretaskBase):
     Not only prints the current spec in a pretty way, but also returns a
     FWAction that updates the spec of future to include the current spec.
     """
-    
+
     _fw_name = 'Print Spec'
-    
+
     def run_task(self, fw_spec):
         import pprint
-        
+
         pprint.pprint(fw_spec)
-        
+
         spec = fw_spec
 
         return FWAction(update_spec=spec)

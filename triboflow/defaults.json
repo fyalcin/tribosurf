@@ -9,7 +9,8 @@
       "k_dens":12.5,
       "surfene_thr":0.01,
       "vacuum":15,
-      "is_metal":null
+      "is_metal":null,
+      "epsilon":1.0
    },
    "interface_params":{
       "max_area":"NO_DEFAULT",

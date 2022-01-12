@@ -12,15 +12,120 @@ from fireworks import Workflow, Firework
 from atomate.vasp.fireworks import StaticFW
 from atomate.vasp.powerups import add_modify_incar
 
+from triboflow.firetasks.surfen_tools import FT_PutSurfenInputsIntoDB, FT_RelaxSurfaceEnergyInputs, FT_WriteSurfaceEnergies
 from triboflow.fireworks.common import run_pes_calc_fw, make_pes_fw
 from triboflow.firetasks.convergence import FT_Convo
 from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \
     FT_StartSlabRelax, FT_GetRelaxedSlab
 from triboflow.firetasks.PPES import FT_DoPPESCalcs, FT_FitPPES
 from triboflow.firetasks.adhesion import FT_CalcAdhesion
-from triboflow.utils.database import Navigator, NavigatorMP
+from triboflow.firetasks.utils import FT_UpdateCompParams
+from triboflow.firetasks.dielectric import FT_GetEpsilon
+from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
+from triboflow.utils.surfen_tools import get_surfen_inputs_from_mpid
 from triboflow.utils.vasp_tools import get_emin_and_emax, get_custom_vasp_static_settings
 
+
+def dielectric_constant_swf(structure,
+                            mpid,
+                            flag,
+                            comp_parameters={},
+                            spec={},
+                            functional='PBE',
+                            db_file='auto',
+                            hl_db=True,
+                            update_bulk=True,
+                            update_slabs=False):
+    """
+    Subworkflow that calculates dielectric properties and updates the comp_parameters.
+
+    Parameters
+    ----------
+    structure : pymatgen.core.structure.Structure
+        The structure for which the dielectric porperties are calculated.
+    mpid : str
+        Material Project's material identifier ID of the structure passed.
+    flag : str
+        Will be used to name the FW of the vasp calc and later to find it in the
+        tasks collection.
+    comp_parameters : dict, optional
+        Dictionary of computational parameters. Used to set up the vasp input
+        set. The default is {}.
+    spec : dict, optional
+        fw_spec that can be passed to the FWs. The default is {}.
+    functional : str, optional
+        Functional for the calculation. Usually SCAN or PBE. Used to select
+        the output collection in the high level db. The default is 'PBE'.
+    db_file : str, optional
+        Path to a db.json file. If 'auto', the standard config folder is used.
+        The default is 'auto'.
+    hl_db : str or bool, optional
+        If a string is given, the high-level database will be chosen based on
+        that string. If True, the db.json file will be used to determine the
+        name of the high_level_db. The default is True.
+    update_bulk : bool, optional
+        If the bulk entry for the given mpid should be updated.
+        The default is True.
+    update_slabs : bool, optional
+        If the slab entries matching a given mpid should be updated (all miller
+        indices. The default is False.
+
+    Returns
+    -------
+    WF : fireworks.core.firework.Workflow
+        The dielectric subworkflow.
+
+    """
+
+    #check if epsilon is already calculated for that material.
+    try:
+        nav_high = StructureNavigator(db_file=db_file,
+                                      high_level=hl_db)
+        bulk_data = nav_high.get_bulk_from_db(mpid, functional)
+        epsilon = bulk_data['comp_parameters'].get('epsilon', False)
+    except:
+        epsilon = False
+
+    formula = structure.composition.reduced_formula
+    wf_name = f'Dielectric calculation WF for {formula} {mpid}'
+
+    if not epsilon:
+        vis = get_custom_vasp_static_settings(structure,
+                                              comp_parameters,
+                                              'bulk_epsilon_from_scratch')
+        Calc_Eps_FW = StaticFW(structure=structure,
+                               name=flag,
+                               vasp_input_set=vis)
+
+        Get_Eps_FT = FT_GetEpsilon(label=flag, db_file=db_file)
+
+        Update_Data_FT = FT_UpdateCompParams(mpid=mpid,
+                                             functional=functional,
+                                             new_params=['epsilon'],
+                                             update_bulk=update_bulk,
+                                             update_slabs=update_slabs,
+                                             db_file=db_file,
+                                             high_level_db=hl_db)
+        Update_FW = Firework(tasks=[Get_Eps_FT, Update_Data_FT],
+                             spec=spec,
+                             name=flag+'_update_high_level')
+
+        WF = Workflow([Calc_Eps_FW, Update_FW], {Calc_Eps_FW: [Update_FW]},
+                      name=wf_name)
+    else:
+        spec.update({'epsilon': epsilon})
+        Update_Data_FT = FT_UpdateCompParams(mpid=mpid,
+                                             functional=functional,
+                                             new_params=['epsilon'],
+                                             update_bulk=update_bulk,
+                                             update_slabs=update_slabs,
+                                             db_file=db_file,
+                                             high_level_db=hl_db)
+        Update_FW = Firework(tasks=[Update_Data_FT],
+                             spec=spec,
+                             name=flag+'_update_high_level')
+        WF = Workflow([Update_FW], name=wf_name)
+    return WF
 
 def adhesion_energy_swf(top_slab,
                         bottom_slab,
@@ -73,14 +178,14 @@ def adhesion_energy_swf(top_slab,
         raise AssertionError("You have used {} as an input for <top_slab>.\n"
                              "Please use <class 'pymatgen.core.surface.Slab'>"
                              " instead.".format(type(top_slab)))
-        
+
     try:
         bot_miller = list(bottom_slab.miller_index)
     except:
         raise AssertionError("You have used {} as an input for <bot_slab>.\n"
                              "Please use <class 'pymatgen.core.surface.Slab'>"
                              " instead.".format(type(bottom_slab)))
-        
+
     if not interface_name:
         mt = ''.join(str(s) for s in top_miller)
         mb = ''.join(str(s) for s in bot_miller)
@@ -89,8 +194,8 @@ def adhesion_energy_swf(top_slab,
                           '_AutoGen')
         print('\nYour interface name has been automatically generated to be:'
               '\n {}'.format(interface_name))
-        
-    
+
+
     if comp_parameters == {}:
         print('\nNo computational parameters have been defined!\n'
               'Workflow will run with:\n'
@@ -105,9 +210,9 @@ def adhesion_energy_swf(top_slab,
               '    "is_metal": <True/False>,\n'
               '    "encut": <float>,\n'
               '    "k_dens": <int>}\n')
-    
+
     tag = interface_name+'_'+str(uuid4())
-    
+
     vis_top = get_custom_vasp_static_settings(top_slab,
                                               comp_parameters,
                                               'slab_from_scratch')
@@ -117,14 +222,14 @@ def adhesion_energy_swf(top_slab,
     vis_interface = get_custom_vasp_static_settings(interface,
                                               comp_parameters,
                                               'slab_from_scratch')
-    
+
     FW_top = StaticFW(structure=top_slab, vasp_input_set=vis_top,
                       name=tag+'top')
     FW_bot = StaticFW(structure=bottom_slab, vasp_input_set=vis_bot,
                       name=tag+'bottom')
     FW_interface = StaticFW(structure=interface, vasp_input_set=vis_interface,
                       name=tag+'interface')
-    
+
     FW_results = Firework(FT_CalcAdhesion(interface_name=interface_name,
                                  functional=functional,
                                  top_label=tag+'top',
@@ -135,10 +240,10 @@ def adhesion_energy_swf(top_slab,
                                FW_bot: [FW_results],
                                FW_interface: [FW_results]},
                    name='Calculate adhesion SWF for {}'.format(interface_name))
-    
+
     return add_modify_incar(SWF)
-    
-    
+
+
 def calc_pes_swf(top_slab, bottom_slab,
                  interface_name=None,
                  functional='PBE',
@@ -146,8 +251,8 @@ def calc_pes_swf(top_slab, bottom_slab,
                  file_output=False,
                  output_dir=None,
                  remote_copy=False,
-                 server=None, 
-                 user=None, 
+                 server=None,
+                 user=None,
                  port=None):
     """Create a subworkflow to compute the PES for an interface of two slabs.
     
@@ -201,21 +306,21 @@ def calc_pes_swf(top_slab, bottom_slab,
     SWF : fireworks.core.firework.Workflow
         A subworkflow intended to compute the PES of a certain interface.
 
-    """  
+    """
     try:
         top_miller = list(top_slab.miller_index)
     except:
         raise AssertionError("You have used {} as an input for <top_slab>.\n"
                              "Please use <class 'pymatgen.core.surface.Slab'>"
                              " instead.".format(type(top_slab)))
-        
+
     try:
         bot_miller = list(bottom_slab.miller_index)
     except:
         raise AssertionError("You have used {} as an input for <bot_slab>.\n"
                              "Please use <class 'pymatgen.core.surface.Slab'>"
                              " instead.".format(type(bottom_slab)))
-        
+
     if not interface_name:
         mt = ''.join(str(s) for s in top_miller)
         mb = ''.join(str(s) for s in bot_miller)
@@ -224,8 +329,8 @@ def calc_pes_swf(top_slab, bottom_slab,
                           '_AutoGen')
         print('\nYour interface name has been automatically generated to be:'
               '\n {}'.format(interface_name))
-        
-    
+
+
     if comp_parameters == {}:
         print('\nNo computational parameters have been defined!\n'
               'Workflow will run with:\n'
@@ -240,33 +345,33 @@ def calc_pes_swf(top_slab, bottom_slab,
               '    "is_metal": <True/False>,\n'
               '    "encut": <float>,\n'
               '    "k_dens": <int>}\n')
-    
+
     tag = interface_name+'_'+str(uuid4())
-    
-    FW_1 = run_pes_calc_fw(top_slab=top_slab, 
-                           bottom_slab=bottom_slab, 
+
+    FW_1 = run_pes_calc_fw(top_slab=top_slab,
+                           bottom_slab=bottom_slab,
                            interface_name=interface_name,
                            functional=functional,
                            comp_parameters=comp_parameters,
                            tag=tag,
                            FW_name='Start PES calcs for '+interface_name)
-    
+
     FW_2 = make_pes_fw(interface_name=interface_name,
                        functional=functional,
                        tag=tag,
                        file_output=file_output,
                        output_dir=output_dir,
                        remote_copy=remote_copy,
-                       server=server, 
-                       user=user, 
+                       server=server,
+                       user=user,
                        port=port,
                        FW_name='Parse PES calcs for '+interface_name)
-    
+
     SWF = Workflow([FW_1, FW_2], {FW_1: [FW_2]},
                    name='Calc PES for '+interface_name+' SWF')
     return SWF
-    
-def calc_ppes_swf(interface_name, functional, distance_list=[-0.5, -0.25, 0.0, 
+
+def calc_ppes_swf(interface_name, functional, distance_list=[-0.5, -0.25, 0.0,
                   0.25, 0.5, 2.5, 3.0, 4.0, 5.0, 7.5],
                   out_name='PPES@minimum', structure_name='minimum_relaxed',
                   spec={}):
@@ -306,21 +411,21 @@ def calc_ppes_swf(interface_name, functional, distance_list=[-0.5, -0.25, 0.0,
 
     """
     tag = interface_name+'_'+str(uuid4())
-    
+
     FW_1 = Firework(FT_DoPPESCalcs(interface_name=interface_name,
                                    functional=functional,
                                    distance_list = distance_list,
                                    tag=tag,
                                    structure_name = structure_name),
                     spec=spec, name='PPES Calculations for '+interface_name)
-    
+
     FW_2 = Firework(FT_FitPPES(interface_name=interface_name,
                                    functional=functional,
                                    distance_list = distance_list,
                                    out_name = out_name,
                                    tag = tag),
                     spec=spec, name='PPES Fitting for '+interface_name)
-    
+
     SWF = Workflow([FW_1, FW_2], {FW_1: [FW_2]},
                    name = 'Calc PPES for '+interface_name+' SWF')
     return SWF
@@ -339,8 +444,8 @@ def make_and_relax_slab_swf(bulk_structure,
                             file_output=False,
                             output_dir=None,
                             remote_copy=False,
-                            server=None, 
-                            user=None, 
+                            server=None,
+                            user=None,
                             port=None,
                             print_help=True):
     """
@@ -407,9 +512,9 @@ def make_and_relax_slab_swf(bulk_structure,
     else:
         miller = miller_index
         miller_str = ''.join(str(s) for s in miller_index)
-        
+
     formula = bulk_structure.composition.reduced_formula
-    
+
     if flag.startswith('mp-') and flag[3:].isdigit():
         nav_mp = NavigatorMP()
         formula_from_flag = nav_mp.get_property_from_mp(
@@ -422,7 +527,7 @@ def make_and_relax_slab_swf(bulk_structure,
                              '(mp-id) you have chosen which corresponds '
                              'to {}.\n'.format(
                                  formula, formula_from_flag))
-    
+
     if comp_parameters == {}:
         print('\nNo computational parameters have been defined!\n'
               'Workflow will run with:\n'
@@ -437,7 +542,7 @@ def make_and_relax_slab_swf(bulk_structure,
               '    "is_metal": <True/False>,\n'
               '    "encut": <int>,\n'
               '    "k_dens": <int>}\n')
-    
+
     if print_help:
         nav = Navigator()
         db_file = nav.path
@@ -447,27 +552,27 @@ def make_and_relax_slab_swf(bulk_structure,
               'from triboflow.utils.database import GetSlabFromDB\n'
               'results = GetBulkFromDB("{}", "{}", "{}", "{}")\n'
               'pprint.pprint(results)\n'.format(flag, db_file, miller, functional))
-    
+
     tag = formula+miller_str+'_'+str(uuid4())
-            
+
     FTs = []
-    
+
     FTs.append(FT_MakeSlabInDB(bulk_structure=bulk_structure,
                                miller=miller,
                                flag=flag,
                                functional=functional,
                                min_thickness=min_thickness,
                                min_vacuum=min_vacuum))
-    
+
     FTs.append(FT_StartSlabRelax(flag=flag, miller=miller,
                                  functional=functional, tag=tag,
                                  comp_parameters=comp_parameters,
                                  slab_struct_name=slab_struct_name,
                                  relax_type=relax_type))
-    
+
     FW = Firework(FTs, spec=spec,
                   name='Make and relax '+formula+miller_str+' slab')
-    
+
     FW2 = Firework(FT_GetRelaxedSlab(flag=flag,
                                      miller=miller,
                                      functional=functional,
@@ -476,12 +581,12 @@ def make_and_relax_slab_swf(bulk_structure,
                                      file_output=file_output,
                                      output_dir=output_dir,
                                      remote_copy=remote_copy,
-                                     server=server, 
-                                     user=user, 
+                                     server=server,
+                                     user=user,
                                      port=port),
                    spec=spec,
                    name='Put relaxed '+formula+miller_str+' slab in DB')
-    
+
     SWF = Workflow([FW, FW2], {FW: [FW2]},
                    name='Make and relax '+formula+miller_str+' SWF')
     return SWF
@@ -489,25 +594,25 @@ def make_and_relax_slab_swf(bulk_structure,
 
 
 
-def converge_swf(structure, 
+def converge_swf(structure,
                  conv_type,
-                 flag, 
-                 comp_parameters={}, 
+                 flag,
+                 comp_parameters={},
                  spec={},
-                 functional='PBE', 
-                 deformations=None, 
+                 functional='PBE',
+                 deformations=None,
                  encut_start=None,
                  encut_incr=25,
                  k_dens_start=1.0,
                  k_dens_incr=0.1,
                  k_dens_default=12.5,
-                 n_converge=3, 
+                 n_converge=3,
                  db_file=None,
                  file_output=False,
                  output_dir=None,
                  remote_copy=False,
-                 server=None, 
-                 user=None, 
+                 server=None,
+                 user=None,
                  port=None,
                  print_help=True):
     """Subworkflows that converges Encut or kpoints denstiy using fits to an EOS.
@@ -605,14 +710,14 @@ def converge_swf(structure,
                 encut_start = int(25 * np.ceil(enmax/25))
     elif conv_type == 'kpoints':
             name = 'Kpoint Convergence SWF of '+structure.composition.reduced_formula
-    
+
     tag = "BM group: {}".format(str(uuid4()))
-        
+
     if flag.startswith('mp-') and flag[3:].isdigit():
         formula_from_struct = structure.composition.reduced_formula
         nav_mp = NavigatorMP()
         formula_from_flag = nav_mp.get_property_from_mp(
-            mp_id=flag, 
+            mp_id=flag,
             properties=['pretty_formula'])
         formula_from_flag = formula_from_flag['pretty_formula']
 
@@ -622,7 +727,7 @@ def converge_swf(structure,
                              '(mp-id) you have chosen which corresponds '
                              'to {}.\n'.format(
                                  formula_from_struct, formula_from_flag))
-        
+
     if comp_parameters == {}:
         if conv_type == 'encut':
             print('\nNo computational parameters have been defined!\n'
@@ -648,7 +753,7 @@ def converge_swf(structure,
                   '    "use_spin": <True/False>,\n'
                   '    "is_metal": <True/False>,\n'
                   '    "encut": <int>}\n')
-    
+
     if print_help:
         nav = Navigator()
         db_file = nav.path
@@ -687,12 +792,58 @@ def converge_swf(structure,
                              file_output=file_output,
                              output_dir=output_dir,
                              remote_copy=remote_copy,
-                             server=server, 
-                             user=user, 
-                             port=port)        
-    
+                             server=server,
+                             user=user,
+                             port=port)
+
     FW_C = Firework(FT_EncutConvo, spec=spec,
                     name=name)
     WF = Workflow([FW_C], name=name)
+
+    return WF
+
+
+def surface_energy_swf(mpid,
+                       functional,
+                       sg_params,
+                       sg_filter,
+                       db_file='auto',
+                       high_level=True,
+                       comp_params_user={},
+                       custom_id=None):
+    nav_high = Navigator(db_file, high_level=True)
+
+    comp_params = nav_high.find_data(f'{functional}.bulk_data', {'mpid': mpid})['comp_parameters']
+    comp_params.update(comp_params_user)
+
+    inputs_list = get_surfen_inputs_from_mpid(mpid,
+                                              functional,
+                                              sg_params,
+                                              sg_filter,
+                                              comp_params,
+                                              custom_id,
+                                              db_file,
+                                              high_level)
+
+    coll = f'{functional}.slab_data.LEO'
+    fltr = {'mpid': mpid}
+
+    FW1 = Firework(
+        FT_PutSurfenInputsIntoDB(inputs_list=inputs_list, sg_params=sg_params, comp_params=comp_params,
+                                 fltr=fltr, coll=coll, db_file=db_file, high_level=high_level),
+        name=f"Generate surface energy inputs for {mpid} with {functional} and put in DB")
+
+    FW2 = Firework(
+        FT_RelaxSurfaceEnergyInputs(inputs_list=inputs_list, fltr=fltr, coll=coll, comp_params=comp_params,
+                                    db_file=db_file, high_level=high_level),
+        name=f"Generate and relax surface energy inputs for {mpid} with {functional}")
+
+    FW3 = Firework(
+        FT_WriteSurfaceEnergies(inputs_list=inputs_list, fltr=fltr, coll=coll, db_file=db_file,
+                                high_level=high_level),
+        name=f"Calculate the surface energies for {mpid} with {functional} and put into DB")
+
+    WF = Workflow(fireworks=[FW1, FW2, FW3], links_dict={FW1: [FW2], FW2: [FW3]},
+                  name=f"Surface energy SWF for {mpid} with {functional}.")
 
     return WF
