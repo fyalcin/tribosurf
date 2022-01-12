@@ -62,11 +62,10 @@ def scan_relax_with_static(struct, vis, name):
                          'user_potcar_functional': static_vis.potcar_functional,
                          'user_potcar_settings': static_vis.user_potcar_settings,
                          'vdw': static_vis.vdw}
-    fw_3 = StaticFW(structure=struct,
-                    vasp_input_set_params=static_vis_params,
-                    parents=fw_2, prev_calc_loc=True,
-                    additional_files_from_prev_calc=['WAVECAR'],
-                    name=name)
+     fw_3 = StaticFW(vasp_input_set_params=static_vis_params,
+                              parents = fw_2, prev_calc_loc=True,
+                              additional_files_from_prev_calc=['WAVECAR'],
+                              name=name)
     return [fw_1, fw_2, fw_3], {fw_1: fw_2, fw_2: fw_3}
 
 def pbe_relax_with_static(struct, vis, name):
