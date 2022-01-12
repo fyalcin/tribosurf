@@ -189,10 +189,7 @@ class InitWF:
         fw : fireworks.core.firework.Firework
             Firework that checks all input parameters for an heterogeneous WF.
             
-        """# Put the parameters to build the interface in DB
-        ft_interface_db = FT_PutInterfaceInDB(mat_1 = 'mat', mat_2 = 'mat',
-                                             comp_params = 'comp',
-                                             inter_params = 'inter')
+        """
         
         # Firetasks checking the material parameters
         ft_mat = FTCheckInput(input_dict = material, read_key = 'bulk_params',

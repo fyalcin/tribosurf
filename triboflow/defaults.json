@@ -10,7 +10,7 @@
       "surfene_thr":0.01,
       "vacuum":15,
       "is_metal":null,
-      "epsilon":1.0
+      "epsilon":null
    },
    "interface_params":{
       "max_area":"NO_DEFAULT",
