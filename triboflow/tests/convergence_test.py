@@ -14,21 +14,23 @@ from triboflow.workflows.subworkflows import converge_swf
 prim_bulk_dict = {'@module': 'pymatgen.core.structure',
  '@class': 'Structure',
  'charge': None,
- 'lattice': {'matrix': [[0.0, 1.98191273760033, 1.98191273760033],
-   [1.98191273760033, 0.0, 1.98191273760033],
-   [1.98191273760033, 1.98191273760033, 0.0]],
-  'a': 2.8028478729543758,
-  'b': 2.8028478729543758,
-  'c': 2.8028478729543758,
-  'alpha': 59.99999999999999,
-  'beta': 59.99999999999999,
-  'gamma': 59.99999999999999,
-  'volume': 15.56981965667947},
- 'sites': [{'species': [{'element': 'Pt', 'occu': 1}],
+ 'lattice': {'matrix': [[-1.420025838669831,
+    1.4200258386698312,
+    1.4200258386698312],
+   [1.420025838669831, -1.4200258386698312, 1.4200258386698312],
+   [1.4200258386698315, 1.4200258386698312, -1.420025838669831]],
+  'a': 2.4595569006367533,
+  'b': 2.4595569006367533,
+  'c': 2.4595569006367533,
+  'alpha': 109.47122063449069,
+  'beta': 109.47122063449069,
+  'gamma': 109.47122063449069,
+  'volume': 11.453777224502772},
+ 'sites': [{'species': [{'element': 'Fe', 'occu': 1}],
    'abc': [0.0, 0.0, 0.0],
    'xyz': [0.0, 0.0, 0.0],
-   'label': 'Pt',
-   'properties': {'magmom': 0.000}}]}
+   'label': 'Fe',
+   'properties': {'magmom': 2.214}}]}
 
 struct = Structure.from_dict(prim_bulk_dict)
 
@@ -45,12 +47,13 @@ struct = Structure.from_dict(prim_bulk_dict)
 
 WF = converge_swf(structure=struct,
                   conv_type='encut',
-                  flag='NewEncutKSPCAINGConvoTest_SCAN',
+                  flag='SCAN_encut_test_Fe_100',
                   functional='SCAN',
+                  encut_incr= 100,
                   comp_parameters={'is_metal': True,
                                     'use_spin': True,
                                     'functional': 'SCAN',
-                                    'k_dens': 5.5})
+                                    'k_dens': 4.6})
 
 
 lpad = LaunchPad.auto_load()

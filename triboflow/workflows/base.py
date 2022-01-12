@@ -148,6 +148,7 @@ def scan_relax(struct, vis, name):
     vis_params = {'user_incar_settings': vis.user_incar_settings,
                   'user_kpoints_settings': vis.user_kpoints_settings,
                   'user_potcar_functional': vis.potcar_functional,
+                  'user_potcar_settings': vis.user_potcar_settings,
                   'vdw': vis.vdw}
     fw_1 = ScanOptimizeFW(structure=struct, name=name+'_PBEsolPreCalc',
                           vasp_input_set=gga_vis,

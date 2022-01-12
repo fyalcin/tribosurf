@@ -22,7 +22,7 @@ inputs = {'material_1': {'formula': 'ZnCu',
                          'miller': '001',
                          'mpid': 'mp-13136',
                          'thick_min': 4,
-                         'thick_max': 10,
+                         'thick_max': 12,
                          'thick_incr': 1
                          },
           'computational_params':{'functional': 'PBE',
