@@ -13,6 +13,7 @@ from triboflow.firetasks.structure_manipulation import FT_StartPreRelax
 from triboflow.firetasks.check_inputs import FT_CopyCompParamsToSlab
 from triboflow.firetasks.init_check import material_from_mp
 from triboflow.firetasks.convergence import FT_StartConvo
+from triboflow.firetasks.dielectric import FT_StartDielectric
 from triboflow.utils.utils import load_homoatomic_materials
 from triboflow.firetasks.run_slabs_wfs import FT_SlabOptThick
 
@@ -57,6 +58,13 @@ def get_slab_convergence_wf(material, comp_params):
                                       .format(formula))
     WF.append(ConvergeKpoints)
     
+    CalcDielectric = Firework(FT_StartDielectric(mp_id=mp_id,
+                                                 functional=functional,
+                                                 update_bulk=True,
+                                                 update_slabs=False),
+                                 name=f'Start dielectric SWF for {material["formula"]}')
+    WF.append(CalcDielectric)
+    
     TransferParams = Firework(FT_CopyCompParamsToSlab(mp_id=mp_id,
                                                       miller=miller,
                                                       functional=functional),
@@ -72,7 +80,8 @@ def get_slab_convergence_wf(material, comp_params):
     Dependencies = {Initialize: [PreRelaxation],
                     PreRelaxation: [ConvergeEncut],
                     ConvergeEncut: [ConvergeKpoints],
-                    ConvergeKpoints: [TransferParams],
+                    ConvergeKpoints: [CalcDielectric],
+                    CalcDielectric: [TransferParams],
                     TransferParams: [MakeSlabs]}
 
     WF_Name = f'ConvergeSlab {formula} {mp_id} {miller} {functional}'

@@ -10,6 +10,7 @@ from fireworks import LaunchPad
 from fireworks import Workflow, Firework
 from triboflow.fireworks.init_fws import InitWF
 from triboflow.firetasks.structure_manipulation import FT_StartPreRelax
+from triboflow.firetasks.dielectric import FT_StartDielectric
 from triboflow.firetasks.init_check import material_from_mp
 from triboflow.firetasks.convergence import FT_StartConvo
 from triboflow.utils.utils import load_homoatomic_materials
@@ -53,9 +54,17 @@ def get_bulk_convergence_wf(material, comp_params):
                                       .format(material['formula']))
     WF.append(ConvergeKpoints)
     
+    CalcDielectric = Firework(FT_StartDielectric(mp_id=mp_id,
+                                                 functional=functional,
+                                                 update_bulk=True,
+                                                 update_slabs=False),
+                                 name=f'Start dielectric SWF for {material["formula"]}')
+    WF.append(CalcDielectric)
+    
     Dependencies = {Initialize: [PreRelaxation],
                     PreRelaxation: [ConvergeEncut],
-                    ConvergeEncut: [ConvergeKpoints]}
+                    ConvergeEncut: [ConvergeKpoints],
+                    ConvergeKpoints: [CalcDielectric]}
 
     WF_Name = 'ConvergeBulk ' + material['formula'] +' '+ mp_id +' '+ functional
 
@@ -74,12 +83,17 @@ if __name__ == "__main__":
     materials_dict = load_homoatomic_materials()
     materials_list =[]
 
-    for formula in ['Al', 'C', 'Si', 'Ge', 'Cu', 'Ag',
-                    'Au', 'Ni', 'Fe', 'Ti', 'Co']:
-        mpid = materials_dict[formula]['mpids'][materials_dict[formula]['default']]
-        materials_list.append({'formula': formula, 'mpid': mpid})
-        workflow_list = []
+    # for formula in ['Al', 'C', 'Si', 'Ge', 'Cu', 'Ag',
+    #                 'Au', 'Ni', 'Fe', 'Ti', 'Co']:
+    #     mpid = materials_dict[formula]['mpids'][materials_dict[formula]['default']]
+    #     materials_list.append({'formula': formula, 'mpid': mpid})
+        
+    materials_list = [{'formula': 'WC', 'mpid': 'mp-1894'},
+                      {'formula': 'WC', 'mpid': 'mp-13136'},
+                      {'formula': 'GaAs', 'mpid': 'mp-2534'},
+                      {'formula': 'TiN', 'mpid': 'mp-492'}]
     
+    workflow_list = []
     for mat in materials_list:
         workflow_list.append(get_bulk_convergence_wf(mat, computational_params))
     submit_multiple_wfs(workflow_list)
