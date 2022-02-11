@@ -121,7 +121,7 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
 
         # Case of a slab
         else:
-            s = [Shaper.reconstruct(slab, thk, vac) for slab in s]
+            s = [Shaper.resize(slab, thk, vac) for slab in s]
             s = s[ext_index]
 
         slabs.append(s)

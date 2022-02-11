@@ -9,10 +9,10 @@ The module contains:
 
     ** Shaper **:
         General class to examine layers, bonds, lattice parameters,
-        and reconstructs slabs with desired transformations.
+        and resizes slabs with desired transformations.
         It includes the following methods:
             - _get_layer_spacings
-            - reconstruct_slab
+            - resize_slab
             - get_surface_normal
             - _get_hkl_projection
             - _get_layers
@@ -29,17 +29,18 @@ __author__ = 'Fırat Yalçın'
 __contact__ = 'firat.yalcin@univie.ac.at'
 __date__ = 'April 21st, 2021'
 
-from pymatgen.core.structure import Structure
-from pymatgen.core.lattice import Lattice
-from pymatgen.core.surface import center_slab, Slab, SlabGenerator, get_symmetrically_distinct_miller_indices
+import itertools
+from collections import defaultdict
+
+import numpy as np
 from pymatgen.analysis.local_env import BrunnerNN_real
 from pymatgen.analysis.molecule_structure_comparator import CovalentRadius
+from pymatgen.core.lattice import Lattice
+from pymatgen.core.structure import Structure
+from pymatgen.core.surface import center_slab, Slab, SlabGenerator, get_symmetrically_distinct_miller_indices
 from pymatgen.io.cif import CifParser
 from scipy.cluster.hierarchy import fcluster, linkage
 from scipy.spatial.distance import squareform
-from collections import defaultdict
-import numpy as np
-import itertools
 
 
 def range_diff(r1, r2):
@@ -152,17 +153,17 @@ class Shaper():
             raise ValueError('Region must be one of "cell", "vacuum", or "slab"')
 
     @staticmethod
-    def reconstruct(struct, slab_thickness=None, vacuum_thickness=None, tol=0.1, minimize_bv=False,
-                    center=True, **kwargs):
+    def resize(struct, slab_thickness=None, vacuum_thickness=None, tol=0.1,
+               chunk_size=1, min_thick_A=None, center=True):
         """
-        Reconstruct the input slab with the desired slab thickness in
+        resize the input slab with the desired slab thickness in
         number of layers and the vacuum region in Angstroms. All the attributes
-        of sites are preserved by the reconstruction.
+        of sites are preserved by the resizing process.
 
         Parameters
         ----------
         struct : pymatgen.core.structure.Structure
-            Structure object that is to be reconstructed. Input object
+            Structure object that is to be resized. Input object
             is not modified with this method.
         slab_thickness : int
             Desired slab thickness in number of layers. Layers will
@@ -172,18 +173,24 @@ class Shaper():
             Desired vacuum region thickness in Angstroms. Lattice
             parameters are modified in order to get the correct vacuum.
         tol : float, optional
-            Tolerance value for layering of sites. Used in counting of the layers.
-        minimize_bv : bool, optional
-            Whether to minimize the bond valence sum of broken bonds when
-            removing layers. The default is True.
-        center : bool
-            Whether to center the reconstructed slab between the vacuum region.
+            Tolerance value for layering of sites in Angstroms. Used in counting
+            of layers. The default is 0.1.
+        chunk_size : int, optional
+            Number of layers that are removed at once. Used to preserve terminations.
+            The default is 1.
+        min_thick_A : float, optional
+            Minimum slab thickness in Angstroms. If a float is passed, the number of
+            layers to remove will be adjusted so that the resized slab is at least
+            min_thick_A thick in Angstroms.
+            The default is None.
+        center : bool, optional
+            Whether to center the resized slab between the vacuum region.
             The default is True.
 
         Returns
         -------
-        reconstructed_struct : pymatgen.core.structure.Structure
-            Reconstructed structure with the desired parameters.
+        resized_struct : pymatgen.core.structure.Structure
+            resized structure with the desired parameters.
 
         """
         # Input slab is first centered for the cases where the slab spills
@@ -194,48 +201,43 @@ class Shaper():
         if slab_thickness:
             # Layers (containing sites) are removed from the bottom until
             # the desired slab_thickness is reached
-            if minimize_bv:
-                bbs = kwargs['bbs']
-                bvs, indices = np.unique(list(bbs.values()), return_index=True)
-                periodicity = len(bvs)
+            num_layers = len(Shaper._get_layers(struct_centered, tol))
+            layers_to_remove = int(chunk_size * np.floor((num_layers - slab_thickness) / chunk_size))
+            if min_thick_A:
                 spacings = [spacing for spacing in Shaper._get_layer_spacings(struct_centered, tol) if spacing < 4.0]
-                num_layers = len(Shaper._get_layers(struct_centered, tol))
-                layers_to_remove = int(periodicity * np.floor((num_layers
-                                                               - slab_thickness) / periodicity))
-                while initial_thickness - sum(spacings[:layers_to_remove]) < 10:
-                    if layers_to_remove < 0:
-                        raise ValueError('you must choose a bigger slab')
-                    layers_to_remove -= periodicity
+                while initial_thickness - sum(spacings[:layers_to_remove]) < min_thick_A:
+                    layers_to_remove -= chunk_size
+            if layers_to_remove > 0:
                 struct_resized = Shaper._remove_layers(struct_centered, layers_to_remove,
                                                        tol=tol, method='layers')
             else:
-                struct_resized = Shaper._remove_layers(struct_centered, slab_thickness, tol=tol)
+                struct_resized = struct_centered
         else:
             struct_resized = struct_centered
         # Vacuum region is modified to the desired thickness
         if vacuum_thickness:
-            reconstructed_struct = Shaper._modify_vacuum(struct_resized, vacuum_thickness)
+            resized_struct = Shaper._modify_vacuum(struct_resized, vacuum_thickness)
         else:
-            reconstructed_struct = struct_resized
+            resized_struct = struct_resized
 
         if not slab_thickness and not vacuum_thickness:
             print(f'Warning! You chose to keep the slab and vacuum thicknesses as they are'
-                  'during reconstruction. Make sure this is what you want.')
-            reconstructed_struct = struct_centered if center else struct
+                  'during resize. Make sure this is what you want.')
+            resized_struct = struct_centered if center else struct
 
-        bbs = kwargs.get('bbs')
-        if bbs:
-            layers_initial = len(Shaper._get_layers(struct_centered, tol))
-            layers_resized = len(Shaper._get_layers(reconstructed_struct, tol))
-            diff = layers_initial - layers_resized
-            shifts = list(bbs.keys())
-            top_shift = np.round(reconstructed_struct.shift, 4)
-            top_shift_index = shifts.index(top_shift)
-            bot_shift = shifts[(top_shift_index - diff) % len(shifts)]
-            top_bvs = bbs[top_shift]
-            bot_bvs = bbs[bot_shift]
-            reconstructed_struct.energy = {'top': top_bvs, 'bottom': bot_bvs}
-        return reconstructed_struct
+        # bbs = kwargs.get('bbs')
+        # if bbs:
+        #     layers_initial = len(Shaper._get_layers(struct_centered, tol))
+        #     layers_resized = len(Shaper._get_layers(resized_struct, tol))
+        #     diff = layers_initial - layers_resized
+        #     shifts = list(bbs.keys())
+        #     top_shift = np.round(resized_struct.shift, 4)
+        #     top_shift_index = shifts.index(top_shift)
+        #     bot_shift = shifts[(top_shift_index - diff) % len(shifts)]
+        #     top_bvs = bbs[top_shift]
+        #     bot_bvs = bbs[bot_shift]
+        #     resized_struct.energy = {'top': top_bvs, 'bottom': bot_bvs}
+        return resized_struct
 
     @staticmethod
     def _modify_vacuum(struct, vac_thick, method='to_value', center=True):
@@ -266,14 +268,14 @@ class Shaper():
 
         # Check if a Slab or Structure is passed and proceed accordingly
         if 'miller_index' in vars(struct):
-            # Necessary slab attributes to reconstruct the Slab
+            # Necessary slab attributes to resize the Slab
             attrs = ["species", "miller_index", "oriented_unit_cell",
                      "shift", "scale_factor", "reorient_lattice",
                      "reconstruction", "site_properties", "energy"]
             struct_params = attr_to_dict(struct, attrs)
             out_object = Slab
         else:
-            # Necessary structure attributes to reconstruct the Structure
+            # Necessary structure attributes to resize the Structure
             attrs = ["species", "site_properties"]
             struct_params = attr_to_dict(struct, attrs)
             out_object = Structure
@@ -429,6 +431,8 @@ class Shaper():
         elif method == "target":
             to_remove = c_coords[:len(c_coords) - num_layers] if position == "bottom" \
                 else c_coords[num_layers:]
+        else:
+            raise ValueError(f'{method} is not a valid method. Please use either "layers" or "target".')
         indices_list = [layers[c_coord] for c_coord in to_remove]
         flat_list = [item for sublist in indices_list for item in sublist]
         slab_copy = slab.copy()
@@ -436,7 +440,7 @@ class Shaper():
         return center_slab(slab_copy) if center else slab_copy
 
     @staticmethod
-    def _get_average_layer_spacing(slab, tol=0.1, vacuum_treshold=6.0):
+    def _get_average_layer_spacing(slab, tol=0.1, vacuum_threshold=6.0):
         """
         Compute the average distance between the slabs layers disregarding the
         vacuum region.
@@ -445,7 +449,7 @@ class Shaper():
         ----------
         slab : pymatgen.core.surface.Slab
             Standard pymatgen Slab object.
-        vacuum_treshold : float, optional
+        vacuum_threshold : float, optional
             Regions larger than this will be treated as vacuum and will not be
             treated as an interlayer spacing. The default is 6.0
         Returns
@@ -456,7 +460,7 @@ class Shaper():
         """
         spacings = Shaper._get_layer_spacings(slab, tol)
         spacings_no_vac = np.delete(spacings,
-                                    np.where(spacings >= vacuum_treshold))
+                                    np.where(spacings >= vacuum_threshold))
         av_spacing = np.mean(spacings_no_vac)
         return av_spacing
 
@@ -569,6 +573,9 @@ class Shaper():
         elif nn_method == 'BNN':
             BNN = BrunnerNN_real(cutoff=cutoff)
             nn_list = BNN.get_all_nn_info(struct)
+        else:
+            raise ValueError('"nn_method" must be one of "all" or "BNN"')
+
         c_ranges = []
         for s_index, site in enumerate(struct):
             for nn in nn_list[s_index]:
@@ -714,7 +721,7 @@ class Shaper():
         return {'symmetric': sym, 'stoichiometric': sto}
 
     @staticmethod
-    def generate_slabs(bulk_conv, sg_params, reconstruct=True, to_file=False):
+    def generate_slabs(bulk_conv, sg_params, to_file=False):
         """
         Generates slabs with the given parameters.
 
@@ -725,34 +732,52 @@ class Shaper():
             slabs from.
         sg_params : dict
             Parameters to be used in the SlabGenerator.
-            Required keys are:
+            Required keys:
                 miller,
                 slab_thick,
                 vac_thick,
                 max_normal_search,
                 tol
-            Optional keys are:
+            Optional keys:
                 lll_reduce,
                 center_slab,
                 in_unit_planes,
                 prim,
-                minimize_bv
 
-            For more info about the description of these parameters,
-            refer to the documentation of pymatgen.core.surface.SlabGenerator.
-        reconstruct : bool, optional
-            Context: Pymatgen's slab generation algorithm works by replicating the
-            oriented unit cell(OUC) a number of times to each the minimum slab size.
-            However, it does not determine the number of layers in the OUC correctly.
-            This leads to much larger slabs than one asks for, but it ensures that
-            the terminations of the top and bottom are always complementary, which
-            can be useful at times.
+            Keys that concern various methods in Shaper
+                resize: value -> bool, optional
+                Context: Pymatgen's slab generation algorithm works by replicating the
+                         oriented unit cell(OUC) a number of times to each the minimum slab size.
+                         However, it does not determine the number of layers in the OUC correctly.
+                         This leads to much larger slabs than one asks for, but it ensures that
+                         the terminations of the top and bottom are always complementary, which
+                         can be useful at times.
 
-            This tag determines whether to remove layers from the bottom until
-            the desired thickness is reached. It also modifies the vacuum by
-            modifying the c parameter so that we have the desired vacuum.
-            The default is 'True'.
+                         This tag determines whether to remove layers from the bottom until
+                         the desired thickness is reached. It also modifies the vacuum by
+                         modifying the c parameter so that we have the desired vacuum.
+                         Defaults to 'False'.
 
+                preserve_terminations: value -> bool, optional
+                Context: Pymatgen sometimes generates more than one unique slab for a given miller
+                         index, meaning there are distinct terminations for each one. This tag
+                         determines whether or not to preserve the terminations when resizing slabs.
+                         This is done accomplished by removing layers in 'chunks' where each chunk
+                         corresponds to a portion of the oriented unit cell with height equal to
+                         the distance between miller planes for the given conventional bulk structure.
+                         Defaults to 'None'.
+
+                min_thick_A: value -> float, optional
+                Context: For certain structures, the layers are very close to each other (depending
+                         on the tol parameter of course), where one could have a slab with many layers
+                         but still thin in the physical space. This could lead to convergence issues
+                         in surface energies. This tag allows the user to set a minimum slab thickness
+                         in units of Angstroms, and the resizing algorithm will not remove any more layers
+                         that will reduce the slab thickness below min_thick_A.
+                         Defaults to 'None'.
+
+            For more info about the description of the parameters concerning pymatgen's slabgenerator,
+            please refer to the documentation of pymatgen.core.surface.SlabGenerator.
         to_file : bool, optional
             Whether to export the generated structures as VASP formatted files.
             Filenames are in the format {formula}_{miller_index}_{termination_index}.
@@ -760,10 +785,10 @@ class Shaper():
         Returns
         -------
         slabs : list
-            List of all the slabs (unique terminations) generated with the given
-            parameters
-        SG : pymatgen.core.surface.SlabGenerator
-            Pymatgen SlabGenerator object used to generate the slabs.
+            List of all the slabs consistent with the given parameters
+        SG_dict: dict
+            Dict with keys as miller indices and values corresponding
+            pymatgen.core.surface.SlabGenerator objects.
 
         """
         max_index = sg_params.get('max_index')
@@ -776,8 +801,9 @@ class Shaper():
             else:
                 miller = [(*m,) for m in miller]
         slab_thick = sg_params.get('slab_thick')
+        tol = sg_params.get('tol')
+        nn_method = 'all'
         vac_thick = sg_params.get('vac_thick')
-        minimize_bv = sg_params.get('minimize_bv')
         mns = sg_params.get('max_normal_search')
 
         SG_dict = {}
@@ -794,26 +820,68 @@ class Shaper():
                                primitive=sg_params.get('prim', True),
                                max_normal_search=max_normal_search,
                                reorient_lattice=True)
+            slabs = SG.get_slabs(ftol=tol, symmetrize=sg_params.get('symmetrize', False))
 
-            nn_method = 'all'
-            tol = sg_params.get('tol')
-            bbs = Shaper._bonds_by_shift(SG, nn_method, tol)
-            slabs = SG.get_slabs(tol=tol, symmetrize=sg_params.get('symmetrize', False))
+            # since the terminations repeat every d_hkl distance in c direction,
+            # the distance between miller planes, we need to figure out how many
+            # layers this d_hkl portion corresponds to in order to preserve terminations
+            d_hkl = bulk_conv.lattice.d_hkl(m)
+            ouc = slabs[0].oriented_unit_cell
+            ouc_layers = len(Shaper._get_layers(ouc, tol))
+            ouc_height = Shaper._get_proj_height(ouc)
+            # we calculate how many layers pymatgen considers a single layer here
+            pmg_layer_size = int(ouc_layers / round(ouc_height / d_hkl))
 
-            if reconstruct:
-                slabs = [Shaper.reconstruct(slab, slab_thick, vac_thick, tol=tol,
-                                            minimize_bv=minimize_bv, bbs=bbs)
+            resize = sg_params.get('resize', True)
+            print(f'resize is {resize}')
+            if resize:
+                # Not the best name perhaps? layer_step is another candidate
+                preserve_terminations = sg_params.get('preserve_terminations')
+                chunk_size = pmg_layer_size if preserve_terminations else 1
+                min_thick_A = sg_params.get('min_thick_A', None)
+                slabs = [Shaper.resize(slab, slab_thick, vac_thick, tol=tol,
+                                       chunk_size=chunk_size, min_thick_A=min_thick_A)
                          for slab in slabs]
+            else:
+                # TODO: Remove this once resize is confirmed working. Only here to generate
+                # TODO: slabs with sizes comparable to the initial slab_thick with pymatgen
+                slab_thick_pmg = np.ceil(slab_thick / pmg_layer_size)
+                SG = SlabGenerator(initial_structure=bulk_conv,
+                                   miller_index=m,
+                                   min_slab_size=slab_thick_pmg,
+                                   min_vacuum_size=vac_thick,
+                                   lll_reduce=sg_params.get('lll_reduce', True),
+                                   center_slab=sg_params.get('center_slab', True),
+                                   in_unit_planes=sg_params.get('in_unit_planes', True),
+                                   primitive=sg_params.get('prim', True),
+                                   max_normal_search=max_normal_search,
+                                   reorient_lattice=True)
+                slabs = SG.get_slabs(ftol=tol, symmetrize=sg_params.get('symmetrize', False))
+                slabs = [Shaper.resize(slab, vacuum_thickness=vac_thick, tol=tol) for slab in slabs]
 
-            # for slab in slabs:
-            #     slab.energy = bbs[np.round(slab.shift, 4)]
+            try:
+                slab = slabs[0]
+            except IndexError:
+                print(f'Symmetric slabs could not be generated for {m} orientation. Increasing slab_thick'
+                      ' may or may not solve this issue.')
+                continue
+
+            bbs = Shaper._bonds_by_shift(SG, nn_method, tol)
+            for slab in slabs:
+                slab.energy = bbs[np.round(slab.shift, 4)]
+
+            print(
+                f'{ouc.composition.reduced_formula}{m} has {[len(Shaper._get_layers(s, tol)) for s in slabs]} layer slabs'
+                f' with {[s.num_sites for s in slabs]} sites and\n'
+                f'thicknesses {[np.round(Shaper._get_proj_height(s, "slab"), 3) for s in slabs]} Angstroms.')
+            print(f'The OUC has {ouc_layers} layers and d_hkl is {pmg_layer_size} layers.')
+            print(f'Their BVS are {[s.energy for s in slabs]}.\n')
 
             if to_file:
                 formula = slabs[0].composition.reduced_formula
                 for index, slab in enumerate(slabs):
                     hkl = ''.join([str(i) for i in slab.miller_index])
                     area = np.round(slab.surface_area, 2)
-
                     slab.to('poscar', f'{formula}_{hkl}_{area}_{index}.vasp')
 
             slabs_list += slabs
