@@ -8,11 +8,13 @@ Functions that deal with the inputs for surface energy calculations.
     Author: Fırat Yalçın
 
 """
-import numpy as np
 from datetime import datetime
+
+import numpy as np
 from atomate.vasp.fireworks import StaticFW
 from atomate.vasp.powerups import add_modify_incar
 from fireworks import Firework, Workflow
+from pymatgen.core.surface import get_symmetrically_distinct_miller_indices, get_symmetrically_equivalent_miller_indices
 
 from triboflow.firetasks.fv import FT_fake_vasp
 from triboflow.phys.shaper import Shaper
@@ -131,7 +133,7 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
             # in the oriented unit cell to preserve stoichiometry
             layers_to_remove = int(ouc_layers * np.floor((sto_slab_layers - slab_layers) / ouc_layers))
             target_layers = sto_slab_layers - layers_to_remove
-            sto_slab = Shaper.reconstruct(sto_slab, target_layers, vac_thickness, tol)
+            sto_slab = Shaper.resize(sto_slab, target_layers, vac_thickness, tol)
             # sto_slab = Shaper._remove_layers(sto_slab, layers_to_remove, tol, method='layers')
             sto_slab_input = generate_input_dict(sto_slab, 'static', 'sto_slab')
             slab_static_input = generate_input_dict(slab, 'static', 'slab_static')
@@ -168,8 +170,8 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
                 sto_slab_layers = len(Shaper._get_layers(sto_slab_top, tol))
                 layers_to_remove = int(ouc_layers * np.floor((sto_slab_layers - slab_layers) / ouc_layers))
                 target_layers = sto_slab_layers - layers_to_remove
-                sto_slab_top = Shaper.reconstruct(sto_slab_top, target_layers, vac_thickness, tol)
-                sto_slab_bot = Shaper.reconstruct(sto_slab_bot, target_layers, vac_thickness, tol)
+                sto_slab_top = Shaper.resize(sto_slab_top, target_layers, vac_thickness, tol)
+                sto_slab_bot = Shaper.resize(sto_slab_bot, target_layers, vac_thickness, tol)
                 # sto_slab_top = Shaper._remove_layers(sto_slab_top, layers_to_remove, tol, method='layers')
                 # sto_slab_bot = Shaper._remove_layers(sto_slab_bot, layers_to_remove, tol, method='layers')
                 sto_slab_top_input = generate_input_dict(sto_slab_top, 'static', 'sto_slab_top')
@@ -181,11 +183,27 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
                 sto_slab_layers = len(Shaper._get_layers(sto_slab, tol))
                 layers_to_remove = int(ouc_layers * np.floor((sto_slab_layers - slab_layers) / ouc_layers))
                 target_layers = sto_slab_layers - layers_to_remove
-                sto_slab = Shaper.reconstruct(sto_slab, target_layers, vac_thickness, tol)
+                sto_slab = Shaper.resize(sto_slab, target_layers, vac_thickness, tol)
                 # sto_slab = Shaper._remove_layers(sto_slab, layers_to_remove, tol, method='layers')
                 sto_slab_input = generate_input_dict(sto_slab, 'static', 'sto_slab')
                 inputs_dict['inputs'] += [sto_slab_input]
     return inputs_dict
+
+
+def update_miller_info(mpid,
+                       functional,
+                       max_index=2,
+                       db_file='auto',
+                       high_level=True):
+    fltr = {'mpid': mpid}
+    nav_high = Navigator(db_file, high_level=True)
+    bulk_conv = get_conv_bulk_from_mpid(mpid, f'{functional}.bulk_data', db_file, high_level)
+    unique_hkl = get_symmetrically_distinct_miller_indices(bulk_conv, max_index)
+    equiv_hkl = {}
+    for hkl in unique_hkl:
+        sym_eq_hkl = get_symmetrically_equivalent_miller_indices(bulk_conv, hkl)
+        hkl_str = ''.join([str(i) for i in hkl])
+        equiv_hkl[hkl_str] = sym_eq_hkl
 
 
 def get_surfen_inputs_from_mpid(mpid,
@@ -443,6 +461,13 @@ def put_surfen_inputs_into_db(inputs_list, sg_params, comp_params, fltr, coll, d
                 new_values={'$set': {loc_input + '.structure': struct.as_dict()}},
                 upsert=True)
         loc_slab = '.'.join(loc[:3])
+
+        tol = sg_params.get('tol')
+        layers = Shaper._get_layers(slab, tol)
+        top_layer = [str(slab[site].species) for site in layers[max(layers)]]
+        bot_layer = [str(slab[site].species) for site in layers[min(layers)]]
+        terminations = {'top': top_layer, 'bottom': bot_layer}
+
         nav.update_data(
             collection=coll,
             fltr=fltr,
@@ -450,6 +475,7 @@ def put_surfen_inputs_into_db(inputs_list, sg_params, comp_params, fltr, coll, d
                                  loc_slab + '.slab_params': slab_params,
                                  loc_slab + '.sg_params': sg_params,
                                  loc_slab + '.comp_params': comp_params,
+                                 loc_slab + '.terminations': terminations,
                                  loc_slab + '.created_on': datetime.now()}},
             upsert=True)
 
@@ -545,8 +571,7 @@ def generate_candidate_slabs(bulk_conv,
         List of all the (Slab, SlabGenerator) tuples that satisfy the constraints.
 
     """
-    reconstruct = sg_params.get('reconstruct', True)
-    slabs_list, SG_dict = Shaper.generate_slabs(bulk_conv, sg_params, reconstruct)
+    slabs_list, SG_dict = Shaper.generate_slabs(bulk_conv, sg_params)
     bvs = [slab.energy for slab in slabs_list]
 
     # lll = sg_params.get('lll_reduce')
