@@ -203,15 +203,22 @@ class Shaper():
             # the desired slab_thickness is reached
             num_layers = len(Shaper._get_layers(struct_centered, tol))
             layers_to_remove = int(chunk_size * np.floor((num_layers - slab_thickness) / chunk_size))
+            #print(f'initial thickness {initial_thickness}, num layers {num_layers}, min_thick_A {min_thick_A}, chunk size {chunk_size}')
             if min_thick_A:
                 spacings = [spacing for spacing in Shaper._get_layer_spacings(struct_centered, tol) if spacing < 4.0]
-                while initial_thickness - sum(spacings[:layers_to_remove]) < min_thick_A:
-                    layers_to_remove -= chunk_size
+                if initial_thickness > min_thick_A:
+                    while initial_thickness - sum(spacings[:layers_to_remove]) < min_thick_A:
+                        layers_to_remove -= chunk_size
+                        #print(f'layers to remove {layers_to_remove}')
+                else:
+                    layers_to_remove = 0
             if layers_to_remove > 0:
                 struct_resized = Shaper._remove_layers(struct_centered, layers_to_remove,
                                                        tol=tol, method='layers')
             else:
                 struct_resized = struct_centered
+            num_layers_resized = len(Shaper._get_layers(struct_resized, tol))
+            #print(f'after resize, num layers is {num_layers_resized}\n')
         else:
             struct_resized = struct_centered
         # Vacuum region is modified to the desired thickness
