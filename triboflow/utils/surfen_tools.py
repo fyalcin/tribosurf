@@ -452,12 +452,16 @@ def put_surfen_inputs_into_db(inputs_list, sg_params, comp_params, fltr, coll, d
         slab = slab.get('struct')
         for calc in inputs:
             struct = calc['struct']
+            uid_input = calc['uid']
+            tag = calc['tag']
             loc = calc['loc']
             loc_input = '.'.join(loc)
             nav.update_data(
                 collection=coll,
                 fltr=fltr,
-                new_values={'$set': {loc_input + '.structure': struct.as_dict()}},
+                new_values={'$set': {loc_input + '.structure': struct.as_dict(),
+                                     loc_input + '.uid': uid_input,
+                                     loc_input + '.task_label': tag}},
                 upsert=True)
         loc_slab = '.'.join(loc[:3])
 
@@ -803,10 +807,10 @@ def update_inputs_list(inputs_list, comp_params):
             calc_tag = calc.get('calc_tag')
             calc_type = calc.get('calc_type')
             loc = ['miller_list', millerstr, uid_slab, 'calcs', calc_tag]
-            input_uid = dict_to_hash({**comp_params, 'coords': struct.frac_coords})
+            uid_input = dict_to_hash({**comp_params, 'coords': struct.frac_coords})
             formula = struct.composition.reduced_formula
-            tag = f'{formula}_{millerstr}_{calc_tag}_{input_uid}'
-            tag_dict = {'tag': tag, 'loc': loc, 'calc_type': calc_type}
+            tag = f'{formula}_{millerstr}_{calc_tag}_{uid_input}'
+            tag_dict = {'tag': tag, 'loc': loc, 'calc_type': calc_type, 'uid': uid_input}
             calc.update(tag_dict)
 
     return inputs_list
