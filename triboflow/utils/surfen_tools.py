@@ -257,8 +257,7 @@ def get_surfen_inputs_from_mpid(mpid,
     """
 
     coll = f'{functional}.bulk_data'
-    bulk_conv = get_conv_bulk_from_mpid(mpid, coll, db_file, high_level)
-    candidates = generate_candidate_slabs(bulk_conv, sg_params, sg_filter)
+    candidates = generate_candidate_slabs_from_mpid(mpid, sg_params, sg_filter, coll, db_file, high_level)
     tol = sg_params.get('tol')
     inputs_list = [get_surfen_inputs_from_slab(c[0], c[1], tol, custom_id) for c in candidates]
     inputs_list = update_inputs_list(inputs_list, comp_params)
@@ -540,16 +539,19 @@ def get_calc_wf(struct, vis, tag, fake=False):
     return WF
 
 
-def generate_candidate_slabs(bulk_conv,
-                             sg_params,
-                             sg_filter):
+def generate_candidate_slabs_from_mpid(mpid,
+                                       sg_params,
+                                       sg_filter,
+                                       coll='PBE.bulk_data',
+                                       db_file='auto',
+                                       high_level=True):
     """
     Generates slabs within certain constraints from a given bulk structure.
 
     Parameters
     ----------
-    bulk_conv : pymatgen.core.structure.Structure
-        Conventional standard bulk structure used in the SlabGenerator.
+     mpid : str
+        Unique MaterialsProject ID describing the structure.
     sg_params : dict
         Dict of parameters used in the SlabGenerator. For info about required
         and optional keys, refer to Shaper.generate_slabs()
@@ -564,6 +566,14 @@ def generate_candidate_slabs(bulk_conv,
         while 'bvs_min_N' filters out N lowest energy slabs. Energy here refers
         to the bond valence sums of broken bonds when the slabs are generated,
         and can be accessed by slab.energy.
+    coll : str, optional
+        Name of the bulk collection to load the bulk structure from.
+        The default is "PBE.bulk_data".
+    db_file : str, optional
+        Full path of the db.json. The default is 'auto'.
+    high_level : str, optional
+        Whether to query the results from the high level database or not.
+        The default is True.
 
     Returns
     -------
@@ -571,6 +581,7 @@ def generate_candidate_slabs(bulk_conv,
         List of all the (Slab, SlabGenerator) tuples that satisfy the constraints.
 
     """
+    bulk_conv = get_conv_bulk_from_mpid(mpid, coll, db_file, high_level)
     slabs_list, SG_dict = Shaper.generate_slabs(bulk_conv, sg_params)
     bvs = [slab.energy for slab in slabs_list]
 
