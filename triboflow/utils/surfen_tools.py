@@ -102,7 +102,7 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
     slab_layers = len(Shaper._get_layers(slab, tol))
     slab_thickness = Shaper._get_proj_height(slab, 'slab')
     vac_thickness = np.round(Shaper._get_proj_height(slab, 'vacuum'), 3)
-    ouc_input = generate_input_dict(ouc, 'relax', 'ouc')
+    ouc_input = generate_input_dict(ouc, 'static', 'ouc')
     millerstr = ''.join([str(i) for i in slab.miller_index])
     inputs_dict = {'struct': slab,
                    'custom_id': custom_id,
@@ -787,12 +787,12 @@ def update_inputs_list(inputs_list, comp_params):
     inputs_list with each element updated with the Workflows, unique IDs, locations, and tags.
 
     """
-    for slab in inputs_list:
-        frac_coords = slab.get('struct').frac_coords
-        inputs = slab.get('inputs')
-        slab_params = slab.get('slab_params')
+    for slab_data in inputs_list:
+        frac_coords = slab_data.get('struct').frac_coords
+        inputs = slab_data.get('inputs')
+        slab_params = slab_data.get('slab_params')
         all_params = {**comp_params, **slab_params, 'coords': frac_coords}
-        uid = slab.get('custom_id')
+        uid = slab_data.get('custom_id')
         if not uid:
             uid = dict_to_hash(all_params)
         slab_params.update({'uid': uid})
