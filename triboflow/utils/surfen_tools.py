@@ -788,22 +788,24 @@ def update_inputs_list(inputs_list, comp_params):
 
     """
     for slab_data in inputs_list:
-        frac_coords = slab_data.get('struct').frac_coords
-        inputs = slab_data.get('inputs')
+        slab = slab_data.get('struct')
         slab_params = slab_data.get('slab_params')
-        all_params = {**comp_params, **slab_params, 'coords': frac_coords}
-        uid = slab_data.get('custom_id')
-        if not uid:
-            uid = dict_to_hash(all_params)
-        slab_params.update({'uid': uid})
+        all_params = {**comp_params, **slab_params, 'coords': slab.frac_coords}
+        uid_slab = slab_data.get('custom_id')
+        if not uid_slab:
+            uid_slab = dict_to_hash(all_params)
+        slab_params.update({'uid': uid_slab})
+
+        millerstr = slab_params.get('hkl')
+        inputs = slab_data.get('inputs')
         for calc in inputs:
             struct = calc.get('struct')
-            calc_type = calc.get('calc_type')
             calc_tag = calc.get('calc_tag')
-            millerstr = slab_params.get('hkl')
-            loc = ['miller_list', millerstr, uid, 'calcs', calc_tag]
+            calc_type = calc.get('calc_type')
+            loc = ['miller_list', millerstr, uid_slab, 'calcs', calc_tag]
+            input_uid = dict_to_hash({**comp_params, 'coords': struct.frac_coords})
             formula = struct.composition.reduced_formula
-            tag = f'{formula}_{millerstr}_{calc_tag}_{uid}'
+            tag = f'{formula}_{millerstr}_{calc_tag}_{input_uid}'
             tag_dict = {'tag': tag, 'loc': loc, 'calc_type': calc_type}
             calc.update(tag_dict)
 
