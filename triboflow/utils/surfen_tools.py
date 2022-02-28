@@ -794,7 +794,9 @@ def update_inputs_list(inputs_list, comp_params):
     for slab_data in inputs_list:
         slab = slab_data.get('struct')
         slab_params = slab_data.get('slab_params')
-        all_params = {**comp_params, **slab_params, 'coords': slab.frac_coords}
+        slab_frac_coords = np.round(slab.frac_coords, 8)
+        slab_frac_coords[slab_frac_coords == 1.0] = 0.0
+        all_params = {**comp_params, **slab_params, 'coords': slab_frac_coords}
         uid_slab = slab_data.get('custom_id')
         if not uid_slab:
             uid_slab = dict_to_hash(all_params)
@@ -807,7 +809,9 @@ def update_inputs_list(inputs_list, comp_params):
             calc_tag = calc.get('calc_tag')
             calc_type = calc.get('calc_type')
             loc = ['miller_list', millerstr, uid_slab, 'calcs', calc_tag]
-            uid_input = dict_to_hash({**comp_params, 'coords': struct.frac_coords})
+            struct_frac_coords = np.round(struct.frac_coords, 8)
+            struct_frac_coords[struct_frac_coords == 1.0] = 0.0
+            uid_input = dict_to_hash({**comp_params, 'coords': struct_frac_coords})
             formula = struct.composition.reduced_formula
             tag = f'{formula}_{millerstr}_{calc_tag}_{uid_input}'
             tag_dict = {'tag': tag, 'loc': loc, 'calc_type': calc_type, 'uid': uid_input}
