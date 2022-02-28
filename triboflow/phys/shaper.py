@@ -388,10 +388,9 @@ class Shaper():
         for i, v in enumerate(clusters):
             layers[v].append(i)
 
-        # for each layer, find sites that belong to it and assign an
-        # average c-value for the layer
-        layers = {sum([struct.frac_coords[i][2] - np.floor(struct.frac_coords[i][2])
-                       for i in v]) / len(v): v for k, v in layers.items()}
+        # for each layer, find sites that belong to it and assign the first
+        # site's c-coord as the c-coord of the layer
+        layers = {struct.frac_coords[v[0]][2]: v for k, v in layers.items()}
         return layers
 
     @staticmethod
