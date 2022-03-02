@@ -98,10 +98,10 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
     sto = id_slab['stoichiometric']
     ## oriented unit cell is used for the reference bulk energies
     ouc = Shaper.get_constrained_ouc(slab)
-    ouc_layers = len(Shaper._get_layers(ouc, tol))
-    slab_layers = len(Shaper._get_layers(slab, tol))
-    slab_thickness = Shaper._get_proj_height(slab, 'slab')
-    vac_thickness = np.round(Shaper._get_proj_height(slab, 'vacuum'), 3)
+    ouc_layers = len(Shaper.get_layers(ouc, tol))
+    slab_layers = len(Shaper.get_layers(slab, tol))
+    slab_thickness = Shaper.get_proj_height(slab, 'slab')
+    vac_thickness = np.round(Shaper.get_proj_height(slab, 'vacuum'), 3)
     ouc_input = generate_input_dict(ouc, 'static', 'ouc')
     millerstr = ''.join([str(i) for i in slab.miller_index])
     inputs_dict = {'struct': slab,
@@ -127,14 +127,14 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
             # to each other, this is done by SlabGenerator.get_slab() which always creates
             # a stoichiometric slab.
             sto_slab = SG.get_slab(slab.shift, tol)
-            sto_slab_layers = len(Shaper._get_layers(sto_slab, tol))
-            # Since SlabGenerator creates a larger than than we want, we remove layers
+            sto_slab_layers = len(Shaper.get_layers(sto_slab, tol))
+            # Since SlabGenerator creates a larger slab than we want, we remove layers
             # and the number of layers removed is an integer multiple of the number of layers
             # in the oriented unit cell to preserve stoichiometry
             layers_to_remove = int(ouc_layers * np.floor((sto_slab_layers - slab_layers) / ouc_layers))
             target_layers = sto_slab_layers - layers_to_remove
             sto_slab = Shaper.resize(sto_slab, target_layers, vac_thickness, tol)
-            # sto_slab = Shaper._remove_layers(sto_slab, layers_to_remove, tol, method='layers')
+            # sto_slab = Shaper.remove_layers(sto_slab, layers_to_remove, tol, method='layers')
             sto_slab_input = generate_input_dict(sto_slab, 'static', 'sto_slab')
             slab_static_input = generate_input_dict(slab, 'static', 'slab_static')
             inputs_dict['inputs'] += [slab_static_input, sto_slab_input]
@@ -153,7 +153,7 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
         if not sto:
             # For asymmetric slabs, we need the periodicity in the layering to figure out
             # if the top and bottom terminations are complementary.
-            bbs = Shaper._bonds_by_shift(SG, nn_method, tol)
+            bbs = Shaper.bonds_by_shift(SG, nn_method, tol)
             bvs, indices = np.unique(list(bbs.values()), return_index=True)
             periodicity = len(bvs)
 
@@ -167,24 +167,24 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
                 bot_shift_index = (top_shift_index - slab_layers) % len(all_shifts)
                 sto_slab_top = SG.get_slab(slab.shift, tol)
                 sto_slab_bot = SG.get_slab(all_shifts[bot_shift_index], tol)
-                sto_slab_layers = len(Shaper._get_layers(sto_slab_top, tol))
+                sto_slab_layers = len(Shaper.get_layers(sto_slab_top, tol))
                 layers_to_remove = int(ouc_layers * np.floor((sto_slab_layers - slab_layers) / ouc_layers))
                 target_layers = sto_slab_layers - layers_to_remove
                 sto_slab_top = Shaper.resize(sto_slab_top, target_layers, vac_thickness, tol)
                 sto_slab_bot = Shaper.resize(sto_slab_bot, target_layers, vac_thickness, tol)
-                # sto_slab_top = Shaper._remove_layers(sto_slab_top, layers_to_remove, tol, method='layers')
-                # sto_slab_bot = Shaper._remove_layers(sto_slab_bot, layers_to_remove, tol, method='layers')
+                # sto_slab_top = Shaper.remove_layers(sto_slab_top, layers_to_remove, tol, method='layers')
+                # sto_slab_bot = Shaper.remove_layers(sto_slab_bot, layers_to_remove, tol, method='layers')
                 sto_slab_top_input = generate_input_dict(sto_slab_top, 'static', 'sto_slab_top')
                 sto_slab_bot_input = generate_input_dict(sto_slab_bot, 'static', 'sto_slab_bot')
                 inputs_dict['inputs'] += [sto_slab_top_input, sto_slab_bot_input]
             else:
                 inputs_dict['slab_params'].update({'comp': True})
                 sto_slab = SG.get_slab(slab.shift, tol)
-                sto_slab_layers = len(Shaper._get_layers(sto_slab, tol))
+                sto_slab_layers = len(Shaper.get_layers(sto_slab, tol))
                 layers_to_remove = int(ouc_layers * np.floor((sto_slab_layers - slab_layers) / ouc_layers))
                 target_layers = sto_slab_layers - layers_to_remove
                 sto_slab = Shaper.resize(sto_slab, target_layers, vac_thickness, tol)
-                # sto_slab = Shaper._remove_layers(sto_slab, layers_to_remove, tol, method='layers')
+                # sto_slab = Shaper.remove_layers(sto_slab, layers_to_remove, tol, method='layers')
                 sto_slab_input = generate_input_dict(sto_slab, 'static', 'sto_slab')
                 inputs_dict['inputs'] += [sto_slab_input]
     return inputs_dict
@@ -466,7 +466,7 @@ def put_surfen_inputs_into_db(inputs_list, sg_params, comp_params, fltr, coll, d
         loc_slab = '.'.join(loc[:3])
 
         tol = sg_params.get('tol')
-        layers = Shaper._get_layers(slab, tol)
+        layers = Shaper.get_layers(slab, tol)
         top_layer = [str(slab[site].species) for site in layers[max(layers)]]
         bot_layer = [str(slab[site].species) for site in layers[min(layers)]]
         terminations = {'top': top_layer, 'bottom': bot_layer}

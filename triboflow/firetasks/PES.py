@@ -273,8 +273,8 @@ class FT_RetrievePESEnergies(FiretaskBase):
 
         struct_min = Structure.from_dict(calc_min['output']['structure'])
         struct_max = Structure.from_dict(calc_max['output']['structure'])
-        inter_dist_min = Shaper._get_layer_spacings(struct_min)[0]
-        inter_dist_max = Shaper._get_layer_spacings(struct_max)[0]
+        inter_dist_min = Shaper.get_layer_spacings(struct_min)[0]
+        inter_dist_max = Shaper.get_layer_spacings(struct_max)[0]
 
         nav_high = Navigator(db_file=db_file, high_level=hl_db)
         nav_high.update_data(
