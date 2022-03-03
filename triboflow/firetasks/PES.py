@@ -33,7 +33,7 @@ from triboflow.workflows.base import dynamic_relax_swf
 class FT_ComputePES(FiretaskBase):
     """ Compute the PES for a given interface, plot and save it.
     
-    Uses the perviously computed energies for the unique high-symmetry points
+    Uses the previously computed energies for the unique high-symmetry points
     and copies them to all the correct replica points. Replicates the points
     and fits the PES using radial basis functions. Output is saved in the
     database and if wanted also to files.
@@ -92,7 +92,7 @@ class FT_ComputePES(FiretaskBase):
         corrugation = max(pes_data[:,2])-min(pes_data[:,2])
         
         if file_output:
-            data.dump('Computet_PES_data_'+name+'.dat')
+            data.dump('Computed_PES_data_'+name+'.dat')
             pes_data.dump('Interpolated_PES_data_'+name+'.dat')
             
         plot_pes(to_plot, cell*2, to_fig=name)
