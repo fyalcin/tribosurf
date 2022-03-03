@@ -76,12 +76,15 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
     SG : pymatgen.core.surface.SlabGenerator
         Pymatgen SlabGenerator object. Necessary to generate substructures for
         non-stoichiometric slabs with a specific termination.
+        The default is None.
     tol : float
         Tolerance value used in the layering of sites used in various
         methods throughout. Value is in Angstroms.
+        The default is 0.1.
     custom_id : str
         Unique id to identify the database entry linked to the surface energy
         calculation of the slab.
+        The default is None.
 
     Returns
     -------
