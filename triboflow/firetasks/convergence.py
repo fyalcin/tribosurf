@@ -17,7 +17,7 @@ from atomate.vasp.workflows.base.bulk_modulus import get_wf_bulk_modulus
 from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.vasp_tools import (
     get_custom_vasp_static_settings, get_emin_and_emax, MeshFromDensity)
-from triboflow.utils.check_convergence import is_list_converged
+from triboflow.utils.utils import is_list_converged
 from triboflow.utils.file_manipulation import copy_output_files
 
 

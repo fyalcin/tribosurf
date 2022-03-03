@@ -10,7 +10,7 @@ from fireworks import LaunchPad, Workflow, Firework
 
 from triboflow.firetasks.start_swfs import FT_StartDielectricSWF
 
-mpid = 'mp-2534'
+mpid = 'mp-134'
 functional = 'PBE'
 
 FT = FT_StartDielectricSWF(mp_id=mpid, functional=functional)

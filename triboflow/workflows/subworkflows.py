@@ -5,26 +5,23 @@ Created on Wed Jun 17 15:47:39 2020
 """
 
 from uuid import uuid4
+
 import numpy as np
-
-from fireworks import Workflow, Firework
-
 from atomate.vasp.fireworks import StaticFW
 from atomate.vasp.powerups import add_modify_incar
-from pymatgen.core.surface import get_symmetrically_distinct_miller_indices, get_symmetrically_equivalent_miller_indices
+from fireworks import Workflow, Firework
 
-from triboflow.firetasks.surfen_tools import FT_WriteSurfenInputsToDB, FT_RelaxSurfaceEnergyInputs, \
-    FT_WriteSurfaceEnergiesToDB
-from triboflow.fireworks.common import run_pes_calc_fw, make_pes_fw
-from triboflow.firetasks.convergence import FT_Convo
-from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \
-    FT_StartSlabRelax, FT_GetRelaxedSlab
 from triboflow.firetasks.PPES import FT_DoPPESCalcs, FT_FitPPES
 from triboflow.firetasks.adhesion import FT_CalcAdhesion
-from triboflow.firetasks.utils import FT_UpdateCompParams
+from triboflow.firetasks.convergence import FT_Convo
 from triboflow.firetasks.dielectric import FT_GetEpsilon
+from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \
+    FT_StartSlabRelax, FT_GetRelaxedSlab
+from triboflow.firetasks.surfen_tools import FT_WriteSurfenInputsToDB, FT_RelaxSurfaceEnergyInputs, \
+    FT_WriteSurfaceEnergiesToDB
+from triboflow.firetasks.utils import FT_UpdateCompParams
+from triboflow.fireworks.common import run_pes_calc_fw, make_pes_fw
 from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
-from triboflow.utils.structure_manipulation import get_conv_bulk_from_mpid
 from triboflow.utils.surfen_tools import get_surfen_inputs_from_mpid
 from triboflow.utils.vasp_tools import get_emin_and_emax, get_custom_vasp_static_settings
 
