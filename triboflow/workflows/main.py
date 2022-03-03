@@ -12,7 +12,7 @@ from triboflow.firetasks.structure_manipulation import (
 from triboflow.firetasks.init_check import unbundle_input, material_from_mp
 from triboflow.firetasks.check_inputs import FT_UpdateCompParams
 from triboflow.firetasks.adhesion import (
-    FT_RelaxMatchedSlabs, FT_RetrievMatchedSlabs)
+    FT_RelaxMatchedSlabs, FT_RetrieveMatchedSlabs)
 from triboflow.firetasks.start_swfs import FT_StartAdhesionSWF, FT_StartBulkConvoSWF, FT_StartDielectricSWF, \
     FT_StartPESCalcSWF
 from triboflow.utils.structure_manipulation import interface_name
@@ -149,7 +149,7 @@ def heterogeneous_wf(inputs):
     WF.append(RelaxMatchedSlabs)
     
     RetrieveMatchedSlabs = Firework(
-        FT_RetrievMatchedSlabs(
+        FT_RetrieveMatchedSlabs(
             mp_id_1=mp_id_1,
             mp_id_2=mp_id_2,
             miller_1=mat_1.get('miller'),

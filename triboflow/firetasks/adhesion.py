@@ -26,7 +26,7 @@ from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
 
 
 @explicit_serialize
-class FT_RetrievMatchedSlabs(FiretaskBase):
+class FT_RetrieveMatchedSlabs(FiretaskBase):
     """ Retrieve relaxed matched slabs and save them in the high_level database.
 
     Get the relaxed aligned top and bottom slabs from the low level database
