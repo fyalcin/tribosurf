@@ -48,7 +48,10 @@ import numpy as np
 import warnings
 from pymatgen.core.lattice import Lattice
 from pymatgen.core.surface import center_slab, Slab
+from pymatgen.core.interface import Interface
 from mpinterfaces.transformations import get_matching_lattices
+from pymatgen.analysis.interfaces.zsl import ZSLGenerator
+
 
 from triboflow.utils.structure_manipulation import (
     recenter_aligned_slabs,
@@ -166,7 +169,8 @@ class InterfaceMatcher:
                  r1r2_tol=0.02,
                  vacuum=15.0,
                  best_match='area',
-                 interface_distance='auto'):
+                 interface_distance='auto',
+                 implementation='pymatgen'):
         """Initialize the InterfaceMatcher class
         
         If the strain weights sum up to zero (which is not allowed for the
@@ -251,6 +255,11 @@ class InterfaceMatcher:
         # Set the vacua for the centered slabs to ensure correct vacuum for the
         # interface
         self.__set_vacua()
+        
+        if implementation == "pymatgen":
+            self.implementation = implementation
+        else:
+            self.implementation = "MPInterfaces"
         
     def __check_weights(self, strain_weight_1, strain_weight_2):
         """
@@ -488,10 +497,25 @@ class InterfaceMatcher:
             2D lattice for the second slab.
 
         """
+        if self.implementation == "MPInterfaces":
         
-        uv_opt1, uv_opt2 = get_matching_lattices(self.top_slab,
-                                                 self.bot_slab,
-                                                 **self.match_params)
+            uv_opt1, uv_opt2 = get_matching_lattices(self.top_slab,
+                                                     self.bot_slab,
+                                                     **self.match_params)
+            #print(f'uv_opt1: {uv_opt1}\nuv_opt2: {uv_opt2}')
+        else:
+            zsl_gen = ZSLGenerator(max_area_ratio_tol=self.match_params['r1r2_tol'],
+                                   max_area=self.match_params['max_area'],
+                                   max_angle_tol=self.match_params['max_angle_diff']/100,#in contrast to MPInterfaces this is a relative value, i.e. percentage
+                                   max_length_tol=self.match_params['max_mismatch'],
+                                   bidirectional=False)
+            zsl_match = next(zsl_gen(film_vectors=self.top_slab.lattice.matrix[0:2],
+                                     substrate_vectors=self.bot_slab.lattice.matrix[0:2],
+                                     lowest=True))
+            uv_opt1 = [zsl_match.film_sl_vectors[0], zsl_match.film_sl_vectors[1]]
+            uv_opt2 = [zsl_match.substrate_sl_vectors[0], zsl_match.substrate_sl_vectors[1]]
+            self.zsl_match = zsl_match
+            #print(f'uv_opt1: {uv_opt1}\nuv_opt2: {uv_opt2}')
         return uv_opt1, uv_opt2
     
     def _get_matching_lattices(self):
@@ -652,7 +676,13 @@ class InterfaceMatcher:
         tcs, bcs = self.get_centered_slabs()
         if not tcs and not bcs:
                 return None
-        interface = stack_aligned_slabs(bcs, tcs)
+        #interface = stack_aligned_slabs(bcs, tcs)
+        
+        interface = Interface.from_slabs(substrate_slab=bcs,
+                                         film_slab=tcs,
+                                         gap=self.inter_dist,
+                                         vacuum_over_film=self.vacuum_thickness)
+        
         self.interface = clean_up_site_properties(interface)
         
         return self.interface
