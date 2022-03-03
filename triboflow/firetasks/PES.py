@@ -10,7 +10,6 @@ from monty.json import jsanitize
 import numpy as np
 
 from pymatgen.core.structure import Structure
-from pymatgen.core.surface import Slab
 from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
@@ -25,81 +24,9 @@ from triboflow.utils.database import (
     Navigator, StructureNavigator, convert_image_to_bytes)
 from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
 from triboflow.utils.structure_manipulation import (
-    interface_name, clean_up_site_properties, stack_aligned_slabs, 
+    clean_up_site_properties, stack_aligned_slabs,
     recenter_aligned_slabs)
 from triboflow.workflows.base import dynamic_relax_swf
-
-@explicit_serialize
-class FT_StartPESCalcSubWF(FiretaskBase):
-    """ Start a PES subworkflow.
-    
-    Starts a PES subworkflow using data from the high-level database.
-    This is intended to be used to start a PES subworkflow from a main
-    workflow.
-    
-    Parameters
-    ----------
-    mp_id_1 : str
-        Materials Project database ID for the first material of the interface.
-    mp_id_2 : str
-        Materials Project database ID for the second material of the interface.
-    miller_1 : list of int or str
-        Miller index of the first material.
-    miller_2 : list of int or str
-        Miller index of the second material.
-    functional : str
-        Which functional to use; has to be 'PBE' or 'SCAN'.
-    db_file : str, optional
-        Full path to the db.json file that should be used. Defaults to
-        '>>db_file<<', to use env_chk.
-        
-    Returns
-    -------
-    FWAction that produces a detour PES subworkflow.    
-    """
-    required_params = ['mp_id_1', 'mp_id_2', 'miller_1', 'miller_2',
-                       'functional']
-    optional_params = ['db_file', 'high_level_db']
-
-    def run_task(self, fw_spec):
-
-        from triboflow.workflows.subworkflows import calc_pes_swf
-        mp_id_1 = self.get('mp_id_1')
-        mp_id_2 = self.get('mp_id_2')
-        miller_1 = self.get('miller_1')
-        miller_2 = self.get('miller_2')
-        functional = self.get('functional')
-        db_file = self.get('db_file')
-        if not db_file:
-            db_file = env_chk('>>db_file<<', fw_spec)
-        hl_db = self.get('high_level_db', True)
-        
-        name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
-        
-        nav_structure = StructureNavigator(
-            db_file=db_file, 
-            high_level=hl_db)
-        interface_dict = nav_structure.get_interface_from_db(
-            name=name,
-            functional=functional
-        )
-        comp_params = interface_dict['comp_parameters']
-        top_slab = Slab.from_dict(interface_dict['top_aligned'])
-        bot_slab = Slab.from_dict(interface_dict['bottom_aligned'])
-        already_done = interface_dict.get('relaxed_structure@min')
-        
-        if not already_done:
-            SWF = calc_pes_swf(top_slab=top_slab,
-                               bottom_slab=bot_slab,
-                               interface_name=name,
-                               functional=functional,
-                               comp_parameters=comp_params,
-                               output_dir=None)
-
-            return FWAction(detours=SWF, update_spec=fw_spec)
-
-        else:
-            return FWAction(update_spec=fw_spec)
 
 
 @explicit_serialize

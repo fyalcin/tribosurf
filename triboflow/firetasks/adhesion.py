@@ -198,78 +198,7 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
                             update_spec={'relaxation_inputs': inputs})
         else:
             return FWAction(update_spec={'relaxation_inputs': inputs})
-        
-@explicit_serialize
-class FT_StartAdhesionSWF(FiretaskBase):
-    """Start an adhesion subworkflow.
 
-    Take relaxed top and bottom slabs of an interface, as well as the relaxed
-    interface structure (by default the one with the lowest energy) and compute
-    the adhesion energy through a subworkflow.
-    
-    Parameters
-    ----------
-    mp_id_1 : str
-        MaterialsProject ID number for the first material
-    mp_id_2 : str
-        MaterialsProject ID number for the second material
-    miller_1 : str or [int]
-        Miller indices of the first material
-    miller_2 : str or [int]
-        Miller indices of the second material
-    functional : str
-        Functional with which the workflow is run. PBE or SCAN.
-    db_file : str, optional
-        Full path of the db.json file to be used. The default is to use
-        env_chk to find the file.
-    adhesion_handle: str, optional
-        Flag under which the adhesion energy will be saved in the interface_data
-        collection of the high_level database.
-    high_level_db : str or True, optional
-        Name of the high_level database to use. Defaults to 'True', in which
-        case it is read from the db.json file.
-    """
-    required_params = ['mp_id_1', 'mp_id_2', 'miller_1', 'miller_2',
-                       'functional']
-    optional_params = ['db_file', 'adhesion_handle', 'high_level_db']
-    def run_task(self, fw_spec):
-        from triboflow.workflows.subworkflows import adhesion_energy_swf
-        mp_id_1 = self.get('mp_id_1')
-        mp_id_2 = self.get('mp_id_2')
-        miller_1 = self.get('miller_1')
-        miller_2 = self.get('miller_2')
-        functional = self.get('functional')
-        db_file = self.get('db_file')
-        if not db_file:
-            db_file = env_chk('>>db_file<<', fw_spec)
-        adhesion_handle = self.get('adhesion_handle', 'adhesion_energy@min')
-        hl_db = self.get('high_level_db', True)
-            
-        nav = Navigator(db_file, high_level=hl_db)
-        
-        name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
-        
-        interface_dict = nav.find_data(collection=functional+'.interface_data',
-                                       fltr={'name': name})
-        
-        adhesion_was_calculated = interface_dict.get(adhesion_handle)
-        comp_params = interface_dict.get('comp_parameters',{})
-        
-        if not adhesion_was_calculated:
-            top_slab = Slab.from_dict(interface_dict['top_aligned_relaxed'])
-            bottom_slab = Slab.from_dict(interface_dict['bottom_aligned_relaxed'])
-            interface = Structure.from_dict(interface_dict['relaxed_structure@min']) 
-        
-            SWF = adhesion_energy_swf(top_slab,
-                                  bottom_slab,
-                                  interface,
-                                  interface_name=name,
-                                  functional=functional,
-                                  comp_parameters=comp_params)
-            
-            return FWAction(detours=SWF)
-        else:
-            return FWAction(update_spec=fw_spec)
 
 @explicit_serialize
 class FT_CalcAdhesion(FiretaskBase):

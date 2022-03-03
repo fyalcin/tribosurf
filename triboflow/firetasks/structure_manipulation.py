@@ -21,8 +21,7 @@ from triboflow.workflows.base import dynamic_relax_swf
 from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
 from triboflow.utils.structure_manipulation import (
-    interface_name, slab_from_structure, recenter_aligned_slabs, 
-    stack_aligned_slabs, transfer_average_magmoms, clean_up_site_properties)
+    interface_name, transfer_average_magmoms)
 from triboflow.utils.file_manipulation import copy_output_files
 from triboflow.phys.interface_matcher import InterfaceMatcher
 
@@ -30,7 +29,7 @@ from triboflow.phys.interface_matcher import InterfaceMatcher
 
 
 @explicit_serialize
-class FT_StartPreRelax(FiretaskBase):
+class FT_StartBulkPreRelax(FiretaskBase):
     """ Start a subworkflow as a detour to relax the cell shape and positions
     of a primitive structure depending on lattice parameters, and then move
     the optimized primitive structure to the high level database.
@@ -172,96 +171,6 @@ class FT_UpdatePrimStruct(FiretaskBase):
         return FWAction(update_spec=fw_spec)
 
 
-@explicit_serialize
-class FT_StartSlabRelaxSWF(FiretaskBase):
-    """Start a subworkflow as a detour to make a slab and relax it.
-
-    Parameters
-    ----------
-    mp_id : str
-        ID number for structures in the material project.
-    miller : list of int or str
-        Miller indices for the slab generation. Either single str e.g. '111',
-        or a list of int e.g. [1, 1, 1]
-    functional : str
-        functional that is used for the calculation.
-    db_file : str, optional
-        Full path to the db.json file which holds the location and access
-        credentials to the database. If not given uses env_chk.
-    slab_struct_name : str, optional
-        Name of the slab to be put in the DB (identified by mp_id and miller).
-        Defaults to 'unrelaxed_slab'.
-    relax_type : str
-        Relaxation type for the get_custom_vasp_relax_settings helper_function.
-    bulk_struct_name : str, optional
-        Name of the bulk structure in the bulk database (material is
-        identified by mp_id, but there might be different structures of the
-        same material.) Defaults to 'structure_equiVol'.
-    slab_out_name : str, optional
-        Name of the slab to be put in the DB (identified by mp_id and miller).
-        Defaults to 'relaxed_slab'.
-        
-    Returns
-    -------
-        Starts a new subworkflow as a detour to the current workflow.
-    """
-    
-    required_params = ['mp_id', 'miller', 'functional']
-    optional_params = ['db_file', 'slab_struct_name', 'relax_type',
-                       'bulk_struct_name', 'slab_out_name', 'high_level_db']
-
-    def run_task(self, fw_spec):
-        from triboflow.workflows.subworkflows import make_and_relax_slab_swf
-
-        mp_id = self.get('mp_id')
-        if type(self['miller']) == str:
-            miller = [int(k) for k in list(self['miller'])]
-        else:
-            miller = self['miller']
-
-        functional = self.get('functional')
-
-        db_file = self.get('db_file')
-        if not db_file:
-            db_file = env_chk('>>db_file<<', fw_spec)
-
-        slab_name = self.get('slab_struct_name', 'unrelaxed_slab')
-        relax_type = self.get('relax_type', 'slab_pos_relax')
-        bulk_name = self.get('bulk_struct_name', 'structure_equiVol')
-        slab_out_name = self.get('slab_out_name', 'relaxed_slab')
-        hl_db = self.get('high_level_db', True)
-        
-        nav_structure = StructureNavigator(
-            db_file=db_file,
-            high_level=hl_db)
-
-        data = nav_structure.get_bulk_from_db(
-            mp_id=mp_id,
-            functional=functional)
-        bulk_struct = Structure.from_dict(data[bulk_name])
-        
-        slab_data = nav_structure.get_slab_from_db(
-            mp_id=mp_id,
-            functional=functional,
-            miller=miller)
-        comp_params = slab_data.get('comp_parameters')
-        min_thickness = slab_data.get('min_thickness', 10)
-        min_vacuum = slab_data.get('min_vacuum', 25)
-        
-        WF = make_and_relax_slab_swf(bulk_structure=bulk_struct,
-                                     miller_index=miller,
-                                     flag=mp_id,
-                                     comp_parameters=comp_params,
-                                     functional=functional,
-                                     min_thickness=min_thickness,
-                                     min_vacuum=min_vacuum,
-                                     relax_type=relax_type,
-                                     slab_struct_name=slab_name,
-                                     out_struct_name=slab_out_name,
-                                     print_help=False)
-        
-        return FWAction(detours=WF)
-    
 @explicit_serialize
 class FT_GetRelaxedSlab(FiretaskBase):
     """Get the relaxed structure from the DB, and put a Slab into the high-level DB.

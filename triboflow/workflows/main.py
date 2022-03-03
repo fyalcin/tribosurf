@@ -7,15 +7,14 @@ Created on Wed Jun 17 15:47:39 2020
 from fireworks import Workflow, Firework
 
 from triboflow.fireworks.init_fws import InitWF
-from triboflow.firetasks.convergence import FT_StartConvo
-from triboflow.firetasks.dielectric import FT_StartDielectric
 from triboflow.firetasks.structure_manipulation import (
-    FT_MakeHeteroStructure, FT_StartPreRelax)
-from triboflow.firetasks.PES import FT_StartPESCalcSubWF
+    FT_MakeHeteroStructure, FT_StartBulkPreRelax)
 from triboflow.firetasks.init_check import unbundle_input, material_from_mp
 from triboflow.firetasks.check_inputs import FT_UpdateCompParams
 from triboflow.firetasks.adhesion import (
-    FT_RelaxMatchedSlabs, FT_RetrievMatchedSlabs, FT_StartAdhesionSWF)
+    FT_RelaxMatchedSlabs, FT_RetrievMatchedSlabs)
+from triboflow.firetasks.start_swfs import FT_StartAdhesionSWF, FT_StartBulkConvoSWF, FT_StartDielectricSWF, \
+    FT_StartPESCalcSWF
 from triboflow.utils.structure_manipulation import interface_name
 from triboflow.firetasks.run_slabs_wfs import FT_SlabOptThick
 
@@ -49,61 +48,61 @@ def heterogeneous_wf(inputs):
                                                   interface=inter_params)
     WF.append(Initialize)
 
-    PreRelaxation_M1 = Firework(FT_StartPreRelax(mp_id=mp_id_1,
-                                                 functional=functional),
+    PreRelaxation_M1 = Firework(FT_StartBulkPreRelax(mp_id=mp_id_1,
+                                                     functional=functional),
                                 name='Start pre-relaxation for {}'
                                 .format(mat_1['formula']))
     WF.append(PreRelaxation_M1)
 
-    PreRelaxation_M2 = Firework(FT_StartPreRelax(mp_id=mp_id_2,
-                                                 functional=functional),
+    PreRelaxation_M2 = Firework(FT_StartBulkPreRelax(mp_id=mp_id_2,
+                                                     functional=functional),
                                 name='Start pre-relaxation for {}'
                                 .format(mat_2['formula']))
     WF.append(PreRelaxation_M2)
 
-    ConvergeEncut_M1 = Firework(FT_StartConvo(conv_type='encut',
-                                              mp_id=mp_id_1,
-                                              functional=functional,
-                                              ),
+    ConvergeEncut_M1 = Firework(FT_StartBulkConvoSWF(conv_type='encut',
+                                                     mp_id=mp_id_1,
+                                                     functional=functional,
+                                                     ),
                                 name='Start encut convergence for {}'
-                                      .format(mat_1['formula']))
+                                .format(mat_1['formula']))
     WF.append(ConvergeEncut_M1)
     
-    ConvergeEncut_M2 = Firework(FT_StartConvo(conv_type='encut',
-                                              mp_id=mp_id_2,
-                                              functional=functional,
-                                              ),
+    ConvergeEncut_M2 = Firework(FT_StartBulkConvoSWF(conv_type='encut',
+                                                     mp_id=mp_id_2,
+                                                     functional=functional,
+                                                     ),
                                 name='Start encut convergence for {}'
-                                      .format(mat_2['formula']))
+                                .format(mat_2['formula']))
     WF.append(ConvergeEncut_M2)
     
-    ConvergeKpoints_M1 = Firework(FT_StartConvo(conv_type='kpoints',
-                                                mp_id=mp_id_1,
-                                                functional=functional,
-                                                ),
+    ConvergeKpoints_M1 = Firework(FT_StartBulkConvoSWF(conv_type='kpoints',
+                                                       mp_id=mp_id_1,
+                                                       functional=functional,
+                                                       ),
                                   name='Start kpoints convergence for {}'
-                                        .format(mat_1['formula']))
+                                  .format(mat_1['formula']))
     WF.append(ConvergeKpoints_M1)
     
-    ConvergeKpoints_M2 = Firework(FT_StartConvo(conv_type='kpoints',
-                                                mp_id=mp_id_2,
-                                                functional=functional,
-                                                ),
-                                name='Start kpoints convergence for {}'
-                                     .format(mat_2['formula']))
+    ConvergeKpoints_M2 = Firework(FT_StartBulkConvoSWF(conv_type='kpoints',
+                                                       mp_id=mp_id_2,
+                                                       functional=functional,
+                                                       ),
+                                  name='Start kpoints convergence for {}'
+                                  .format(mat_2['formula']))
     WF.append(ConvergeKpoints_M2)
     
-    CalcDielectric_M1 = Firework(FT_StartDielectric(mp_id=mp_id_1,
-                                                    functional=functional,
-                                                    update_bulk=True,
-                                                    update_slabs=True),
+    CalcDielectric_M1 = Firework(FT_StartDielectricSWF(mp_id=mp_id_1,
+                                                       functional=functional,
+                                                       update_bulk=True,
+                                                       update_slabs=True),
                                  name=f'Start dielectric SWF for {mat_1["formula"]}')
     WF.append(CalcDielectric_M1)
     
-    CalcDielectric_M2 = Firework(FT_StartDielectric(mp_id=mp_id_2,
-                                                    functional=functional,
-                                                    update_bulk=True,
-                                                    update_slabs=True),
+    CalcDielectric_M2 = Firework(FT_StartDielectricSWF(mp_id=mp_id_2,
+                                                       functional=functional,
+                                                       update_bulk=True,
+                                                       update_slabs=True),
                                  name=f'Start dielectric SWF for {mat_2["formula"]}')
     WF.append(CalcDielectric_M2)
     
@@ -160,7 +159,7 @@ def heterogeneous_wf(inputs):
     WF.append(RetrieveMatchedSlabs)
     
     CalcPESPoints = Firework(
-        FT_StartPESCalcSubWF(
+        FT_StartPESCalcSWF(
             mp_id_1=mp_id_1,
             mp_id_2=mp_id_2,
             miller_1=mat_1.get('miller'),
