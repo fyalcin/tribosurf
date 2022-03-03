@@ -95,7 +95,7 @@ class FT_ComputePES(FiretaskBase):
             data.dump('Computed_PES_data_'+name+'.dat')
             pes_data.dump('Interpolated_PES_data_'+name+'.dat')
             
-        plot_pes(to_plot, cell*2, to_fig=name)
+        plot_pes(to_plot, cell, to_fig=name)
         plot_name = 'PES_' + str(name) + '.png'
         pes_image_bytes = convert_image_to_bytes('./'+plot_name)
         
