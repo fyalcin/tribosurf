@@ -888,6 +888,7 @@ class Shaper:
             bbs = Shaper.bonds_by_shift(SG, nn_method, tol)
             for slab in slabs:
                 slab.energy = bbs[np.round(slab.shift, 4)]
+                slab.pmg_layer_size = pmg_layer_size
 
             print(
                 f'{ouc.composition.reduced_formula}{m} has {[len(Shaper.get_layers(s, tol)) for s in slabs]} layer slabs'

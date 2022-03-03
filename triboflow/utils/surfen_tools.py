@@ -150,43 +150,36 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
 
         inputs_dict['inputs'] += [slab_tf_input, slab_bf_input, slab_static_input]
 
-        if not sto:
-            # For asymmetric slabs, we need the periodicity in the layering to figure out
-            # if the top and bottom terminations are complementary.
-            bbs = Shaper.bonds_by_shift(SG, nn_method, tol)
-            bvs, indices = np.unique(list(bbs.values()), return_index=True)
-            periodicity = len(bvs)
+        try:
+            pmg_layer_size = slab.pmg_layer_size
+        except AttributeError:
+            print('Your slab does not have a "pmg_layer_size" attribute which is needed to'
+                  'determine if a slab has complementary terminations. The workflow will proceed'
+                  'assuming that your slab has complementary terminations, which could lead to'
+                  'incorrect surface energies.')
+            comp = True
+        else:
+            comp = True if slab_layers % pmg_layer_size == 0 else False
+            inputs_dict['slab_params'].update({'comp': comp})
 
-            if slab_layers % periodicity != 0:
-                inputs_dict['slab_params'].update({'comp': False})
-                # For non-stoichiometric slabs, we need the stoichiometric versions in order
-                # to calculate the cleavage energy which is a component in the surface energy
-                # calculation.
-                all_shifts = SG._calculate_possible_shifts(tol)
-                top_shift_index = all_shifts.index(slab.shift)
-                bot_shift_index = (top_shift_index - slab_layers) % len(all_shifts)
-                sto_slab_top = SG.get_slab(slab.shift, tol)
-                sto_slab_bot = SG.get_slab(all_shifts[bot_shift_index], tol)
-                sto_slab_layers = len(Shaper.get_layers(sto_slab_top, tol))
-                layers_to_remove = int(ouc_layers * np.floor((sto_slab_layers - slab_layers) / ouc_layers))
-                target_layers = sto_slab_layers - layers_to_remove
-                sto_slab_top = Shaper.resize(sto_slab_top, target_layers, vac_thickness, tol)
-                sto_slab_bot = Shaper.resize(sto_slab_bot, target_layers, vac_thickness, tol)
-                # sto_slab_top = Shaper.remove_layers(sto_slab_top, layers_to_remove, tol, method='layers')
-                # sto_slab_bot = Shaper.remove_layers(sto_slab_bot, layers_to_remove, tol, method='layers')
-                sto_slab_top_input = generate_input_dict(sto_slab_top, 'static', 'sto_slab_top')
-                sto_slab_bot_input = generate_input_dict(sto_slab_bot, 'static', 'sto_slab_bot')
-                inputs_dict['inputs'] += [sto_slab_top_input, sto_slab_bot_input]
-            else:
-                inputs_dict['slab_params'].update({'comp': True})
-                sto_slab = SG.get_slab(slab.shift, tol)
-                sto_slab_layers = len(Shaper.get_layers(sto_slab, tol))
-                layers_to_remove = int(ouc_layers * np.floor((sto_slab_layers - slab_layers) / ouc_layers))
-                target_layers = sto_slab_layers - layers_to_remove
-                sto_slab = Shaper.resize(sto_slab, target_layers, vac_thickness, tol)
-                # sto_slab = Shaper.remove_layers(sto_slab, layers_to_remove, tol, method='layers')
-                sto_slab_input = generate_input_dict(sto_slab, 'static', 'sto_slab')
-                inputs_dict['inputs'] += [sto_slab_input]
+        if not comp:
+            # For non-stoichiometric slabs, we need the stoichiometric versions in order
+            # to calculate the cleavage energy which is a component in the surface energy
+            # calculation.
+            all_shifts = SG._calculate_possible_shifts(tol)
+            top_shift_index = all_shifts.index(slab.shift)
+            bot_shift_index = (top_shift_index - slab_layers) % len(all_shifts)
+            sto_slab_top = SG.get_slab(slab.shift, tol)
+            sto_slab_bot = SG.get_slab(all_shifts[bot_shift_index], tol)
+            sto_slab_layers = len(Shaper.get_layers(sto_slab_top, tol))
+            layers_to_remove = int(ouc_layers * np.floor((sto_slab_layers - slab_layers) / ouc_layers))
+            target_layers = sto_slab_layers - layers_to_remove
+            sto_slab_top = Shaper.resize(sto_slab_top, target_layers, vac_thickness, tol)
+            sto_slab_bot = Shaper.resize(sto_slab_bot, target_layers, vac_thickness, tol)
+            sto_slab_top_input = generate_input_dict(sto_slab_top, 'static', 'sto_slab_top')
+            sto_slab_bot_input = generate_input_dict(sto_slab_bot, 'static', 'sto_slab_bot')
+            inputs_dict['inputs'] += [sto_slab_top_input, sto_slab_bot_input]
+
     return inputs_dict
 
 
@@ -734,36 +727,26 @@ def calculate_surface_energy_gen(slab_dict, fltr, coll, db_file='auto', high_lev
         ens['E_rel_top'] = E_rel_top
         ens['E_rel_bot'] = E_rel_bot
 
-        if sto:
+        if comp:
             nsites = en_dict['slab_bot_fixed_relax']['nsites']
             E_cle = (slab_static_en - nsites * bulk_en) / 2
             surf_en_top = E_cle + E_rel_top
             surf_en_bot = E_cle + E_rel_bot
             ens['E_cle'] = E_cle
         else:
-            if comp:
-                sto_slab_en = en_dict['sto_slab']['energy']
-                sto_slab_nsites = en_dict['sto_slab']['nsites']
+            sto_slab_top_en = en_dict['sto_slab_top']['energy']
+            sto_slab_bot_en = en_dict['sto_slab_bot']['energy']
 
-                E_cle = (sto_slab_en - sto_slab_nsites * bulk_en) / 2
+            sto_slab_top_nsites = en_dict['sto_slab_top']['nsites']
+            sto_slab_bot_nsites = en_dict['sto_slab_bot']['nsites']
 
-                surf_en_top = E_cle + E_rel_top
-                surf_en_bot = E_cle + E_rel_bot
-                ens['E_cle'] = E_cle
-            else:
-                sto_slab_top_en = en_dict['sto_slab_top']['energy']
-                sto_slab_bot_en = en_dict['sto_slab_bot']['energy']
+            E_cle_top = (sto_slab_top_en - sto_slab_top_nsites * bulk_en) / 2
+            E_cle_bot = (sto_slab_bot_en - sto_slab_bot_nsites * bulk_en) / 2
 
-                sto_slab_top_nsites = en_dict['sto_slab_top']['nsites']
-                sto_slab_bot_nsites = en_dict['sto_slab_bot']['nsites']
-
-                E_cle_top = (sto_slab_top_en - sto_slab_top_nsites * bulk_en) / 2
-                E_cle_bot = (sto_slab_bot_en - sto_slab_bot_nsites * bulk_en) / 2
-
-                surf_en_top = E_cle_top + E_rel_top
-                surf_en_bot = E_cle_bot + E_rel_bot
-                ens['E_cle_top_term'] = E_cle_top
-                ens['E_cle_bot_term'] = E_cle_bot
+            surf_en_top = E_cle_top + E_rel_top
+            surf_en_bot = E_cle_bot + E_rel_bot
+            ens['E_cle_top_term'] = E_cle_top
+            ens['E_cle_bot_term'] = E_cle_bot
 
     surf_en_top *= 16.02176565 / area
     surf_en_bot *= 16.02176565 / area
