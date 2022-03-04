@@ -99,8 +99,9 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
     id_slab = Shaper.identify_slab(slab)
     sym = id_slab['symmetric']
     sto = id_slab['stoichiometric']
+
     ## oriented unit cell is used for the reference bulk energies
-    ouc = Shaper.get_constrained_ouc(slab)
+    ouc = slab.oriented_unit_cell
     ouc_layers = len(Shaper.get_layers(ouc, tol))
     slab_layers = len(Shaper.get_layers(slab, tol))
     slab_thickness = Shaper.get_proj_height(slab, 'slab')
@@ -119,6 +120,19 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
                                    'hkl': millerstr,
                                    'bvs': slab.energy,
                                    'area': slab.surface_area}}
+
+    try:
+        pmg_layer_size = slab.pmg_layer_size
+    except AttributeError:
+        print('Your slab does not have a "pmg_layer_size" attribute which is needed to'
+              'determine if a slab has complementary terminations. The workflow will proceed'
+              'assuming that your slab has complementary terminations, which could lead to'
+              'incorrect surface energies.')
+        comp = True
+        pmg_layer_size = ouc_layers
+    else:
+        comp = True if slab_layers % pmg_layer_size == 0 else False
+        inputs_dict['slab_params'].update({'comp': comp})
 
     if sym:
         slab_relax_input = generate_input_dict(slab, 'relax', 'slab_relax')
@@ -152,18 +166,6 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
         slab_static_input = generate_input_dict(slab, 'static', 'slab_static')
 
         inputs_dict['inputs'] += [slab_tf_input, slab_bf_input, slab_static_input]
-
-        try:
-            pmg_layer_size = slab.pmg_layer_size
-        except AttributeError:
-            print('Your slab does not have a "pmg_layer_size" attribute which is needed to'
-                  'determine if a slab has complementary terminations. The workflow will proceed'
-                  'assuming that your slab has complementary terminations, which could lead to'
-                  'incorrect surface energies.')
-            comp = True
-        else:
-            comp = True if slab_layers % pmg_layer_size == 0 else False
-            inputs_dict['slab_params'].update({'comp': comp})
 
         if not comp:
             # For non-stoichiometric slabs, we need the stoichiometric versions in order
