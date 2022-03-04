@@ -509,13 +509,16 @@ class InterfaceMatcher:
                                    max_angle_tol=self.match_params['max_angle_diff']/100,#in contrast to MPInterfaces this is a relative value, i.e. percentage
                                    max_length_tol=self.match_params['max_mismatch'],
                                    bidirectional=False)
-            zsl_match = next(zsl_gen(film_vectors=self.top_slab.lattice.matrix[0:2],
+            try:
+                zsl_match = next(zsl_gen(film_vectors=self.top_slab.lattice.matrix[0:2],
                                      substrate_vectors=self.bot_slab.lattice.matrix[0:2],
                                      lowest=True))
-            uv_opt1 = [zsl_match.film_sl_vectors[0], zsl_match.film_sl_vectors[1]]
-            uv_opt2 = [zsl_match.substrate_sl_vectors[0], zsl_match.substrate_sl_vectors[1]]
-            self.zsl_match = zsl_match
-            #print(f'uv_opt1: {uv_opt1}\nuv_opt2: {uv_opt2}')
+                uv_opt1 = [zsl_match.film_sl_vectors[0], zsl_match.film_sl_vectors[1]]
+                uv_opt2 = [zsl_match.substrate_sl_vectors[0], zsl_match.substrate_sl_vectors[1]]
+                self.zsl_match = zsl_match
+                #print(f'uv_opt1: {uv_opt1}\nuv_opt2: {uv_opt2}')
+            except:
+                return None, None
         return uv_opt1, uv_opt2
     
     def _get_matching_lattices(self):
@@ -685,6 +688,13 @@ class InterfaceMatcher:
         
         self.interface = clean_up_site_properties(interface)
         
+        properties = {'area': interface.volume/interface.lattice.c,
+                      'strain': self.get_strain(),
+                      'strain_weights': {'film': self.top_weight,
+                                         'substrate': self.bot_weight},
+                      }
+        interface.interface_properties.update(properties)
+        self.interface = interface
         return self.interface
     
     def get_interface_distance(self):
