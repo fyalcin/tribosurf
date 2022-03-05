@@ -240,7 +240,6 @@ class Shaper:
         # outside the box from the top and the bottom
         struct_centered = center_slab(struct.copy(sanitize=True))
         initial_thickness = Shaper.get_proj_height(struct_centered, 'slab')
-        print(f'CHUNK SIZE IS {chunk_size}')
 
         if slab_thickness:
             # Layers (containing sites) are removed from the bottom until
@@ -907,6 +906,7 @@ class Shaper:
             d_hkl = bulk_conv.lattice.d_hkl(m)
             ouc_layers = len(Shaper.get_layers(ouc, tol))
             ouc_height = Shaper.get_proj_height(ouc)
+            print(f'OUC RATIO THING IS {ouc_height / d_hkl}')
             # we calculate how many layers pymatgen considers a single layer here
             pmg_layer_size = int(ouc_layers / round(ouc_height / d_hkl))
 
@@ -997,14 +997,11 @@ class Shaper:
                  1: ((1, 0, 0), (0, 0, 1), (0, 1, 0))}
         slab_lattice = np.round(slab.lattice.abc[:2], 6)
         ouc = slab.oriented_unit_cell
-        print(f'first try')
         indices = get_subset_indices(slab_lattice, np.round(ouc.lattice.abc, 6))
         if not indices:
             ouc = ouc.copy(sanitize=True)
-            print(f'second try')
             indices = get_subset_indices(slab_lattice, np.round(ouc.lattice.abc, 6))
             if not indices:
-                print(f'third try')
                 ouc = Shaper.get_constrained_ouc(slab)
                 indices = get_subset_indices(slab_lattice, np.round(ouc.lattice.abc, 6))
                 if not indices:
@@ -1013,6 +1010,5 @@ class Shaper:
         if trans_index == 2:
             return ouc
         else:
-            print(f'trans index is {trans_index}')
             st = SupercellTransformation(trans[trans_index])
             return st.apply_transformation(ouc)
