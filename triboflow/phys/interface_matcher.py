@@ -385,6 +385,7 @@ class InterfaceMatcher:
         """
         Assign top and bottom slab based on the formula and miller index.
         
+        Make sure that the c-axis are orthogonal to the ab-plane.
         This is just for consistency since above and below are of course
         not meaningfull in a DFT context. Strain weights are assigned
         accordingly as well.
@@ -411,15 +412,19 @@ class InterfaceMatcher:
         opt2 = max(n1, n2)
         
         if n1 == opt1 and n2 == opt2:
-            self.top_slab = slab_1
+            self.top_slab = slab_1.get_orthogonal_c_slab()
             self.top_weight = weight_1
-            self.bot_slab = slab_2
+            self.top_miller = slab_1.miller_index
+            self.bot_slab = slab_2.get_orthogonal_c_slab()
             self.bot_weight = weight_2
+            self.bot_miller = slab_2.miller_index
         else:
-            self.top_slab = slab_2
+            self.top_slab = slab_2.get_orthogonal_c_slab()
             self.top_weight = weight_2
-            self.bot_slab = slab_1
+            self.top_miller = slab_2.miller_index
+            self.bot_slab = slab_1.get_orthogonal_c_slab()
             self.bot_weight = weight_1
+            self.bot_miller = slab_2.miller_index
             
             
     def __make_3d_lattice_from_2d_lattice(self, slab, uv):
@@ -506,7 +511,7 @@ class InterfaceMatcher:
         else:
             zsl_gen = ZSLGenerator(max_area_ratio_tol=self.match_params['r1r2_tol'],
                                    max_area=self.match_params['max_area'],
-                                   max_angle_tol=self.match_params['max_angle_diff']/100,#in contrast to MPInterfaces this is a relative value, i.e. percentage
+                                   max_angle_tol=self.match_params['max_angle_diff']/50,#in contrast to MPInterfaces this is a relative value, i.e. percentage
                                    max_length_tol=self.match_params['max_mismatch'],
                                    bidirectional=False)
             try:
@@ -664,15 +669,14 @@ class InterfaceMatcher:
         
     def get_interface(self):
         """
-        Return a interface slab object containing two matched slabs.
+        Return an Interface object containing two matched slabs.
         
         They are correctly orientated and have a defined distance to each other.
-        The interface plane is z=0. The relative lateral position of the slabs
-        are random though.
+        The relative lateral position of the slabs are random though.
 
         Returns
         -------
-        pymatgen.core.surface.Slab
+        pymatgen.core.interface.Interface
             Matched interface structure of two slabs.
 
         """
@@ -681,20 +685,21 @@ class InterfaceMatcher:
                 return None
         #interface = stack_aligned_slabs(bcs, tcs)
         
-        interface = Interface.from_slabs(substrate_slab=bcs,
-                                         film_slab=tcs,
-                                         gap=self.inter_dist,
-                                         vacuum_over_film=self.vacuum_thickness)
+        self.interface = Interface.from_slabs(substrate_slab=bcs,
+                                              film_slab=tcs,
+                                              gap=self.inter_dist,
+                                              vacuum_over_film=self.vacuum_thickness)
         
-        self.interface = clean_up_site_properties(interface)
+        self.interface = clean_up_site_properties(self.interface)
+
+        self.interface.interface_properties = {'area': tcs.surface_area,
+                                               'strain': self.get_strain(),
+                                               'film_miller': self.top_miller,
+                                               'substrate_miller': self.bot_miller,
+                                               'strain_weights': {'film': self.top_weight,
+                                                                  'substrate': self.bot_weight},
+                                               }
         
-        properties = {'area': interface.volume/interface.lattice.c,
-                      'strain': self.get_strain(),
-                      'strain_weights': {'film': self.top_weight,
-                                         'substrate': self.bot_weight},
-                      }
-        interface.interface_properties.update(properties)
-        self.interface = interface
         return self.interface
     
     def get_interface_distance(self):
