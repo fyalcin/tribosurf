@@ -52,6 +52,7 @@ from pymatgen.core.lattice import Lattice
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import center_slab, Slab, SlabGenerator, get_symmetrically_distinct_miller_indices
 from pymatgen.io.cif import CifParser
+from pymatgen.transformations.standard_transformations import SupercellTransformation
 from scipy.cluster.hierarchy import fcluster, linkage
 from scipy.spatial.distance import squareform
 
@@ -992,7 +993,6 @@ class Shaper:
 
     @staticmethod
     def get_matching_ouc(slab):
-        from pymatgen.transformations.standard_transformations import SupercellTransformation
         trans = {0: ((0, 0, 1), (0, 1, 0), (1, 0, 0)),
                  1: ((1, 0, 0), (0, 0, 1), (0, 1, 0))}
         slab_lattice = np.round(slab.lattice.abc[:2], 6)
