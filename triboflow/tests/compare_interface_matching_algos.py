@@ -13,32 +13,6 @@ from triboflow.phys.interface_matcher import InterfaceMatcher
 from triboflow.utils.database import Navigator
 from triboflow.utils.structure_manipulation import interface_name
 
-
-def get_slabs_from_name(interface_name, structure_navigator, functional='PBE'):
-    name_a, name_b, mpid_1, mpid_2 = interface_name.split("_")
-    a = [x.isdigit() for x in name_a].index(True)
-    miller_a = int(name_a[a:])
-    formula_a = name_a[:a]
-    b = [x.isdigit() for x in name_b].index(True)
-    miller_b = int(name_b[b:])
-    try:
-        slab_1 = structure_navigator.get_slab_from_db(mpid_1, functional, miller_a)
-        if slab_1['formula'] == formula_a:
-            slab_a = slab_1
-            slab_b = structure_navigator.get_slab_from_db(mpid_2, functional, miller_b)
-        else:
-            slab_a = structure_navigator.get_slab_from_db(mpid_2, functional, miller_a)
-            slab_b = structure_navigator.get_slab_from_db(mpid_1, functional, miller_b)
-    except:
-        slab_1 = structure_navigator.get_slab_from_db(mpid_2, functional, miller_a)
-        if slab_1['formula'] == formula_a:
-            slab_a = slab_1
-            slab_b = structure_navigator.get_slab_from_db(mpid_1, functional, miller_b)
-        else:
-            slab_a = structure_navigator.get_slab_from_db(mpid_1, functional, miller_a)
-            slab_b = structure_navigator.get_slab_from_db(mpid_2, functional, miller_b)
-    return slab_a, slab_b
-
 interface_parameters = {'max_area': 100,
                         'interface_distance': 'auto',
                         'max_angle_diff': 1,

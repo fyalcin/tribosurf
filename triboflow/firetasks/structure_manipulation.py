@@ -709,10 +709,10 @@ class FT_MakeHeteroStructure(FiretaskBase):
 # =============================================================================
         
             MI = InterfaceMatcher(slab_1=slab_1,
-                                slab_2=slab_2,
-                                strain_weight_1=bm_1,
-                                strain_weight_2=bm_2,
-                                **inter_params)
+                                  slab_2=slab_2,
+                                  strain_weight_1=bm_1,
+                                  strain_weight_2=bm_2,
+                                  **inter_params)
             top_aligned, bottom_aligned = MI.get_centered_slabs()
         
             if top_aligned and bottom_aligned:
@@ -732,37 +732,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
             
             else:
 
-                f = 1.05 # factor with which to multiply the missmatch criteria
-            
-                new_params = {
-                    'max_area': inter_params['max_area'] * f,
-                    'max_mismatch': inter_params['max_mismatch'] * f,
-                    'max_angle_diff': inter_params['max_angle_diff'] * f,
-                    'r1r2_tol': inter_params['r1r2_tol'] * f,
-                    'interface_distance': inter_params['interface_distance'],
-                    'vacuum': inter_params['vacuum']}
-            
-                if not inter_data.get('original_interface_params'):
-
-                    nav_high.update_data(
-                        collection=functional+'.interface_data',
-                        fltr={'name': interface_name},
-                        new_values={'$set': 
-                                       {'original_interface_params': 
-                                            inter_params}})
-
-                nav_high.update_data(
-                    collection=functional+'.interface_data',
-                    fltr={'name': interface_name},
-                    new_values={'$set': {'interface_parameters': new_params}})
-
-                new_fw = Firework(FT_MakeHeteroStructure(mp_id_1=mp_id_1,
-                                                         miller_1=miller_1,
-                                                         mp_id_2=mp_id_2,
-                                                         miller_2=miller_2,
-                                                         db_file=db_file))
-                
-                return FWAction(detours=new_fw)
+                return FWAction(defuse_workflow=True)
 
 
 

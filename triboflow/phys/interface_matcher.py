@@ -49,13 +49,11 @@ import warnings
 from pymatgen.core.lattice import Lattice
 from pymatgen.core.surface import center_slab, Slab
 from pymatgen.core.interface import Interface
-from mpinterfaces.transformations import get_matching_lattices
 from pymatgen.analysis.interfaces.zsl import ZSLGenerator
 
 
 from triboflow.utils.structure_manipulation import (
     recenter_aligned_slabs,
-    stack_aligned_slabs,
     clean_up_site_properties)
 from triboflow.phys.shaper import Shaper
 
@@ -163,14 +161,14 @@ class InterfaceMatcher:
                  slab_2,
                  strain_weight_1=1.0,
                  strain_weight_2=1.0,
-                 max_area=100.0,
-                 max_mismatch=0.01,
-                 max_angle_diff=1.0,
-                 r1r2_tol=0.02,
+                 max_area_ratio_tol=0.09,
+                 max_area=100,
+                 max_length_tol=0.03,
+                 max_angle_tol=0.01,
+                 bidirectional_search=True,
                  vacuum=15.0,
-                 best_match='area',
                  interface_distance='auto',
-                 implementation='pymatgen'):
+                 interface_distance_addon=0.0):
         """Initialize the InterfaceMatcher class
         
         If the strain weights sum up to zero (which is not allowed for the
@@ -198,33 +196,38 @@ class InterfaceMatcher:
             Weight for the lattice straining of the first slab. Combined with the
             'strain_weight_1' this determines which slab will be strained by
             how much to get unified lattice for the interface.  The default is 1.0
+        max_area_ratio_tol : float, optional
+            Tolerance parameter related to the lattice search
+            Lattice vectors are considered for the search if the areas do not
+            differ more than max_area_ratio_tol
+            The default is 0.09
         max_area : float, optional
             Maximally allowed cross section area of the interface.
             The default is 100.0
-        max_mismatch : float, optional
+        max_length_tol : float, optional
             Maximally allowed mismatch between the length of the lattice vectors
             in %. E.g. 0.01 is indicating a maximal 1% mismatch.
+            The default is 0.03
+        max_angle_tol : float, optional
+            Maximally allowed angle mismatch between the cells in %.
+            E.g. 0.01 is indicating a maximal 1% mismatch.
             The default is 0.01
-        max_angle_diff : float, optional
-            Maximally allowed angle mismatch between the cells in degrees.
-            The default is 1.0
-        r1r2_tol : float, optional
-            Tolerance parameter related to the lattice search
-            (abs(float(r1) * area1 - float(r2) * area2) / max_area <= r1r2_tol)
-            The default is 0.02
+        bidirectional_search : bool, optional
+            Select if vectors of substrate and film are exchangable during the
+            lattice search. The default is True
         vacuum : float, optional
             Thickness of the vacuum layer for the final interface. The default
             is 15.0
-        best_match : 'area' or 'mismatch', optional
-            Determines if the algorithm returns the matched slabs with the
-            smallest mismatch within "max_area" or the smalles area within the
-            other tolerance parameters. The default is "area"
         interface_distance : int, float or str, optional
             Determines the distance between the matched slabs if an interface
             structure is returned. If the input can be transformed into a float,
             that float will be used as the distance. If not, the distance will
             be automatically computed as the average layer distance of the
             two slabs. The default is "auto"
+        interface_distance_addon : float, optional
+            This will be added to the automatic interface distance if
+            interface_distance is not set explicitly to a float or int.
+            The default is 0.0
 
         Returns
         -------
@@ -234,13 +237,12 @@ class InterfaceMatcher:
         # handle inconsistent input
         weight_1, weight_2, = self.__check_weights(strain_weight_1,
                                                    strain_weight_2)
-        best_match = self.__check_best_match(best_match)
                     
         self.match_params = {'max_area': max_area,
-                             'max_mismatch': max_mismatch,
-                             'max_angle_diff': max_angle_diff,
-                             'r1r2_tol': r1r2_tol,
-                             'best_match': best_match
+                             'max_length_tol': max_length_tol,
+                             'max_angle_tol': max_angle_tol,
+                             'max_area_ratio_tol': max_area_ratio_tol,
+                             'bidirectional': bidirectional_search
                             }
         self.vacuum_thickness = vacuum
         self.aligned_top_slab = None
@@ -251,15 +253,10 @@ class InterfaceMatcher:
                                  weight_1,
                                  weight_2)
         # Set interface distance
-        self.__set_interface_dist(interface_distance)
+        self.__set_interface_dist(interface_distance, interface_distance_addon)
         # Set the vacua for the centered slabs to ensure correct vacuum for the
         # interface
         self.__set_vacua()
-        
-        if implementation == "pymatgen":
-            self.implementation = implementation
-        else:
-            self.implementation = "MPInterfaces"
         
     def __check_weights(self, strain_weight_1, strain_weight_2):
         """
@@ -294,30 +291,6 @@ class InterfaceMatcher:
             return 1.0, 1.0
         else:
             return strain_weight_1, strain_weight_2
-            
-    def __check_best_match(self, best_match):
-        """
-        Check and correct the passed value for "best_match" if needed.
-
-        Parameters
-        ----------
-        best_match : str
-            Select if small areas or best match should be prioritised in the
-            lattice search.
-
-        Returns
-        -------
-        str
-            either the input value of "best_match" or "area"
-
-        """
-        if best_match not in ['area', 'mismatch']:
-            warnings.warn('You have passed the "best_match" argument "{}", '
-                         'which is not in ["area", "mismatch"]. It will be '
-                         'set to "area" instead!'.format(best_match))
-            return 'area'
-        else:
-            return best_match
     
     def __set_vacua(self):
         """
@@ -333,7 +306,7 @@ class InterfaceMatcher:
         self.vacuum_top = thickness_bot + self.vacuum_thickness + self.inter_dist
         self.vacuum_bot = thickness_top + self.vacuum_thickness + self.inter_dist
 
-    def __set_interface_dist(self, initial_distance):
+    def __set_interface_dist(self, initial_distance, distance_boost):
         """
         Set the interface distance for the class instance.
         
@@ -347,6 +320,8 @@ class InterfaceMatcher:
         initial_distance : any type possible
             if transformable to a float, the float will be used, otherwise
             automatic computation is done.
+        distance_boost : float or int
+            added to interface distance if it is automatically determined.
 
         Returns
         -------
@@ -358,7 +333,7 @@ class InterfaceMatcher:
         except:
             av_spacing_top = Shaper._get_average_layer_spacing(self.top_slab)
             av_spacing_bot = Shaper._get_average_layer_spacing(self.bot_slab)
-            self.inter_dist = np.mean([av_spacing_top, av_spacing_bot])
+            self.inter_dist = np.mean([av_spacing_top, av_spacing_bot]) + distance_boost
                 
     
     def __get_formula_and_miller(self, slab):
@@ -470,8 +445,8 @@ class InterfaceMatcher:
 
         """
         _, __, sc_matrix = slab.lattice.find_mapping(lattice,
-                                ltol=self.match_params['max_mismatch'],
-                                atol=self.match_params['max_angle_diff'])
+                                ltol=self.match_params['max_length_tol'],
+                                atol=1)
         sc_matrix[2] = np.array([0, 0, 1])
         return sc_matrix
     
@@ -489,42 +464,29 @@ class InterfaceMatcher:
         Compute the reduced matching lattice vectors for heterostructure
         interfaces as described in the paper by Zur and McGill:
         Journal of Applied Physics 55, 378 (1984); doi: 10.1063/1.333084
-        The function used is taken from the MPInterfaces package:
-        Computational Materials Science 122 (2016) 183–190;
-        doi: http://dx.doi.org/10.1016/j.commatsci.2016.05.020
+        Implementation by pymatgen.
 
 
         Returns
         -------
-        uv_opt1 : [np.array, np.array]
+        matched_top_vec : [np.array, np.array]
             2D lattice for the first slab.
-        uv_opt2 : [np.array, np.array]
+        matched_bot_vec : [np.array, np.array]
             2D lattice for the second slab.
 
         """
-        if self.implementation == "MPInterfaces":
+        zsl_gen = ZSLGenerator(**self.match_params)
+        try:
+            zsl_match = next(zsl_gen(film_vectors=self.top_slab.lattice.matrix[0:2],
+                            substrate_vectors=self.bot_slab.lattice.matrix[0:2],
+                            lowest=True))
+            matched_top_vec = zsl_match.film_sl_vectors
+            matched_bot_vec = zsl_match.substrate_sl_vectors
+            self.zsl_match = zsl_match
+            return matched_top_vec, matched_bot_vec
+        except:
+            return None, None
         
-            uv_opt1, uv_opt2 = get_matching_lattices(self.top_slab,
-                                                     self.bot_slab,
-                                                     **self.match_params)
-            #print(f'uv_opt1: {uv_opt1}\nuv_opt2: {uv_opt2}')
-        else:
-            zsl_gen = ZSLGenerator(max_area_ratio_tol=self.match_params['r1r2_tol'],
-                                   max_area=self.match_params['max_area'],
-                                   max_angle_tol=self.match_params['max_angle_diff']/50,#in contrast to MPInterfaces this is a relative value, i.e. percentage
-                                   max_length_tol=self.match_params['max_mismatch'],
-                                   bidirectional=False)
-            try:
-                zsl_match = next(zsl_gen(film_vectors=self.top_slab.lattice.matrix[0:2],
-                                     substrate_vectors=self.bot_slab.lattice.matrix[0:2],
-                                     lowest=True))
-                uv_opt1 = [zsl_match.film_sl_vectors[0], zsl_match.film_sl_vectors[1]]
-                uv_opt2 = [zsl_match.substrate_sl_vectors[0], zsl_match.substrate_sl_vectors[1]]
-                self.zsl_match = zsl_match
-                #print(f'uv_opt1: {uv_opt1}\nuv_opt2: {uv_opt2}')
-            except:
-                return None, None
-        return uv_opt1, uv_opt2
     
     def _get_matching_lattices(self):
         """
@@ -538,36 +500,18 @@ class InterfaceMatcher:
             Return two Lattice objects that are matched if a match is found.
 
         """
-        uv_1, uv_2 = self._find_lattice_match()
+        top_vec, bot_vec = self._find_lattice_match()
         # Handle the possibility that no match is found
-        if not uv_1 and not uv_2:
+        if not top_vec and not bot_vec:
             return None, None
-        top_latt = self.__make_3d_lattice_from_2d_lattice(self.top_slab, uv_1)
-        bot_latt = self.__make_3d_lattice_from_2d_lattice(self.bot_slab, uv_2)
+        top_latt = self.__make_3d_lattice_from_2d_lattice(self.top_slab, top_vec)
+        bot_latt = self.__make_3d_lattice_from_2d_lattice(self.bot_slab, bot_vec)
         
         self.unstrained_top_lattice = top_latt
         self.unstrained_bot_lattice = bot_latt
         
         return top_latt, bot_latt
     
-    def _assign_position_site_properties(self):
-        """
-        Add site properties on the slabs to mark the sites of the interface.
-        
-        Site properties are set on both slabs under the 'interface_region' key
-        to facilitate the detection of sites belonging to the top or bottom
-        slab. This is useful to find the slabs again in the unified interface
-        object.
-
-        Returns
-        -------
-        None.
-
-        """
-        self.aligned_top_slab.add_site_property('interface_region',
-                ['top_slab' for i in range(self.aligned_top_slab.num_sites)])
-        self.aligned_bot_slab.add_site_property('interface_region',
-                ['bot_slab' for i in range(self.aligned_bot_slab.num_sites)])
     
     def _get_matching_supercells(self):
         """
@@ -632,7 +576,7 @@ class InterfaceMatcher:
             
             flipped_slab = flip_slab(sc_top)
             self.aligned_top_slab, self.aligned_bot_slab = flipped_slab, sc_bot
-        self._assign_position_site_properties()
+
         return self.aligned_top_slab, self.aligned_bot_slab        
         
     def get_centered_slabs(self):
