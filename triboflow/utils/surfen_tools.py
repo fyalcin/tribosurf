@@ -102,7 +102,6 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
 
     ## oriented unit cell is used for the reference bulk energies
     ouc = slab.oriented_unit_cell
-    ouc_layers = len(Shaper.get_layers(ouc, tol))
     slab_layers = len(Shaper.get_layers(slab, tol))
     slab_thickness = Shaper.get_proj_height(slab, 'slab')
     vac_thickness = np.round(Shaper.get_proj_height(slab, 'vacuum'), 3)
@@ -124,6 +123,7 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
     try:
         pmg_layer_size = slab.pmg_layer_size
     except AttributeError:
+        ouc_layers = len(Shaper.get_layers(ouc, tol))
         print('Your slab does not have a "pmg_layer_size" attribute which is needed to'
               'determine if a slab has complementary terminations. The workflow will proceed'
               'assuming that your slab has complementary terminations, which could lead to'
@@ -147,8 +147,8 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
             sto_slab_layers = len(Shaper.get_layers(sto_slab, tol))
             # Since SlabGenerator creates a larger slab than we want, we remove layers
             # and the number of layers removed is an integer multiple of the number of layers
-            # in the oriented unit cell to preserve stoichiometry
-            layers_to_remove = int(ouc_layers * np.floor((sto_slab_layers - slab_layers) / ouc_layers))
+            # in the d_hkl portion of the oriented unit cell to preserve stoichiometry
+            layers_to_remove = int(pmg_layer_size * np.floor((sto_slab_layers - slab_layers) / ouc_layers))
             target_layers = sto_slab_layers - layers_to_remove
             sto_slab = Shaper.resize(sto_slab, target_layers, vac_thickness, tol)
             # sto_slab = Shaper.remove_layers(sto_slab, layers_to_remove, tol, method='layers')
@@ -177,7 +177,7 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
             sto_slab_top = SG.get_slab(slab.shift, tol)
             sto_slab_bot = SG.get_slab(all_shifts[bot_shift_index], tol)
             sto_slab_layers = len(Shaper.get_layers(sto_slab_top, tol))
-            layers_to_remove = int(ouc_layers * np.floor((sto_slab_layers - slab_layers) / ouc_layers))
+            layers_to_remove = int(pmg_layer_size * np.floor((sto_slab_layers - slab_layers) / ouc_layers))
             target_layers = sto_slab_layers - layers_to_remove
             sto_slab_top = Shaper.resize(sto_slab_top, target_layers, vac_thickness, tol)
             sto_slab_bot = Shaper.resize(sto_slab_bot, target_layers, vac_thickness, tol)
