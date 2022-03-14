@@ -301,8 +301,8 @@ class InterfaceMatcher:
         None.
 
         """
-        thickness_top = Shaper._get_proj_height(self.top_slab, 'slab')
-        thickness_bot = Shaper._get_proj_height(self.bot_slab, 'slab')
+        thickness_top = Shaper.get_proj_height(self.top_slab, 'slab')
+        thickness_bot = Shaper.get_proj_height(self.bot_slab, 'slab')
         self.vacuum_top = thickness_bot + self.vacuum_thickness + self.inter_dist
         self.vacuum_bot = thickness_top + self.vacuum_thickness + self.inter_dist
 
@@ -451,10 +451,10 @@ class InterfaceMatcher:
         return sc_matrix
     
     def _set_intended_vacuum(self, slab, vacuum):
-        return Shaper._modify_vacuum(slab,
-                                     vacuum,
-                                     method='to_value',
-                                     center=False)
+        return Shaper.modify_vacuum(slab,
+                                    vacuum,
+                                    method='to_value',
+                                    center=False)
         
     
     def _find_lattice_match(self):

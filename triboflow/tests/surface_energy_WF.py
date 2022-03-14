@@ -8,7 +8,7 @@ Created on Tue Oct 19 11:28:20 2021
 
 from fireworks import LaunchPad, Workflow, Firework
 
-from triboflow.firetasks.surfen_main import FT_StartSurfaceEnergy
+from triboflow.firetasks.start_swfs import FT_StartSurfaceEnergySWF
 from triboflow.utils.database import Navigator
 
 lpad = LaunchPad.auto_load()
@@ -46,14 +46,14 @@ for data in bulk_data:
     comp_params_user = {}
     custom_id = None
 
-    SurfaceEnergy = Firework(FT_StartSurfaceEnergy(mpid=mpid,
-                                                   functional=functional,
-                                                   sg_params=sg_params,
-                                                   sg_filter=sg_filter,
-                                                   db_file=db_file,
-                                                   high_level=high_level,
-                                                   comp_params_user=comp_params_user,
-                                                   custom_id=custom_id),
+    SurfaceEnergy = Firework(FT_StartSurfaceEnergySWF(mpid=mpid,
+                                                      functional=functional,
+                                                      sg_params=sg_params,
+                                                      sg_filter=sg_filter,
+                                                      db_file=db_file,
+                                                      high_level=high_level,
+                                                      comp_params_user=comp_params_user,
+                                                      custom_id=custom_id),
                              name=f'Start surface energy SWF for {formula}')
 
     WF = Workflow([SurfaceEnergy])

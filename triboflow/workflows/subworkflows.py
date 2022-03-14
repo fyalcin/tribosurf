@@ -5,26 +5,23 @@ Created on Wed Jun 17 15:47:39 2020
 """
 
 from uuid import uuid4
+
 import numpy as np
-
-from fireworks import Workflow, Firework
-
 from atomate.vasp.fireworks import StaticFW
 from atomate.vasp.powerups import add_modify_incar
-from pymatgen.core.surface import get_symmetrically_distinct_miller_indices, get_symmetrically_equivalent_miller_indices
+from fireworks import Workflow, Firework
 
-from triboflow.firetasks.surfen_tools import FT_PutSurfenInputsIntoDB, FT_RelaxSurfaceEnergyInputs, \
-    FT_WriteSurfaceEnergies
-from triboflow.fireworks.common import run_pes_calc_fw, make_pes_fw
-from triboflow.firetasks.convergence import FT_Convo
-from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \
-    FT_StartSlabRelax, FT_GetRelaxedSlab
 from triboflow.firetasks.PPES import FT_DoPPESCalcs, FT_FitPPES
 from triboflow.firetasks.adhesion import FT_CalcAdhesion
-from triboflow.firetasks.utils import FT_UpdateCompParams
+from triboflow.firetasks.convergence import FT_Convo
 from triboflow.firetasks.dielectric import FT_GetEpsilon
+from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \
+    FT_StartSlabRelax, FT_GetRelaxedSlab
+from triboflow.firetasks.surfen_tools import FT_WriteSurfenInputsToDB, FT_RelaxSurfaceEnergyInputs, \
+    FT_WriteSurfaceEnergiesToDB
+from triboflow.firetasks.utils import FT_UpdateCompParams
+from triboflow.fireworks.common import run_pes_calc_fw, make_pes_fw
 from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
-from triboflow.utils.structure_manipulation import get_conv_bulk_from_mpid
 from triboflow.utils.surfen_tools import get_surfen_inputs_from_mpid
 from triboflow.utils.vasp_tools import get_emin_and_emax, get_custom_vasp_static_settings
 
@@ -835,7 +832,7 @@ def surface_energy_swf(mpid,
         hkl = input['slab_params']['hkl']
         uid_short = input['slab_params']['uid'][:4]
         FW1 = Firework(
-            FT_PutSurfenInputsIntoDB(inputs_list=input_list, sg_params=sg_params, comp_params=comp_params,
+            FT_WriteSurfenInputsToDB(inputs_list=input_list, sg_params=sg_params, comp_params=comp_params,
                                      fltr=fltr, coll=coll, db_file=db_file, high_level=high_level),
             name=f"Generate surface energy inputs for {mpid}-{hkl}-{uid_short} with {functional} and put in DB")
 
@@ -845,8 +842,8 @@ def surface_energy_swf(mpid,
             name=f"Generate and relax surface energy inputs for {mpid}-{hkl}-{uid_short} with {functional}")
 
         FW3 = Firework(
-            FT_WriteSurfaceEnergies(inputs_list=input_list, fltr=fltr, coll=coll, db_file=db_file,
-                                    high_level=high_level),
+            FT_WriteSurfaceEnergiesToDB(inputs_list=input_list, fltr=fltr, coll=coll, db_file=db_file,
+                                        high_level=high_level),
             name=f"Calculate the surface energies for {mpid}-{hkl}-{uid_short} with {functional} and put into DB")
 
         WF = Workflow(fireworks=[FW1, FW2, FW3], links_dict={FW1: [FW2], FW2: [FW3]},

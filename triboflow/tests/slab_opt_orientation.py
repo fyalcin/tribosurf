@@ -8,7 +8,7 @@ Created on Tue Oct 19 11:28:20 2021
 
 from fireworks import Firework, Workflow
 from fireworks import LaunchPad
-from triboflow.firetasks.surfen_tools import FT_SlabOptOrientation
+from triboflow.firetasks.surfen_tools import FT_StartSlabOptOrientation
 
 mpid = 'mp-149'
 functional = 'PBE'
@@ -33,15 +33,15 @@ sg_filter = {'method': 'all'}
 
 lpad = LaunchPad.auto_load()
 
-FT = FT_SlabOptOrientation(mpid=mpid,
-                           functional=functional,
-                           sg_params=sg_params,
-                           sg_filter=sg_filter,
-                           db_file=db_file,
-                           high_level=high_level,
-                           comp_params=comp_params,
-                           override=override,
-                           fake=fake)
+FT = FT_StartSlabOptOrientation(mpid=mpid,
+                                functional=functional,
+                                sg_params=sg_params,
+                                sg_filter=sg_filter,
+                                db_file=db_file,
+                                high_level=high_level,
+                                comp_params=comp_params,
+                                override=override,
+                                fake=fake)
 
 FW = Firework(FT)
 WF1 = Workflow.from_Firework(FW)
