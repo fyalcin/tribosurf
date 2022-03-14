@@ -256,7 +256,7 @@ def get_generalized_kmesh(structure, k_dist, RemoveSymm=False, Vasp6=True):
 
 
 def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
-                                    k_dens_default=12.5, ups={'W': 'W_sv'}):
+                                    k_dens_default=8.5, ups={'W': 'W_sv'}):
     """Make custom vasp settings for static calculations.
     
     Parameters
@@ -441,7 +441,7 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
 
 
 def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
-                                   k_dens_default=12.5, ups={'W': 'W_sv'}):
+                                   k_dens_default=8.5, ups={'W': 'W_sv'}):
     """Make custom vasp settings for relaxations.
     
     Parameters

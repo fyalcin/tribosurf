@@ -49,6 +49,7 @@ import warnings
 from pymatgen.core.lattice import Lattice
 from pymatgen.core.surface import center_slab, Slab
 from pymatgen.core.interface import Interface
+from pymatgen.core.structure import Structure
 from pymatgen.analysis.interfaces.zsl import ZSLGenerator
 
 
@@ -140,17 +141,24 @@ def flip_slab(slab):
                             [0., 1., 0.],
                             [0., 0., -1.]])
     flipped_coords = np.dot(slab.cart_coords, flip_matrix)
-        
-    flipped_slab = Slab(lattice=slab.lattice,
-                        species=slab.species,
-                        coords=flipped_coords,
-                        miller_index=slab.miller_index,
-                        oriented_unit_cell=slab.oriented_unit_cell,
-                        shift=slab.shift,
-                        scale_factor=slab.scale_factor,
-                        reconstruction=slab.reconstruction,
-                        coords_are_cartesian=True,
-                        site_properties=slab.site_properties)
+    
+    try:
+        flipped_slab = Slab(lattice=slab.lattice,
+                            species=slab.species,
+                            coords=flipped_coords,
+                            miller_index=slab.miller_index,
+                            oriented_unit_cell=slab.oriented_unit_cell,
+                            shift=slab.shift,
+                            scale_factor=slab.scale_factor,
+                            reconstruction=slab.reconstruction,
+                            coords_are_cartesian=True,
+                            site_properties=slab.site_properties)
+    except:
+        flipped_slab = Structure(lattice=slab.lattice,
+                                 species=slab.species,
+                                 coords=flipped_coords,
+                                 coords_are_cartesian=True,
+                                 site_properties=slab.site_properties)
     return center_slab(flipped_slab)
     
 
@@ -331,8 +339,8 @@ class InterfaceMatcher:
         try:
             self.inter_dist = float(initial_distance)
         except:
-            av_spacing_top = Shaper._get_average_layer_spacing(self.top_slab)
-            av_spacing_bot = Shaper._get_average_layer_spacing(self.bot_slab)
+            av_spacing_top = Shaper.get_average_layer_spacing(self.top_slab)
+            av_spacing_bot = Shaper.get_average_layer_spacing(self.bot_slab)
             self.inter_dist = np.mean([av_spacing_top, av_spacing_bot]) + distance_boost
                 
     
@@ -627,10 +635,10 @@ class InterfaceMatcher:
         tcs, bcs = self.get_centered_slabs()
         if not tcs and not bcs:
                 return None
-        #interface = stack_aligned_slabs(bcs, tcs)
         
+        #Note that the from_slab method of the Inteface object flips the film over!
         self.interface = Interface.from_slabs(substrate_slab=bcs,
-                                              film_slab=tcs,
+                                              film_slab=flip_slab(tcs),
                                               gap=self.inter_dist,
                                               vacuum_over_film=self.vacuum_thickness)
         

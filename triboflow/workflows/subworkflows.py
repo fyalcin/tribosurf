@@ -244,7 +244,7 @@ def adhesion_energy_swf(top_slab,
     return add_modify_incar(SWF)
 
 
-def calc_pes_swf(top_slab, bottom_slab,
+def calc_pes_swf(interface,
                  interface_name=None,
                  functional='PBE',
                  comp_parameters={},
@@ -266,7 +266,7 @@ def calc_pes_swf(top_slab, bottom_slab,
     
     Parameters
     ----------
-    top_slab : pymatgen.core.surface.Slab
+    interface : pymatgen.core.interface.Interface
         Top slab of the interface.
     bottom_slab : pymatgen.core.surface.Slab
         Bottom slab of the interface.
@@ -274,9 +274,6 @@ def calc_pes_swf(top_slab, bottom_slab,
         Unique name to find the interface in the database with.
         The default is None, which will lead to an automatic interface_name
         generation which will be printed on screen.
-    bottom_mpid : str, optional
-        ID of the bulk material of the top slab in the MP database.
-        The default is None.
     functional : str, optional
         Which functional to use; has to be 'PBE' or 'SCAN'. The default is 'PBE'
     comp_parameters : dict, optional
@@ -308,27 +305,24 @@ def calc_pes_swf(top_slab, bottom_slab,
 
     """
     try:
-        top_miller = list(top_slab.miller_index)
+        top_miller = interface.interface_properties['film_miller']
+        bot_miller = interface.interface_properties['substrate_miller']
+        if not interface_name:
+            mt = ''.join(str(s) for s in top_miller)
+            mb = ''.join(str(s) for s in bot_miller)
+            interface_name = (interface.film.composition.reduced_formula + '_' + mt + '_' +
+                              interface.substrate.composition.reduced_formula + '_' + mb +
+                              '_AutoGen')
+            print('\nYour interface name has been automatically generated to be:'
+                  '\n {}'.format(interface_name))
     except:
-        raise AssertionError("You have used {} as an input for <top_slab>.\n"
-                             "Please use <class 'pymatgen.core.surface.Slab'>"
-                             " instead.".format(type(top_slab)))
-
-    try:
-        bot_miller = list(bottom_slab.miller_index)
-    except:
-        raise AssertionError("You have used {} as an input for <bot_slab>.\n"
-                             "Please use <class 'pymatgen.core.surface.Slab'>"
-                             " instead.".format(type(bottom_slab)))
-
-    if not interface_name:
-        mt = ''.join(str(s) for s in top_miller)
-        mb = ''.join(str(s) for s in bot_miller)
-        interface_name = (top_slab.composition.reduced_formula + '_' + mt + '_' +
-                          bottom_slab.composition.reduced_formula + '_' + mb +
-                          '_AutoGen')
-        print('\nYour interface name has been automatically generated to be:'
-              '\n {}'.format(interface_name))
+        if not interface_name:
+            mt = mb = 'unkown_miller'
+            interface_name = (interface.film.composition.reduced_formula + '_' + mt + '_' +
+                              interface.substrate.composition.reduced_formula + '_' + mb +
+                              '_AutoGen')
+            print('\nYour interface name has been automatically generated to be:'
+                  '\n {}'.format(interface_name))    
 
     if comp_parameters == {}:
         print('\nNo computational parameters have been defined!\n'
@@ -336,7 +330,7 @@ def calc_pes_swf(top_slab, bottom_slab,
               '   ISPIN = 1\n'
               '   ISMEAR = 0\n'
               '   ENCUT = 520\n'
-              '   kpoint density kappa = 5000\n'
+              '   kpoints_density = 8.5\n'
               'We recommend to pass a comp_parameters dictionary'
               ' of the form:\n'
               '   {"use_vdw": <True/False>,\n'
