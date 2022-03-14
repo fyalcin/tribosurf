@@ -693,7 +693,7 @@ class FT_EndThickConvo(FiretaskBase):
         output_slab = slab_from_structure(p['miller'], Structure.from_dict(out_struct_dict))
 
         opt_thickness = {'layers': int(index),
-                         'angstroms': Shaper._get_proj_height(output_slab, 'slab')}
+                         'angstroms': Shaper.get_proj_height(output_slab, 'slab')}
 
         # Create an array containing the thickness vs surface energy info
         thick_array = []

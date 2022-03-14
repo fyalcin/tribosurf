@@ -3,7 +3,7 @@
 """
 Created on Wed Apr 21 01:05:05 2021
 
-Class and methods that deal with the general Shaper of structures.
+Class and methods that deal with the classification, construction, and modification of structures.
 
 The module contains:
 
@@ -11,14 +11,27 @@ The module contains:
         General class to examine layers, bonds, lattice parameters,
         and resizes slabs with desired transformations.
         It includes the following methods:
-            - _get_layer_spacings
-            - resize_slab
-            - get_surface_normal
-            - _get_hkl_projection
-            - _get_layers
-            - _remove_layers
+            - get_layer_spacings
+            - get_proj_height
+            - resize
+            - modify_vacuum
+            - get_hkl_projection
+            - get_layers
+            - remove_layers
+            - get_average_layer_spacing
+            - get_bonds
+            - get_c_ranges
+            - get_bv
+            - get_surface_area
+            - bonds_by_shift
+            - fix_regions
+            - identify_slab
+            - generate_slabs
+            - get_constrained_ouc
 
     Functions:
+    - range_diff
+    - multirange_diff
     - attr_to_dict
 
     Author: Fırat Yalçın
@@ -39,6 +52,7 @@ from pymatgen.core.lattice import Lattice
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import center_slab, Slab, SlabGenerator, get_symmetrically_distinct_miller_indices
 from pymatgen.io.cif import CifParser
+from pymatgen.transformations.standard_transformations import SupercellTransformation
 from scipy.cluster.hierarchy import fcluster, linkage
 from scipy.spatial.distance import squareform
 
@@ -66,10 +80,25 @@ def attr_to_dict(obj, attrs):
     return attr_dict
 
 
-class Shaper():
+def get_subset_indices(list1, list2):
+    """
+    checks if list1 is a sublist of list2
+    """
+    couples = list(itertools.permutations(list2, len(list1)))
+    indices = list(itertools.permutations(range(len(list2)), len(list1)))
+    try:
+        index = indices[couples.index(tuple(list1))]
+    except:
+        return False
+    else:
+
+        return index
+
+
+class Shaper:
 
     @staticmethod
-    def _get_layer_spacings(struct, tol=0.1):
+    def get_layer_spacings(struct, tol=0.1, direction=2):
         """
         Simple method to calculate the projected heights of the spacings
         between layers in the given structure.
@@ -82,6 +111,11 @@ class Shaper():
             be parallel to the plane that the first 2 lattice vectors lie on.
         tol : float, optional
             Tolerance parameter to cluster sites into layers. The default is 0.1.
+        direction : int, optional
+            Direction in which we calculate the projected height. Allowed
+            values are 0, 1, and 2, which correspond to the first, second,
+            and third lattice vectors respectively.
+            The default is 2.
     
         Returns
         -------
@@ -92,7 +126,7 @@ class Shaper():
         """
 
         # Layer info that contains the c-coordinates and sites
-        layers = Shaper._get_layers(struct, tol)
+        layers = Shaper.get_layers(struct, tol, direction)
 
         # Only the c-coordinates of the layers are needed
         layers_c = sorted(layers.keys())
@@ -107,12 +141,12 @@ class Shaper():
         # For slabs with the third lattice vector not along miller
         # direction, we need the projected height to also project the vacuum
         # height
-        proj_height = Shaper._get_proj_height(struct)
+        proj_height = Shaper.get_proj_height(struct)
 
         return np.round([spacing * proj_height for spacing in d], 10)
 
     @staticmethod
-    def _get_proj_height(struct, region='cell', min_vac=4.0):
+    def get_proj_height(struct, region='cell', min_vac=4.0, direction=2):
         """
         Internal method to calculate the projected height of a specific region.
         For more than one slab region, the total height is calculated.
@@ -127,6 +161,11 @@ class Shaper():
         min_vac : float, optional
             Thickness threshold in angstroms to define a region as a
             vacuum region. The default is 4.0.
+        direction : int, optional
+            Direction in which we calculate the projected height. Allowed
+            values are 0, 1, and 2, which correspond to the first, second,
+            and third lattice vectors respectively.
+            The default is 2.
     
         Raises
         ------
@@ -142,11 +181,16 @@ class Shaper():
     
         """
 
-        proj_height = Shaper._get_hkl_projection(struct.lattice.matrix[2], struct)
+        # proj_height = Shaper.get_hkl_projection(struct.lattice.matrix[direction], struct)
+        lateral_vecs = [struct.lattice.matrix[i] for i in range(3) if i != direction]
+        normal = np.cross(*lateral_vecs)
+        normal /= np.linalg.norm(normal)
+        vec_to_proj = struct.lattice.matrix[direction]
+        proj_height = np.abs(np.dot(vec_to_proj, normal))
         if region == "cell":
             return proj_height
         elif region == "slab" or region == "vacuum":
-            spacings = Shaper._get_layer_spacings(struct)
+            spacings = Shaper.get_layer_spacings(struct)
             slab_height = sum([s for s in spacings if s < min_vac])
             return slab_height if region == "slab" else proj_height - slab_height
         else:
@@ -196,34 +240,30 @@ class Shaper():
         # Input slab is first centered for the cases where the slab spills
         # outside the box from the top and the bottom
         struct_centered = center_slab(struct.copy(sanitize=True))
-        initial_thickness = Shaper._get_proj_height(struct_centered, 'slab')
+        initial_thickness = Shaper.get_proj_height(struct_centered, 'slab')
 
         if slab_thickness:
             # Layers (containing sites) are removed from the bottom until
             # the desired slab_thickness is reached
-            num_layers = len(Shaper._get_layers(struct_centered, tol))
+            num_layers = len(Shaper.get_layers(struct_centered, tol))
             layers_to_remove = int(chunk_size * np.floor((num_layers - slab_thickness) / chunk_size))
-            #print(f'initial thickness {initial_thickness}, num layers {num_layers}, min_thick_A {min_thick_A}, chunk size {chunk_size}')
             if min_thick_A:
-                spacings = [spacing for spacing in Shaper._get_layer_spacings(struct_centered, tol) if spacing < 4.0]
+                spacings = [spacing for spacing in Shaper.get_layer_spacings(struct_centered, tol) if spacing < 4.0]
                 if initial_thickness > min_thick_A:
                     while initial_thickness - sum(spacings[:layers_to_remove]) < min_thick_A:
                         layers_to_remove -= chunk_size
-                        #print(f'layers to remove {layers_to_remove}')
                 else:
                     layers_to_remove = 0
             if layers_to_remove > 0:
-                struct_resized = Shaper._remove_layers(struct_centered, layers_to_remove,
-                                                       tol=tol, method='layers')
+                struct_resized = Shaper.remove_layers(struct_centered, layers_to_remove,
+                                                      tol=tol, method='layers')
             else:
                 struct_resized = struct_centered
-            num_layers_resized = len(Shaper._get_layers(struct_resized, tol))
-            #print(f'after resize, num layers is {num_layers_resized}\n')
         else:
             struct_resized = struct_centered
         # Vacuum region is modified to the desired thickness
         if vacuum_thickness:
-            resized_struct = Shaper._modify_vacuum(struct_resized, vacuum_thickness)
+            resized_struct = Shaper.modify_vacuum(struct_resized, vacuum_thickness)
         else:
             resized_struct = struct_resized
 
@@ -234,8 +274,8 @@ class Shaper():
 
         # bbs = kwargs.get('bbs')
         # if bbs:
-        #     layers_initial = len(Shaper._get_layers(struct_centered, tol))
-        #     layers_resized = len(Shaper._get_layers(resized_struct, tol))
+        #     layers_initial = len(Shaper.get_layers(struct_centered, tol))
+        #     layers_resized = len(Shaper.get_layers(resized_struct, tol))
         #     diff = layers_initial - layers_resized
         #     shifts = list(bbs.keys())
         #     top_shift = np.round(resized_struct.shift, 4)
@@ -247,7 +287,7 @@ class Shaper():
         return resized_struct
 
     @staticmethod
-    def _modify_vacuum(struct, vac_thick, method='to_value', center=True):
+    def modify_vacuum(struct, vac_thick, method='to_value', center=True):
         """
         Method to modify the vacuum region in a structure.
     
@@ -298,12 +338,12 @@ class Shaper():
         lat_params = attr_to_dict(struct.lattice, lat_attrs)
 
         # latvec = struct.lattice.matrix
-        proj_height = Shaper._get_proj_height(struct)
+        proj_height = Shaper.get_proj_height(struct)
 
         # 'c' parameter of the Lattice is modified to adjust vacuum
         # to the desired thickness
         if method == 'to_value':
-            initial_vac = Shaper._get_proj_height(struct, 'vacuum')
+            initial_vac = Shaper.get_proj_height(struct, 'vacuum')
             lat_params['c'] += (vac_thick - initial_vac) * lat_params['c'] / proj_height
         elif method == 'by_value':
             lat_params['c'] += vac_thick * lat_params['c'] / proj_height
@@ -315,34 +355,34 @@ class Shaper():
 
         return modified_struct
 
-    @staticmethod
-    def _get_hkl_projection(vector, struct):
-        """
-        Simple method to calculate the norm of theprojection of a vector
-        along the hkl direction which is assumed to be normal to the plane
-        formed by the first two lattice vectors of the passed structure.
-        Useful for structures where the third lattice vector is not in
-        the same direction as the surface normal.
-    
-        Parameters
-        ----------
-        struct : pymatgen.core.structure.Structure
-            Main object in pymatgen to store structures.
-    
-        Returns
-        -------
-        float
-            Projected height of the given structure in the direction
-            that is normal to the x-y plane
-    
-        """
-        latvec = struct.lattice.matrix
-        normal = np.cross(latvec[0], latvec[1])
-        normal /= np.linalg.norm(normal)
-        return np.dot(vector, normal)
+    # @staticmethod
+    # def get_hkl_projection(vector, struct):
+    #     """
+    #     Simple method to calculate the norm of the projection of a vector
+    #     along the hkl direction which is assumed to be normal to the plane
+    #     formed by the first two lattice vectors of the passed structure.
+    #     Useful for structures where the third lattice vector is not in
+    #     the same direction as the surface normal.
+    #
+    #     Parameters
+    #     ----------
+    #     struct : pymatgen.core.structure.Structure
+    #         Main object in pymatgen to store structures.
+    #
+    #     Returns
+    #     -------
+    #     float
+    #         Projected height of the given structure in the direction
+    #         that is normal to the x-y plane
+    #
+    #     """
+    #     latvec = struct.lattice.matrix
+    #     normal = np.cross(latvec[0], latvec[1])
+    #     normal /= np.linalg.norm(normal)
+    #     return np.abs(np.dot(vector, normal))
 
     @staticmethod
-    def _get_layers(struct, tol=0.1):
+    def get_layers(struct, tol=0.1, direction=2):
         """
         Finds the layers in the structure taking z-direction as the primary
         direction such that the layers form planes parallel to xy-plane.
@@ -356,6 +396,12 @@ class Shaper():
     
         tol : float, optional
             Tolerance parameter to cluster sites into layers. The default is 0.1.
+
+        direction : int, optional
+            Which direction to count the layers in. Allowed values are 0, 1, and 2,
+            and they correspond to the first, second, and the third lattice
+            vectors respectively.
+            The default is 2.
     
         Returns
         -------
@@ -372,9 +418,9 @@ class Shaper():
         dist_matrix = np.zeros((n, n))
         for i, j in itertools.combinations(list(range(n)), 2):
             if i != j:
-                cdist = frac_coords[i][2] - frac_coords[j][2]
+                cdist = frac_coords[i][direction] - frac_coords[j][direction]
                 # cdist = abs(cdist - round(cdist)) * proj_height
-                cdist = abs(cdist - round(cdist)) * struct.lattice.abc[2]
+                cdist = abs(cdist - round(cdist)) * struct.lattice.abc[direction]
                 dist_matrix[i, j] = cdist
                 dist_matrix[j, i] = cdist
 
@@ -388,15 +434,14 @@ class Shaper():
         for i, v in enumerate(clusters):
             layers[v].append(i)
 
-        # for each layer, find sites that belong to it and assign an
-        # average c-value for the layer
-        layers = {sum([struct.frac_coords[i][2] - np.floor(struct.frac_coords[i][2])
-                       for i in v]) / len(v): v for k, v in layers.items()}
+        # for each layer, find sites that belong to it and assign the first
+        # site's c-coord as the c-coord of the layer
+        layers = {struct.frac_coords[v[0]][direction]: v for k, v in layers.items()}
         return layers
 
     @staticmethod
-    def _remove_layers(slab, num_layers, tol=0.1, method='target', position='bottom',
-                       center=True):
+    def remove_layers(slab, num_layers, tol=0.1, method='target', position='bottom',
+                      center=True):
         """
         Removes layers from the bottom of the slab while updating the number
         of bonds broken in the meantime.
@@ -427,7 +472,7 @@ class Shaper():
             Copy of the input Slab structure with layers removed.
     
         """
-        layers = Shaper._get_layers(slab, tol)
+        layers = Shaper.get_layers(slab, tol)
         if num_layers > len(layers):
             raise ValueError('Number of layers to remove/target can\'t exceed \
                              the number of layers in the given slab.')
@@ -447,7 +492,7 @@ class Shaper():
         return center_slab(slab_copy) if center else slab_copy
 
     @staticmethod
-    def _get_average_layer_spacing(slab, tol=0.1, vacuum_threshold=6.0):
+    def get_average_layer_spacing(slab, tol=0.1, vacuum_threshold=6.0):
         """
         Compute the average distance between the slabs layers disregarding the
         vacuum region.
@@ -465,14 +510,14 @@ class Shaper():
             Average layer spacing
     
         """
-        spacings = Shaper._get_layer_spacings(slab, tol)
+        spacings = Shaper.get_layer_spacings(slab, tol)
         spacings_no_vac = np.delete(spacings,
                                     np.where(spacings >= vacuum_threshold))
         av_spacing = np.mean(spacings_no_vac)
         return av_spacing
 
     @staticmethod
-    def _get_bonds(struct, method='covalent_radii', dtol=0.20, wtol=0.15):
+    def get_bonds(struct, method='covalent_radii', dtol=0.20, wtol=0.15):
         """
         Finds all unique bonds in the structure and orders them by bond strength
         using bond valance method and with the assumption that the ideal bond length
@@ -554,7 +599,7 @@ class Shaper():
         return bonds
 
     @staticmethod
-    def _get_c_ranges(struct, nn_method='all'):
+    def get_c_ranges(struct, nn_method='all', cutoff=5.0):
         """
         Calculates all the bonds in the given structure
 
@@ -565,6 +610,9 @@ class Shaper():
         nn_method: str, optional
             Nearest-neighbor algorithm to be used. Currently supports
             'all' and 'BNN'. For more info, check out BrunnerNN documentation.
+        cutoff : float, optional
+            Cutoff radius used in neighbor searching. The value is in Angstroms.
+            The default value is 5.0A.
 
         Returns
         -------
@@ -574,7 +622,7 @@ class Shaper():
 
         """
         cr = CovalentRadius().radius
-        cutoff = 2 * max([a[0] for a in list(Shaper._get_bonds(struct).values())])
+        # cutoff = 2 * max([a[0] for a in list(Shaper.get_bonds(struct).values())])
         if nn_method == 'all':
             nn_list = struct.get_all_neighbors(r=cutoff)
         elif nn_method == 'BNN':
@@ -584,15 +632,16 @@ class Shaper():
             raise ValueError('"nn_method" must be one of "all" or "BNN"')
 
         c_ranges = []
+        species = [str(i) for i in struct.species]
         for s_index, site in enumerate(struct):
             for nn in nn_list[s_index]:
                 c_range = np.round(sorted([site.frac_coords[2], nn.frac_coords[2]]), 3)
                 if c_range[0] != c_range[1]:
                     nn_site_index = nn.index
-                    sp1 = str(struct.species[s_index])
-                    sp2 = str(struct.species[nn_site_index])
+                    sp1 = species[s_index]
+                    sp2 = species[nn_site_index]
                     dist = nn.nn_distance
-                    bv = Shaper._get_bv(cr[sp1], cr[sp2], dist)
+                    bv = Shaper.get_bv(cr[sp1], cr[sp2], dist)
                     bv = ((sp1, s_index), (sp2, nn_site_index), dist, bv)
                     if c_range[0] < 0:
                         c_ranges.append((0, c_range[1], bv))
@@ -605,7 +654,7 @@ class Shaper():
         return c_ranges
 
     @staticmethod
-    def _get_bv(r1, r2, bond_dist):
+    def get_bv(r1, r2, bond_dist):
         b = 0.37
         R_0 = r1 + r2
         return np.exp((R_0 - bond_dist) / b)
@@ -616,7 +665,7 @@ class Shaper():
         return np.linalg.norm(np.cross(mat[0], mat[1]))
 
     @staticmethod
-    def _bonds_by_shift(SG, nn_method='all', tol=0.1):
+    def bonds_by_shift(SG, nn_method='all', tol=0.1, cutoff=5.0):
         """
         Calculates the bond valence sums of the broken bonds corresponding to
         all the possible shifts
@@ -629,6 +678,9 @@ class Shaper():
         tol : float, optional
             Tolerance value used in the layering of sites in units of Angstroms.
             The default is 0.1.
+        cutoff : float, optional
+            Cutoff radius used in neighbor searching. The value is in Angstroms.
+            The default value is 5.0A.
 
         Returns
         -------
@@ -639,7 +691,7 @@ class Shaper():
         """
         ouc = SG.oriented_unit_cell
         area = Shaper.get_surface_area(ouc)
-        c_ranges = Shaper._get_c_ranges(ouc, nn_method)
+        c_ranges = Shaper.get_c_ranges(ouc, nn_method, cutoff)
         shifts = np.round(SG._calculate_possible_shifts(tol=tol), 4)
         bbs = {}
         for shift in shifts:
@@ -685,7 +737,7 @@ class Shaper():
                              'bottom_third']
         if fix_type not in allowed_fix_types:
             raise ValueError('Your fix_type is not in allowed_fix_types')
-        layers = Shaper._get_layers(struct, tol)
+        layers = Shaper.get_layers(struct, tol)
         sorted_layers = sorted(layers.keys())
         num_layers = len(layers)
         fix_arr = np.asarray([[True, True, True] for i in range(len(struct))])
@@ -807,42 +859,60 @@ class Shaper():
                 miller = [(*miller,)]
             else:
                 miller = [(*m,) for m in miller]
+
         slab_thick = sg_params.get('slab_thick')
-        tol = sg_params.get('tol')
-        nn_method = 'all'
         vac_thick = sg_params.get('vac_thick')
         mns = sg_params.get('max_normal_search')
+        lll_reduce = sg_params.get('lll_reduce', True)
+        primitive = sg_params.get('prim', True)
+        tol = sg_params.get('tol')
 
         SG_dict = {}
         slabs_list = []
         for m in miller:
+            print(m)
             max_normal_search = max([abs(i) for i in m]) if mns == 'max' else mns
             SG = SlabGenerator(initial_structure=bulk_conv,
                                miller_index=m,
                                min_slab_size=slab_thick,
                                min_vacuum_size=vac_thick,
-                               lll_reduce=sg_params.get('lll_reduce', True),
+                               lll_reduce=lll_reduce,
                                center_slab=sg_params.get('center_slab', True),
                                in_unit_planes=sg_params.get('in_unit_planes', True),
-                               primitive=sg_params.get('prim', True),
+                               primitive=primitive,
                                max_normal_search=max_normal_search,
                                reorient_lattice=True)
             slabs = SG.get_slabs(ftol=tol, symmetrize=sg_params.get('symmetrize', False))
+
+            ouc = Shaper.get_matching_ouc(slabs[0])
+            if not ouc:
+                SG = SlabGenerator(initial_structure=bulk_conv,
+                                   miller_index=m,
+                                   min_slab_size=slab_thick,
+                                   min_vacuum_size=vac_thick,
+                                   lll_reduce=False,
+                                   center_slab=sg_params.get('center_slab', True),
+                                   in_unit_planes=sg_params.get('in_unit_planes', True),
+                                   primitive=False,
+                                   max_normal_search=max_normal_search,
+                                   reorient_lattice=True)
+                slabs = SG.get_slabs(ftol=tol, symmetrize=sg_params.get('symmetrize', False))
+                ouc = Shaper.get_matching_ouc(slabs[0])
+            for slab in slabs:
+                slab.oriented_unit_cell = ouc
 
             # since the terminations repeat every d_hkl distance in c direction,
             # the distance between miller planes, we need to figure out how many
             # layers this d_hkl portion corresponds to in order to preserve terminations
             d_hkl = bulk_conv.lattice.d_hkl(m)
-            ouc = slabs[0].oriented_unit_cell
-            ouc_layers = len(Shaper._get_layers(ouc, tol))
-            ouc_height = Shaper._get_proj_height(ouc)
+            ouc_layers = len(Shaper.get_layers(ouc, tol))
+            ouc_height = Shaper.get_proj_height(ouc)
+            print(f'OUC RATIO THING IS {ouc_height / d_hkl}')
             # we calculate how many layers pymatgen considers a single layer here
             pmg_layer_size = int(ouc_layers / round(ouc_height / d_hkl))
 
             resize = sg_params.get('resize', True)
-            print(f'resize is {resize}')
             if resize:
-                # Not the best name perhaps? layer_step is another candidate
                 preserve_terminations = sg_params.get('preserve_terminations')
                 chunk_size = pmg_layer_size if preserve_terminations else 1
                 min_thick_A = sg_params.get('min_thick_A', None)
@@ -857,10 +927,10 @@ class Shaper():
                                    miller_index=m,
                                    min_slab_size=slab_thick_pmg,
                                    min_vacuum_size=vac_thick,
-                                   lll_reduce=sg_params.get('lll_reduce', True),
+                                   lll_reduce=lll_reduce,
                                    center_slab=sg_params.get('center_slab', True),
                                    in_unit_planes=sg_params.get('in_unit_planes', True),
-                                   primitive=sg_params.get('prim', True),
+                                   primitive=primitive,
                                    max_normal_search=max_normal_search,
                                    reorient_lattice=True)
                 slabs = SG.get_slabs(ftol=tol, symmetrize=sg_params.get('symmetrize', False))
@@ -873,14 +943,16 @@ class Shaper():
                       ' may or may not solve this issue.')
                 continue
 
-            bbs = Shaper._bonds_by_shift(SG, nn_method, tol)
+            nn_method = 'all'
+            bbs = Shaper.bonds_by_shift(SG, nn_method, tol, cutoff=max(bulk_conv.lattice.abc))
             for slab in slabs:
                 slab.energy = bbs[np.round(slab.shift, 4)]
+                slab.pmg_layer_size = pmg_layer_size
 
             print(
-                f'{ouc.composition.reduced_formula}{m} has {[len(Shaper._get_layers(s, tol)) for s in slabs]} layer slabs'
+                f'{ouc.composition.reduced_formula}{m} has {[len(Shaper.get_layers(s, tol)) for s in slabs]} layer slabs'
                 f' with {[s.num_sites for s in slabs]} sites and\n'
-                f'thicknesses {[np.round(Shaper._get_proj_height(s, "slab"), 3) for s in slabs]} Angstroms.')
+                f'thicknesses {[np.round(Shaper.get_proj_height(s, "slab"), 3) for s in slabs]} Angstroms.')
             print(f'The OUC has {ouc_layers} layers and d_hkl is {pmg_layer_size} layers.')
             print(f'Their BVS are {[s.energy for s in slabs]}.\n')
 
@@ -918,3 +990,25 @@ class Shaper():
                        'gamma': slab.lattice.gamma}
         ouc = slab.oriented_unit_cell.get_primitive_structure(constrain_latt=constraints)
         return ouc
+
+    @staticmethod
+    def get_matching_ouc(slab):
+        trans = {0: ((0, 0, 1), (0, 1, 0), (1, 0, 0)),
+                 1: ((1, 0, 0), (0, 0, 1), (0, 1, 0))}
+        slab_lattice = np.round(slab.lattice.abc[:2], 6)
+        ouc = slab.oriented_unit_cell
+        indices = get_subset_indices(slab_lattice, np.round(ouc.lattice.abc, 6))
+        if not indices:
+            ouc = ouc.copy(sanitize=True)
+            indices = get_subset_indices(slab_lattice, np.round(ouc.lattice.abc, 6))
+            if not indices:
+                ouc = Shaper.get_constrained_ouc(slab)
+                indices = get_subset_indices(slab_lattice, np.round(ouc.lattice.abc, 6))
+                if not indices:
+                    return None
+        trans_index = 3 - sum(indices)
+        if trans_index == 2:
+            return ouc
+        else:
+            st = SupercellTransformation(trans[trans_index])
+            return st.apply_transformation(ouc)

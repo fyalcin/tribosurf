@@ -16,92 +16,10 @@ from atomate.utils.utils import env_chk
 from atomate.vasp.fireworks.core import StaticFW
 from atomate.vasp.powerups import add_modify_incar
 
-from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
+from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.vasp_tools import get_custom_vasp_static_settings
 from triboflow.utils.structure_manipulation import clean_up_site_properties
 
-
-@explicit_serialize
-class FT_StartPPESWF(FiretaskBase):
-    """
-    Start a CalcPPES_SWF subworkflow that calculates a PPES.
-    
-    The workflow is only added if there are not already relevant results in
-    the high-level database.
-    
-    Parameters
-    ----------
-    interface_name : str
-        Name of the interface in the high-level database.
-    functional : str
-        Which functional to use; has to be 'PBE' or 'SCAN'.
-    distance_list : list of float, optional
-        Modification of the equilibrium distance between the slabs.
-        The default is [-0.5, -0.25, 0.0, 0.25, 0.5, 2.5, 3.0, 4.0, 5.0, 7.5].
-    out_name : str, optional
-        Name for the PPES data in the high-level database. The default is
-        'PPES@minimum'.
-    structure_name : str, optional
-        Name of the structure in the interface entry to the high-level database
-        for which the PPES should be calculated. The default is
-        'minimum_relaxed'.
-    spec : dict, optional
-        fw_spec that can be passed to the SWF and will be passed on. The
-        default is {}.
-
-    Returns
-    -------
-    SWF : fireworks.core.firework.Workflow
-        Subworkflow to calculate the PPES for a certain interface.
-
-    """
-
-    required_params = ['interface_name', 'functional', 'distance_list']
-    optional_params = ['db_file', 'structure_name', 'out_name', 'high_level_db']
-
-    def run_task(self, fw_spec):
-        from triboflow.workflows.subworkflows import calc_ppes_swf
-
-        name = self.get('interface_name')
-        functional = self.get('functional')
-        tag = self.get('tag')
-
-        db_file = self.get('db_file')
-        if not db_file:
-            db_file = env_chk('>>db_file<<', fw_spec)
-
-        structure_name = self.get('structure_name', 'minimum_relaxed')
-        out_name = self.get('out_name', 'PPES@minimum')
-        
-        d_list = self.get('distance_list')
-        hl_db = self.get('high_level_db', True)
-
-        nav_structure = StructureNavigator(
-            db_file=db_file, 
-            high_level=hl_db)
-        interface_dict = nav_structure.get_interface_from_db(
-            name=name, 
-            functional=functional)
-        
-        calc_PPES = True
-        if interface_dict.get('PPES') is not None:
-            if interface_dict['PPES'].get(out_name) is not None:
-                print('\n A PPES-object with out_name: '+out_name+
-                      '\n has already been created in the interface entry: '+
-                      name+'\n for the '+functional+' functional.')
-                calc_PPES = False
-                
-        if calc_PPES:
-            SWF = calc_ppes_swf(interface_name=name,
-                                functional=functional,
-                                distance_list=d_list,
-                                out_name=out_name,
-                                structure_name=structure_name,
-                                spec=fw_spec)
-
-            return FWAction(additions=SWF, update_spec=fw_spec)
-        else:
-            return FWAction(update_spec=fw_spec)
 
 @explicit_serialize
 class FT_DoPPESCalcs(FiretaskBase):

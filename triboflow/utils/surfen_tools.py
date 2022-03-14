@@ -76,12 +76,15 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
     SG : pymatgen.core.surface.SlabGenerator
         Pymatgen SlabGenerator object. Necessary to generate substructures for
         non-stoichiometric slabs with a specific termination.
+        The default is None.
     tol : float
         Tolerance value used in the layering of sites used in various
         methods throughout. Value is in Angstroms.
+        The default is 0.1.
     custom_id : str
         Unique id to identify the database entry linked to the surface energy
         calculation of the slab.
+        The default is None.
 
     Returns
     -------
@@ -96,13 +99,13 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
     id_slab = Shaper.identify_slab(slab)
     sym = id_slab['symmetric']
     sto = id_slab['stoichiometric']
+
     ## oriented unit cell is used for the reference bulk energies
-    ouc = Shaper.get_constrained_ouc(slab)
-    ouc_layers = len(Shaper._get_layers(ouc, tol))
-    slab_layers = len(Shaper._get_layers(slab, tol))
-    slab_thickness = Shaper._get_proj_height(slab, 'slab')
-    vac_thickness = np.round(Shaper._get_proj_height(slab, 'vacuum'), 3)
-    ouc_input = generate_input_dict(ouc, 'relax', 'ouc')
+    ouc = slab.oriented_unit_cell
+    slab_layers = len(Shaper.get_layers(slab, tol))
+    slab_thickness = Shaper.get_proj_height(slab, 'slab')
+    vac_thickness = np.round(Shaper.get_proj_height(slab, 'vacuum'), 3)
+    ouc_input = generate_input_dict(ouc, 'static', 'ouc')
     millerstr = ''.join([str(i) for i in slab.miller_index])
     inputs_dict = {'struct': slab,
                    'custom_id': custom_id,
@@ -117,6 +120,20 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
                                    'bvs': slab.energy,
                                    'area': slab.surface_area}}
 
+    try:
+        pmg_layer_size = slab.pmg_layer_size
+    except AttributeError:
+        ouc_layers = len(Shaper.get_layers(ouc, tol))
+        print('Your slab does not have a "pmg_layer_size" attribute which is needed to'
+              'determine if a slab has complementary terminations. The workflow will proceed'
+              'assuming that your slab has complementary terminations, which could lead to'
+              'incorrect surface energies.')
+        comp = True
+        pmg_layer_size = ouc_layers
+    else:
+        comp = True if slab_layers % pmg_layer_size == 0 else False
+        inputs_dict['slab_params'].update({'comp': comp})
+
     if sym:
         slab_relax_input = generate_input_dict(slab, 'relax', 'slab_relax')
         inputs_dict['inputs'] += [slab_relax_input]
@@ -127,14 +144,14 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
             # to each other, this is done by SlabGenerator.get_slab() which always creates
             # a stoichiometric slab.
             sto_slab = SG.get_slab(slab.shift, tol)
-            sto_slab_layers = len(Shaper._get_layers(sto_slab, tol))
-            # Since SlabGenerator creates a larger than than we want, we remove layers
+            sto_slab_layers = len(Shaper.get_layers(sto_slab, tol))
+            # Since SlabGenerator creates a larger slab than we want, we remove layers
             # and the number of layers removed is an integer multiple of the number of layers
-            # in the oriented unit cell to preserve stoichiometry
-            layers_to_remove = int(ouc_layers * np.floor((sto_slab_layers - slab_layers) / ouc_layers))
+            # in the d_hkl portion of the oriented unit cell to preserve stoichiometry
+            layers_to_remove = int(pmg_layer_size * np.floor((sto_slab_layers - slab_layers) / ouc_layers))
             target_layers = sto_slab_layers - layers_to_remove
             sto_slab = Shaper.resize(sto_slab, target_layers, vac_thickness, tol)
-            # sto_slab = Shaper._remove_layers(sto_slab, layers_to_remove, tol, method='layers')
+            # sto_slab = Shaper.remove_layers(sto_slab, layers_to_remove, tol, method='layers')
             sto_slab_input = generate_input_dict(sto_slab, 'static', 'sto_slab')
             slab_static_input = generate_input_dict(slab, 'static', 'slab_static')
             inputs_dict['inputs'] += [slab_static_input, sto_slab_input]
@@ -150,43 +167,24 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
 
         inputs_dict['inputs'] += [slab_tf_input, slab_bf_input, slab_static_input]
 
-        if not sto:
-            # For asymmetric slabs, we need the periodicity in the layering to figure out
-            # if the top and bottom terminations are complementary.
-            bbs = Shaper._bonds_by_shift(SG, nn_method, tol)
-            bvs, indices = np.unique(list(bbs.values()), return_index=True)
-            periodicity = len(bvs)
+        if not comp:
+            # For non-stoichiometric slabs, we need the stoichiometric versions in order
+            # to calculate the cleavage energy which is a component in the surface energy
+            # calculation.
+            all_shifts = SG._calculate_possible_shifts(tol)
+            top_shift_index = all_shifts.index(slab.shift)
+            bot_shift_index = (top_shift_index - slab_layers) % len(all_shifts)
+            sto_slab_top = SG.get_slab(slab.shift, tol)
+            sto_slab_bot = SG.get_slab(all_shifts[bot_shift_index], tol)
+            sto_slab_layers = len(Shaper.get_layers(sto_slab_top, tol))
+            layers_to_remove = int(pmg_layer_size * np.floor((sto_slab_layers - slab_layers) / ouc_layers))
+            target_layers = sto_slab_layers - layers_to_remove
+            sto_slab_top = Shaper.resize(sto_slab_top, target_layers, vac_thickness, tol)
+            sto_slab_bot = Shaper.resize(sto_slab_bot, target_layers, vac_thickness, tol)
+            sto_slab_top_input = generate_input_dict(sto_slab_top, 'static', 'sto_slab_top')
+            sto_slab_bot_input = generate_input_dict(sto_slab_bot, 'static', 'sto_slab_bot')
+            inputs_dict['inputs'] += [sto_slab_top_input, sto_slab_bot_input]
 
-            if slab_layers % periodicity != 0:
-                inputs_dict['slab_params'].update({'comp': False})
-                # For non-stoichiometric slabs, we need the stoichiometric versions in order
-                # to calculate the cleavage energy which is a component in the surface energy
-                # calculation.
-                all_shifts = SG._calculate_possible_shifts(tol)
-                top_shift_index = all_shifts.index(slab.shift)
-                bot_shift_index = (top_shift_index - slab_layers) % len(all_shifts)
-                sto_slab_top = SG.get_slab(slab.shift, tol)
-                sto_slab_bot = SG.get_slab(all_shifts[bot_shift_index], tol)
-                sto_slab_layers = len(Shaper._get_layers(sto_slab_top, tol))
-                layers_to_remove = int(ouc_layers * np.floor((sto_slab_layers - slab_layers) / ouc_layers))
-                target_layers = sto_slab_layers - layers_to_remove
-                sto_slab_top = Shaper.resize(sto_slab_top, target_layers, vac_thickness, tol)
-                sto_slab_bot = Shaper.resize(sto_slab_bot, target_layers, vac_thickness, tol)
-                # sto_slab_top = Shaper._remove_layers(sto_slab_top, layers_to_remove, tol, method='layers')
-                # sto_slab_bot = Shaper._remove_layers(sto_slab_bot, layers_to_remove, tol, method='layers')
-                sto_slab_top_input = generate_input_dict(sto_slab_top, 'static', 'sto_slab_top')
-                sto_slab_bot_input = generate_input_dict(sto_slab_bot, 'static', 'sto_slab_bot')
-                inputs_dict['inputs'] += [sto_slab_top_input, sto_slab_bot_input]
-            else:
-                inputs_dict['slab_params'].update({'comp': True})
-                sto_slab = SG.get_slab(slab.shift, tol)
-                sto_slab_layers = len(Shaper._get_layers(sto_slab, tol))
-                layers_to_remove = int(ouc_layers * np.floor((sto_slab_layers - slab_layers) / ouc_layers))
-                target_layers = sto_slab_layers - layers_to_remove
-                sto_slab = Shaper.resize(sto_slab, target_layers, vac_thickness, tol)
-                # sto_slab = Shaper._remove_layers(sto_slab, layers_to_remove, tol, method='layers')
-                sto_slab_input = generate_input_dict(sto_slab, 'static', 'sto_slab')
-                inputs_dict['inputs'] += [sto_slab_input]
     return inputs_dict
 
 
@@ -257,8 +255,7 @@ def get_surfen_inputs_from_mpid(mpid,
     """
 
     coll = f'{functional}.bulk_data'
-    bulk_conv = get_conv_bulk_from_mpid(mpid, coll, db_file, high_level)
-    candidates = generate_candidate_slabs(bulk_conv, sg_params, sg_filter)
+    candidates = generate_candidate_slabs_from_mpid(mpid, sg_params, sg_filter, coll, db_file, high_level)
     tol = sg_params.get('tol')
     inputs_list = [get_surfen_inputs_from_slab(c[0], c[1], tol, custom_id) for c in candidates]
     inputs_list = update_inputs_list(inputs_list, comp_params)
@@ -453,17 +450,21 @@ def put_surfen_inputs_into_db(inputs_list, sg_params, comp_params, fltr, coll, d
         slab = slab.get('struct')
         for calc in inputs:
             struct = calc['struct']
+            uid_input = calc['uid']
+            tag = calc['tag']
             loc = calc['loc']
             loc_input = '.'.join(loc)
             nav.update_data(
                 collection=coll,
                 fltr=fltr,
-                new_values={'$set': {loc_input + '.structure': struct.as_dict()}},
+                new_values={'$set': {loc_input + '.structure': struct.as_dict(),
+                                     loc_input + '.uid': uid_input,
+                                     loc_input + '.task_label': tag}},
                 upsert=True)
         loc_slab = '.'.join(loc[:3])
 
         tol = sg_params.get('tol')
-        layers = Shaper._get_layers(slab, tol)
+        layers = Shaper.get_layers(slab, tol)
         top_layer = [str(slab[site].species) for site in layers[max(layers)]]
         bot_layer = [str(slab[site].species) for site in layers[min(layers)]]
         terminations = {'top': top_layer, 'bottom': bot_layer}
@@ -540,16 +541,19 @@ def get_calc_wf(struct, vis, tag, fake=False):
     return WF
 
 
-def generate_candidate_slabs(bulk_conv,
-                             sg_params,
-                             sg_filter):
+def generate_candidate_slabs_from_mpid(mpid,
+                                       sg_params,
+                                       sg_filter,
+                                       coll='PBE.bulk_data',
+                                       db_file='auto',
+                                       high_level=True):
     """
     Generates slabs within certain constraints from a given bulk structure.
 
     Parameters
     ----------
-    bulk_conv : pymatgen.core.structure.Structure
-        Conventional standard bulk structure used in the SlabGenerator.
+     mpid : str
+        Unique MaterialsProject ID describing the structure.
     sg_params : dict
         Dict of parameters used in the SlabGenerator. For info about required
         and optional keys, refer to Shaper.generate_slabs()
@@ -564,6 +568,14 @@ def generate_candidate_slabs(bulk_conv,
         while 'bvs_min_N' filters out N lowest energy slabs. Energy here refers
         to the bond valence sums of broken bonds when the slabs are generated,
         and can be accessed by slab.energy.
+    coll : str, optional
+        Name of the bulk collection to load the bulk structure from.
+        The default is "PBE.bulk_data".
+    db_file : str, optional
+        Full path of the db.json. The default is 'auto'.
+    high_level : str, optional
+        Whether to query the results from the high level database or not.
+        The default is True.
 
     Returns
     -------
@@ -571,6 +583,7 @@ def generate_candidate_slabs(bulk_conv,
         List of all the (Slab, SlabGenerator) tuples that satisfy the constraints.
 
     """
+    bulk_conv = get_conv_bulk_from_mpid(mpid, coll, db_file, high_level)
     slabs_list, SG_dict = Shaper.generate_slabs(bulk_conv, sg_params)
     bvs = [slab.energy for slab in slabs_list]
 
@@ -719,36 +732,26 @@ def calculate_surface_energy_gen(slab_dict, fltr, coll, db_file='auto', high_lev
         ens['E_rel_top'] = E_rel_top
         ens['E_rel_bot'] = E_rel_bot
 
-        if sto:
+        if comp:
             nsites = en_dict['slab_bot_fixed_relax']['nsites']
             E_cle = (slab_static_en - nsites * bulk_en) / 2
             surf_en_top = E_cle + E_rel_top
             surf_en_bot = E_cle + E_rel_bot
             ens['E_cle'] = E_cle
         else:
-            if comp:
-                sto_slab_en = en_dict['sto_slab']['energy']
-                sto_slab_nsites = en_dict['sto_slab']['nsites']
+            sto_slab_top_en = en_dict['sto_slab_top']['energy']
+            sto_slab_bot_en = en_dict['sto_slab_bot']['energy']
 
-                E_cle = (sto_slab_en - sto_slab_nsites * bulk_en) / 2
+            sto_slab_top_nsites = en_dict['sto_slab_top']['nsites']
+            sto_slab_bot_nsites = en_dict['sto_slab_bot']['nsites']
 
-                surf_en_top = E_cle + E_rel_top
-                surf_en_bot = E_cle + E_rel_bot
-                ens['E_cle'] = E_cle
-            else:
-                sto_slab_top_en = en_dict['sto_slab_top']['energy']
-                sto_slab_bot_en = en_dict['sto_slab_bot']['energy']
+            E_cle_top = (sto_slab_top_en - sto_slab_top_nsites * bulk_en) / 2
+            E_cle_bot = (sto_slab_bot_en - sto_slab_bot_nsites * bulk_en) / 2
 
-                sto_slab_top_nsites = en_dict['sto_slab_top']['nsites']
-                sto_slab_bot_nsites = en_dict['sto_slab_bot']['nsites']
-
-                E_cle_top = (sto_slab_top_en - sto_slab_top_nsites * bulk_en) / 2
-                E_cle_bot = (sto_slab_bot_en - sto_slab_bot_nsites * bulk_en) / 2
-
-                surf_en_top = E_cle_top + E_rel_top
-                surf_en_bot = E_cle_bot + E_rel_bot
-                ens['E_cle_top_term'] = E_cle_top
-                ens['E_cle_bot_term'] = E_cle_bot
+            surf_en_top = E_cle_top + E_rel_top
+            surf_en_bot = E_cle_bot + E_rel_bot
+            ens['E_cle_top_term'] = E_cle_top
+            ens['E_cle_bot_term'] = E_cle_bot
 
     surf_en_top *= 16.02176565 / area
     surf_en_bot *= 16.02176565 / area
@@ -776,24 +779,30 @@ def update_inputs_list(inputs_list, comp_params):
     inputs_list with each element updated with the Workflows, unique IDs, locations, and tags.
 
     """
-    for slab in inputs_list:
-        frac_coords = slab.get('struct').frac_coords
-        inputs = slab.get('inputs')
-        slab_params = slab.get('slab_params')
-        all_params = {**comp_params, **slab_params, 'coords': frac_coords}
-        uid = slab.get('custom_id')
-        if not uid:
-            uid = dict_to_hash(all_params)
-        slab_params.update({'uid': uid})
+    for slab_data in inputs_list:
+        slab = slab_data.get('struct')
+        slab_params = slab_data.get('slab_params')
+        slab_frac_coords = np.round(slab.frac_coords, 8)
+        slab_frac_coords[slab_frac_coords == 1.0] = 0.0
+        all_params = {**comp_params, **slab_params, 'coords': slab_frac_coords}
+        uid_slab = slab_data.get('custom_id')
+        if not uid_slab:
+            uid_slab = dict_to_hash(all_params)
+        slab_params.update({'uid': uid_slab})
+
+        millerstr = slab_params.get('hkl')
+        inputs = slab_data.get('inputs')
         for calc in inputs:
             struct = calc.get('struct')
-            calc_type = calc.get('calc_type')
             calc_tag = calc.get('calc_tag')
-            millerstr = slab_params.get('hkl')
-            loc = ['miller_list', millerstr, uid, 'calcs', calc_tag]
+            calc_type = calc.get('calc_type')
+            loc = ['miller_list', millerstr, uid_slab, 'calcs', calc_tag]
+            struct_frac_coords = np.round(struct.frac_coords, 8)
+            struct_frac_coords[struct_frac_coords == 1.0] = 0.0
+            uid_input = dict_to_hash({**comp_params, 'coords': struct_frac_coords})
             formula = struct.composition.reduced_formula
-            tag = f'{formula}_{millerstr}_{calc_tag}_{uid}'
-            tag_dict = {'tag': tag, 'loc': loc, 'calc_type': calc_type}
+            tag = f'{formula}_{millerstr}_{calc_tag}_{uid_input}'
+            tag_dict = {'tag': tag, 'loc': loc, 'calc_type': calc_type, 'uid': uid_input}
             calc.update(tag_dict)
 
     return inputs_list

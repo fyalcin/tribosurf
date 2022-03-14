@@ -1,7 +1,7 @@
 from fireworks import Firework, Workflow
 from fireworks import LaunchPad
 
-from triboflow.firetasks.surfen_tools import FT_SurfEnFromFile
+from triboflow.firetasks.surfen_tools import FT_StartSurfaceEnergyFromFile
 
 #filename = '/home/fs71411/firaty/al100.cif'
 #miller = (1, 0, 0)
@@ -20,14 +20,14 @@ for miller in millers:
     filename = f'/home/fs71411/firaty/cifs/Si-({millerstr}).cif'
     custom_id = f'Si_{millerstr}_CRY_400_6'
 
-    FT = FT_SurfEnFromFile(filename=filename,
-                       miller=miller,
-                       mpid=mpid,
-                       functional=functional,
-                       db_file=db_file,
-                       high_level=high_level,
-                       custom_id=custom_id,
-                       comp_params=comp_params)
+    FT = FT_StartSurfaceEnergyFromFile(filename=filename,
+                                       miller=miller,
+                                       mpid=mpid,
+                                       functional=functional,
+                                       db_file=db_file,
+                                       high_level=high_level,
+                                       custom_id=custom_id,
+                                       comp_params=comp_params)
 
     FW = Firework(FT)
     WF1 = Workflow.from_Firework(FW)
