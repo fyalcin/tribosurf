@@ -22,7 +22,7 @@ computational_params = {'functional': 'PBE',
                    'BM_tolerance': 0.01,
                    'use_vdw': False,
                    'surfene_thr': 0.01,
-                   'vacuum': 15}
+                   'vacuum': 12}
 
 def get_slab_convergence_wf(material, comp_params):
     struct, mp_id = material_from_mp(material)
@@ -118,6 +118,12 @@ if __name__ == "__main__":
         
     workflow_list = []
     
+    # materials_list = [{'formula': 'ZnCu',
+    #                    'mpid': 'mp-987',
+    #                    'thick_min': 3,
+    #                    'thick_max': 12,
+    #                    'thick_incr': 1,
+    #                    'miller': '110'}]
     for mat in materials_list:
         workflow_list.append(get_slab_convergence_wf(mat, computational_params))
     #submit_multiple_wfs(workflow_list)
