@@ -315,10 +315,8 @@ class FT_StartPESCalcs(FiretaskBase):
     heterogeneous_wf
     Parameters
     ----------
-    top_slab : pymatgen.core.surface.Slab
-        Top slab of the interface.
-    bottom_slab : pymatgen.core.surface.Slab
-        Bottom slab of the interface.
+    interface : pymatgen.core.interface.Interface
+        Interface object for which the PES is to be constructed
     interface_name : str
         Name of the interface in the high-level database.
     comp_parameters : dict
@@ -334,15 +332,14 @@ class FT_StartPESCalcs(FiretaskBase):
     FWActions that produce a detour workflow with relaxations for the PES.
     """
 
-    required_params = ['top_slab', 'bot_slab', 'interface_name',
+    required_params = ['interface', 'interface_name',
                        'comp_parameters', 'tag']
     optional_params = ['db_file']
 
     def run_task(self, fw_spec):
 
-        top_slab = self.get('top_slab')
-        bot_slab = self.get('bot_slab')
-        name = self.get('interface_name')
+        interface = self.get('interface')
+        interface_name = self.get('interface_name')
         comp_params = self.get('comp_parameters')
         tag = self.get('tag')
 
@@ -355,32 +352,19 @@ class FT_StartPESCalcs(FiretaskBase):
             raise SystemExit('Lateral shifts not found in the fw_spec./n'
                              'Please check your Firework for errors!')
 
-        top_slab, bot_slab = recenter_aligned_slabs(top_slab, bot_slab)
-
-        # # List all sites of interface that have positive c coordinates as they
-        # # are in the upper slab.
-        # sites_to_shift = []
-        # for i, s in enumerate(struct.sites):
-        #     if s.c > 0:
-        #         sites_to_shift.append(i)
-
         inputs = []
-        for s in lateral_shifts.keys():
-            label = tag + '_' + s
-            x_shift = lateral_shifts.get(s)[0][0]
-            y_shift = lateral_shifts.get(s)[0][1]
-            # Make sure that there are no NoneTypes in the site_properties!
-            inter_struct = stack_aligned_slabs(bot_slab,
-                                               top_slab,
-                                               top_shift=[x_shift, y_shift, 0])
-            clean_struct = clean_up_site_properties(inter_struct)
+        for name, shift in lateral_shifts.items():
+            label = tag + '_' + name
+            frac_shift = np.dot(shift[0], interface.lattice.reciprocal_lattice.matrix[:2,:2])/(2*np.pi)
+            interface.in_plane_offset = frac_shift
+            clean_struct = clean_up_site_properties(interface)
 
             vis = get_custom_vasp_relax_settings(structure=clean_struct,
                                                  comp_parameters=comp_params,
                                                  relax_type='interface_z_relax')
             inputs.append([clean_struct, vis, label])
 
-        wf_name = 'PES relaxations for: ' + name
+        wf_name = 'PES relaxations for: ' + interface_name
         WF = dynamic_relax_swf(inputs_list=inputs,
                                wf_name=wf_name,
                                add_static=True)
