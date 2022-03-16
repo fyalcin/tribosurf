@@ -22,9 +22,7 @@ from triboflow.phys.shaper import Shaper
 from triboflow.utils.database import (
     Navigator, StructureNavigator, convert_image_to_bytes)
 from triboflow.utils.plot_tools import plot_pes
-from triboflow.utils.structure_manipulation import (
-    clean_up_site_properties, stack_aligned_slabs,
-    recenter_aligned_slabs)
+from triboflow.utils.structure_manipulation import clean_up_site_properties
 from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
 from triboflow.workflows.base import dynamic_relax_swf
 
@@ -238,10 +236,8 @@ class FT_FindHighSymmPoints(FiretaskBase):
     
     Parameters
     ----------
-    top_slab : pymatgen.core.surface.Slab
-        Top slab of the interface.
-    bottom_slab : pymatgen.core.surface.Slab
-        Bottom slab of the interface.
+    interface : pymatgen.core.interface.Interface
+        Interface object for which the PES is to be constructed
     functional : str
         Which functional to use; has to be 'PBE' or 'SCAN'.
     interface_name : str
@@ -255,12 +251,11 @@ class FT_FindHighSymmPoints(FiretaskBase):
     FWActions that updates the fw_spec with lateral shifts.
     """
 
-    required_params = ['top_slab', 'bot_slab', 'functional', 'interface_name']
+    required_params = ['interface', 'functional', 'interface_name']
     optional_params = ['db_file' 'high_level_db']
 
     def run_task(self, fw_spec):
-        top_slab = self.get('top_slab')
-        bot_slab = self.get('bot_slab')
+        interface = self.get('interface')
         name = self.get('interface_name')
         functional = self.get('functional')
 
@@ -269,6 +264,8 @@ class FT_FindHighSymmPoints(FiretaskBase):
             db_file = env_chk('>>db_file<<', fw_spec)
         hl_db = self.get('high_level_db', True)
 
+        top_slab = interface.film
+        bot_slab = interface.substrate
         # Top slab needs to be flipped to find the high symmetry points at the
         # interface.
         flipped_top = flip_slab(top_slab)
@@ -276,7 +273,7 @@ class FT_FindHighSymmPoints(FiretaskBase):
 
         bottom_hsp_unique, bottom_hsp_all = get_slab_hs(bot_slab)
 
-        cell = bot_slab.lattice.matrix
+        cell = interface.lattice.matrix
 
         hsp_unique = get_interface_hs(bottom_hsp_unique, top_hsp_unique, cell)
         hsp_all = get_interface_hs(bottom_hsp_all, top_hsp_all, cell)
@@ -355,7 +352,8 @@ class FT_StartPESCalcs(FiretaskBase):
         inputs = []
         for name, shift in lateral_shifts.items():
             label = tag + '_' + name
-            frac_shift = np.dot(shift[0], interface.lattice.reciprocal_lattice.matrix[:2,:2])/(2*np.pi)
+            #in plane offset requests fractional coordinates. We have cartesian ones and must transform
+            frac_shift = np.dot(shift[0],interface.lattice.inv_matrix)
             interface.in_plane_offset = frac_shift
             clean_struct = clean_up_site_properties(interface)
 

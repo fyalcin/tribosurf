@@ -41,7 +41,7 @@ def export_legend(legend, filename="legend.png", expand=[-5, -5, 5, 5]):
     fig.savefig(filename, dpi="figure", bbox_inches=bbox)
 
 
-def plot_slab_hs(hs, slab, to_fig=None, hs_type='all', leg_size=10):
+def plot_slab_hs(hs, slab, to_fig=None, hs_type='all', leg_size=10, in_frac=False):
     """
     Plot the slab, displaying the atoms and the HS sites of the surface
 
@@ -94,6 +94,8 @@ def plot_slab_hs(hs, slab, to_fig=None, hs_type='all', leg_size=10):
     # Add the HS sites with the proper labels
     for k in hs.keys():
         data = hs[k]
+        if in_frac:
+            data = np.dot(data, slab.lattice.matrix[:2,:2])
         if len(data.shape) == 1:
             plt.plot(data[0], data[1], marker='o', markersize=18 * (ratio), mew=0.5,
                      linestyle='', zorder=10000, label=k, markeredgecolor='black')

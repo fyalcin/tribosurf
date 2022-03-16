@@ -23,6 +23,7 @@ from triboflow.firetasks.utils import FT_UpdateCompParams
 from triboflow.fireworks.common import run_pes_calc_fw, make_pes_fw
 from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
 from triboflow.utils.surfen_tools import get_surfen_inputs_from_mpid
+from triboflow.utils.structure_manipulation import slab_from_structure
 from triboflow.utils.vasp_tools import get_emin_and_emax, get_custom_vasp_static_settings
 
 
@@ -268,8 +269,6 @@ def calc_pes_swf(interface,
     ----------
     interface : pymatgen.core.interface.Interface
         Top slab of the interface.
-    bottom_slab : pymatgen.core.surface.Slab
-        Bottom slab of the interface.
     interface_name : str, optional
         Unique name to find the interface in the database with.
         The default is None, which will lead to an automatic interface_name
@@ -340,9 +339,10 @@ def calc_pes_swf(interface,
               '    "k_dens": <int>}\n')
 
     tag = interface_name + '_' + str(uuid4())
+    
+    
 
-    FW_1 = run_pes_calc_fw(top_slab=top_slab,
-                           bottom_slab=bottom_slab,
+    FW_1 = run_pes_calc_fw(interface = interface,
                            interface_name=interface_name,
                            functional=functional,
                            comp_parameters=comp_parameters,
