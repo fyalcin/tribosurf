@@ -116,63 +116,61 @@ class HighSymmetryAnalysis:
     def _get_slab_hs_dicts(self):
         top_u = self.__separate_adsorption_sites(
                     self.__get_adsorption_site(self.top_slab, unique=True))
-        if self.frac_coords:
-            self.top_sites_unique = self.__remove_c_coord(
-                self.__return_frac_coords(top_u))
-        else:
-            self.top_sites_unique = self.__remove_c_coord(top_u)
+        self.top_sites_unique = self.__remove_c_coord(
+            self.__return_frac_coords(top_u))
             
         bot_u = self.__separate_adsorption_sites(
             self.__get_adsorption_site(self.bot_slab, unique=True))
-        if self.frac_coords:
-            self.bot_sites_unique = self.__remove_c_coord(
-                self.__return_frac_coords(bot_u))
-        else:
-            self.bot_sites_unique = self.__remove_c_coord(bot_u)
+        self.bot_sites_unique = self.__remove_c_coord(
+            self.__return_frac_coords(bot_u))
         
         top_all = self.__sort_all_sites(
             self.top_adsf,
             self.__get_adsorption_site(self.top_slab, unique=False),
             top_u)
-        if self.frac_coords:
-            self.top_sites_all = self.__remove_c_coord(
-                self.__return_frac_coords(top_all))
-        else:
-            self.top_sites_all = self.__remove_c_coord(top_all)
+        self.top_sites_all = self.__remove_c_coord(
+            self.__return_frac_coords(top_all))
             
         bot_all = self.__sort_all_sites(
             self.bot_adsf,
             self.__get_adsorption_site(self.bot_slab, unique=False),
             bot_u)
-        if self.frac_coords:
-            self.bot_sites_all = self.__remove_c_coord(
-                self.__return_frac_coords(bot_all))
-        else:
-            self.bot_sites_all = self.remove_c_coord(bot_all)
+        self.bot_sites_all = self.__remove_c_coord(
+            self.__return_frac_coords(bot_all))
         
-    def __remove_equivalent_shifts(self, hs_shifts):
+    def _remove_equivalent_shifts(self, hs_shifts):
         unique_shifts = hs_shifts.copy()
         struct_match = StructureMatcher(ltol=0.01, stol=0.01, angle_tol=0.01,
                                         primitive_cell=False, scale=False)
-        #auxiliary list since we cannot remove entries of the dictionary while
-        #iterating over it.
-        remove_these_shifts = []
-        interface_1 = self.interface.copy()
-        interface_2 = self.interface.copy()
-        for shift_combos in combinations(hs_shifts.items(), 2):
-            interface_1.in_plane_offset = shift_combos[0][1]
-            interface_2.in_plane_offset = shift_combos[1][1]
-            #if we find equivalent structures for different shifts, remove one of them
-            if struct_match.fit(interface_1, interface_2):
-                #If we later pop these, we have to avoid duplicates here!
-                if shift_combos[1][0] not in remove_these_shifts:
-                    remove_these_shifts.append(shift_combos[1][0])
-        #finally remove the shifts
-        print(remove_these_shifts)
-        for shift in remove_these_shifts:
-            unique_shifts.pop(shift)
+        interface_list = []
+        for k, v in hs_shifts.items():
+            intrfc = self.interface.copy()
+            intrfc.name = k
+            intrfc.in_plane_offset = v
+            interface_list.append(intrfc)
+        grouped_interfaces = struct_match.group_structures(interface_list)
+        unique_shifts = {}
+        for intrfc in grouped_interfaces:
+            unique_shifts[intrfc[0].name] = intrfc[0].in_plane_offset
         return unique_shifts
-                    
+     
+    def _get_all_shifts(self):
+        shifts = {}
+        for kbot, vbot in self.bot_sites_all.items():
+            for ktop, vtop in self.top_sites_all.items():
+                bottom_shifts = [vbot] if vbot.ndim == 1 else vbot
+                top_shifts = [vtop] if vtop.ndim == 1 else vtop
+                shift_list = []
+                for bs in bottom_shifts:
+                    for ts in top_shifts:
+                        x_shift = clean_frac_coord(np.round(bs - ts, 12)[0])
+                        y_shift = clean_frac_coord(np.round(bs - ts, 12)[1])
+                        shift = np.asarray([x_shift, y_shift])
+                        # only add a new shift if the exact same one is not already present
+                        if not any((shift == x).all() for x in list(shifts.values())):
+                            shifts[kbot+'-'+ktop] = shift_list.append(shift)
+                shifts[kbot+'-'+ktop] = np.asarray(shift_list)
+        self.all_shifts = shifts
         
     def _get_unique_shifts(self):
         unique_shifts = {}
@@ -186,17 +184,10 @@ class HighSymmetryAnalysis:
                 if not any((shift == x).all() for x in list(unique_shifts.values())):
                     unique_shifts[kbot+'-'+ktop] = shift
         
-        return self.__remove_equivalent_shifts(unique_shifts)
+        return self._remove_equivalent_shifts(unique_shifts)
 
 def clean_frac_coord(coord):
-    while coord < 0.0:
-        coord += 1.0
-    while coord > 1.0:
-        coord -= 1.0
-    if coord == 1.0 or coord == 0.0:
-        return 0.0
-    else:
-        return np.round(coord, 12)
+        return np.round(coord%1, 12)
 
 def old_symm(interface):
     top_slab = interface.film
