@@ -164,6 +164,7 @@ class HighSymmetryAnalysis:
             interface_2.in_plane_offset = shift_combos[1][1]
             #if we find equivalent structures for different shifts, remove one of them
             if struct_match.fit(interface_1, interface_2):
+                #If we later pop these, we have to avoid duplicates here!
                 if shift_combos[1][0] not in remove_these_shifts:
                     remove_these_shifts.append(shift_combos[1][0])
         #finally remove the shifts
