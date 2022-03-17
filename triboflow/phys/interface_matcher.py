@@ -407,7 +407,7 @@ class InterfaceMatcher:
             self.top_miller = slab_2.miller_index
             self.bot_slab = slab_1.get_orthogonal_c_slab()
             self.bot_weight = weight_1
-            self.bot_miller = slab_2.miller_index
+            self.bot_miller = slab_1.miller_index
             
             
     def __make_3d_lattice_from_2d_lattice(self, slab, uv):

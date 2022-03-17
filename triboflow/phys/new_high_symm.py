@@ -7,6 +7,8 @@ Created on Wed Mar 16 14:40:07 2022
 """
 
 import numpy as np
+from itertools import combinations
+
 
 from triboflow.phys.high_symmetry import (
     get_slab_hs, get_interface_hs, pbc_hspoints, fix_hs_dicts)
@@ -148,11 +150,31 @@ class HighSymmetryAnalysis:
         else:
             self.bot_sites_all = self.remove_c_coord(bot_all)
         
+    def __remove_equivalent_shifts(self, hs_shifts):
+        unique_shifts = hs_shifts.copy()
+        struct_match = StructureMatcher(ltol=0.01, stol=0.01, angle_tol=0.01,
+                                        primitive_cell=False, scale=False)
+        #auxiliary list since we cannot remove entries of the dictionary while
+        #iterating over it.
+        remove_these_shifts = []
+        interface_1 = self.interface.copy()
+        interface_2 = self.interface.copy()
+        for shift_combos in combinations(hs_shifts.items(), 2):
+            interface_1.in_plane_offset = shift_combos[0][1]
+            interface_2.in_plane_offset = shift_combos[1][1]
+            #if we find equivalent structures for different shifts, remove one of them
+            if struct_match.fit(interface_1, interface_2):
+                if shift_combos[1][0] not in remove_these_shifts:
+                    remove_these_shifts.append(shift_combos[1][0])
+        #finally remove the shifts
+        print(remove_these_shifts)
+        for shift in remove_these_shifts:
+            unique_shifts.pop(shift)
+        return unique_shifts
+                    
         
     def _get_unique_shifts(self):
         unique_shifts = {}
-        struct_match = StructureMatcher(ltol=0.01, stol=0.01, angle_tol=0.01,
-                                        primitive_cell=False, scale=False)
         for kbot, vbot in self.bot_sites_unique.items():
             for ktop, vtop in self.top_sites_unique.items():
                 # fold back all coordinates into the unit cell
@@ -161,20 +183,9 @@ class HighSymmetryAnalysis:
                 shift = np.asarray([x_shift, y_shift])
                 # only add a new shift if the exact same one is not already present
                 if not any((shift == x).all() for x in list(unique_shifts.values())):
-                    # now we check for equivalent structures with different shifts
-                    interface_new = self.interface.copy()
-                    interface_new.in_plane_offset = shift
-                    if len(unique_shifts) == 0:
-                        unique_shifts[kbot+'-'+ktop] = shift
-                    else:
-                        for old_shift in unique_shifts.values():
-                            interface_old = self.interface.copy()
-                            interface_old.in_plane_offset = old_shift
-                            if not struct_match.fit(interface_new, interface_old):
-                                unique_shifts[kbot+'-'+ktop] = shift
-                    
-                    
-        return unique_shifts
+                    unique_shifts[kbot+'-'+ktop] = shift
+        
+        return self.__remove_equivalent_shifts(unique_shifts)
 
 def clean_frac_coord(coord):
     while coord < 0.0:
