@@ -18,22 +18,88 @@ from pymatgen.analysis.adsorption import AdsorbateSiteFinder
 from pymatgen.analysis.structure_matcher import StructureMatcher
 
 
-class HighSymmetryAnalysis:
+class InterfaceSymmetryAnalysis:
     
     def __init__(self,
-                 interface,
-                 in_frac_coordinates = True,
-                 no_obtuse_hollow = True):
+                 in_cartesian_coordinates = False,
+                 no_obtuse_hollow = True,
+                 ltol=0.01,
+                 stol=0.01,
+                 angle_tol=0.01):
+        """
+        Initializes the InterfaceSymmetryAnalysis class.
         
-        self.interface = interface
-        self.top_slab = flip_slab(interface.film)
-        self.bot_slab = interface.substrate
+        This class analyses an Interface with respect to its lateral shifts
+        in order to efficiently construct a potential energy surface (PES),
+        also called generalized stacking fault or gamma-surface.
         
-        self.top_adsf = AdsorbateSiteFinder(self.top_slab)
-        self.bot_adsf = AdsorbateSiteFinder(self.bot_slab)
+        The procedure is as follows:
+            1) Find the high symmetry adsorption sites (ontop, bridge, hollow) for
+            both the top layer of the bottom part of the interface and the
+            bottom layer for the top part of the interface.
+            2) Sort these sites according the different types (e.g. ontop_1,
+            bridge_2, ...) and distinguish between unique sites and equivalent
+            replicas.
+            3) Combine the ordered sites to possible lateral shifts between the
+            top and bottom parts of the interface and label them
+            (e.g. ontop_2-hollow_3).
+            4) Separate the unique shifts from equivalent ones by using a
+            pymatgen StructureMatcher to group the resulting interfaces.
+            5) Return a dictionary with the results.
         
-        self.frac_coords = in_frac_coordinates
+        After initializing the class, the object can be called as a function
+        with an pymatgen.core.interface.Interface object as parameter. It will
+        return a dictionary with the following entries:
+            'unique_shifts', -> Unique combinations of the interfaces high symmetry
+                                points. Use this shifts to calculate the energies.
+            'all_shifts',    -> All combinations of the interfaces high symmetry
+                                points. These fill the whole unit cell. Copy
+                                the calculated energies from the unique points
+                                over to this get a smooth PES interpolation.
+            'top_high_symm_points_unique',     -> unique high symmetry points
+                                                  for the flipped top slab.
+            'top_high_symm_points_all',        -> all high symmetry points
+                                                  for the flipped top slab.
+            'bottom_high_symm_points_unique',  -> unique high symmetry points
+                                                  for the bottom slab.
+            'bottom_high_symm_points_all'      -> unique high symmetry points
+                                                  for the bottom slab.
+
+        Parameters
+        ----------
+        in_cartesian_coordinates : bool, optional
+            Return the high symmetry points and interface shifts in cartesian
+            rather than fractional coordinates. The default is False.
+        no_obtuse_hollow : bool, optional
+            Selects if you want to add obtuse hollows to the high symmetry
+            points. The default for this in pymatgens AdsorbateSiteFinder is
+            "True", which means that no obtuse hollows are added! Be careful
+            when adding these sites, since it will result most likely in
+            extemely many unique shifts and sample the unit cell very densly
+            with associated huge computational cost. The default is True.
+        ltol : float, optional
+            Fractional length tolerance for the StructureMatcher. Keep this low,
+            since matching structures should match exactly. The default is 0.01.
+        stol : float, optional
+            Site tolerance for the StructureMatcher. Defined as the fraction of
+            the average free length per atom. Keep this low, since matching
+            structures should match exactly. The default is 0.01.
+        angle_tol : float, optional
+            Angle tolerance for the StructureMatcher in degrees. Keep this low,
+            since matching structures should match exactly. The default is 0.01.
+
+        Returns
+        -------
+        None.
+
+        """
+        
+        self.cart_coords = in_cartesian_coordinates
         self.no_optuse_hollow = no_obtuse_hollow
+        self.ltol = ltol
+        self.stol = stol
+        self.angle_tol = angle_tol
+        
 
     def __get_adsorption_site(self, slab, unique): 
         """
@@ -49,7 +115,7 @@ class HighSymmetryAnalysis:
         
         unique : bool, optional
             If True, only unique non equivalent points are returned. If Flase, all
-            replicas are listed as well. The default is True
+            replicas are listed as well.
 
         Returns
         -------
@@ -77,7 +143,10 @@ class HighSymmetryAnalysis:
                                                no_obtuse_hollow=self.no_optuse_hollow)
         return sites
             
-    def __return_frac_coords(self, hs_dict):
+    def __convert_to_frac(self, hs_dict):
+        """
+        Convert cartesian coordinates in a high_symmetry dictionary to fractional.
+        """
         frac_sites = {}
         for k, v in hs_dict.items():
             try:
@@ -86,7 +155,23 @@ class HighSymmetryAnalysis:
                 frac_sites[k] = v
         return frac_sites
     
+    def __convert_to_cart(self, hs_dict):
+        """
+        Convert fractional coordinates in a high_symmetry dictionary to cartesian.
+        """
+        
+        cart_sites = {}
+        for k, v in hs_dict.items():
+            try:
+                cart_sites[k] = np.dot(v, self.interface.lattice.matrix)
+            except:
+                cart_sites[k] = v
+        return cart_sites
+    
     def __remove_c_coord(self, hs_dict):
+        """
+        Remove the c coordinate for all high symmetry points to make 2D shifts.
+        """
         new_dict = {}
         for k, v in hs_dict.items():
             try:
@@ -96,6 +181,13 @@ class HighSymmetryAnalysis:
         return new_dict
     
     def __separate_adsorption_sites(self, sites_dictionary):
+        """
+        Label unique adsorption sites uniquly
+        
+        Pymatgen's AdsorptionSiteFinder will group e.g. two distictly different
+        ontop sites together. This separates them into ontop_1 and ontop_2.
+
+        """
         d = {}
         for k, v in sites_dictionary.items():
             if k != 'all':
@@ -113,48 +205,32 @@ class HighSymmetryAnalysis:
             new_dict[label] = np.asarray(new_dict[label])
         return new_dict
     
-    def _get_slab_hs_dicts(self):
+    def __get_slab_hs_dicts(self):
         top_u = self.__separate_adsorption_sites(
                     self.__get_adsorption_site(self.top_slab, unique=True))
         self.top_sites_unique = self.__remove_c_coord(
-            self.__return_frac_coords(top_u))
+            self.__convert_to_frac(top_u))
             
         bot_u = self.__separate_adsorption_sites(
             self.__get_adsorption_site(self.bot_slab, unique=True))
         self.bot_sites_unique = self.__remove_c_coord(
-            self.__return_frac_coords(bot_u))
+            self.__convert_to_frac(bot_u))
         
         top_all = self.__sort_all_sites(
             self.top_adsf,
             self.__get_adsorption_site(self.top_slab, unique=False),
             top_u)
         self.top_sites_all = self.__remove_c_coord(
-            self.__return_frac_coords(top_all))
+            self.__convert_to_frac(top_all))
             
         bot_all = self.__sort_all_sites(
             self.bot_adsf,
             self.__get_adsorption_site(self.bot_slab, unique=False),
             bot_u)
         self.bot_sites_all = self.__remove_c_coord(
-            self.__return_frac_coords(bot_all))
-        
-    def _remove_equivalent_shifts(self, hs_shifts):
-        unique_shifts = hs_shifts.copy()
-        struct_match = StructureMatcher(ltol=0.01, stol=0.01, angle_tol=0.01,
-                                        primitive_cell=False, scale=False)
-        interface_list = []
-        for k, v in hs_shifts.items():
-            intrfc = self.interface.copy()
-            intrfc.name = k
-            intrfc.in_plane_offset = v
-            interface_list.append(intrfc)
-        grouped_interfaces = struct_match.group_structures(interface_list)
-        unique_shifts = {}
-        for intrfc in grouped_interfaces:
-            unique_shifts[intrfc[0].name] = intrfc[0].in_plane_offset
-        return unique_shifts
+            self.__convert_to_frac(bot_all))
      
-    def _get_all_shifts(self):
+    def __get_all_shifts(self):
         shifts = {}
         for kbot, vbot in self.bot_sites_all.items():
             for ktop, vtop in self.top_sites_all.items():
@@ -163,31 +239,72 @@ class HighSymmetryAnalysis:
                 shift_list = []
                 for bs in bottom_shifts:
                     for ts in top_shifts:
-                        x_shift = clean_frac_coord(np.round(bs - ts, 12)[0])
-                        y_shift = clean_frac_coord(np.round(bs - ts, 12)[1])
-                        shift = np.asarray([x_shift, y_shift])
+                        # comment about next line
+                        shift =  np.round((bs - ts)%1, 12)
                         # only add a new shift if the exact same one is not already present
                         if not any((shift == x).all() for x in list(shifts.values())):
                             shifts[kbot+'-'+ktop] = shift_list.append(shift)
                 shifts[kbot+'-'+ktop] = np.asarray(shift_list)
         self.all_shifts = shifts
         
-    def _get_unique_shifts(self):
+    def __group_structures(self):
+        interface_list = []
+        struct_match = StructureMatcher(ltol=self.ltol,
+                                        stol=self.stol,
+                                        angle_tol=self.angle_tol,
+                                        primitive_cell=False,
+                                        scale=False)
+        shift_check_list = []
+        for k, v in self.all_shifts.items():
+            for shift in v:
+                if shift.tolist() not in shift_check_list:
+                    intrfc = self.interface.copy()
+                    intrfc.name = k
+                    intrfc.in_plane_offset = shift
+                    interface_list.append(intrfc)
+                    shift_check_list.append(shift.tolist())
+        grouped_interfaces = struct_match.group_structures(interface_list)
         unique_shifts = {}
-        for kbot, vbot in self.bot_sites_unique.items():
-            for ktop, vtop in self.top_sites_unique.items():
-                # fold back all coordinates into the unit cell
-                x_shift = clean_frac_coord(np.round(vbot - vtop, 12)[0])
-                y_shift = clean_frac_coord(np.round(vbot - vtop, 12)[1])
-                shift = np.asarray([x_shift, y_shift])
-                # only add a new shift if the exact same one is not already present
-                if not any((shift == x).all() for x in list(unique_shifts.values())):
-                    unique_shifts[kbot+'-'+ktop] = shift
+        replic_shifts = {}
+        for intrfc_group in grouped_interfaces:
+            unique_shifts[intrfc_group[0].name] = intrfc_group[0].in_plane_offset
+            shift_list = []
+            for intrfc in intrfc_group:
+                shift_list.append(intrfc.in_plane_offset)
+            replic_shifts[intrfc_group[0].name] = np.unique(
+                np.asarray(shift_list), axis=0)
         
-        return self._remove_equivalent_shifts(unique_shifts)
-
-def clean_frac_coord(coord):
-        return np.round(coord%1, 12)
+        self.unique_shifts = unique_shifts
+        self.replica_shifts = replic_shifts
+    
+    def __set_parameters(self, interface):
+        self.interface = interface
+        self.top_slab = flip_slab(interface.film)
+        self.bot_slab = interface.substrate
+        
+        self.top_adsf = AdsorbateSiteFinder(self.top_slab)
+        self.bot_adsf = AdsorbateSiteFinder(self.bot_slab)
+        
+    def __call__(self, interface):        
+        self.__set_parameters(interface)
+        print('stuff')
+        self.__get_slab_hs_dicts()
+        self.__get_all_shifts()
+        self.__group_structures()
+        out_dict = {'unique_shifts': self.unique_shifts,
+                    'all_shifts': self.replica_shifts,
+                    'top_high_symm_points_unique': self.top_sites_unique,
+                    'top_high_symm_points_all': self.top_sites_all,
+                    'bottom_high_symm_points_unique': self.bot_sites_unique,
+                    'bottom_high_symm_points_all': self.bot_sites_all}
+        
+        if self.cart_coords:
+            cart_out = {}
+            for k, v in out_dict:
+                cart_out[k] = self.__convert_to_cart(v)
+            return cart_out
+        else:
+            return out_dict
 
 def old_symm(interface):
     top_slab = interface.film
