@@ -474,17 +474,5 @@ def old_symm(interface):
             'bottom_high_symm_points_unique': b_hsp_u,
             'bottom_high_symm_points_all': b_hsp_a,
             'top_high_symm_points_unique': t_hsp_u,
-<<<<<<< HEAD
-            'top_high_symm_points_all': t_hsp_a}
-=======
             'top_high_symm_points_all': t_hsp_a}
 
-
-def new_symm(interface):
-    top_slab = interface.film
-    bot_slab = interface.substrate
-
-    # Top slab needs to be flipped to find the high symmetry points at the
-    # interface.
-    flipped_top = flip_slab(top_slab)
->>>>>>> 6719359239239bc4939905c25d9d72c60090ddfd
