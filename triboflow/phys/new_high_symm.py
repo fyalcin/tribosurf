@@ -77,7 +77,7 @@ class InterfaceSymmetryAnalysis:
             points. The default for this in pymatgens AdsorbateSiteFinder is
             "True", which means that no obtuse hollows are added! Be careful
             when adding these sites, since it will result most likely in
-            extemely many unique shifts and sample the unit cell very densly
+            extremely many unique shifts and sample the unit cell very densely
             with associated huge computational cost. The default is True.
         ltol : float, optional
             Fractional length tolerance for the StructureMatcher. Keep this low,
@@ -157,12 +157,12 @@ class InterfaceSymmetryAnalysis:
         ----------
         slab : pymatgen.core.surface.Slab (pymatgen.core.structure.Structure)
             The slab of which you want to calculate the surface HS points.
-            The input need to be a slab, i.e. an atomic structure non-periodic
+            The input needs to be a slab, i.e. an atomic structure non-periodic
             along the z-direction. However, type(slab) could be either a Slab
             object or a Structure object.
         
         unique : bool, optional
-            If True, only unique non equivalent points are returned. If Flase, all
+            If True, only unique non-equivalent points are returned. If False, all
             replicas are listed as well.
 
         Returns
@@ -195,7 +195,7 @@ class InterfaceSymmetryAnalysis:
         """
         Label unique adsorption sites uniquely
         
-        Pymatgen's AdsorptionSiteFinder will group e.g. two distictly different
+        Pymatgen's AdsorptionSiteFinder will group e.g. two distinctly different
         ontop sites together. This method separates them into ontop_1 and ontop_2.
 
         """
@@ -210,7 +210,7 @@ class InterfaceSymmetryAnalysis:
         """
         Sort duplicate high symmetry points wrt the labels of the unique points.
         
-        Uses an instace of pymatgens adsorption site finder to assigne all
+        Uses an instance of pymatgens adsorption site finder to assign all
         high symmetry sites in a dictionary to one of the previously defined
         unique sites (e.g. ontop_1, bridge_2, ...)
 
@@ -271,7 +271,7 @@ class InterfaceSymmetryAnalysis:
         Analyse the adsorption sites of the substrate and the flipped slab.
         
         In the process high symmetry dictionaries are constructed for both
-        the top an bottom slabs, for unique and replicated adsorption sites.
+        the top and the bottom slabs, for unique and replicated adsorption sites.
         Cartesian coordinates are converted to fractional ones. Z-coordinates
         are deleted.
         """
@@ -294,7 +294,7 @@ class InterfaceSymmetryAnalysis:
         ontop_1-bridge_2.
         """
         shifts = {}
-        # all_shifts_list will be used to store all previously enountered shifts
+        # all_shifts_list will be used to store all previously encountered shifts
         # since we do not want to duplicate shifts.
         all_shifts_list = []
         for kbot, vbot in self.bot_sites_all.items():
@@ -338,7 +338,7 @@ class InterfaceSymmetryAnalysis:
                                         scale=False)
         for name, shift_array in self.all_shifts.items():
             for shift in shift_array:
-                # make an interace with the current shift and assign it a name
+                # make an interface with the current shift and assign it a name
                 # to keep track of the HSP combination associated with it.
                 intrfc = self.interface.copy()
                 intrfc.in_plane_offset = shift
@@ -365,7 +365,7 @@ class InterfaceSymmetryAnalysis:
     def __set_parameters(self, interface):
         """
         set a couple of parameters for the class instance depended on the
-        interface passd to the __call__ method.
+        interface passed to the __call__ method.
         """
         self.interface = interface
         self.top_slab = flip_slab(interface.film)
