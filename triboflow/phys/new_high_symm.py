@@ -71,7 +71,7 @@ class InterfaceSymmetryAnalysis:
             rather than fractional coordinates. The default is False.
         no_obtuse_hollow : bool, optional
             Selects if you want to add obtuse hollows to the high symmetry
-            points. The default for this in pymatgens AdsorbateSiteFinder is
+            points. The default for this in pymatgen's AdsorbateSiteFinder is
             "True", which means that no obtuse hollows are added! Be careful
             when adding these sites, since it will result most likely in
             extremely many unique shifts and sample the unit cell very densely
@@ -147,7 +147,7 @@ class InterfaceSymmetryAnalysis:
 
     def __get_adsorption_site(self, slab, unique):
         """
-        Return the adorption sites of a slab object, either only unique ones, or all.
+        Return the adsorption sites of a slab object, either only unique ones, or all.
         
         Parameters
         ----------
