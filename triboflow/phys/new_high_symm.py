@@ -7,15 +7,12 @@ Created on Wed Mar 16 14:40:07 2022
 """
 
 import numpy as np
-from itertools import combinations
-
+from pymatgen.analysis.adsorption import AdsorbateSiteFinder
+from pymatgen.analysis.structure_matcher import StructureMatcher
 
 from triboflow.phys.high_symmetry import (
     get_slab_hs, get_interface_hs, pbc_hspoints, fix_hs_dicts)
 from triboflow.phys.interface_matcher import flip_slab
-
-from pymatgen.analysis.adsorption import AdsorbateSiteFinder
-from pymatgen.analysis.structure_matcher import StructureMatcher
 
 
 class InterfaceSymmetryAnalysis:
@@ -57,10 +54,10 @@ class InterfaceSymmetryAnalysis:
         'bottom_high_symm_points_all'      -> unique high symmetry points
                                               for the bottom slab.
     """
-    
+
     def __init__(self,
-                 in_cartesian_coordinates = False,
-                 no_obtuse_hollow = True,
+                 in_cartesian_coordinates=False,
+                 no_obtuse_hollow=True,
                  ltol=0.01,
                  stol=0.01,
                  angle_tol=0.01):
@@ -95,23 +92,22 @@ class InterfaceSymmetryAnalysis:
         None.
 
         """
-        
+
         self.cart_coords = in_cartesian_coordinates
         self.no_optuse_hollow = no_obtuse_hollow
         self.ltol = ltol
         self.stol = stol
         self.angle_tol = angle_tol
-        
 
     def __convert_to_frac(self, hs_dict, only_2d=False):
         """
         Convert cartesian coordinates in a high_symmetry dictionary to fractional.
         """
         if only_2d:
-            m = self.interface.lattice.inv_matrix[:2,:2]
+            m = self.interface.lattice.inv_matrix[:2, :2]
         else:
             m = self.interface.lattice.inv_matrix
-        
+
         frac_sites = {}
         for k, v in hs_dict.items():
             try:
@@ -119,16 +115,16 @@ class InterfaceSymmetryAnalysis:
             except:
                 frac_sites[k] = v
         return frac_sites
-    
+
     def __convert_to_cart(self, hs_dict, only_2d=True):
         """
         Convert fractional coordinates in a high_symmetry dictionary to cartesian.
         """
         if only_2d:
-            m = self.interface.lattice.matrix[:2,:2]
+            m = self.interface.lattice.matrix[:2, :2]
         else:
             m = self.interface.lattice.matrix
-            
+
         cart_sites = {}
         for k, v in hs_dict.items():
             try:
@@ -136,7 +132,7 @@ class InterfaceSymmetryAnalysis:
             except:
                 cart_sites[k] = v
         return cart_sites
-    
+
     def __remove_c_coord(self, hs_dict):
         """
         Remove the c coordinate for all high symmetry points to make 2D shifts.
@@ -144,12 +140,12 @@ class InterfaceSymmetryAnalysis:
         new_dict = {}
         for k, v in hs_dict.items():
             try:
-                new_dict[k] = v[:,:2]
+                new_dict[k] = v[:, :2]
             except:
                 new_dict[k] = v[:2]
         return new_dict
 
-    def __get_adsorption_site(self, slab, unique): 
+    def __get_adsorption_site(self, slab, unique):
         """
         Return the adorption sites of a slab object, either only unique ones, or all.
         
@@ -176,21 +172,21 @@ class InterfaceSymmetryAnalysis:
             adsf = self.top_adsf
         else:
             adsf = self.bot_adsf
-    
+
         if unique:
             # Extract the unique HS points for the given surface
-            sites = adsf.find_adsorption_sites(distance=0, 
-                                               symm_reduce=0.01, 
+            sites = adsf.find_adsorption_sites(distance=0,
+                                               symm_reduce=0.01,
                                                near_reduce=0.01,
                                                no_obtuse_hollow=self.no_optuse_hollow)
         else:
-            #Extract all the HS points for the given surface
-            sites = adsf.find_adsorption_sites(distance=0, 
-                                               symm_reduce=0, 
+            # Extract all the HS points for the given surface
+            sites = adsf.find_adsorption_sites(distance=0,
+                                               symm_reduce=0,
                                                near_reduce=0.01,
                                                no_obtuse_hollow=self.no_optuse_hollow)
         return sites
-    
+
     def __separate_adsorption_sites(self, sites_dictionary):
         """
         Label unique adsorption sites uniquely
@@ -203,9 +199,9 @@ class InterfaceSymmetryAnalysis:
         for k, v in sites_dictionary.items():
             if k != 'all':
                 for i, coords in enumerate(v):
-                    d[k+'_'+str(i+1)] = coords
+                    d[k + '_' + str(i + 1)] = coords
         return d
-    
+
     def __sort_all_sites(self, adsf, all_sites, unique_sites):
         """
         Sort duplicate high symmetry points wrt the labels of the unique points.
@@ -239,8 +235,7 @@ class InterfaceSymmetryAnalysis:
                     new_dict[label].append(site)
             new_dict[label] = np.asarray(new_dict[label])
         return new_dict
-    
-    
+
     def __get_unique_hs_sites(self, slab):
         """
         Return unique adsorption sites for a slab.
@@ -249,11 +244,11 @@ class InterfaceSymmetryAnalysis:
         z-direction are returned.
         """
         unique = self.__separate_adsorption_sites(
-                    self.__get_adsorption_site(slab, unique=True))
+            self.__get_adsorption_site(slab, unique=True))
         unique_frac = self.__remove_c_coord(
             self.__convert_to_frac(unique))
         return unique, unique_frac
-    
+
     def __get_all_hs_sites(self, slab, unique_sites, adsf):
         """
         Return all adsorption sites for a slab in fractional 2D coordinates.
@@ -265,7 +260,7 @@ class InterfaceSymmetryAnalysis:
         all_sites = self.__remove_c_coord(
             self.__convert_to_frac(all_sites))
         return all_sites
-    
+
     def __get_slab_hs_dicts(self):
         """
         Analyse the adsorption sites of the substrate and the flipped slab.
@@ -275,17 +270,17 @@ class InterfaceSymmetryAnalysis:
         Cartesian coordinates are converted to fractional ones. Z-coordinates
         are deleted.
         """
-        
+
         top_u, self.top_sites_unique = self.__get_unique_hs_sites(self.top_slab)
         bot_u, self.bot_sites_unique = self.__get_unique_hs_sites(self.bot_slab)
-            
+
         self.top_sites_all = self.__get_all_hs_sites(self.top_slab,
                                                      top_u,
                                                      self.top_adsf)
         self.bot_sites_all = self.__get_all_hs_sites(self.bot_slab,
                                                      bot_u,
                                                      self.bot_adsf)
-     
+
     def __get_all_shifts(self):
         """
         Makes a dictionary containing all unique lateral shifts of an interface.
@@ -310,15 +305,15 @@ class InterfaceSymmetryAnalysis:
                         # The %1 is used to map all fractional coordinates back
                         # into the unit cell and get rid of -0.0 etc. We convert
                         # to a list to facilitate comparison with previous shifts.
-                        shift =  np.round((bs - ts)%1, 12).tolist()
+                        shift = np.round((bs - ts) % 1, 12).tolist()
                         # only add a new shift if the exact same one is not already present
                         if shift not in all_shifts_list:
                             all_shifts_list.append(shift)
                             shift_list.append(shift)
                 # convert to numpy array and assigne to HSP combination.
-                shifts[kbot+'-'+ktop] = np.asarray(shift_list)
+                shifts[kbot + '-' + ktop] = np.asarray(shift_list)
         self.all_shifts = shifts
-        
+
     def __group_structures(self):
         """
         Group unique and all interfacial shifts using a StructureMatcher
@@ -358,10 +353,10 @@ class InterfaceSymmetryAnalysis:
                 shift_list.append(intrfc.in_plane_offset)
             replic_shifts[intrfc_group[0].name] = np.unique(
                 np.asarray(shift_list), axis=0)
-        
+
         self.unique_shifts = unique_shifts
         self.replica_shifts = replic_shifts
-    
+
     def __set_parameters(self, interface):
         """
         set a couple of parameters for the class instance depended on the
@@ -370,10 +365,10 @@ class InterfaceSymmetryAnalysis:
         self.interface = interface
         self.top_slab = flip_slab(interface.film)
         self.bot_slab = interface.substrate
-        
+
         self.top_adsf = AdsorbateSiteFinder(self.top_slab)
         self.bot_adsf = AdsorbateSiteFinder(self.bot_slab)
-        
+
     def __call__(self, interface):
         """
         Return information about the interfaces high-symmetry points and shifts
@@ -420,7 +415,7 @@ class InterfaceSymmetryAnalysis:
                     'top_high_symm_points_all': self.top_sites_all,
                     'bottom_high_symm_points_unique': self.bot_sites_unique,
                     'bottom_high_symm_points_all': self.bot_sites_all}
-        
+
         if self.cart_coords:
             cart_out = {}
             for k, v in out_dict.items():
@@ -429,10 +424,11 @@ class InterfaceSymmetryAnalysis:
         else:
             return out_dict
 
+
 def old_symm(interface):
     top_slab = interface.film
     bot_slab = interface.substrate
-    
+
     # Top slab needs to be flipped to find the high symmetry points at the
     # interface.
     flipped_top = flip_slab(top_slab)
@@ -452,7 +448,7 @@ def old_symm(interface):
     b_hsp_a = pbc_hspoints(bottom_hsp_all, cell)
     t_hsp_u = pbc_hspoints(top_hsp_unique, cell)
     t_hsp_a = pbc_hspoints(top_hsp_all, cell)
-    
+
     return {'unique_shifts': c_hsp_u,
             'all_shifts': c_hsp_a,
             'bottom_high_symm_points_unique': b_hsp_u,
@@ -464,7 +460,7 @@ def old_symm(interface):
 def new_symm(interface):
     top_slab = interface.film
     bot_slab = interface.substrate
-    
+
     # Top slab needs to be flipped to find the high symmetry points at the
     # interface.
     flipped_top = flip_slab(top_slab)
