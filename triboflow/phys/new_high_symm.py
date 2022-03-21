@@ -7,8 +7,7 @@ Created on Wed Mar 16 14:40:07 2022
 """
 
 import numpy as np
-from itertools import combinations
-
+from monty.json import jsanitize
 
 from triboflow.phys.high_symmetry import (
     get_slab_hs, get_interface_hs, pbc_hspoints, fix_hs_dicts)
@@ -18,7 +17,7 @@ from pymatgen.analysis.adsorption import AdsorbateSiteFinder
 from pymatgen.analysis.structure_matcher import StructureMatcher
 
 
-class InterfaceSymmetryAnalysis:
+class InterfaceSymmetryAnalyzer:
     """
     This class analyses an Interface with respect to its lateral shifts
     in order to efficiently construct a potential energy surface (PES),
@@ -61,6 +60,7 @@ class InterfaceSymmetryAnalysis:
     def __init__(self,
                  in_cartesian_coordinates = False,
                  no_obtuse_hollow = True,
+                 jsanitize_output = True,
                  ltol=0.01,
                  stol=0.01,
                  angle_tol=0.01):
@@ -79,6 +79,10 @@ class InterfaceSymmetryAnalysis:
             when adding these sites, since it will result most likely in
             extemely many unique shifts and sample the unit cell very densly
             with associated huge computational cost. The default is True.
+        jsanitize_output : bool, optional
+            If true, will run monty.jsanitze on the final dictionary so that
+            the numpy arrays will be converted to lists and can be saved in a
+            mongoDB database.
         ltol : float, optional
             Fractional length tolerance for the StructureMatcher. Keep this low,
             since matching structures should match exactly. The default is 0.01.
@@ -98,6 +102,7 @@ class InterfaceSymmetryAnalysis:
         
         self.cart_coords = in_cartesian_coordinates
         self.no_optuse_hollow = no_obtuse_hollow
+        self.jsanitize_output = jsanitize_output
         self.ltol = ltol
         self.stol = stol
         self.angle_tol = angle_tol
@@ -373,8 +378,25 @@ class InterfaceSymmetryAnalysis:
         
         self.top_adsf = AdsorbateSiteFinder(self.top_slab)
         self.bot_adsf = AdsorbateSiteFinder(self.bot_slab)
+    
+    def __check_cartesian_and_jsanitize(self, out_dict):
+        """
+        Return the output and possibly switch to cartesian coordinates and jsanitize.
+        """
+        if self.cart_coords:
+            new_out = {}
+            for k, v in out_dict.items():
+                new_out[k] = self.__convert_to_cart(v)
+        else:
+            new_out = out_dict
         
+        if self.jsanitize_output:
+            return jsanitize(new_out)
+        else:
+            return new_out
+    
     def __call__(self, interface):
+        
         """
         Return information about the interfaces high-symmetry points and shifts
         
@@ -421,13 +443,7 @@ class InterfaceSymmetryAnalysis:
                     'bottom_high_symm_points_unique': self.bot_sites_unique,
                     'bottom_high_symm_points_all': self.bot_sites_all}
         
-        if self.cart_coords:
-            cart_out = {}
-            for k, v in out_dict.items():
-                cart_out[k] = self.__convert_to_cart(v)
-            return cart_out
-        else:
-            return out_dict
+        return self.__check_cartesian_and_jsanitize(out_dict)
 
 def old_symm(interface):
     top_slab = interface.film
