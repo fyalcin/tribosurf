@@ -30,13 +30,14 @@ __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 8th, 2021'
 
 import numpy as np
-from monty.json import jsanitize
+
 from ase import Atoms
 from pymatgen.analysis.adsorption import AdsorbateSiteFinder
 from pymatgen.analysis.structure_matcher import StructureMatcher
 
-from triboflow.utils.structure_manipulation import stack_aligned_slabs, \
-    clean_up_site_properties, recenter_aligned_slabs
+from triboflow.utils.structure_manipulation import (
+    stack_aligned_slabs, clean_up_site_properties, recenter_aligned_slabs)
+
 
 
 # =============================================================================

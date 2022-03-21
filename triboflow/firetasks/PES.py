@@ -14,9 +14,7 @@ from fireworks.utilities.fw_utilities import explicit_serialize
 from monty.json import jsanitize
 from pymatgen.core.structure import Structure
 
-from triboflow.phys.high_symmetry import (
-    get_slab_hs, get_interface_hs, pbc_hspoints, fix_hs_dicts)
-from triboflow.phys.interface_matcher import flip_slab
+from triboflow.phys.new_high_symm import InterfaceSymmetryAnalyzer
 from triboflow.phys.potential_energy_surface import get_pes
 from triboflow.phys.shaper import Shaper
 from triboflow.utils.database import (
@@ -264,27 +262,9 @@ class FT_FindHighSymmPoints(FiretaskBase):
             db_file = env_chk('>>db_file<<', fw_spec)
         hl_db = self.get('high_level_db', True)
 
-        top_slab = interface.film
-        bot_slab = interface.substrate
-        # Top slab needs to be flipped to find the high symmetry points at the
-        # interface.
-        flipped_top = flip_slab(top_slab)
-        top_hsp_unique, top_hsp_all = get_slab_hs(flipped_top)
 
-        bottom_hsp_unique, bottom_hsp_all = get_slab_hs(bot_slab)
-
-        cell = interface.lattice.matrix
-
-        hsp_unique = get_interface_hs(bottom_hsp_unique, top_hsp_unique, cell)
-        hsp_all = get_interface_hs(bottom_hsp_all, top_hsp_all, cell)
-
-        c_hsp_u, c_hsp_a = fix_hs_dicts(hsp_unique, hsp_all,
-                                        top_slab, bot_slab)
-
-        b_hsp_u = pbc_hspoints(bottom_hsp_unique, cell)
-        b_hsp_a = pbc_hspoints(bottom_hsp_all, cell)
-        t_hsp_u = pbc_hspoints(top_hsp_unique, cell)
-        t_hsp_a = pbc_hspoints(top_hsp_all, cell)
+        ISA = InterfaceSymmetryAnalyzer()
+        hsp_dict = ISA(interface)
 
         nav_high = Navigator(db_file=db_file, high_level=hl_db)
         nav_high.update_data(
@@ -292,15 +272,15 @@ class FT_FindHighSymmPoints(FiretaskBase):
             fltr={'name': name},
             new_values={'$set':
                             {'PES.high_symmetry_points':
-                                 {'bottom_unique': b_hsp_u,
-                                  'bottom_all': b_hsp_a,
-                                  'top_unique': t_hsp_u,
-                                  'top_all': t_hsp_a,
-                                  'combined_unique': jsanitize(c_hsp_u),
-                                  'combined_all': jsanitize(c_hsp_a)}}},
+                                 {'bottom_unique': hsp_dict['bottom_high_symm_points_unique'],
+                                  'bottom_all': hsp_dict['bottom_high_symm_points_unique'],
+                                  'top_unique': hsp_dict['bottom_high_symm_points_unique'],
+                                  'top_all': hsp_dict['bottom_high_symm_points_unique'],
+                                  'combined_unique': hsp_dict['bottom_high_symm_points_unique'],
+                                  'combined_all': hsp_dict['bottom_high_symm_points_unique']}}},
             upsert=True)
 
-        return FWAction(update_spec=({'lateral_shifts': c_hsp_u}))
+        return FWAction(update_spec=({'lateral_shifts': hsp_dict['bottom_high_symm_points_unique']}))
 
 
 @explicit_serialize
