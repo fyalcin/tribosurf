@@ -61,8 +61,6 @@ class InterfaceSymmetryAnalyzer:
                  in_cartesian_coordinates = False,
                  no_obtuse_hollow = True,
                  jsanitize_output = True,
-                 in_cartesian_coordinates=False,
-                 no_obtuse_hollow=True,
                  ltol=0.01,
                  stol=0.01,
                  angle_tol=0.01):
