@@ -474,3 +474,74 @@ def old_symm(interface):
             'top_high_symm_points_unique': t_hsp_u,
             'top_high_symm_points_all': t_hsp_a}
 
+if __name__ == "__main__":
+    import json
+    from time import time
+    from pymatgen.core.interface import Interface
+    
+    with open('/fs/home/wolloch/git_test/TriboFlow/triboflow/tests/interface_matching_test_results_0307.json', 'r') as f:
+        matching_dict = json.load(f)
+    
+    results = {}
+    for k, v in matching_dict.items():
+        try:
+            interface = Interface.from_dict(v['pmg']['interface'])
+            if "Co" in interface.formula:
+                continue
+        except:
+            continue
+        print(f'working on {k}'.center(80,'-'))
+        
+        try:
+            st = time()
+            old_hsp = old_symm(interface)
+            et = time()
+            old_time = np.round(et-st, 0)
+            print (f'old method took {old_time} seconds')
+            old_all_list = []
+            for v in old_hsp['all_shifts'].values():
+                old_all_list.extend(v)
+            b = np.asarray(old_all_list)
+            b = b[b[:, 1].argsort()]
+            b = b[b[:, 0].argsort(kind='mergesort')]
+        except:
+            print('old method failed!')
+            old_hsp = None
+            old_time = None
+        
+        try:
+            st = time()
+            ISA = InterfaceSymmetryAnalyzer(in_cartesian_coordinates=True,
+                                            jsanitize_output=False)
+            new_hsp = ISA(interface)
+            et = time()
+            new_time = np.round(et-st, 0)
+            print (f'new method took {new_time} seconds')
+            
+            new_all_list = []
+            for v in new_hsp['all_shifts'].values():
+                new_all_list.extend(v)
+                a = np.asarray(new_all_list)
+                a = a[a[:, 1].argsort()]
+                a = a[a[:, 0].argsort(kind='mergesort')]
+        except:
+            print('new method failed!')
+            new_hsp = None
+            new_time = None
+        
+        try:
+            close = np.allclose(a,b)
+        except:
+            print('np.allclose() failed! Probably Nr. of HSPs is different or either method failed')
+            close = None
+        
+        print(f'are old and new method close: {close}')
+                              
+        results[k] = {'timing': {'old': old_time,
+                                 'new': new_time},
+                      'all_close': close,
+                      'hsp_old': old_hsp,
+                      'hsp_new': new_hsp,
+                      'interface': interface}
+             
+        
