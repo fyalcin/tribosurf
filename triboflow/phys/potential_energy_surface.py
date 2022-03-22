@@ -86,7 +86,7 @@ def get_pes(hs_all, E, cell, to_fig=None, point_density=20):
              .     .     .
              
     """
-    
+
     # Unfold the PES points
     E_list, data = unfold_pes(hs_all, E)
     
@@ -107,10 +107,13 @@ def get_pes(hs_all, E, cell, to_fig=None, point_density=20):
     data_rep = replicate_points(data, cell, replicate_of=(3, 3) )
     rbf = Rbf(data_rep[:, 0], data_rep[:, 1], data_rep[:, 2], function='cubic')
     # rbf = RBFInterpolator(data_rep[:,:2], data_rep[:, 2], kernel='cubic')
-   
+
+    xrange, yrange = sum(abs(cell[:2, 0])), sum(abs(cell[:2, 1]))
+    ratio = xrange/yrange if xrange/yrange > 1 else yrange/xrange
+    ratio = round(ratio)
     # Calculate the PES on a very dense and uniform grid. Useful for further 
     # analysis (MEP, shear strength) and to plot the PES
-    coordinates = generate_uniform_grid(cell*2, density=point_density)
+    coordinates = generate_uniform_grid(cell*ratio, density=point_density)
     E_new = rbf(coordinates[:, 0], coordinates[:, 1])
     # E_new = rbf(coordinates[:,:2])
     pes_data = np.column_stack([coordinates[:, :2], E_new])

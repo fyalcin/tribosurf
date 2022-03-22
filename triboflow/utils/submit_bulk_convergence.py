@@ -9,10 +9,9 @@ Created on Mon Oct  4 16:12:32 2021
 from fireworks import LaunchPad
 from fireworks import Workflow, Firework
 from triboflow.fireworks.init_fws import InitWF
-from triboflow.firetasks.structure_manipulation import FT_StartPreRelax
-from triboflow.firetasks.dielectric import FT_StartDielectric
+from triboflow.firetasks.structure_manipulation import FT_StartBulkPreRelax
 from triboflow.firetasks.init_check import material_from_mp
-from triboflow.firetasks.convergence import FT_StartConvo
+from triboflow.firetasks.start_swfs import FT_StartBulkConvoSWF, FT_StartDielectricSWF
 from triboflow.utils.utils import load_homoatomic_materials
 
 computational_params = {'functional': 'PBE',
@@ -32,33 +31,33 @@ def get_bulk_convergence_wf(material, comp_params):
                                             computational=comp_params)
     WF.append(Initialize)
 
-    PreRelaxation = Firework(FT_StartPreRelax(mp_id=mp_id,
-                                              functional=functional),
-                                 name='Start pre-relaxation for {}'
-                                .format(material['formula']))
+    PreRelaxation = Firework(FT_StartBulkPreRelax(mp_id=mp_id,
+                                                  functional=functional),
+                             name='Start pre-relaxation for {}'
+                             .format(material['formula']))
     WF.append(PreRelaxation)
     
-    ConvergeEncut = Firework(FT_StartConvo(conv_type='encut',
-                                           mp_id=mp_id,
-                                           functional=functional,
-                                           ),
-                                name='Start encut convergence for {}'
-                                      .format(material['formula']))
+    ConvergeEncut = Firework(FT_StartBulkConvoSWF(conv_type='encut',
+                                                  mp_id=mp_id,
+                                                  functional=functional,
+                                                  ),
+                             name='Start encut convergence for {}'
+                             .format(material['formula']))
     WF.append(ConvergeEncut)
     
-    ConvergeKpoints = Firework(FT_StartConvo(conv_type='kpoints',
-                                           mp_id=mp_id,
-                                           functional=functional,
-                                           ),
-                                name='Start kpoints convergence for {}'
-                                      .format(material['formula']))
+    ConvergeKpoints = Firework(FT_StartBulkConvoSWF(conv_type='kpoints',
+                                                    mp_id=mp_id,
+                                                    functional=functional,
+                                                    ),
+                               name='Start kpoints convergence for {}'
+                               .format(material['formula']))
     WF.append(ConvergeKpoints)
     
-    CalcDielectric = Firework(FT_StartDielectric(mp_id=mp_id,
-                                                 functional=functional,
-                                                 update_bulk=True,
-                                                 update_slabs=False),
-                                 name=f'Start dielectric SWF for {material["formula"]}')
+    CalcDielectric = Firework(FT_StartDielectricSWF(mp_id=mp_id,
+                                                    functional=functional,
+                                                    update_bulk=True,
+                                                    update_slabs=False),
+                              name=f'Start dielectric SWF for {material["formula"]}')
     WF.append(CalcDielectric)
     
     Dependencies = {Initialize: [PreRelaxation],
