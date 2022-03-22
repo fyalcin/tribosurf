@@ -5,12 +5,13 @@ Created on Tue Oct 19 11:28:20 2021
 
 @author: yalcin
 """
-
+from fireworks.core.rocket_launcher import rapidfire
 from fireworks import LaunchPad, Workflow, Firework
 
-from triboflow.firetasks.surfen_main import FT_StartSurfaceEnergy
+from triboflow.firetasks.start_swfs import FT_StartSurfaceEnergySWF
 from triboflow.utils.database import Navigator
-
+from datetime import datetime
+today = datetime.today().strftime('%Y-%m-%d')
 lpad = LaunchPad.auto_load()
 
 db_file = 'auto'
@@ -21,42 +22,47 @@ fake = False
 nav = Navigator(db_file=db_file, high_level=high_level)
 bulk_data = nav.find_many_data('PBE.bulk_data', {})
 mat_list = []
-
+lpad.reset(today)
 for data in bulk_data:
     mpid = data['mpid']
     print(mpid)
     formula = data['formula']
     functional = 'PBE'
 
-    sg_params = {'miller': [(2, 1, 2)],
+    sg_params = {'miller': [(3, 3, 2)],
                  'symmetrize': False,
                  'slab_thick': 12,
                  'vac_thick': 15,
-                 'prim': True,
-                 'lll_reduce': True,
-                 'max_index': 2,
+                 'primitive': False,
+                 'lll_reduce': False,
+                 # 'max_index': 2,
                  'tol': 0.1,
-                 'max_normal_search': 'max',
+                 'max_normal_search': None,
                  'resize': True,
                  'preserve_terminations': True,
-                 'min_thick_A': 6}
+                 'min_thick_A': 8}
 
     sg_filter = {'method': 'all'}
 
     comp_params_user = {}
     custom_id = None
 
-    SurfaceEnergy = Firework(FT_StartSurfaceEnergy(mpid=mpid,
-                                                   functional=functional,
-                                                   sg_params=sg_params,
-                                                   sg_filter=sg_filter,
-                                                   db_file=db_file,
-                                                   high_level=high_level,
-                                                   comp_params_user=comp_params_user,
-                                                   custom_id=custom_id),
+    SurfaceEnergy = Firework(FT_StartSurfaceEnergySWF(mpid=mpid,
+                                                      functional=functional,
+                                                      sg_params=sg_params,
+                                                      sg_filter=sg_filter,
+                                                      db_file=db_file,
+                                                      high_level=high_level,
+                                                      comp_params_user=comp_params_user,
+                                                      custom_id=custom_id),
                              name=f'Start surface energy SWF for {formula}')
 
     WF = Workflow([SurfaceEnergy])
     formulas = ['WC', 'TiC', 'Fe', 'Pt', 'ZrN', 'TiN', 'GaAs', 'GaN', 'TaN', 'Au', 'Cu', 'ZnCu', 'ZnO', 'CuAu', 'MgO']
-    if formula in formulas:
+    # if formula == 'Fe':
+    #     lpad.add_wf(WF)
+    if mpid == 'mp-13':
         lpad.add_wf(WF)
+
+
+rapidfire(lpad)

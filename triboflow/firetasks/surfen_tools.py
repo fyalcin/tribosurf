@@ -10,7 +10,7 @@ from triboflow.utils.surfen_tools import get_surfen_inputs_from_mpid, write_surf
 
 
 @explicit_serialize
-class FT_SurfEnFromFile(FiretaskBase):
+class FT_StartSurfaceEnergyFromFile(FiretaskBase):
     _fw_name = 'Calculates the surface energy of the slab loaded from a file.'
     required_params = ['filename', 'miller', 'mpid', 'functional']
     optional_params = ['db_file', 'high_level', 'custom_id', 'comp_params']
@@ -41,7 +41,7 @@ class FT_SurfEnFromFile(FiretaskBase):
         coll = f'{functional}.slab_data.LEO'
 
         FW1 = Firework(
-            FT_PutSurfenInputsIntoDB(inputs_list=inputs_list, sg_params={}, comp_params=comp_params,
+            FT_WriteSurfenInputsToDB(inputs_list=inputs_list, sg_params={}, comp_params=comp_params,
                                      fltr=fltr, coll=coll, db_file=db_file, high_level=high_level),
             name=f"Generate surface energy inputs for {mpid} with {functional} and put in DB")
 
@@ -51,8 +51,8 @@ class FT_SurfEnFromFile(FiretaskBase):
             name=f"Generate and relax surface energy inputs for {mpid} with {functional}")
 
         FW3 = Firework(
-            FT_WriteSurfaceEnergies(inputs_list=inputs_list, fltr=fltr, coll=coll, db_file=db_file,
-                                    high_level=high_level),
+            FT_WriteSurfaceEnergiesToDB(inputs_list=inputs_list, fltr=fltr, coll=coll, db_file=db_file,
+                                        high_level=high_level),
             name=f"Calculate the surface energies for {mpid} with {functional} and put into DB")
         WF = Workflow([FW1, FW2, FW3], {FW1: [FW2], FW2: [FW3]})
 
@@ -144,7 +144,7 @@ class FT_RelaxSurfaceEnergyInputs(FiretaskBase):
 
 
 @explicit_serialize
-class FT_SlabOptOrientation(FiretaskBase):
+class FT_StartSlabOptOrientation(FiretaskBase):
     """
     Starts a Workflow that will find the lowest energy orientation of a material
     desribed by its MaterialsProject ID given certain constraints.
@@ -232,7 +232,7 @@ class FT_SlabOptOrientation(FiretaskBase):
         fltr = {'mpid': mpid}
 
         FW1 = Firework(
-            FT_PutSurfenInputsIntoDB(inputs_list=inputs_list, sg_params=sg_params, comp_params=comp_params,
+            FT_WriteSurfenInputsToDB(inputs_list=inputs_list, sg_params=sg_params, comp_params=comp_params,
                                      fltr=fltr, coll=coll, db_file=db_file, high_level=high_level),
             name=f"Generate surface energy inputs for {mpid} with {functional} and put in DB")
 
@@ -242,12 +242,12 @@ class FT_SlabOptOrientation(FiretaskBase):
             name=f"Generate and relax surface energy inputs for {mpid} with {functional}")
 
         FW3 = Firework(
-            FT_WriteSurfaceEnergies(inputs_list=inputs_list, fltr=fltr, coll=coll, db_file=db_file,
-                                    high_level=high_level),
+            FT_WriteSurfaceEnergiesToDB(inputs_list=inputs_list, fltr=fltr, coll=coll, db_file=db_file,
+                                        high_level=high_level),
             name=f"Calculate the surface energies for {mpid} with {functional} and put into DB")
 
         FW4 = Firework(
-            FT_GenerateSurfenEntries(fltr=fltr, coll=coll, db_file=db_file, high_level=high_level),
+            FT_FindLowEnergyTerminations(fltr=fltr, coll=coll, db_file=db_file, high_level=high_level),
             name=f"Update the consolidated surface energy list for {mpid} with {functional}")
 
         WF = Workflow([FW1, FW2, FW3, FW4], {FW1: [FW2], FW2: [FW3], FW3: [FW4]},
@@ -257,7 +257,7 @@ class FT_SlabOptOrientation(FiretaskBase):
 
 
 @explicit_serialize
-class FT_WriteSurfaceEnergies(FiretaskBase):
+class FT_WriteSurfaceEnergiesToDB(FiretaskBase):
     """ Calculates the surface energies and updates the LEO collection entries
     with them.
 
@@ -301,7 +301,7 @@ class FT_WriteSurfaceEnergies(FiretaskBase):
 
 
 @explicit_serialize
-class FT_PutSurfenInputsIntoDB(FiretaskBase):
+class FT_WriteSurfenInputsToDB(FiretaskBase):
     """
     Firetask that writes all the inputs and parameters for surface energy calculations described in
     the inputs_list into the database to be later updated with the surface energies.
@@ -351,7 +351,7 @@ class FT_PutSurfenInputsIntoDB(FiretaskBase):
 
 
 @explicit_serialize
-class FT_GenerateSurfenEntries(FiretaskBase):
+class FT_FindLowEnergyTerminations(FiretaskBase):
     """ Firetask that goes through all the calculated surface energies in the database and finds the minimum
     of each orientation, creating a new entry in the same document with an easy-to-navigate
     list of surface energies.

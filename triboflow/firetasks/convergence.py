@@ -7,7 +7,6 @@ import numpy as np
 from datetime import datetime
 from pprint import pprint, pformat
 
-from pymatgen.core.structure import Structure
 from fireworks import FWAction, FiretaskBase, Firework, Workflow, FileWriteTask
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
@@ -15,113 +14,12 @@ from atomate.vasp.config import VASP_CMD, DB_FILE
 from atomate.vasp.powerups import add_modify_incar
 from atomate.vasp.workflows.base.bulk_modulus import get_wf_bulk_modulus
 
-from triboflow.utils.database import Navigator, StructureNavigator, NavigatorMP
+from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.vasp_tools import (
     get_custom_vasp_static_settings, get_emin_and_emax, MeshFromDensity)
-from triboflow.utils.check_convergence import is_list_converged
+from triboflow.utils.utils import is_list_converged
 from triboflow.utils.file_manipulation import copy_output_files
 
-
-@explicit_serialize
-class FT_StartConvo(FiretaskBase):
-    """ Starts a convergence subworkflow.
-
-    Starts either an energy cutoff or kpoint density convergence of a material
-    with a given MPID and functional through a subworkflow.
-
-    Parameters
-    ----------
-    conv_type : str
-        Either "kpoints" or "encut", depending on what to converge.
-    mp_id : str
-        MaterialsProject ID number for the material
-    functional : str
-        Functional with which the workflow is run. PBE or SCAN.
-    db_file : str, optional
-        Full path of the db.json file to be used. The default is to use
-        env_chk to find the file.
-    encut_start : float, optional
-        Starting encut value for the first run. Defaults to the largest EMIN
-        in the POTCAR.
-    encut_incr : float, optional
-        Increment for the encut during the convergence. Defaults to 25.
-    k_dens_start : float, optional
-        Starting kpoint density in 1/Angstrom. Defaults to 1.0
-    k_dens_incr : float, optional
-        Increment for the kpoint convergence. Can be set quite small since
-        there is a check in place to see if a new mesh is actually constructed
-        for each density. Defaults to 0.1.
-    n_converge : int, optional
-        Number of calculations that have to be inside the convergence
-        threshold for convergence to be reached. Defaults to 3.
-    high_level_db : str or True, optional
-        Name of the high_level database to use. Defaults to 'True', in which
-        case it is read from the db.json file.
-    """
-
-    _fw_name = 'Start Encut or Kdensity Convergence'
-    required_params = ['conv_type', 'mp_id', 'functional']
-    optional_params = ['db_file', 'encut_start', 'encut_incr', 'k_dens_start',
-                       'k_dens_incr', 'n_converge', 'high_level_db']
-
-    def run_task(self, fw_spec):
-        from triboflow.workflows.subworkflows import converge_swf
-
-        conv_type = self.get('conv_type')
-        mp_id = self.get('mp_id')
-        functional = self.get('functional')
-        db_file = self.get('db_file')
-        n_converge = self.get('n_converge', 3)
-        encut_start = self.get('encut_start', None)
-        encut_incr = self.get('encut_incr', 25)
-        k_dens_start = self.get('k_dens_start', 2.0)
-        k_dens_incr = self.get('k_dens_incr', 0.1)
-        if not db_file:
-            db_file = env_chk('>>db_file<<', fw_spec)
-        hl_db = self.get('high_level_db', True)
-            
-        if conv_type not in ['kpoints', 'encut']:
-            raise ValueError('"type" input must be either "kpoints" or'
-                             '"encut".\nYou have passed {}'.format(conv_type))
-        
-        nav_structure = StructureNavigator(
-            db_file=db_file, 
-            high_level=hl_db)
-        data = nav_structure.get_bulk_from_db(
-            mp_id=mp_id, 
-            functional=functional)
-        
-        if conv_type == 'encut':
-            stop_convergence = data.get('encut_info')
-        elif conv_type == 'kpoints':
-            stop_convergence = data.get('k_dense_info')
-        
-        if not stop_convergence:
-            structure_dict = data.get('structure_equiVol')
-            if not structure_dict:
-                structure_dict = data.get('primitive_structure')
-                if not structure_dict:
-                    structure_dict = data.get('structure_fromMP')
-                    if not structure_dict:
-                        raise LookupError('No structure found that can be used '
-                                          'as input for the convergence swf.')
-            structure = Structure.from_dict(structure_dict)
-            comp_params = data.get('comp_parameters', {})
-            SWF = converge_swf(structure=structure,
-                               conv_type=conv_type,
-                               flag=mp_id,
-                               comp_parameters=comp_params,
-                               functional=functional,
-                               encut_start=encut_start,
-                               encut_incr=encut_incr,
-                               k_dens_start=k_dens_start,
-                               k_dens_incr=k_dens_incr,
-                               n_converge=n_converge, 
-                               print_help=False)
-            return FWAction(detours=SWF, update_spec=fw_spec)
-        else:
-            return FWAction(update_spec=fw_spec)
-        
 
 @explicit_serialize
 class FT_UpdateBMLists(FiretaskBase):
