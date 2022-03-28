@@ -637,12 +637,11 @@ class FT_MakeHeteroStructure(FiretaskBase):
                     new_values={'$set': {'unrelaxed_structure': inter_dict,
                                          'bottom_aligned': bottom_dict,
                                          'top_aligned': top_dict}})
-
+                return
             else:
-
                 return FWAction(defuse_workflow=True)
 
-                return FWAction(detours=new_fw)
+            
 
 
 @explicit_serialize

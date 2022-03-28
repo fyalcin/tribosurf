@@ -97,11 +97,11 @@ def plot_slab_hs(hs, slab, to_fig=None, hs_type='all', leg_size=10, in_frac=Fals
         if in_frac:
             data = np.dot(data, slab.lattice.matrix[:2,:2])
         if len(data.shape) == 1:
-            plt.plot(data[0], data[1], marker='o', markersize=18 * (ratio), mew=0.5,
+            plt.plot(data[0], data[1], marker='o', markersize=12 * (ratio), mew=0.5,
                      linestyle='', zorder=10000, label=k, markeredgecolor='black')
         else:
             if hs_type == 'all':
-                plt.plot(data[:, 0], data[:, 1], marker='o', markersize=12, mew=0.5,
+                plt.plot(data[:, 0], data[:, 1], marker='o', markersize=18* (ratio), mew=0.5,
                          linestyle='', zorder=10000, label=k, mec='black')
             elif hs_type == 'unique':
                 plt.plot(data[:, 0], data[:, 1], marker='o', markersize=12, mew=0.5,

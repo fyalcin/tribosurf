@@ -319,7 +319,9 @@ class InterfaceSymmetryAnalyzer:
                             all_shifts_list.append(shift)
                             shift_list.append(shift)
                 # convert to numpy array and assigne to HSP combination.
-                shifts[kbot + '-' + ktop] = np.asarray(shift_list)
+                # do not add empty lists
+                if shift_list:
+                    shifts[kbot + '-' + ktop] = np.asarray(shift_list)
         self.all_shifts = shifts
 
     def __group_structures(self):
@@ -354,12 +356,13 @@ class InterfaceSymmetryAnalyzer:
         # interface objects.
         unique_shifts = {}
         replic_shifts = {}
-        for intrfc_group in grouped_interfaces:
-            unique_shifts[intrfc_group[0].name] = intrfc_group[0].in_plane_offset
+        for i, intrfc_group in enumerate(grouped_interfaces):
+            unique_shifts['group_'+str(i+1)] = (intrfc_group[0].in_plane_offset,
+                                                intrfc_group[0].name)
             shift_list = []
             for intrfc in intrfc_group:
                 shift_list.append(intrfc.in_plane_offset)
-            replic_shifts[intrfc_group[0].name] = np.unique(
+            replic_shifts['group_'+str(i+1)] = np.unique(
                 np.asarray(shift_list), axis=0)
 
         self.unique_shifts = unique_shifts
@@ -442,6 +445,185 @@ class InterfaceSymmetryAnalyzer:
                     'bottom_high_symm_points_all': self.bot_sites_all}
         
         return self.__check_cartesian_and_jsanitize(out_dict)
+
+class SimpleSymmetryAnalyzer:
+
+    def __init__(self,
+                 in_cartesian_coordinates = False,
+                 no_obtuse_hollow = True,
+                 jsanitize_output = True,
+                 ltol=0.01,
+                 stol=0.01,
+                 angle_tol=0.01):
+        self.cart_coords = in_cartesian_coordinates
+        self.no_optuse_hollow = no_obtuse_hollow
+        self.jsanitize_output = jsanitize_output
+        self.ltol = ltol
+        self.stol = stol
+        self.angle_tol = angle_tol
+
+    def __convert_to_frac(self, hs_dict, only_2d=False):
+        """
+        Convert cartesian coordinates in a high_symmetry dictionary to fractional.
+        """
+        if only_2d:
+            m = self.interface.lattice.inv_matrix[:2, :2]
+        else:
+            m = self.interface.lattice.inv_matrix
+
+        frac_sites = {}
+        for k, v in hs_dict.items():
+            try:
+                frac_sites[k] = np.dot(v, m)
+            except:
+                frac_sites[k] = v
+        return frac_sites
+
+    def __convert_to_cart(self, hs_dict, only_2d=True):
+        """
+        Convert fractional coordinates in a high_symmetry dictionary to cartesian.
+        """
+        if only_2d:
+            m = self.interface.lattice.matrix[:2, :2]
+        else:
+            m = self.interface.lattice.matrix
+
+        cart_sites = {}
+        for k, v in hs_dict.items():
+            try:
+                cart_sites[k] = np.dot(v, m)
+            except:
+                cart_sites[k] = v
+        return cart_sites
+
+    def __remove_c_coord(self, hs_dict):
+        """
+        Remove the c coordinate for all high symmetry points to make 2D shifts.
+        """
+        new_dict = {}
+        for k, v in hs_dict.items():
+            try:
+                new_dict[k] = v[:, :2]
+            except:
+                new_dict[k] = v[:2]
+        return new_dict
+
+    def __get_adsorption_site(self, slab, unique):
+        if slab == self.top_slab:
+            adsf = self.top_adsf
+        else:
+            adsf = self.bot_adsf
+
+        if unique:
+            # Extract the unique HS points for the given surface
+            sites = adsf.find_adsorption_sites(distance=0,
+                                               symm_reduce=0.01,
+                                               near_reduce=0.01,
+                                               no_obtuse_hollow=self.no_optuse_hollow)
+        else:
+            # Extract all the HS points for the given surface
+            sites = adsf.find_adsorption_sites(distance=0,
+                                               symm_reduce=0,
+                                               near_reduce=0.01,
+                                               no_obtuse_hollow=self.no_optuse_hollow)
+        return sites
+
+
+    def __get_all_hs_sites(self, slab):
+        """
+        Return all adsorption sites for a slab in fractional 2D coordinates.
+        """
+        all_sites = self.__get_adsorption_site(slab, unique=False)
+        all_sites = self.__remove_c_coord(
+            self.__convert_to_frac(all_sites))
+        return all_sites
+
+    def __get_slab_hs_dicts(self):
+        
+        self.top_sites_all = self.__get_all_hs_sites(self.top_slab)['all']
+        self.bot_sites_all = self.__get_all_hs_sites(self.bot_slab)['all']
+
+    def __get_all_shifts(self):
+        """
+        Makes a dictionary containing all unique lateral shifts of an interface.
+        
+        They are grouped according to high-symmetry point combinations, e.g.
+        ontop_1-bridge_2.
+        """
+        # all_shifts_list will be used to store all previously encountered shifts
+        # since we do not want to duplicate shifts.
+        all_shifts_list = []
+        for bot_shift in self.bot_sites_all:
+            for top_shift in self.top_sites_all:
+                shift = np.round((bot_shift - top_shift) % 1, 12).tolist()
+                if shift not in all_shifts_list:
+                    all_shifts_list.append(shift)
+        self.all_shifts = np.asarray(all_shifts_list)
+
+    def __group_structures(self):
+        """
+        Group unique and all interfacial shifts using a StructureMatcher
+        
+        Different shifts of the interface can result in symmetrically equivalent
+        structures of the interface. These can be found by pymatgen's
+        StructureMatcher using the .group_structures method.
+        It returns a list of lists with equivalent structures. We take the first
+        one of each list and put them in self.unique_shifts, while the whole
+        list is put in self.replica_shifts.
+        """
+        interface_list = []
+        struct_match = StructureMatcher(ltol=self.ltol,
+                                        stol=self.stol,
+                                        angle_tol=self.angle_tol,
+                                        primitive_cell=False,
+                                        scale=False)
+        
+        for shift in self.all_shifts:
+            # make an interface with the current shift and assign it a name
+            # to keep track of the HSP combination associated with it.
+            intrfc = self.interface.copy()
+            intrfc.in_plane_offset = shift
+            interface_list.append(intrfc)
+        # group the interfaces in interface_list
+        grouped_interfaces = struct_match.group_structures(interface_list)
+        # set up the output dictionaries and populate them with the correct
+        # shifts which are just the .in_plane_offset attributes of the grouped
+        # interface objects.
+        unique_shifts = {}
+        replic_shifts = {}
+        for i, intrfc_group in enumerate(grouped_interfaces):
+            unique_shifts['g'+str(i)] = intrfc_group[0].in_plane_offset
+            shifts = []
+            for intrfc in intrfc_group:
+                shifts.append(intrfc.in_plane_offset)
+            replic_shifts['g'+str(i)] = np.unique(np.asarray(shifts), axis=0)
+
+        self.unique_shifts = unique_shifts
+        self.replica_shifts = replic_shifts
+
+    def __set_parameters(self, interface):
+        """
+        set a couple of parameters for the class instance depended on the
+        interface passed to the __call__ method.
+        """
+        self.interface = interface
+        self.top_slab = flip_slab(interface.film)
+        self.bot_slab = interface.substrate
+
+        self.top_adsf = AdsorbateSiteFinder(self.top_slab)
+        self.bot_adsf = AdsorbateSiteFinder(self.bot_slab)
+    
+    def __call__(self, interface):
+        
+        self.__set_parameters(interface)
+        self.__get_slab_hs_dicts()
+        self.__get_all_shifts()
+        self.__group_structures()
+        out_dict = {'unique_shifts': self.unique_shifts,
+                    'all_shifts': self.replica_shifts}
+        
+        return out_dict
+
 
 def old_symm(interface):
     top_slab = interface.film
