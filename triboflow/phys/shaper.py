@@ -235,7 +235,7 @@ class Shaper:
         """
         # Input slab is first centered for the cases where the slab spills
         # outside the box from the top and the bottom
-        struct_centered = center_slab(struct.copy(sanitize=True))
+        struct_centered = center_slab(struct.copy())
         initial_thickness = Shaper.get_proj_height(struct_centered, 'slab')
 
         if slab_thickness:
