@@ -343,8 +343,7 @@ class InterfaceSymmetryAnalyzer:
                                         scale=False)
         for name, shift_array in self.all_shifts.items():
             for shift in shift_array:
-                # make an interface with the current shift and assign it a name
-                # to keep track of the HSP combination associated with it.
+                # make an interface with the current shift and set a n
                 intrfc = self.interface.copy()
                 intrfc.in_plane_offset = shift
                 intrfc.name = name
@@ -353,12 +352,14 @@ class InterfaceSymmetryAnalyzer:
         grouped_interfaces = struct_match.group_structures(interface_list)
         # set up the output dictionaries and populate them with the correct
         # shifts which are just the .in_plane_offset attributes of the grouped
-        # interface objects.
+        # interface objects. Assign the group nr as keys, so the replicated
+        # points can be matched to the unique ones.
         unique_shifts = {}
+        group_assignment = {}
         replic_shifts = {}
         for i, intrfc_group in enumerate(grouped_interfaces):
-            unique_shifts['group_'+str(i+1)] = (intrfc_group[0].in_plane_offset,
-                                                intrfc_group[0].name)
+            unique_shifts['group_'+str(i+1)] = intrfc_group[0].in_plane_offset
+            group_assignment['group_'+str(i+1)] = intrfc_group[0].name
             shift_list = []
             for intrfc in intrfc_group:
                 shift_list.append(intrfc.in_plane_offset)
@@ -367,6 +368,7 @@ class InterfaceSymmetryAnalyzer:
 
         self.unique_shifts = unique_shifts
         self.replica_shifts = replic_shifts
+        self.group_assignment = group_assignment
 
     def __set_parameters(self, interface):
         """
@@ -442,7 +444,8 @@ class InterfaceSymmetryAnalyzer:
                     'top_high_symm_points_unique': self.top_sites_unique,
                     'top_high_symm_points_all': self.top_sites_all,
                     'bottom_high_symm_points_unique': self.bot_sites_unique,
-                    'bottom_high_symm_points_all': self.bot_sites_all}
+                    'bottom_high_symm_points_all': self.bot_sites_all,
+                    'group_assignments': self.group_assignment}
         
         return self.__check_cartesian_and_jsanitize(out_dict)
 
@@ -545,13 +548,9 @@ class SimpleSymmetryAnalyzer:
 
     def __get_all_shifts(self):
         """
-        Makes a dictionary containing all unique lateral shifts of an interface.
-        
-        They are grouped according to high-symmetry point combinations, e.g.
-        ontop_1-bridge_2.
+        Makes an array containing all high-symmetry lateral shifts of an interface.
         """
-        # all_shifts_list will be used to store all previously encountered shifts
-        # since we do not want to duplicate shifts.
+       
         all_shifts_list = []
         for bot_shift in self.bot_sites_all:
             for top_shift in self.top_sites_all:
@@ -579,8 +578,7 @@ class SimpleSymmetryAnalyzer:
                                         scale=False)
         
         for shift in self.all_shifts:
-            # make an interface with the current shift and assign it a name
-            # to keep track of the HSP combination associated with it.
+            # make an interface with the current shift
             intrfc = self.interface.copy()
             intrfc.in_plane_offset = shift
             interface_list.append(intrfc)
@@ -588,7 +586,8 @@ class SimpleSymmetryAnalyzer:
         grouped_interfaces = struct_match.group_structures(interface_list)
         # set up the output dictionaries and populate them with the correct
         # shifts which are just the .in_plane_offset attributes of the grouped
-        # interface objects.
+        # interface objects. Assign the group nr as keys, so the replicated
+        # points can be matched to the unique ones.
         unique_shifts = {}
         replic_shifts = {}
         for i, intrfc_group in enumerate(grouped_interfaces):
