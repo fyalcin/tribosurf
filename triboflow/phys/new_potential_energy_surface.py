@@ -26,9 +26,9 @@ __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 8th, 2021'
 
 import numpy as np
-from scipy.interpolate import Rbf
-from itertools import combinations
-#from scipy.interpolate import RBFInterpolator
+import matplotlib.pyplot as plt
+
+from scipy.interpolate import Rbf, RBFInterpolator
 
 from triboflow.utils.phys_tools import replicate_points, generate_uniform_grid,\
     orthorombize, pbc_coordinates
@@ -41,31 +41,49 @@ from triboflow.utils.phys_tools import replicate_points, generate_uniform_grid,\
 class PESGenerator():
     def __init__(self,
                  point_density=50,
-                 interpolation_function='cubic',
-                 plot_unique=True,
-                 plot_unit_cell=True):
+                 interpolation_kernel='cubic',
+                 plot_unique_points=True,
+                 plot_unit_cell=True,
+                 plotting_ratio=None,
+                 normalize_minimum = True,
+                 nr_of_contours = 50):
         self.point_density = point_density
-        self.interpolation_function = interpolation_function
+        self.interpolation_kernel = interpolation_kernel
+        self.plotting_ratio = plotting_ratio
+        self.normalize = normalize_minimum
+        self.contours = nr_of_contours
+        self.plot_unit_cell = plot_unit_cell
         
     def __call__(self,
                  interface,
                  energies_dict,
                  all_shifts_dict,
                  unique_shifts_dict):
-        self.interface = interface
-        self.energies_dict = energies_dict
-        self.all_shifts = all_shifts_dict,
-        self.unique_shifts = unique_shifts_dict
         
-    def _make_energies_list(self):
+        self.interface = interface.copy()
+        self.energies_dict = energies_dict.copy()
+        self.all_shifts = all_shifts_dict.copy()
+        self.unique_shifts = unique_shifts_dict.copy()
+        if self.normalize:
+            self.energy_offset = min(self.energies_dict.values())
+        else:
+            self.energy_offset = 0.0
+        self._get_rbf()
+        self._get_plotting_rectangle()
+        X, Y = self._get_grid(self.width, self.height)
+        Z = self._evaluate_on_grid(X, Y)
+        self._plot_grid(X, Y, Z)
+        
+    def __make_energies_list(self):
         
         energy_list = []
-        for group, coordinates in self.all_shifts:
+        for group, coordinates in self.all_shifts.items():
             for coord in coordinates:
-                energy_list.append(coord.extend(self.energies_dict[group]))
+                energy_list.append(coord + [self.energies_dict[group]-
+                                            self.energy_offset])
         self.unit_cell_energies = energy_list
         
-    def _extend_energies_list(self):
+    def __extend_energies_list(self):
         extended_energy_list = []
         xrange = yrange = [-1.0, 0.0, 1.0]
         for x in xrange:
@@ -74,14 +92,84 @@ class PESGenerator():
                     extended_energy_list.append([entry[0]+x,
                                                  entry[1]+y,
                                                  entry[2]])
-        self.extended_energies = np.asarray(extended_energy_list)
+        self.extended_energies = self._from_frac_to_cart(
+            np.asarray(extended_energy_list))
         
     def _get_rbf(self):
+        self.__make_energies_list()
+        self.__extend_energies_list()
+        # self.rbf = RBFInterpolator(self.extended_energies[:, :2],
+        #                self.extended_energies[:, 2],
+        #                kernel=self.interpolation_kernel)
         self.rbf = Rbf(self.extended_energies[:, 0],
-                       self.extended_energies[:, 0],
-                       self.extended_energies[:, 0],
-                       function=self.interpolation_function)
-                
+                       self.extended_energies[:, 1],
+                       self.extended_energies[:, 2],
+                       function=self.interpolation_kernel)
+        
+    def _from_frac_to_cart(self, array):
+        m = self.interface.lattice.matrix[:2,:2]
+        if len(array[0]) == 3:
+            m = np.vstack((np.hstack((m,np.zeros((2,1)))),np.asarray([0,0,1])))
+        return np.dot(array,m)
+            
+    def _get_plotting_rectangle(self):
+        a = self.interface.lattice.matrix[0,:2]
+        b = self.interface.lattice.matrix[1,:2]
+        ab = a+b
+        min_x = min(0, a[0], b[0], ab[0])
+        max_x = max(a[0], b[0], ab[0])
+        min_y = min(0, a[1], b[1], ab[1])
+        max_y = max(a[1], b[1], ab[1])
+        width = max_x - min_x
+        height = max_y - min_y
+        self.shift_x = min_x
+        self.shift_y = min_y
+        if self.plotting_ratio:
+            x_mult, y_mult = self._find_rect_multiplicator(width, height)
+            width = x_mult*width
+            height = y_mult*height
+        self.width = width
+        self.height = height
+        
+    def _plot_grid(self, X, Y, Z):
+        levels = np.linspace(np.amin(Z), np.amax(Z), self.contours)
+        fig = plt.figure(figsize=(self.width, self.height), dpi=600)
+        ax = fig.add_subplot(111)
+        ax.set_aspect('equal')
+        zt1 = plt.contourf(X, Y, Z, levels, cmap=plt.cm.RdYlBu_r)
+        cbar1 = plt.colorbar(zt1, ax=ax, orientation='vertical')
+        cbar1.set_label(r'$E_{adh} \left(J/m^2\right)$', rotation=270, labelpad=20,
+                        fontsize=15, family='sans-serif')
+        if self.plot_unit_cell:
+            a = self.interface.lattice.matrix[0]
+            b = self.interface.lattice.matrix[1]
+            import matplotlib.patches as patches
+            x = [0, a[0], a[0] + b[0], b[0]]
+            x_shifted = [i-self.shift_x for i in x]
+            y = [0, 0, b[1], a[1] + b[1], b[1]]
+            y_shifted = [i-self.shift_y for i in y]
+            ax.add_patch(patches.Polygon(xy=list(zip(x_shifted, y_shifted)), fill=False, lw=2))
+        plt.savefig('PES_test.svg', dpi=600)
+        
+    def _evaluate_on_grid(self, X, Y):
+        
+        Z = self.rbf(X, Y)
+        return Z
+    
+    def _get_grid(self, xmax, ymax):
+        grid_x = np.arange(0, xmax, 1.0/self.point_density)
+        grid_y = np.arange(0, ymax, 1.0/self.point_density)
+        X, Y = np.meshgrid(grid_x, grid_y)
+        return X, Y
+            
+    def _find_rect_multiplicator(self, width, height):
+        f = self.plotting_ratio / (width/height)
+        if f > 1:
+            return 1.0, np.ceil(f)
+        elif f < 1:
+            return np.ceil(1/f), 1.0
+        else:
+            return 1.0, 1.0
         
 
 def get_pes(hs_all, E, cell, to_fig=None, point_density=20):
