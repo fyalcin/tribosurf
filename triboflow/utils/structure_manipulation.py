@@ -161,7 +161,7 @@ def slab_from_file(filename, mpid, functional, miller, db_file='auto', high_leve
     struct = Structure.from_file(filename)
     SG = get_SG_from_mpid(mpid, functional, miller, db_file, high_level)
     tmp_slab = SG.get_slabs()[0]
-    ouc = Shaper.get_constrained_ouc(tmp_slab)
+    ouc = Shaper.get_matching_ouc(tmp_slab)
     scale_factor = struct.lattice.a/ouc.lattice.a
     scale_array = ((scale_factor, 0, 0), (0, scale_factor, 0), (0, 0, scale_factor))
     deformer = DeformStructureTransformation(deformation=scale_array)
