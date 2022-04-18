@@ -632,6 +632,8 @@ class Shaper:
         species = [str(i) for i in struct.species]
         for s_index, site in enumerate(struct):
             for nn in nn_list[s_index]:
+                if nn_method == 'BNN':
+                    nn = nn['site']
                 c_range = np.round(sorted([site.frac_coords[2], nn.frac_coords[2]]), 3)
                 if c_range[0] != c_range[1]:
                     nn_site_index = nn.index
@@ -903,7 +905,7 @@ class Shaper:
             # the corresponding min_slab_size parameter in pmg_sg_params by calculating the number of layers
             # needed to reach min_thick_A.
             if min_thick_A:
-                pmg_sg_params['min_slab_size'] = max(np.ceil(min_thick_A/d_hkl) + 1, sg_params['slab_thick'])
+                pmg_sg_params['min_slab_size'] = max(np.ceil(min_thick_A / d_hkl) + 1, sg_params['slab_thick'])
                 sg = SlabGenerator(**pmg_sg_params)
             slabs = sg.get_slabs(ftol=tol, symmetrize=sg_params.get('symmetrize', False))
 
