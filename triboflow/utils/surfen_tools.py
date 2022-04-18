@@ -112,7 +112,7 @@ def get_surfen_inputs_from_slab(slab, sg=None, tol=0.1, custom_id=None):
                    'primitive': sg.primitive,
                    'lll_reduce': sg.lll_reduce,
                    'max_normal_search': sg.max_normal_search,
-                   'sg_modified': slab.param_modified,
+                   'sg_modified': getattr(slab, 'param_modified', False),
                    'custom_id': custom_id,
                    'inputs': [ouc_input],
                    'slab_params': {'sym': sym,
@@ -129,9 +129,9 @@ def get_surfen_inputs_from_slab(slab, sg=None, tol=0.1, custom_id=None):
         pmg_layer_size = slab.pmg_layer_size
     except AttributeError:
         ouc_layers = len(Shaper.get_layers(ouc, tol))
-        print('Your slab does not have a "pmg_layer_size" attribute which is needed to'
-              'determine if a slab has complementary terminations. The workflow will proceed'
-              'assuming that your slab has complementary terminations, which could lead to'
+        print('Your slab does not have a "pmg_layer_size" attribute which is needed to\n'
+              'determine if a slab has complementary terminations. The workflow will proceed\n'
+              'assuming that your slab has complementary terminations, which could lead to\n'
               'incorrect surface energies.')
         comp = True
         pmg_layer_size = ouc_layers
@@ -467,7 +467,7 @@ def put_surfen_inputs_into_db(inputs_list, sg_params, comp_params, fltr, coll, d
                 upsert=True)
         loc_slab = '.'.join(loc[:3])
 
-        tol = sg_params.get('tol')
+        tol = sg_params.get('tol', 0.1)
         layers = Shaper.get_layers(slab, tol)
         top_layer = [str(slab[site].species) for site in layers[max(layers)]]
         bot_layer = [str(slab[site].species) for site in layers[min(layers)]]
