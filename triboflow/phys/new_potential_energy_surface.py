@@ -67,7 +67,7 @@ class PESGenerator():
                 - 'inverse_quadratic'    : ``1/(1 + r**2)``
                 - 'gaussian'             : ``exp(-r**2)``
             The default is 'linear' and should probably not be changed to
-            keep proper symmetry.
+            keep proper symmetry!
         plot_hs_points : bool or str, optional
             Plot 'all' or 'unique' high symmetry point if those strings are
             passed. If not, no points are plotted. The default is False.
@@ -88,7 +88,8 @@ class PESGenerator():
             Selects the format of the plot, e.g. 'pdf', or 'svg'.
             The default is 'png'.
         plot_path : str or None, optional
-            If a string is set, the PES will be saved at this path.
+            If a string is set, the PES will be saved at this path. USE A
+            TRAILING SLASH! E.g.: /home/user/test/PES/
             The default is None.
 
         """
@@ -102,7 +103,7 @@ class PESGenerator():
         self.fig_name = fig_title
         self.fig_type = fig_type
         self.plot_path = plot_path
-        
+
     def __call__(self,
                  interface,
                  energies_dict,
@@ -127,20 +128,63 @@ class PESGenerator():
             The default is None.
 
         """
-        
         self.interface = interface.copy()
         self.energies_dict = energies_dict.copy()
         self.all_shifts = all_shifts_dict.copy()
         self.unique_shifts = unique_shifts_dict.copy()
         if group_names_dict:
             self.group_names_dict = group_names_dict.copy()
+        else:
+            self.group_names_dict = None
         
+        self.__get_limits_and_multiples()
+
         X, Y, Z = self.__interpolate_on_grid()
-        X_ext, Y_ext, Z_ext = self.__extend_plotting_range(Z)
         
-        self.__plot_grid(X_ext, Y_ext, Z_ext)
+        self.__plot_grid(X, Y, Z)
         self.PES_as_bytes = self.__get_pes_as_bytes(self.PES_fig)
+    
         
+    def __get_limits_and_multiples(self):
+        """
+        Compute the expansion of the input data and plot limits using unit cell
+        and aspect ratio.
+
+        """
+        self.__get_plotting_rectangle()
+        self.__set_meshgrid_limits()
+        self.__get_mult_limits()
+        
+    def __set_meshgrid_limits(self):
+        """
+        Set plot and meshgrid limits according to aspect ratio
+
+        """
+        if self.plotting_ratio:
+            if self.width/self.height < self.plotting_ratio:
+                xlim = self.height*self.plotting_ratio
+                ylim = self.height
+            else:
+                xlim = self.width
+                ylim = self.width/self.plotting_ratio
+        else:
+            xlim = self.width
+            ylim = self.height
+        self.xlim = xlim
+        self.ylim = ylim
+        
+    def __get_mult_limits(self):
+        """
+        Set the limits (mostly generously) of data replication to get a proper
+        interpolation and avoid edge effects.
+        """
+        a = self.interface.lattice.matrix[0,:2]
+        b = self.interface.lattice.matrix[1,:2]
+        ab = a+b
+        max_a = max(a[0], ab[0])
+        max_b = max(b[1], ab[1])
+        self.xmult = np.ceil(self.xlim/max_a)+1
+        self.ymult = np.ceil(self.ylim/max_b)+1
         
     def __make_energies_list(self):
         """
@@ -161,12 +205,13 @@ class PESGenerator():
     def __extend_energies_list(self):
         """
         Extend the input data from the unit cell to unit cells around it to
-        avoid edge effects in interpolation.
+        avoid edge effects in interpolation and allow to conform to chosen
+        aspect ratios.
 
         """
         extended_energy_list = []
-        n_extend = 1.0
-        xrange = yrange = np.arange(-n_extend, n_extend+1.0, 1.0)
+        xrange = np.arange(-self.xmult, self.xmult, 1.0)
+        yrange = np.arange(-1, self.ymult, 1.0)
         for x in xrange:
             for y in yrange:
                 for entry in self.unit_cell_energies:
@@ -207,14 +252,12 @@ class PESGenerator():
         if len(array[0]) == 3:
             m = np.vstack((np.hstack((m,np.zeros((2,1)))),np.asarray([0,0,1])))
         return np.dot(array,m)
+        
+                      
             
     def __get_plotting_rectangle(self):
         """
         Get a rectangle that is just large enough to contain the unit cell.
-
-        Returns
-        -------
-        None.
 
         """
         a = self.interface.lattice.matrix[0,:2]
@@ -242,13 +285,8 @@ class PESGenerator():
             X part of meshgrid
         Y : nump.yndarray
             Y part of meshgrid
-        ZZ : nump.yndarray
-            Interpolation ready for plotting or extending.
-
-        Returns
-        -------
-        None.
-
+        Z : nump.yndarray
+            Interpolation ready for plotting
         """
         levels = np.linspace(np.amin(Z), np.amax(Z), self.contours)
         fig, ax = self.__get_fig_and_ax()
@@ -268,23 +306,23 @@ class PESGenerator():
         plt.ylabel(r"y [$\rm\AA$]", fontsize=20, family='sans-serif')
         plt.xticks(fontsize=20)
         plt.yticks(fontsize=20)
-        self.__set_plot_limits()
+        plt.xlim = ((0,self.xlim))
+        plt.ylim = ((0,self.ylim))
+        ax.set_title(self.fig_name, fontsize = 24, family='sans-serif', pad=10)
         if self.plot_hs_points == 'unique':
             self.__plot_hs_points(self.unique_shifts, fig, self.group_names_dict)
         elif self.plot_hs_points == 'all':
             self.__plot_hs_points(self.all_shifts, fig, self.group_names_dict)
         
-        ax.set_title(self.fig_name, fontsize = 24, family='sans-serif')
+        
         fig.set_tight_layout(True)
         plt.tight_layout()
         self.PES_fig = fig
         
         if self.plot_path:
             plt.savefig(self.plot_path+self.fig_name+'.'+self.fig_type,
-                        dpi=500, bbox_inches='tight')
-        
-
-        
+                        dpi=300, bbox_inches='tight')
+              
     def __evaluate_on_grid(self, X, Y):
         """
         Evalueate the RBF on a meshgrid
@@ -299,8 +337,7 @@ class PESGenerator():
         Returns
         -------
         Z : nump.yndarray
-            Interpolation ready for plotting or extending.
-
+            Interpolation ready for plotting.
         """
         xy = np.vstack([X.ravel(), Y.ravel()]).T
         z = self.rbf(xy)
@@ -309,7 +346,7 @@ class PESGenerator():
             Z = Z - min(Z.ravel())
         return Z
     
-    def __get_grid(self, xmax, ymax, xmult=1, ymult=1):
+    def __get_grid(self, xmax, ymax):
         """
         Return a meshgrid for a (0,xmax*xmult) (0,ymax*ymult) rectangle
 
@@ -319,10 +356,6 @@ class PESGenerator():
             width of the rectangle for interpolation
         ymax : float
             height of the rectangle for interpolation
-        xmult : int, optional
-            multiplication factor for width. The default is 1.
-        ymult : int, optional
-            multiplication factor for height. The default is 1.
 
         Returns
         -------
@@ -330,35 +363,13 @@ class PESGenerator():
             X part of meshgrid
         Y : nump.yndarray
             Y part of meshgrid
-
         """
-        nr_pts_x = int(xmax*self.ppA)*xmult
-        nr_pts_y = int(ymax*self.ppA)*ymult
-        grid_x = np.linspace(0, xmax*xmult, nr_pts_x)
-        grid_y = np.linspace(0, ymax*ymult, nr_pts_y)
+        nr_pts_x = int(xmax*self.ppA)
+        nr_pts_y = int(ymax*self.ppA)
+        grid_x = np.linspace(0, xmax, nr_pts_x)
+        grid_y = np.linspace(0, ymax, nr_pts_y)
         X, Y = np.meshgrid(grid_x, grid_y)
         return X, Y
-            
-    def __find_rect_multiplicator(self):
-        """
-        Return necessary multiplication factor for the plotting rectangle to
-        ensure that the chosen aspect ratio can be plotted.
-
-        Returns
-        -------
-        int
-            multiplication factor for width
-        int
-            multiplication factor for height
-
-        """
-        f = self.plotting_ratio / (self.width/self.height)
-        if f > 1:
-            return int(np.ceil(f)), 1
-        elif f < 1:
-            return 1, int(np.ceil(1/f))
-        else:
-            return 1, 1
         
     def __colorbar_ticks(self, Z, nr_of_ticks=10):
         """
@@ -390,11 +401,6 @@ class PESGenerator():
         ----------
         ax : matplotlib.axes._subplots.AxesSubplot
             Subplot axes
-
-        Returns
-        -------
-        None.
-
         """
         a = self.interface.lattice.matrix[0]
         b = self.interface.lattice.matrix[1]
@@ -421,34 +427,17 @@ class PESGenerator():
             Subplot axes
 
         """
-        add_height = self.height*0.25 if self.plot_hs_points else 0.0
+        add_height = self.ylim*0.10 if self.plot_hs_points else 0.0
         if self.plotting_ratio:
-            fig = plt.figure(figsize=(self.width,
-                                      self.width/self.plotting_ratio+add_height),
-                             dpi=600)
+            fig = plt.figure(figsize=(self.xlim,
+                                      self.xlim/self.plotting_ratio+add_height),
+                             dpi=300)
         else:
-            fig = plt.figure(figsize=(self.width, self.height+add_height),
-                             dpi=600)
+            fig = plt.figure(figsize=(self.xlim, self.ylim+add_height),
+                             dpi=300)
         ax = fig.add_subplot(111)
         ax.set_aspect('equal')
         return fig, ax
-    
-    def __set_plot_limits(self):
-        """
-        Set plot limits according to aspect ratio
-
-        """
-        if self.plotting_ratio:
-            x_mult, y_mult = self.__get_x_and_y_mult()
-            if x_mult/y_mult < self.plotting_ratio:
-                plt.xlim((0, self.height*y_mult*self.plotting_ratio))
-                plt.ylim((0, self.height*y_mult))
-            else:
-                plt.xlim((0, self.width*x_mult))
-                plt.ylim((0, self.width*x_mult/self.plotting_ratio))
-        else:
-            plt.xlim((0, self.width))
-            plt.ylim((0, self.height))
             
     def __plot_hs_points(self, hs_points_dict, fig, group_names_dict=None):
         """
@@ -514,25 +503,6 @@ class PESGenerator():
         im.save(image_bytes, format='png')
         return image_bytes.getvalue()
     
-    def __get_x_and_y_mult(self):
-        """
-        Get multiplicators for the x and y dimensions of the data depending on
-        plotting aspect ratio.
-
-        Returns
-        -------
-        x_mult : int
-            multiplicator for width
-        y_mult : int
-            multiplicator for height
-
-        """
-        if self.plotting_ratio:
-            x_mult, y_mult = self.__find_rect_multiplicator()
-        else:
-            x_mult = y_mult = 1
-        return x_mult, y_mult
-    
     def __interpolate_on_grid(self):
         """
         Generate RBF interpolation, get a meshgrid and evaluate the RBF there.
@@ -552,38 +522,8 @@ class PESGenerator():
 
         """
         self.__get_rbf()
-        self.__get_plotting_rectangle()
         
-        X, Y = self.__get_grid(self.width, self.height)
+        X, Y = self.__get_grid(self.xlim, self.ylim)
         Z = self.__evaluate_on_grid(X, Y)
         return X, Y, Z
-    
-    def __extend_plotting_range(self, Z):
-        """
-        Replicates the already existing PES (input Z) for plotting.
-        
-        Since the aspect ratio of the plot might be very different from the
-        fittend rectangle close to the unit cell, the meshgrid in X and Y, as
-        well as the interpolation Z have to be extended according to the
-        plotting aspect ratio.
-
-        Parameters
-        ----------
-        Z : numpy.ndarray
-            PES interpolation on original meshgrid
-
-        Returns
-        -------
-        X_ext : numpy.ndarray
-            X part of the meshgrid
-        Y_ext : numpy.ndarray
-            Y part of the meshgrid
-        Z_ext : numpy.ndarray
-            Replicated interpolation on new extended meshgrid
-
-        """
-        x_mult, y_mult = self.__get_x_and_y_mult()
-        X_ext, Y_ext = self.__get_grid(self.width, self.height, x_mult+1, y_mult+1)
-        Z_ext = np.block([[Z for i in range(x_mult+1)] for j in range(y_mult+1)])
-        return X_ext, Y_ext, Z_ext
     
