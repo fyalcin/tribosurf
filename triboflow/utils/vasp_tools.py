@@ -313,6 +313,15 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
     uis['ISMEAR'] = -5
     uis['EDIFF'] = 1.0e-6
     uis['SYMPREC'] = 1e-04  # compat some issues that VASP 6.2 has with kpoint lattices
+    #include electrons with l-quantum number up to 6 into the mixer. Helps with convergence
+    #maybe include functionality that sets LMAXMIX dependent on periodic table group
+    # e.g.:
+    # for element in structure.composition.elements:
+    #     if element.group == 3:
+    #         uis['LMAXMIX'] = 6
+    #     elif element.group in [4,5,6,7,8,9,10,11,12]:
+    #         uis['LMAXMIX'] = 4
+    uis['LMAXMIX'] = 6 
 
     if static_type.startswith('bulk_'):
         uis['ALGO'] = 'Fast'
@@ -502,6 +511,15 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
     uis['EDIFF'] = 0.5E-5
     uis['LAECHG'] = '.FALSE.'
     uis['SYMPREC'] = 1e-04  # compat some issues that VASP 6.2 has with kpoint lattices
+    #include electrons with l-quantum number up to 6 into the mixer. Helps with convergence
+    #maybe include functionality that sets LMAXMIX dependent on periodic table group
+    # e.g.:
+    # for element in structure.composition.elements:
+    #     if element.group == 3:
+    #         uis['LMAXMIX'] = 6
+    #     elif element.group in [4,5,6,7,8,9,10,11,12]:
+    #         uis['LMAXMIX'] = 4
+    uis['LMAXMIX'] = 6 
 
     if structure.num_sites < 20:
         uis['LREAL'] = '.FALSE.'
