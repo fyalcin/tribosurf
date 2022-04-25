@@ -13,9 +13,10 @@ from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
 from monty.json import jsanitize
 from pymatgen.core.structure import Structure
+from pymatgen.core.interface import Interface
 
 from triboflow.phys.new_high_symm import InterfaceSymmetryAnalyzer
-from triboflow.phys.potential_energy_surface import get_pes
+from triboflow.phys.new_potential_energy_surface import PESGenerator
 from triboflow.phys.shaper import Shaper
 from triboflow.utils.database import (
     Navigator, StructureNavigator, convert_image_to_bytes)
@@ -72,40 +73,51 @@ class FT_ComputePES(FiretaskBase):
         struct = Structure.from_dict(inter_dict['relaxed_structure@min'])
 
         # Copy the energies for the unique points to all points
-        E_unique = inter_dict['PES']['high_symmetry_points']['energy_list']
-        all_hs = inter_dict['PES']['high_symmetry_points']['combined_all']
-        cell = struct.lattice.matrix
-
-        hsp_min = E_unique[0][0]
-        hsp_max = E_unique[-1][0]
-
-        interpolation, E_list, pes_data, data, to_plot = get_pes(
-            hs_all=all_hs,
-            E=E_unique,
-            cell=struct.lattice.matrix,
-            to_fig=False)
-
-        corrugation = max(pes_data[:, 2]) - min(pes_data[:, 2])
-
+        all_shifts = inter_dict['PES']['high_symmetry_points']['all_shifts']
+        unique_shifts = inter_dict['PES']['high_symmetry_points']['unique_shifts']
+        energy_dict = inter_dict['PES']['high_symmetry_points']['energies_dict']
+        group_assignments = inter_dict['PES']['high_symmetry_points']['group_assignments']
+        
         if file_output:
-            data.dump('Computed_PES_data_' + name + '.dat')
-            pes_data.dump('Interpolated_PES_data_' + name + '.dat')
+            PG = PESGenerator(points_per_angstrom = 50,
+                              interpolation_kernel = 'linear',
+                              plot_hs_points = False,
+                              plot_unit_cell = True,
+                              plotting_ratio = 1.0,
+                              normalize_minimum = True,
+                              nr_of_contours = 30,
+                              fig_title = name,
+                              fig_type = 'png',
+                              plot_path = './')
+        else:
+            PG = PESGenerator(points_per_angstrom = 50,
+                              interpolation_kernel = 'linear',
+                              plot_hs_points = False,
+                              plot_unit_cell = True,
+                              plotting_ratio = 1.0,
+                              normalize_minimum = True,
+                              nr_of_contours = 30,
+                              fig_title = name,
+                              fig_type = 'png',
+                              plot_path = None)
 
-        plot_pes(to_plot, cell, to_fig=name)
-        plot_name = 'PES_' + str(name) + '.png'
-        pes_image_bytes = convert_image_to_bytes('./' + plot_name)
+        PG(interface=struct,
+           energies_dict=energy_dict,
+           all_shifts_dict=all_shifts,
+           unique_shifts_dict=unique_shifts,
+           group_names_dict=group_assignments)
 
         nav_high = Navigator(db_file=db_file, high_level=hl_db)
         nav_high.update_data(
             collection=functional + '.interface_data',
             fltr={'name': name},
-            new_values={'$set': {'PES.rbf': jsanitize(interpolation),
-                                 'PES.all_energies': jsanitize(E_list),
-                                 'PES.pes_data': jsanitize(pes_data),
-                                 'PES.image': pes_image_bytes,
-                                 'corrugation': corrugation,
-                                 'hsp@min': hsp_min,
-                                 'hsp@max': hsp_max}})
+            new_values={'$set': {'PES.rbf': jsanitize(PG.rbf),
+                                 'PES.all_energies': jsanitize(PG.extended_energies),
+                                 'PES.pes_data': jsanitize(PG.PES_on_meshgrid),
+                                 'PES.image': PG.PES_as_bytes,
+                                 'corrugation': PG.corrugation,
+                                 'hsp@min': PG.hsp_min,
+                                 'hsp@max': PG.hsp_max}})
 
 
 @explicit_serialize
@@ -156,27 +168,26 @@ class FT_RetrievePESEnergies(FiretaskBase):
         interface_dict = nav_structure.get_interface_from_db(
             name=name,
             functional=functional)
-        lateral_shifts = interface_dict['PES']['high_symmetry_points']['combined_unique']
+        lateral_shifts = interface_dict['PES']['high_symmetry_points']['unique_shifts']
+        group_assignments = interface_dict['PES']['high_symmetry_points']['group_assignments']
 
         nav = Navigator(db_file=db_file)
-        ref_struct = Structure.from_dict(nav.find_data(
-            collection='tasks',
-            fltr={'task_label': f'{tag}_{list(lateral_shifts)[0]}'})['output']['structure'])
+        ref_struct = Interface.from_dict(interface_dict['unrelaxed_structure'])
         area = np.linalg.norm(np.cross(ref_struct.lattice.matrix[0], ref_struct.lattice.matrix[1]))
 
         energy_list = []
+        energy_dict = {}
         calc_output = {}
         for s in lateral_shifts.keys():
             label = tag + '_' + s
-            x_shift = lateral_shifts.get(s)[0][0]
-            y_shift = lateral_shifts.get(s)[0][1]
             vasp_calc = nav.find_data(
                 collection='tasks',
                 fltr={'task_label': label})
             struct = vasp_calc['output']['structure']
             energy = vasp_calc['output']['energy']
             energy *= 16.02176565 / area
-            energy_list.append([s, x_shift, y_shift, energy])
+            energy_list.append([s, group_assignments[s], energy])
+            energy_dict[s] = energy
             calc_output[s] = {'energy': energy,
                               'relaxed_struct': struct,
                               'task_id': vasp_calc['_id']}
@@ -215,8 +226,8 @@ class FT_RetrievePESEnergies(FiretaskBase):
                          inter_dist_max,
                      'PES.calculations':
                          calc_output,
-                     'PES.high_symmetry_points.energy_list':
-                         sorted_energy_list}})
+                     'PES.high_symmetry_points.energies_dict':
+                         energy_dict}})
 
 
 @explicit_serialize
@@ -273,14 +284,15 @@ class FT_FindHighSymmPoints(FiretaskBase):
             new_values={'$set':
                             {'PES.high_symmetry_points':
                                  {'bottom_unique': hsp_dict['bottom_high_symm_points_unique'],
-                                  'bottom_all': hsp_dict['bottom_high_symm_points_unique'],
-                                  'top_unique': hsp_dict['bottom_high_symm_points_unique'],
-                                  'top_all': hsp_dict['bottom_high_symm_points_unique'],
-                                  'combined_unique': hsp_dict['bottom_high_symm_points_unique'],
-                                  'combined_all': hsp_dict['bottom_high_symm_points_unique']}}},
+                                  'bottom_all': hsp_dict['bottom_high_symm_points_all'],
+                                  'top_unique': hsp_dict['top_high_symm_points_unique'],
+                                  'top_all': hsp_dict['top_high_symm_points_all'],
+                                  'unique_shifts': hsp_dict['unique_shifts'],
+                                  'all_shifts': hsp_dict['all_shifts'],
+                                  'group_assignments': hsp_dict['group_assignments']}}},
             upsert=True)
 
-        return FWAction(update_spec=({'lateral_shifts': hsp_dict['bottom_high_symm_points_unique']}))
+        return FWAction(update_spec=({'lateral_shifts': hsp_dict['unique_shifts']}))
 
 
 @explicit_serialize
@@ -332,9 +344,7 @@ class FT_StartPESCalcs(FiretaskBase):
         inputs = []
         for name, shift in lateral_shifts.items():
             label = tag + '_' + name
-            #in plane offset requests fractional coordinates. We have cartesian ones and must transform
-            frac_shift = np.dot(shift[0],interface.lattice.inv_matrix)
-            interface.in_plane_offset = frac_shift
+            interface.in_plane_offset = shift
             clean_struct = clean_up_site_properties(interface)
 
             vis = get_custom_vasp_relax_settings(structure=clean_struct,
