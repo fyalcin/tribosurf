@@ -46,8 +46,14 @@ class PESGenerator():
         
         Important properties of the class:
             .rbf contains the scipy.interpolate._rbfinterp.RBFInterpolator
+            .PES_on_meshgrid returns a dict with the meshgrid (X and Y) and the
+                interpolated data on it (Z)
             .PES_fig contains the matplotlib.figure.Figure of the PES
             .PES_as_bytes contains the PES as a bytes object.
+            .corrugation gives the difference in energy
+            .hsp_min gives the minimum group or stacking of the input data
+            .hsp_max gives the maximum group or stacking of the input data
+            
         
         
         
@@ -115,8 +121,9 @@ class PESGenerator():
 
         Parameters
         ----------
-        interface : pymatgen.core.interface.Interface
-            A pymatgen interface object
+        interface : pymatgen.core.structure.Structure (or derived class like
+                                                       Slab or Interface)
+            A pymatgen Structure object
         energies_dict : dict
             Adhesion energies for each group of high symmetry points.
         all_shifts_dict : dict
@@ -136,15 +143,54 @@ class PESGenerator():
             self.group_names_dict = group_names_dict.copy()
         else:
             self.group_names_dict = None
-        
+        self.__get_min_and_max_hsps()
         self.__get_limits_and_multiples()
 
         X, Y, Z = self.__interpolate_on_grid()
         
         self.__plot_grid(X, Y, Z)
         self.PES_as_bytes = self.__get_pes_as_bytes(self.PES_fig)
+        self.corrugation = self.__get_corrugation(Z)
+        self.PES_on_meshgrid = {'X': X, 'Y': Y, 'Z':Z}
     
+    
+    def __get_min_and_max_hsps(self):
+        """
+        Find the group or stacking of the minimum and maximum PES positions.
+        """
+        min_group = ['', 1000]
+        max_group = ['', -1000]
+        for k,v in self.energies_dict.items():
+            if v < min_group[1]:
+                min_group = [k, v]
+            if v > max_group[1]:
+                max_group = [k,v]
+        if self.group_names_dict:
+            self.hsp_min = self.group_names_dict[min_group[0]]
+            self.hsp_max = self.group_names_dict[max_group[0]]
+        else:
+            self.hsp_min = min_group[0]
+            self.hsp_max = max_group[0]
         
+        
+    def __get_corrugation(self, Z):
+        """
+        Returns the PES corrugation in eV.
+
+        Parameters
+        ----------
+        Z : np.ndarray
+            interpolated PES on a meshgrid
+
+        Returns
+        -------
+        float
+            The difference in energy between the maximum and minimum
+            of the PES (the corrugation) in eV.
+
+        """
+        return max(Z.ravel()) - min(Z.ravel())
+    
     def __get_limits_and_multiples(self):
         """
         Compute the expansion of the input data and plot limits using unit cell
