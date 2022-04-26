@@ -340,7 +340,16 @@ def calc_pes_swf(interface,
 
     tag = interface_name + '_' + str(uuid4())
     
-    
+    nav = StructureNavigator('auto', high_level=True)
+    try:
+        nav.get_interface_from_db(interface_name, functional)['unrelaxed_structure']
+    except:
+        nav.insert_data(collection = functional+'.interface_data',
+                        data = {'name': interface_name,
+                                'comp_parameters': comp_parameters,
+                                'unrelaxed_structure': interface.as_dict(),
+                                'top_aligned': interface.film.as_dict(),
+                                'bottom_aligned': interface.substrate.as_dict()})
 
     FW_1 = run_pes_calc_fw(interface = interface,
                            interface_name=interface_name,
