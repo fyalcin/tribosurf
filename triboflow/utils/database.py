@@ -216,7 +216,7 @@ class Navigator:
         
         return collection_obj
 
-    def update_data(self, collection, fltr, new_values, upsert=False):
+    def update_data(self, collection, fltr, new_values, upsert=False, dolog=True):
         """
         Update a single document matching the filter (fltr) with the new value.
 
@@ -245,12 +245,13 @@ class Navigator:
         """
 
         collection_obj = self.__initialize_obj_collection(collection)
-
-        log.info('Updating the collection {} with the new data {}.'
-                 ''.format(collection, new_values))
+        
+        if dolog:
+            log.info('Updating the collection {} with the new data {}.'
+                     ''.format(collection, new_values))
         collection_obj.update_one(fltr, new_values, upsert)
     
-    def update_many_data(self, collection, fltr, new_values, upsert=False):
+    def update_many_data(self, collection, fltr, new_values, upsert=False, dolog=True):
         """
         Update many documents that match the filter (fltr) with the new values.
 
@@ -275,8 +276,9 @@ class Navigator:
 
         collection_obj = self.__initialize_obj_collection(collection)
 
-        log.info('Updating the collection {} with the new data {}.'
-                 ''.format(collection, new_values))
+        if dolog:
+            log.info('Updating the collection {} with the new data {}.'
+                     ''.format(collection, new_values))
         collection_obj.update_many(fltr, new_values, upsert)
 
     def insert_data(self, collection, data, duplicates=False, message=None):
