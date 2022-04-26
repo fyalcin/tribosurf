@@ -13,9 +13,10 @@ from fireworks.core.rocket_launcher import rapidfire
 from triboflow.workflows.subworkflows import calc_pes_swf
 from triboflow.utils.structure_manipulation import slab_from_structure
 from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
+from triboflow.phys.interface_matcher import InterfaceMatcher
 
-nav = Navigator()
-db_file = nav.path
+# nav = Navigator()
+# db_file = nav.path
 functional = "PBE"
 
 # TODO: TO REFACTOR
@@ -53,17 +54,34 @@ struct, mpid = nav_mp.get_low_energy_structure(
     chem_formula='C',
     mp_id='mp-1040425')
 slab = slab_from_structure([0,0,1], struct)
+
+IM = InterfaceMatcher(slab, slab, interface_distance=3.4)
+interface = IM.get_interface()
+
+# inter_dict = interface.as_dict()
+# bottom_dict = slab.as_dict()
+# top_dict = slab.as_dict()
+
+# nav_high = Navigator('auto', high_level=True)
+# nav_high.update_data(
+#     collection=functional + '.interface_data',
+#     fltr={'name': 'Navigator_test_Gr-Gr'},
+#     new_values={'$set': {'unrelaxed_structure': inter_dict,
+#                          'bottom_aligned': bottom_dict,
+#                          'top_aligned': top_dict}})
+
 comp_params = {'functional': functional,
                'use_vdw': True,
                'use_spin': True,
                'encut': 500,
                'is_metal': True,
-               'k_dens': 2000
+               'k_dens': 3.0
                }
 
-WF = calc_pes_swf(top_slab=slab, bottom_slab=slab,
+WF = calc_pes_swf(interface=interface,
                   comp_parameters=comp_params,
-                  interface_name="Navigator_test_Gr-Gr")
+                  file_output=True,
+                  output_dir='/fs/home/wolloch/git_test/testdir')
 
 lpad = LaunchPad.auto_load()
 lpad.add_wf(WF)

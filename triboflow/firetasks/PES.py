@@ -18,9 +18,7 @@ from pymatgen.core.interface import Interface
 from triboflow.phys.new_high_symm import InterfaceSymmetryAnalyzer
 from triboflow.phys.new_potential_energy_surface import PESGenerator
 from triboflow.phys.shaper import Shaper
-from triboflow.utils.database import (
-    Navigator, StructureNavigator, convert_image_to_bytes)
-from triboflow.utils.plot_tools import plot_pes
+from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.structure_manipulation import clean_up_site_properties
 from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
 from triboflow.workflows.base import dynamic_relax_swf
@@ -111,13 +109,13 @@ class FT_ComputePES(FiretaskBase):
         nav_high.update_data(
             collection=functional + '.interface_data',
             fltr={'name': name},
-            new_values={'$set': {'PES.on_meshgrid': jsanitize(PG.PES_on_meshgrid),
-                                 'PES.all_energies': jsanitize(PG.extended_energies),
+            new_values={'$set': {'PES.all_energies': jsanitize(PG.extended_energies),
                                  'PES.pes_data': jsanitize(PG.PES_on_meshgrid),
                                  'PES.image': PG.PES_as_bytes,
                                  'corrugation': PG.corrugation,
                                  'hsp@min': PG.hsp_min,
-                                 'hsp@max': PG.hsp_max}})
+                                 'hsp@max': PG.hsp_max}},
+            dolog=False)
 
 
 @explicit_serialize

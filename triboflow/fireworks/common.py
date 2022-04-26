@@ -122,9 +122,7 @@ def make_pes_fw(interface_name, functional, tag, FW_name, file_output,
                          file_output=file_output)
 
     if file_output:
-        output_files = ['Computed_PES_data_' + interface_name + '.dat',
-                        'Interpolated_PES_data_' + interface_name + '.dat',
-                        'PES_' + str(interface_name) + '.png']
+        output_files = [str(interface_name) + '.png']
         FT_3 = copy_output_files(file_list=output_files,
                                  output_dir=output_dir,
                                  remote_copy=remote_copy,
