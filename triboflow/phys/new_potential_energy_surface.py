@@ -313,12 +313,13 @@ class PESGenerator():
         max_x = max(a[0], b[0], ab[0])
         min_y = min(0, a[1], b[1], ab[1])
         max_y = max(a[1], b[1], ab[1])
-        width = max_x - min_x
-        height = max_y - min_y
-        self.shift_x = min_x
-        self.shift_y = min_y
-        self.width = width
-        self.height = height
+        if min_x < 0:
+            self.shift_x = self.interface.lattice.a
+            self.width = max_x + self.interface.lattice.a
+        else:
+            self.width = max_x
+            self.shift_x = 0
+        self.height = max_y - min_y
         
     def __plot_grid(self, X, Y, Z):
         """
@@ -452,10 +453,9 @@ class PESGenerator():
         b = self.interface.lattice.matrix[1]
         import matplotlib.patches as patches
         x = [0, a[0], a[0] + b[0], b[0]]
-        x_shifted = [i-self.shift_x for i in x]
+        x_shifted = [i+self.shift_x for i in x]
         y = [0, 0, b[1], a[1] + b[1], b[1]]
-        y_shifted = [i-self.shift_y for i in y]
-        ax.add_patch(patches.Polygon(xy=list(zip(x_shifted, y_shifted)),
+        ax.add_patch(patches.Polygon(xy=list(zip(x_shifted, y)),
                                      fill=False, lw=2))
     
     def __get_fig_and_ax(self):
@@ -510,8 +510,8 @@ class PESGenerator():
             else:
                 label = key
             shifts = self.__from_frac_to_cart(shifts)
-            plt.plot(shifts[:,0]-self.shift_x,
-                     shifts[:,1]-self.shift_y,
+            plt.plot(shifts[:,0]+self.shift_x,
+                     shifts[:,1],
                      label=label,
                      marker = 'o',
                      linestyle = '',
@@ -520,11 +520,11 @@ class PESGenerator():
                      markeredgewidth=0.5,
                      zorder=1000.0)
             fig.legend(loc='upper left',
+                       ncol=3,
                        handletextpad=0.01,
                        columnspacing=1.0,
                        labelspacing=0.3,
                        #ncol=math.ceil(len(hs_points_dict)/2),
-                       ncol=3,
                        fontsize=15)
     
     def __get_pes_as_bytes(self,fig):
