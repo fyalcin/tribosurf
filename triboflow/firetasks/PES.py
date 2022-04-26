@@ -111,7 +111,7 @@ class FT_ComputePES(FiretaskBase):
         nav_high.update_data(
             collection=functional + '.interface_data',
             fltr={'name': name},
-            new_values={'$set': {'PES.rbf': jsanitize(PG.rbf),
+            new_values={'$set': {'PES.on_meshgrid': jsanitize(PG.PES_on_meshgrid),
                                  'PES.all_energies': jsanitize(PG.extended_energies),
                                  'PES.pes_data': jsanitize(PG.PES_on_meshgrid),
                                  'PES.image': PG.PES_as_bytes,
@@ -192,7 +192,7 @@ class FT_RetrievePESEnergies(FiretaskBase):
                               'relaxed_struct': struct,
                               'task_id': vasp_calc['_id']}
 
-        sorted_energy_list = sorted(energy_list, key=itemgetter(3))
+        sorted_energy_list = sorted(energy_list, key=itemgetter(2))
 
         min_stacking = sorted_energy_list[0][0]
         max_stacking = sorted_energy_list[-1][0]
