@@ -21,6 +21,8 @@ from PIL import Image
 from io import BytesIO
 from scipy.interpolate import RBFInterpolator
 
+from triboflow.utils.database import convert_image_to_bytes
+
 class PESGenerator():
     def __init__(self,
                  points_per_angstrom = 50,
@@ -32,7 +34,7 @@ class PESGenerator():
                  nr_of_contours = 30,
                  fig_title = 'PES',
                  fig_type = 'png',
-                 plot_path = None):
+                 plot_path = './'):
         """
         Class for generating PES interpolation and plots for interfaces.
         
@@ -93,10 +95,10 @@ class PESGenerator():
         fig_type : str, optional
             Selects the format of the plot, e.g. 'pdf', or 'svg'.
             The default is 'png'.
-        plot_path : str or None, optional
-            If a string is set, the PES will be saved at this path. USE A
+        plot_path : str, optional
+            The PES will be saved at this path. USE A
             TRAILING SLASH! E.g.: /home/user/test/PES/
-            The default is None.
+            The default is "./".
 
         """
         self.ppA = points_per_angstrom
@@ -149,7 +151,7 @@ class PESGenerator():
         X, Y, Z = self.__interpolate_on_grid()
         
         self.__plot_grid(X, Y, Z)
-        self.PES_as_bytes = self.__get_pes_as_bytes(self.PES_fig)
+        self.PES_as_bytes = self.__get_pes_as_bytes()
         self.corrugation = self.__get_corrugation(Z)
         self.PES_on_meshgrid = {'X': X, 'Y': Y, 'Z':Z}
     
@@ -366,9 +368,8 @@ class PESGenerator():
         plt.tight_layout()
         self.PES_fig = fig
         
-        if self.plot_path:
-            plt.savefig(self.plot_path+self.fig_name+'.'+self.fig_type,
-                        dpi=300, bbox_inches='tight')
+        plt.savefig(self.plot_path+self.fig_name+'.'+self.fig_type,
+                    dpi=300, bbox_inches='tight')
               
     def __evaluate_on_grid(self, X, Y):
         """
@@ -527,7 +528,7 @@ class PESGenerator():
                        #ncol=math.ceil(len(hs_points_dict)/2),
                        fontsize=15)
     
-    def __get_pes_as_bytes(self,fig):
+    def __get_pes_as_bytes(self):
         """
         Transform a figure into a bytes object to store in the MongoDB database.
 
@@ -542,12 +543,18 @@ class PESGenerator():
             Figure in bytes
 
         """
-        im = Image.frombytes('RGB', 
-                             fig.canvas.get_width_height(),
-                             fig.canvas.tostring_rgb())
-        image_bytes = BytesIO()
-        im.save(image_bytes, format='png')
-        return image_bytes.getvalue()
+        return convert_image_to_bytes(self.plot_path+self.fig_name+'.'+self.fig_type)
+        # buf = BytesIO()
+        # self.PES_fig.savefig(buf)
+        # buf.seek(0)
+        # img = Image.open(buf)
+        # return img.tobytes()
+        # im = Image.frombytes(mode = 'RGB', 
+        #                       size = self.PES_fig.canvas.get_width_height(),
+        #                       data = self.PES_fig.canvas.tostring_rgb())
+        # image_bytes = BytesIO()
+        # im.save(image_bytes, format='png')
+        # return image_bytes.getvalue()
     
     def __interpolate_on_grid(self):
         """
