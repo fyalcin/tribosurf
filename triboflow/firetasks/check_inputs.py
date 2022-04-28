@@ -532,13 +532,13 @@ class FT_CheckInterfaceParamDict(FiretaskBase):
         #Edit this block according to need, but be careful with the defaults!
         #####################################################################
         essential_keys = ['max_area']
-        additional_keys = ['interface_distance', 'max_mismatch',
-                           'max_angle_diff', 'r1r2_tol']
+        additional_keys = ['interface_distance', 'max_length_tol',
+                           'max_angle_tol', 'max_area_ratio_tol']
         
         defaults = {'interface_distance': 2.0,
-                    'max_mismatch': 0.01,
-                    'max_angle_diff': 1.5,
-                    'r1r2_tol': 0.05}
+                    'max_length_tol': 0.03,
+                    'max_angle_tol': 0.01,
+                    'max_area_ratio_tol': 0.1}
         #####################################################################
          
         input_dict = self['input_dict']
