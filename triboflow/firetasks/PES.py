@@ -19,7 +19,8 @@ from triboflow.phys.new_high_symm import InterfaceSymmetryAnalyzer
 from triboflow.phys.new_potential_energy_surface import PESGenerator
 from triboflow.phys.shaper import Shaper
 from triboflow.utils.database import Navigator, StructureNavigator
-from triboflow.utils.structure_manipulation import clean_up_site_properties
+from triboflow.utils.structure_manipulation import (clean_up_site_properties,
+                                                    get_interface_distance)
 from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
 from triboflow.workflows.base import dynamic_relax_swf
 
@@ -212,10 +213,16 @@ class FT_RetrievePESEnergies(FiretaskBase):
         struct_min_dict = calc_min['output']['structure']
         struct_max_dict = calc_max['output']['structure']
 
-        struct_min = Structure.from_dict(calc_min['output']['structure'])
-        struct_max = Structure.from_dict(calc_max['output']['structure'])
-        inter_dist_min = Shaper.get_layer_spacings(struct_min)[0]
-        inter_dist_max = Shaper.get_layer_spacings(struct_max)[0]
+        struct_min = Structure.from_dict(struct_min_dict)
+        struct_max = Structure.from_dict(struct_max_dict)
+        
+        #add site properties from ref_struct to get back interface_labels:
+        for k, v in ref_struct.site_properties.items():
+            struct_min.add_site_property(k, v)
+            struct_max.add_site_property(k, v)
+        
+        inter_dist_min = get_interface_distance(struct_min)
+        inter_dist_max = get_interface_distance(struct_max)
 
         nav_high = Navigator(db_file=db_file, high_level=hl_db)
         nav_high.update_data(
