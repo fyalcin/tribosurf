@@ -268,7 +268,7 @@ def calc_pes_swf(interface,
     Parameters
     ----------
     interface : pymatgen.core.interface.Interface
-        Top slab of the interface.
+        Interface, Slab or Structrue object containing the unrelaxed interface.
     interface_name : str, optional
         Unique name to find the interface in the database with.
         The default is None, which will lead to an automatic interface_name

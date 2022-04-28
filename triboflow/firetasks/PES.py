@@ -75,29 +75,38 @@ class FT_ComputePES(FiretaskBase):
         unique_shifts = inter_dict['PES']['high_symmetry_points']['unique_shifts']
         energy_dict = inter_dict['PES']['high_symmetry_points']['energies_dict']
         group_assignments = inter_dict['PES']['high_symmetry_points']['group_assignments']
-        
-        if file_output:
-            PG = PESGenerator(points_per_angstrom = 50,
-                              interpolation_kernel = 'linear',
-                              plot_hs_points = False,
-                              plot_unit_cell = True,
-                              plotting_ratio = 1.0,
-                              normalize_minimum = True,
-                              nr_of_contours = 30,
-                              fig_title = name,
-                              fig_type = 'png',
-                              plot_path = './')
-        else:
-            PG = PESGenerator(points_per_angstrom = 50,
-                              interpolation_kernel = 'linear',
-                              plot_hs_points = False,
-                              plot_unit_cell = True,
-                              plotting_ratio = 1.0,
-                              normalize_minimum = True,
-                              nr_of_contours = 30,
-                              fig_title = name,
-                              fig_type = 'png',
-                              plot_path = None)
+        PG = PESGenerator(points_per_angstrom = 50,
+                          interpolation_kernel = 'linear',
+                          plot_hs_points = False,
+                          plot_unit_cell = True,
+                          plotting_ratio = 1.0,
+                          normalize_minimum = True,
+                          nr_of_contours = 30,
+                          fig_title = name,
+                          fig_type = 'png',
+                          plot_path = './')
+        # if file_output:
+        #     PG = PESGenerator(points_per_angstrom = 50,
+        #                       interpolation_kernel = 'linear',
+        #                       plot_hs_points = False,
+        #                       plot_unit_cell = True,
+        #                       plotting_ratio = 1.0,
+        #                       normalize_minimum = True,
+        #                       nr_of_contours = 30,
+        #                       fig_title = name,
+        #                       fig_type = 'png',
+        #                       plot_path = './')
+        # else:
+        #     PG = PESGenerator(points_per_angstrom = 50,
+        #                       interpolation_kernel = 'linear',
+        #                       plot_hs_points = False,
+        #                       plot_unit_cell = True,
+        #                       plotting_ratio = 1.0,
+        #                       normalize_minimum = True,
+        #                       nr_of_contours = 30,
+        #                       fig_title = name,
+        #                       fig_type = 'png',
+        #                       plot_path = None)
 
         PG(interface=struct,
            energies_dict=energy_dict,
