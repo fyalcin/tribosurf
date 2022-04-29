@@ -21,7 +21,80 @@ from PIL import Image
 from io import BytesIO
 from scipy.interpolate import RBFInterpolator
 
-from triboflow.utils.database import convert_image_to_bytes
+from pymatgen.core.interface import Interface
+
+from triboflow.utils.database import convert_image_to_bytes, StructureNavigator
+
+
+def get_PESGenerator_from_db(interface_name, db_file='auto', high_level=True, 
+                             functional='PBE', pes_generator_kwargs={}):
+    """
+    Return a PESGenerator object using input arguments from the high_level db.
+    
+    An interface object is loaded from the high level database alongside info
+    about the high symmetry points and their energies. A PESGenerator is
+    constructed using the optional pes_generator_kwargs, and called for the
+    queried interface. This leads to PES construction.
+
+    Parameters
+    ----------
+    interface_name : pymatgen.core.interface.Interface
+        The Interface object
+    db_file : str, optional
+        path to a db.json file. If 'auto', it is loaded from the default
+        location. The default is 'auto'.
+    high_level : str or bool, optional
+        Name of the high_level db. If True, this is read from the db.json.
+        The default is True.
+    functional : str, optional
+        'PBE' or 'SCAN'. The default is 'PBE'.
+    pes_generator_kwargs : dict, optional
+        Dictionary with keyword arguments for the initialization of the 
+        PESGenerator object. The default is {}.
+
+    Returns
+    -------
+    PG : triboflow.phys.potential_energy_surface.PESGenerator
+        PESGenerator object.
+
+    """
+    
+    nav = StructureNavigator(db_file=db_file, high_level=high_level)
+    inter_dict = nav.get_interface_from_db(interface_name, functional)
+    
+    possible_kwargs = ['points_per_angstrom', 'interpolation_kernel', 
+                       'plot_hs_points', 'plot_unit_cell', 'plotting_ratio',
+                       'normalize_minimum', 'nr_of_contours', 'fig_title',
+                       'fig_type', 'plot_path']
+    PG_kwargs = pes_generator_kwargs.copy()
+    for k in pes_generator_kwargs.keys():
+        if k not in possible_kwargs:
+            PG_kwargs.pop(k)
+            print(f'<{k}> is not a valid keyword argument for PESGenerator '
+                  'and will be ignored.\n'
+                  f'Please use only the following arguments: \n{possible_kwargs}')
+    
+    PG=PESGenerator(**PG_kwargs)
+    
+    try:
+        interface = Interface.from_dict(inter_dict['unrelaxed_structure'])
+        all_shifts = inter_dict['PES']['high_symmetry_points']['all_shifts']
+        unique_shifts = inter_dict['PES']['high_symmetry_points']['unique_shifts']
+        energy_dict = inter_dict['PES']['high_symmetry_points']['energies_dict']
+        group_assignments = inter_dict['PES']['high_symmetry_points']['group_assignments']
+    except KeyError:
+        print('Apparently not all necessary data for PES generation for the '
+              f'{interface_name} interface is available in the database yet.\n'
+              'Check your workflow!')
+        return None
+        
+    PG(interface=interface,
+       energies_dict=energy_dict,
+       all_shifts_dict=all_shifts,
+       unique_shifts_dict=unique_shifts,
+       group_names_dict=group_assignments)
+    
+    return PG
 
 class PESGenerator():
     def __init__(self,
@@ -474,7 +547,7 @@ class PESGenerator():
             Subplot axes
 
         """
-        add_height = self.ylim*0.10 if self.plot_hs_points else 0.0
+        add_height = self.ylim*0.20 if self.plot_hs_points else 0.0
         if self.plotting_ratio:
             fig = plt.figure(figsize=(self.xlim,
                                       self.xlim/self.plotting_ratio+add_height),
@@ -520,13 +593,15 @@ class PESGenerator():
                      markersize=8,
                      markeredgewidth=0.5,
                      zorder=1000.0)
-            fig.legend(loc='upper left',
-                       ncol=3,
-                       handletextpad=0.01,
-                       columnspacing=1.0,
-                       labelspacing=0.3,
-                       #ncol=math.ceil(len(hs_points_dict)/2),
-                       fontsize=15)
+            fig.legend(ncol=3,
+                       loc='upper left',
+                         framealpha=1.0,
+                         handletextpad=0.01,
+                         columnspacing=1.0,
+                         labelspacing=0.3,
+                         bbox_to_anchor=(0.0,1.0),
+                         #ncol=math.ceil(len(hs_points_dict)/2),
+                         fontsize=12)
     
     def __get_pes_as_bytes(self):
         """

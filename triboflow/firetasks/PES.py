@@ -16,7 +16,7 @@ from pymatgen.core.structure import Structure
 from pymatgen.core.interface import Interface
 
 from triboflow.phys.new_high_symm import InterfaceSymmetryAnalyzer
-from triboflow.phys.new_potential_energy_surface import PESGenerator
+from triboflow.phys.new_potential_energy_surface import get_PESGenerator_from_db
 from triboflow.phys.shaper import Shaper
 from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.structure_manipulation import (clean_up_site_properties,
@@ -62,58 +62,12 @@ class FT_ComputePES(FiretaskBase):
             db_file = env_chk('>>db_file<<', fw_spec)
         hl_db = self.get('high_level_db', True)
 
-        nav_structure = StructureNavigator(
-            db_file=db_file,
-            high_level=hl_db)
-        inter_dict = nav_structure.get_interface_from_db(
-            name=name,
-            functional=functional
-        )
-        struct = Structure.from_dict(inter_dict['relaxed_structure@min'])
 
-        # Copy the energies for the unique points to all points
-        all_shifts = inter_dict['PES']['high_symmetry_points']['all_shifts']
-        unique_shifts = inter_dict['PES']['high_symmetry_points']['unique_shifts']
-        energy_dict = inter_dict['PES']['high_symmetry_points']['energies_dict']
-        group_assignments = inter_dict['PES']['high_symmetry_points']['group_assignments']
-        PG = PESGenerator(points_per_angstrom = 50,
-                          interpolation_kernel = 'linear',
-                          plot_hs_points = False,
-                          plot_unit_cell = True,
-                          plotting_ratio = 1.0,
-                          normalize_minimum = True,
-                          nr_of_contours = 30,
-                          fig_title = name,
-                          fig_type = 'png',
-                          plot_path = './')
-        # if file_output:
-        #     PG = PESGenerator(points_per_angstrom = 50,
-        #                       interpolation_kernel = 'linear',
-        #                       plot_hs_points = False,
-        #                       plot_unit_cell = True,
-        #                       plotting_ratio = 1.0,
-        #                       normalize_minimum = True,
-        #                       nr_of_contours = 30,
-        #                       fig_title = name,
-        #                       fig_type = 'png',
-        #                       plot_path = './')
-        # else:
-        #     PG = PESGenerator(points_per_angstrom = 50,
-        #                       interpolation_kernel = 'linear',
-        #                       plot_hs_points = False,
-        #                       plot_unit_cell = True,
-        #                       plotting_ratio = 1.0,
-        #                       normalize_minimum = True,
-        #                       nr_of_contours = 30,
-        #                       fig_title = name,
-        #                       fig_type = 'png',
-        #                       plot_path = None)
-
-        PG(interface=struct,
-           energies_dict=energy_dict,
-           all_shifts_dict=all_shifts,
-           unique_shifts_dict=unique_shifts,
-           group_names_dict=group_assignments)
+        PG = get_PESGenerator_from_db(interface_name=name,
+                                      db_file=db_file,
+                                      high_level=hl_db,
+                                      functional=functional,
+                                      pes_generator_kwargs={'fig_title': name})
 
         nav_high = Navigator(db_file=db_file, high_level=hl_db)
         nav_high.update_data(
