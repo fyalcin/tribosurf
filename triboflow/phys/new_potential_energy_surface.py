@@ -24,6 +24,7 @@ from scipy.interpolate import RBFInterpolator
 from pymatgen.core.interface import Interface
 
 from triboflow.utils.database import convert_image_to_bytes, StructureNavigator
+from triboflow.phys.minimum_energy_path import get_initial_string, evolve_string
 
 
 def get_PESGenerator_from_db(interface_name, db_file='auto', high_level=True, 
@@ -228,6 +229,14 @@ class PESGenerator():
         self.corrugation = self.__get_corrugation(Z)
         self.PES_on_meshgrid = {'X': X, 'Y': Y, 'Z':Z}
     
+    def __get_mep(self):
+        self.initial_string = get_initial_string(self.extended_energies,
+                                            self.xlim,
+                                            self.ylim,
+                                            npts=25)
+        self.mep, self.mep_convergence = evolve_string(self.initial_string,
+                                                       self.rbf)
+        return self.mep
     
     def __get_min_and_max_hsps(self):
         """
@@ -423,6 +432,10 @@ class PESGenerator():
                         fontsize=18, family='sans-serif')
         if self.plot_unit_cell:
             self.__plot_unit_cell(ax)
+        
+        self.mep = self.__get_mep()
+        
+        plt.plot(self.mep[:,0], self.mep[:,1], 'k-')
         
         plt.xlabel(r"x [$\rm\AA$]", fontsize=20, family='sans-serif')
         plt.ylabel(r"y [$\rm\AA$]", fontsize=20, family='sans-serif')

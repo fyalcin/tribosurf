@@ -23,6 +23,8 @@ __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 8th, 2021'
 
 import numpy as np
+from scipy.interpolate import interp1d
+
 
 from triboflow.phys.shear_strength import take_derivative, get_shear_strength_xy
 
@@ -30,6 +32,101 @@ from triboflow.phys.shear_strength import take_derivative, get_shear_strength_xy
 # EVALUATION OF THE MEP
 # =============================================================================
 
+def get_initial_string(extended_energy_list, xlim, ylim, npts=100, add_noise=0.01):
+    energies = extended_energy_list.copy()
+    energies[:,2] = energies[:,2] - min(energies[:,2])
+    
+    minima = [x[:2] for x in energies if (x[2] == 0.0 and 
+                                          x[0] >= 0 and
+                                          x[0] < xlim-0.1 and 
+                                          x[1] >= 0 and 
+                                          x[1] < ylim-0.1)]
+    
+    start = [xlim, ylim]
+    end = [0.0, 0.0]
+    for p in minima:
+        if np.linalg.norm(p) < np.linalg.norm(start):
+            start = p
+        if np.linalg.norm(p) > np.linalg.norm(end):
+            end = p
+    
+    string = np.linspace(start, end, npts)
+    if add_noise:
+        noise = np.random.normal(0, add_noise, string.shape)
+        string += noise
+    return string
+
+def evolve_string(string, rbf, nstepmax = 99999, mintol=1e-7, delta=0.01, h=0.001):
+    x = string[:,0]
+    y = string[:,1]
+    n = len(x)
+    g = np.linspace(0,1,n)
+    dx = x - np.roll(x,1)
+    dy = y - np.roll(y,1)
+    dx[0]=0.
+    dy[0]=0.
+    lxy  = np.cumsum(np.sqrt(dx**2+dy**2))
+    lxy /= lxy[n-1]
+    # xf = interp1d(lxy,x,kind='cubic')
+    # x  =  xf(g)
+    # yf = interp1d(lxy,y,kind='cubic')
+    # y  =  yf(g)
+    for nstep in range(int(nstepmax)):
+        # Calculation of the x and y-components of the force.
+        # dVx and dVy are derivative of the potential
+        x += delta
+        tempValp=rbf(np.stack((x,y), axis=1))
+        x -= 2.*delta
+        tempValm=rbf(np.stack((x,y), axis=1))
+        dVx = 0.5*(tempValp-tempValm)/delta
+        x += delta
+        y += delta
+        tempValp=rbf(np.stack((x,y), axis=1))
+        y -= 2.*delta
+        tempValm=rbf(np.stack((x,y), axis=1))
+        y += delta
+        dVy = 0.5*(tempValp-tempValm)/delta
+
+        x0 = x.copy()
+        y0 = y.copy()
+        # string steps:
+        # 1. evolve
+        xt = x- h*dVx
+        yt = y - h*dVy
+        # 2. derivative
+        xt += delta
+        tempValp=rbf(np.stack((xt,yt), axis=1))
+        xt -= 2.*delta
+        tempValm=rbf(np.stack((xt,yt), axis=1))
+        dVxt = 0.5*(tempValp-tempValm)/delta
+        xt += delta
+        yt += delta
+        tempValp=rbf(np.stack((xt,yt), axis=1))
+        yt -= 2.*delta
+        tempValm=rbf(np.stack((xt,yt), axis=1))
+        yt += delta
+        dVyt = 0.5*(tempValp-tempValm)/delta
+
+        x -= 0.5*h*(dVx+dVxt)
+        y -= 0.5*h*(dVy+dVyt)
+        # 3. reparametrize  
+        dx = x-np.roll(x,1)
+        dy = y-np.roll(y,1)
+        dx[0] = 0.
+        dy[0] = 0.
+        lxy  = np.cumsum(np.sqrt(dx**2+dy**2))
+        lxy /= lxy[n-1]
+        xf = interp1d(lxy,x,kind='cubic')
+        x  =  xf(g)
+        yf = interp1d(lxy,y,kind='cubic')
+        y  =  yf(g)
+        tol = (np.linalg.norm(x-x0)+np.linalg.norm(y-y0))/n
+        if tol <= mintol:
+           break
+      
+    mep = np.column_stack([x, y])
+    mep_convergency = (nstep, tol)
+    return mep, mep_convergency
 
 def get_mep(lattice, rbf, theta=0., params=None):
     """

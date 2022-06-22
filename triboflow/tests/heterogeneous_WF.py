@@ -34,7 +34,7 @@ inputs = {'material_1': {'formula': 'Al',
                                   'vacuum': 12},
           'interface_params':{'max_area': 100,
                               'max_area_ratio_tol': 0.1,
-                              'max_mismatch': 0.05
+                              'max_length_tol': 0.05
                               }
           }
 

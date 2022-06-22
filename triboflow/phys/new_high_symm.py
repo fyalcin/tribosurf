@@ -271,7 +271,7 @@ class InterfaceSymmetryAnalyzer:
 
     def __get_slab_hs_dicts(self):
         """
-        Analyse the adsorption sites of the substrate and the flipped slab.
+        Analyse the adsorption sites of the substrate and the flipped film.
         
         In the process high symmetry dictionaries are constructed for both
         the top and the bottom slabs, for unique and replicated adsorption sites.
