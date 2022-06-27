@@ -636,9 +636,12 @@ class InterfaceMatcher:
         if not tcs and not bcs:
                 return None
         
-        #Note that the from_slab method of the Inteface object flips the film over!
+        # Note that the from_slab method of the Inteface object flips the film over!
+        # UPDATE ON 27.06.22: After noticing some discrepancies with the high symmetry points
+        # we decided to leave the film as is, since it gets flipped once more by the Interface
+        # class. This seems to fix the issues with the high symmetry points.
         self.interface = Interface.from_slabs(substrate_slab=bcs,
-                                              film_slab=flip_slab(tcs),
+                                              film_slab=tcs,
                                               gap=self.inter_dist,
                                               vacuum_over_film=self.vacuum_thickness)
         
