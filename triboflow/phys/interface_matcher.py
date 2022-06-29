@@ -565,8 +565,7 @@ class InterfaceMatcher:
         """
         if are_slabs_aligned(self.top_slab, self.bot_slab):
             print("\n  Slabs are already aligned!\n")
-            flipped_slab = center_slab(flip_slab(self.top_slab))
-            self.aligned_top_slab, self.aligned_bot_slab = flipped_slab, self.bot_slab
+            self.aligned_top_slab, self.aligned_bot_slab = self.top_slab, self.bot_slab
         else:
             sc_top, sc_bot = self._get_matching_supercells()
             # Return None, None if no match was found for the given parameters.
@@ -581,9 +580,8 @@ class InterfaceMatcher:
                                                         
             sc_top.lattice = l_top
             sc_bot.lattice = l_bot
-            
-            flipped_slab = flip_slab(sc_top)
-            self.aligned_top_slab, self.aligned_bot_slab = flipped_slab, sc_bot
+
+            self.aligned_top_slab, self.aligned_bot_slab = sc_top, sc_bot
 
         return self.aligned_top_slab, self.aligned_bot_slab        
         
