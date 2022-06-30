@@ -8,6 +8,7 @@ Created on Tue Oct 13 14:52:57 2020
 from operator import itemgetter
 
 import numpy as np
+import pickle
 from atomate.utils.utils import env_chk
 from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
@@ -76,6 +77,7 @@ class FT_ComputePES(FiretaskBase):
             new_values={'$set': {'PES.all_energies': jsanitize(PG.extended_energies),
                                  'PES.pes_data': jsanitize(PG.PES_on_meshgrid),
                                  'PES.image': PG.PES_as_bytes,
+                                 'PES.rbf': pickle.dumps(PG.rbf),
                                  'corrugation': PG.corrugation,
                                  'hsp@min': PG.hsp_min,
                                  'hsp@max': PG.hsp_max}},
