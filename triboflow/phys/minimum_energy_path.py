@@ -32,31 +32,48 @@ from triboflow.phys.shear_strength import take_derivative, get_shear_strength_xy
 # EVALUATION OF THE MEP
 # =============================================================================
 
-def get_initial_string(extended_energy_list, xlim, ylim, npts=100, add_noise=0.01):
+def get_initial_strings(extended_energy_list, xlim, ylim, npts=100, add_noise=0.01):
     energies = extended_energy_list.copy()
     energies[:,2] = energies[:,2] - min(energies[:,2])
     
     minima = [x[:2] for x in energies if (x[2] == 0.0 and 
-                                          x[0] >= 0 and
+                                          x[0] >= 0.1 and
                                           x[0] < xlim-0.1 and 
-                                          x[1] >= 0 and 
+                                          x[1] >= 0.1 and 
                                           x[1] < ylim-0.1)]
     
     start = [xlim, ylim]
     end = [0.0, 0.0]
+    end_x = [0.0, ylim]
+    end_y = [0.0, 0.0]
+    
+    #make a path mostly diagonal through the plotting region
     for p in minima:
         if np.linalg.norm(p) < np.linalg.norm(start):
             start = p
         if np.linalg.norm(p) > np.linalg.norm(end):
             end = p
     
-    string = np.linspace(start, end, npts)
+    #make a path mostly in x direction through the plotting region
+    for p in minima:
+        if p[0] > end_x[0] and np.isclose(p[1], start[1], atol=0.01):
+            end_x = p
+    #make a path mostly in y direction through the plotting region
+    for p in minima:
+        if p[1] > end_y[1] and np.isclose(p[0], start[0], atol=0.01):
+            end_y = p
+    
+    string_d = np.linspace(start, end, npts)
+    string_x = np.linspace(start, end_x, npts)
+    string_y = np.linspace(start, end_y, npts)
     if add_noise:
-        noise = np.random.normal(0, add_noise, string.shape)
-        string += noise
-    return string
+        noise = np.random.normal(0, add_noise, string_d.shape)
+        string_d += noise
+        string_x += noise
+        string_y += noise
+    return string_d, string_x, string_y
 
-def evolve_string(string, rbf, nstepmax = 99999, mintol=1e-7, delta=0.01, h=0.001):
+def evolve_string(string, rbf, nstepmax = 99999, mintol=1e-7, delta=0.005, h=0.001):
     x = string[:,0]
     y = string[:,1]
     n = len(x)
@@ -126,7 +143,7 @@ def evolve_string(string, rbf, nstepmax = 99999, mintol=1e-7, delta=0.01, h=0.00
       
     mep = np.column_stack([x, y])
     mep_convergency = (nstep, tol)
-    return mep, mep_convergency
+    return {'mep': mep, 'convergence': mep_convergency}
 
 def get_mep(lattice, rbf, theta=0., params=None):
     """
