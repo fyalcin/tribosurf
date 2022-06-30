@@ -17,6 +17,8 @@ import multiprocessing
 
 import matplotlib.pyplot as plt
 import numpy as np
+from pymatgen.core import PeriodicSite
+from pymatgen.core.structure import Structure
 from pymatgen.core.interface import Interface
 from scipy.interpolate import RBFInterpolator
 from triboflow.phys.minimum_energy_path import get_initial_strings, evolve_string
@@ -253,6 +255,7 @@ class PESGenerator():
         self.__get_limits_and_multiples()
 
         X, Y, Z = self.__interpolate_on_grid()
+        self.__get_pes_unit_cell()
 
         self.__plot_grid(X, Y, Z)
         self.PES_as_bytes = self.__get_pes_as_bytes()
@@ -449,11 +452,11 @@ class PESGenerator():
 
         Parameters
         ----------
-        X : nump.yndarray
+        X : numpy.ndarray
             X part of meshgrid
-        Y : nump.yndarray
+        Y : numpy.ndarray
             Y part of meshgrid
-        Z : nump.yndarray
+        Z : numpy.ndarray
             Interpolation ready for plotting
         """
         levels = np.linspace(np.amin(Z), np.amax(Z), self.contours)
@@ -505,14 +508,14 @@ class PESGenerator():
 
         Parameters
         ----------
-        X : nump.yndarray
+        X : numpy.ndarray
             X part of meshgrid
-        Y : nump.yndarray
+        Y : numpy.ndarray
             Y part of meshgrid
 
         Returns
         -------
-        Z : nump.yndarray
+        Z : numpy.ndarray
             Interpolation ready for plotting.
         """
         xy = np.vstack([X.ravel(), Y.ravel()]).T
@@ -535,9 +538,9 @@ class PESGenerator():
 
         Returns
         -------
-        X : nump.yndarray
+        X : numpy.ndarray
             X part of meshgrid
-        Y : nump.yndarray
+        Y : numpy.ndarray
             Y part of meshgrid
         """
         nr_pts_x = int(xmax * self.ppA)
@@ -568,6 +571,46 @@ class PESGenerator():
         low = min(Z.ravel())
         high = max(Z.ravel())
         return np.linspace(low, high, nr_of_ticks).tolist()
+
+    def __get_pes_unit_cell(self):
+        """
+        Calculates the minimum repeating unit in the PES data by creating
+        a pymatgen Structure with sites at the high symmetry points (all) with
+        site properties assigned to discern different groups, and then
+        running a cell reduction algorithm (Structure.get_primitive_structure())
+        on the generated structure.
+
+        Returns
+        -------
+        pymatgen.core.lattice.Lattice
+            Lattice object with the periodicity of the PES unit cell
+        """
+        try:
+            pes_unit_cell = self.pes_unit_cell
+        except:
+            interface = self.interface
+            sites = []
+            specie = interface[0].species
+            lattice = interface.lattice
+            hsp_all = self.all_shifts
+
+            for group_name, shifts in hsp_all.items():
+                for shift in shifts:
+                    coord = shift + [0]
+                    site = PeriodicSite(species=specie,
+                                        coords=coord,
+                                        lattice=lattice,
+                                        to_unit_cell=True,
+                                        properties={'group_name': group_name})
+                    sites.append(site)
+            pbc_struct = Structure.from_sites(sites)
+            pbc_struct_prim = pbc_struct.get_primitive_structure(tolerance=0.01,
+                                                                 use_site_props=True)
+            pes_unit_cell = pbc_struct_prim.lattice
+            self.pes_unit_cell = pes_unit_cell
+
+        return pes_unit_cell
+
 
     def __plot_unit_cell(self, ax):
         """
