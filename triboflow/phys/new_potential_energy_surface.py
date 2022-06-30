@@ -14,6 +14,8 @@ __contact__ = 'michael.wolloch@univie.ac.at'
 __date__ = 'April 14th, 2022'
 
 
+import multiprocessing
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -24,7 +26,7 @@ from scipy.interpolate import RBFInterpolator
 from pymatgen.core.interface import Interface
 
 from triboflow.utils.database import convert_image_to_bytes, StructureNavigator
-from triboflow.phys.minimum_energy_path import get_initial_string, evolve_string
+from triboflow.phys.minimum_energy_path import get_initial_strings, evolve_string
 
 
 def get_PESGenerator_from_db(interface_name, db_file='auto', high_level=True, 
@@ -66,7 +68,9 @@ def get_PESGenerator_from_db(interface_name, db_file='auto', high_level=True,
     possible_kwargs = ['points_per_angstrom', 'interpolation_kernel', 
                        'plot_hs_points', 'plot_unit_cell', 'plotting_ratio',
                        'normalize_minimum', 'nr_of_contours', 'fig_title',
-                       'fig_type', 'plot_path']
+                       'fig_type', 'plot_path', 'plot_minimum_energy_paths',
+                       'string_length', 'add_noise_to_string',
+                       'string_max_iterations']
     PG_kwargs = pes_generator_kwargs.copy()
     for k in pes_generator_kwargs.keys():
         if k not in possible_kwargs:
@@ -103,12 +107,17 @@ class PESGenerator():
                  interpolation_kernel = 'linear',
                  plot_hs_points = False,
                  plot_unit_cell = True,
+                 plot_minimum_energy_paths = True,
                  plotting_ratio = 1.0,
                  normalize_minimum = True,
                  nr_of_contours = 30,
                  fig_title = 'PES',
                  fig_type = 'png',
-                 plot_path = './'):
+                 plot_path = './',
+                 string_length = 50,
+                 add_noise_to_string = 0.01,
+                 string_max_iterations = 99999
+                 ):
         """
         Class for generating PES interpolation and plots for interfaces.
         
@@ -129,6 +138,9 @@ class PESGenerator():
             .corrugation gives the difference in energy
             .hsp_min gives the minimum group or stacking of the input data
             .hsp_max gives the maximum group or stacking of the input data
+            .mep is a dictionary with the x and y components of the minimum
+                energy paths as well as their convergence data. The MEPs can
+                be evaluated directly using the rbf.
             
         
         
@@ -155,6 +167,9 @@ class PESGenerator():
             passed. If not, no points are plotted. The default is False.
         plot_unit_cell : bool, optional
             Plot the unit cell in the PES. The default is True.
+        plot_minimum_energy_paths : bool, optional
+            Plot the minimum energy paths along x, y, and diagonally or not.
+            The default is True.
         plotting_ratio : float or None, optional
             Aspect ratio of the PES figure. Can be set to None in which case
             the smallest rectangle fitting the unit cell is plotted.
@@ -173,6 +188,17 @@ class PESGenerator():
             The PES will be saved at this path. USE A
             TRAILING SLASH! E.g.: /home/user/test/PES/
             The default is "./".
+        string_length : int, optional
+            The number of nodes in the strings that will be used to find the
+            minimum energy path. The default is 50.
+        add_noise_to_string : float or None, optional
+            Select if some noise should be added to the initial string nodes,
+            to avoid having symmetry related problems where the string is
+            situatad directly over maxima with zero gradients.
+            The default is 0.01
+        string_max_iterations : int, optional
+            How long the zero temperature string method will run to find the
+            minimum energy paths.
 
         """
         self.ppA = points_per_angstrom
@@ -185,6 +211,10 @@ class PESGenerator():
         self.fig_name = fig_title
         self.fig_type = fig_type
         self.plot_path = plot_path
+        self.string_length = string_length
+        self.noise = add_noise_to_string
+        self.max_iter = string_max_iterations
+        self.plot_mep = plot_minimum_energy_paths
 
     def __call__(self,
                  interface,
@@ -230,13 +260,23 @@ class PESGenerator():
         self.PES_on_meshgrid = {'X': X, 'Y': Y, 'Z':Z}
     
     def __get_mep(self):
-        self.initial_string = get_initial_string(self.extended_energies,
-                                            self.xlim,
-                                            self.ylim,
-                                            npts=25)
-        self.mep, self.mep_convergence = evolve_string(self.initial_string,
-                                                       self.rbf)
-        return self.mep
+        string_d, string_x, string_y = get_initial_strings(extended_energy_list=self.extended_energies,
+                                                           xlim=self.xlim,
+                                                           ylim=self.ylim,
+                                                           npts=self.string_length)
+        self.initial_string_d = string_d
+        self.initial_string_x = string_x
+        self.initial_string_y = string_y
+        
+        #evolve the stings parallel by using a Pool
+        evolve_pool = multiprocessing.Pool(3)
+        mep_d, mep_x, mep_y = evolve_pool.starmap(evolve_string, 
+                                        [[string_d, self.rbf, self.max_iter],
+                                         [string_x, self.rbf, self.max_iter],
+                                         [string_y, self.rbf, self.max_iter]])
+        self.mep = {'mep_d': mep_d,
+                    'mep_x': mep_x,
+                    'mep_y': mep_y}
     
     def __get_min_and_max_hsps(self):
         """
@@ -313,8 +353,8 @@ class PESGenerator():
         ab = a+b
         max_a = max(a[0], ab[0])
         max_b = max(b[1], ab[1])
-        self.xmult = np.ceil(self.xlim/max_a)+1
-        self.ymult = np.ceil(self.ylim/max_b)+1
+        self.xmult = np.ceil(self.xlim/max_a)+2
+        self.ymult = np.ceil(self.ylim/max_b)+2
         
     def __make_energies_list(self):
         """
@@ -433,9 +473,15 @@ class PESGenerator():
         if self.plot_unit_cell:
             self.__plot_unit_cell(ax)
         
-        self.mep = self.__get_mep()
+        self.__get_mep()
         
-        plt.plot(self.mep[:,0], self.mep[:,1], 'k-')
+        if self.plot_mep:
+            mep_d = self.mep['mep_d']['mep']
+            mep_x = self.mep['mep_x']['mep']
+            mep_y = self.mep['mep_y']['mep']
+            plt.plot(mep_x[:,0], mep_x[:,1], 'r:')
+            plt.plot(mep_y[:,0], mep_y[:,1], 'b:')
+            plt.plot(mep_d[:,0], mep_d[:,1], 'g:')
         
         plt.xlabel(r"x [$\rm\AA$]", fontsize=20, family='sans-serif')
         plt.ylabel(r"y [$\rm\AA$]", fontsize=20, family='sans-serif')
@@ -459,7 +505,7 @@ class PESGenerator():
               
     def __evaluate_on_grid(self, X, Y):
         """
-        Evalueate the RBF on a meshgrid
+        Evaluate the RBF on a meshgrid
 
         Parameters
         ----------
