@@ -25,8 +25,8 @@ __date__ = 'February 8th, 2021'
 import numpy as np
 from scipy.interpolate import interp1d
 
-
 from triboflow.phys.shear_strength import take_derivative, get_shear_strength_xy
+
 
 # =============================================================================
 # EVALUATION OF THE MEP
@@ -34,35 +34,35 @@ from triboflow.phys.shear_strength import take_derivative, get_shear_strength_xy
 
 def get_initial_strings(extended_energy_list, xlim, ylim, npts=100, add_noise=0.01):
     energies = extended_energy_list.copy()
-    energies[:,2] = energies[:,2] - min(energies[:,2])
-    
-    minima = [x[:2] for x in energies if (x[2] == 0.0 and 
+    energies[:, 2] = energies[:, 2] - min(energies[:, 2])
+
+    minima = [x[:2] for x in energies if (x[2] == 0.0 and
                                           x[0] >= 0.1 and
-                                          x[0] < xlim-0.1 and 
-                                          x[1] >= 0.1 and 
-                                          x[1] < ylim-0.1)]
-    
+                                          x[0] < xlim - 0.1 and
+                                          x[1] >= 0.1 and
+                                          x[1] < ylim - 0.1)]
+
     start = [xlim, ylim]
     end = [0.0, 0.0]
     end_x = [0.0, ylim]
     end_y = [0.0, 0.0]
-    
-    #make a path mostly diagonal through the plotting region
+
+    # make a path mostly diagonal through the plotting region
     for p in minima:
         if np.linalg.norm(p) < np.linalg.norm(start):
             start = p
         if np.linalg.norm(p) > np.linalg.norm(end):
             end = p
-    
-    #make a path mostly in x direction through the plotting region
+
+    # make a path mostly in x direction through the plotting region
     for p in minima:
         if p[0] > end_x[0] and np.isclose(p[1], start[1], atol=0.01):
             end_x = p
-    #make a path mostly in y direction through the plotting region
+    # make a path mostly in y direction through the plotting region
     for p in minima:
         if p[1] > end_y[1] and np.isclose(p[0], start[0], atol=0.01):
             end_y = p
-    
+
     string_d = np.linspace(start, end, npts)
     string_x = np.linspace(start, end_x, npts)
     string_y = np.linspace(start, end_y, npts)
@@ -73,17 +73,18 @@ def get_initial_strings(extended_energy_list, xlim, ylim, npts=100, add_noise=0.
         string_y += noise
     return string_d, string_x, string_y
 
-def evolve_string(string, rbf, nstepmax = 99999, mintol=1e-7, delta=0.005, h=0.001):
-    x = string[:,0]
-    y = string[:,1]
+
+def evolve_string(string, rbf, nstepmax=99999, mintol=1e-7, delta=0.005, h=0.001):
+    x = string[:, 0]
+    y = string[:, 1]
     n = len(x)
-    g = np.linspace(0,1,n)
-    dx = x - np.roll(x,1)
-    dy = y - np.roll(y,1)
-    dx[0]=0.
-    dy[0]=0.
-    lxy  = np.cumsum(np.sqrt(dx**2+dy**2))
-    lxy /= lxy[n-1]
+    g = np.linspace(0, 1, n)
+    dx = x - np.roll(x, 1)
+    dy = y - np.roll(y, 1)
+    dx[0] = 0.
+    dy[0] = 0.
+    lxy = np.cumsum(np.sqrt(dx ** 2 + dy ** 2))
+    lxy /= lxy[n - 1]
     # xf = interp1d(lxy,x,kind='cubic')
     # x  =  xf(g)
     # yf = interp1d(lxy,y,kind='cubic')
@@ -92,58 +93,59 @@ def evolve_string(string, rbf, nstepmax = 99999, mintol=1e-7, delta=0.005, h=0.0
         # Calculation of the x and y-components of the force.
         # dVx and dVy are derivative of the potential
         x += delta
-        tempValp=rbf(np.stack((x,y), axis=1))
-        x -= 2.*delta
-        tempValm=rbf(np.stack((x,y), axis=1))
-        dVx = 0.5*(tempValp-tempValm)/delta
+        tempValp = rbf(np.stack((x, y), axis=1))
+        x -= 2. * delta
+        tempValm = rbf(np.stack((x, y), axis=1))
+        dVx = 0.5 * (tempValp - tempValm) / delta
         x += delta
         y += delta
-        tempValp=rbf(np.stack((x,y), axis=1))
-        y -= 2.*delta
-        tempValm=rbf(np.stack((x,y), axis=1))
+        tempValp = rbf(np.stack((x, y), axis=1))
+        y -= 2. * delta
+        tempValm = rbf(np.stack((x, y), axis=1))
         y += delta
-        dVy = 0.5*(tempValp-tempValm)/delta
+        dVy = 0.5 * (tempValp - tempValm) / delta
 
         x0 = x.copy()
         y0 = y.copy()
         # string steps:
         # 1. evolve
-        xt = x- h*dVx
-        yt = y - h*dVy
+        xt = x - h * dVx
+        yt = y - h * dVy
         # 2. derivative
         xt += delta
-        tempValp=rbf(np.stack((xt,yt), axis=1))
-        xt -= 2.*delta
-        tempValm=rbf(np.stack((xt,yt), axis=1))
-        dVxt = 0.5*(tempValp-tempValm)/delta
+        tempValp = rbf(np.stack((xt, yt), axis=1))
+        xt -= 2. * delta
+        tempValm = rbf(np.stack((xt, yt), axis=1))
+        dVxt = 0.5 * (tempValp - tempValm) / delta
         xt += delta
         yt += delta
-        tempValp=rbf(np.stack((xt,yt), axis=1))
-        yt -= 2.*delta
-        tempValm=rbf(np.stack((xt,yt), axis=1))
+        tempValp = rbf(np.stack((xt, yt), axis=1))
+        yt -= 2. * delta
+        tempValm = rbf(np.stack((xt, yt), axis=1))
         yt += delta
-        dVyt = 0.5*(tempValp-tempValm)/delta
+        dVyt = 0.5 * (tempValp - tempValm) / delta
 
-        x -= 0.5*h*(dVx+dVxt)
-        y -= 0.5*h*(dVy+dVyt)
+        x -= 0.5 * h * (dVx + dVxt)
+        y -= 0.5 * h * (dVy + dVyt)
         # 3. reparametrize  
-        dx = x-np.roll(x,1)
-        dy = y-np.roll(y,1)
+        dx = x - np.roll(x, 1)
+        dy = y - np.roll(y, 1)
         dx[0] = 0.
         dy[0] = 0.
-        lxy  = np.cumsum(np.sqrt(dx**2+dy**2))
-        lxy /= lxy[n-1]
-        xf = interp1d(lxy,x,kind='cubic')
-        x  =  xf(g)
-        yf = interp1d(lxy,y,kind='cubic')
-        y  =  yf(g)
-        tol = (np.linalg.norm(x-x0)+np.linalg.norm(y-y0))/n
+        lxy = np.cumsum(np.sqrt(dx ** 2 + dy ** 2))
+        lxy /= lxy[n - 1]
+        xf = interp1d(lxy, x, kind='cubic')
+        x = xf(g)
+        yf = interp1d(lxy, y, kind='cubic')
+        y = yf(g)
+        tol = (np.linalg.norm(x - x0) + np.linalg.norm(y - y0)) / n
         if tol <= mintol:
-           break
-      
+            break
+
     mep = np.column_stack([x, y])
     mep_convergency = (nstep, tol)
     return {'mep': mep, 'convergence': mep_convergency}
+
 
 def get_mep(lattice, rbf, theta=0., params=None):
     """
@@ -198,14 +200,14 @@ def get_mep(lattice, rbf, theta=0., params=None):
 
     """
 
-    from scipy.interpolate import interp1d, Rbf
-    
+    from scipy.interpolate import interp1d
+
     # WARNING: A squared lattice need to be provided
     a = lattice[0, :]
     b = lattice[1, :]
     alat_x = a[0]
     alat_y = b[1]
-    
+
     # Initialize the parameters to run the algorithm 
     n = 101
     fac = [0.75, 0.75]
@@ -213,7 +215,7 @@ def get_mep(lattice, rbf, theta=0., params=None):
     nstepmax = 99999
     tol1 = 1e-7
     delta = 0.01
-    
+
     # Check wether some parameters are inserted by the user
     if params != None and isinstance(params, dict):
         for k in params.keys():
@@ -228,91 +230,91 @@ def get_mep(lattice, rbf, theta=0., params=None):
             elif k == 'tol':
                 tol1 = params[k]
             elif k == 'delta':
-                delta = params[k]    
-    
-    facx=fac[0]
-    facy=fac[1]
-    xa =-facx*alat_x
-    ya =-facy*alat_y
-    xb = facx*alat_x
-    yb = facy*alat_y    
-    g = np.linspace(0,1,n)
+                delta = params[k]
 
-    if theta == np.pi/2 or theta == 3*np.pi/2: # y direction
+    facx = fac[0]
+    facy = fac[1]
+    xa = -facx * alat_x
+    ya = -facy * alat_y
+    xb = facx * alat_x
+    yb = facy * alat_y
+    g = np.linspace(0, 1, n)
+
+    if theta == np.pi / 2 or theta == 3 * np.pi / 2:  # y direction
         x = np.zeros(n)
-        y = (yb-ya)*g+ya
-    else: # best starting direction or x direction
-        x = (xb-xa)*g+xa
-        y = np.tan(theta)*x.copy()
-    
-    dx = x - np.roll(x,1)
-    dy = y - np.roll(y,1)
-    dx[0]=0.
-    dy[0]=0.
-    lxy  = np.cumsum(np.sqrt(dx**2+dy**2))
-    lxy /= lxy[n-1]
-    xf = interp1d(lxy,x,kind='cubic')
-    x  =  xf(g)
-    yf = interp1d(lxy,y,kind='cubic')
-    y  =  yf(g)
-    
+        y = (yb - ya) * g + ya
+    else:  # best starting direction or x direction
+        x = (xb - xa) * g + xa
+        y = np.tan(theta) * x.copy()
+
+    dx = x - np.roll(x, 1)
+    dy = y - np.roll(y, 1)
+    dx[0] = 0.
+    dy[0] = 0.
+    lxy = np.cumsum(np.sqrt(dx ** 2 + dy ** 2))
+    lxy /= lxy[n - 1]
+    xf = interp1d(lxy, x, kind='cubic')
+    x = xf(g)
+    yf = interp1d(lxy, y, kind='cubic')
+    y = yf(g)
+
     # Main loop
     for nstep in range(int(nstepmax)):
         # Calculation of the x and y-components of the force.
         # dVx and dVy are derivative of the potential
         x += delta
-        tempValp=rbf(x,y)
-        x -= 2.*delta
-        tempValm=rbf(x,y)
-        dVx = 0.5*(tempValp-tempValm)/delta
+        tempValp = rbf(x, y)
+        x -= 2. * delta
+        tempValm = rbf(x, y)
+        dVx = 0.5 * (tempValp - tempValm) / delta
         x += delta
         y += delta
-        tempValp=rbf(x,y)
-        y -= 2.*delta
-        tempValm=rbf(x,y)
+        tempValp = rbf(x, y)
+        y -= 2. * delta
+        tempValm = rbf(x, y)
         y += delta
-        dVy = 0.5*(tempValp-tempValm)/delta
+        dVy = 0.5 * (tempValp - tempValm) / delta
 
         x0 = x.copy()
         y0 = y.copy()
         # string steps:
         # 1. evolve
-        xt = x- h*dVx
-        yt = y - h*dVy
+        xt = x - h * dVx
+        yt = y - h * dVy
         # 2. derivative
         xt += delta
-        tempValp=rbf(xt,yt)
-        xt -= 2.*delta
-        tempValm=rbf(xt,yt)
-        dVxt = 0.5*(tempValp-tempValm)/delta
+        tempValp = rbf(xt, yt)
+        xt -= 2. * delta
+        tempValm = rbf(xt, yt)
+        dVxt = 0.5 * (tempValp - tempValm) / delta
         xt += delta
         yt += delta
-        tempValp=rbf(xt,yt)
-        yt -= 2.*delta
-        tempValm=rbf(xt,yt)
+        tempValp = rbf(xt, yt)
+        yt -= 2. * delta
+        tempValm = rbf(xt, yt)
         yt += delta
-        dVyt = 0.5*(tempValp-tempValm)/delta
+        dVyt = 0.5 * (tempValp - tempValm) / delta
 
-        x -= 0.5*h*(dVx+dVxt)
-        y -= 0.5*h*(dVy+dVyt)
+        x -= 0.5 * h * (dVx + dVxt)
+        y -= 0.5 * h * (dVy + dVyt)
         # 3. reparametrize  
-        dx = x-np.roll(x,1)
-        dy = y-np.roll(y,1)
+        dx = x - np.roll(x, 1)
+        dy = y - np.roll(y, 1)
         dx[0] = 0.
         dy[0] = 0.
-        lxy  = np.cumsum(np.sqrt(dx**2+dy**2))
-        lxy /= lxy[n-1]
-        xf = interp1d(lxy,x,kind='cubic')
-        x  =  xf(g)
-        yf = interp1d(lxy,y,kind='cubic')
-        y  =  yf(g)
-        tol = (np.linalg.norm(x-x0)+np.linalg.norm(y-y0))/n
+        lxy = np.cumsum(np.sqrt(dx ** 2 + dy ** 2))
+        lxy /= lxy[n - 1]
+        xf = interp1d(lxy, x, kind='cubic')
+        x = xf(g)
+        yf = interp1d(lxy, y, kind='cubic')
+        y = yf(g)
+        tol = (np.linalg.norm(x - x0) + np.linalg.norm(y - y0)) / n
         if tol <= tol1:
-           break
-      
+            break
+
     mep = np.column_stack([x, y])
     mep_convergency = (nstep, tol)
-    
+
     return mep, mep_convergency
 
 
@@ -356,12 +358,12 @@ def get_bs_mep(lattice, rbf, params=None):
         Best orientation for starting calculating the MEP. Units are radiants
 
     """
-    
+
     n = 1000
     fac = [1.5, 1.5]
     delta = 0.001
     delta_theta = 0.5
-    
+
     if params != None and isinstance(params, dict):
         for k in params:
             if k == 'n':
@@ -372,70 +374,70 @@ def get_bs_mep(lattice, rbf, params=None):
                 delta = params[k]
             elif k == 'delta_theta':
                 delta_theta = params[k]
-    
-    facx=fac[0]
-    facy=fac[1]
+
+    facx = fac[0]
+    facy = fac[1]
     alat_x = lattice[0, 0]
-    alat_y = lattice[1, 1]   
-    xa =-facx*alat_x
-    ya =-facy*alat_y
-    xb = facx*alat_x
-    yb = facy*alat_y    
-    
-    g = np.linspace(0,1,n)
-    x = (xb-xa)*g+xa
-    
-    delta_theta *= np.pi/180 # Convert the angle to radiants
-    rep = int(np.pi/delta_theta)    
+    alat_y = lattice[1, 1]
+    xa = -facx * alat_x
+    ya = -facy * alat_y
+    xb = facx * alat_x
+    yb = facy * alat_y
+
+    g = np.linspace(0, 1, n)
+    x = (xb - xa) * g + xa
+
+    delta_theta *= np.pi / 180  # Convert the angle to radiants
+    rep = int(np.pi / delta_theta)
     data_ss = []
-    data_th = []   
+    data_th = []
     theta = 0
     i = 0
-    
+
     ss_x, ss_y = get_shear_strength_xy(lattice, rbf)
     data_ss.append(float(ss_x))
     data_ss.append(float(ss_y))
     data_th.append(0.)
-    data_th.append(np.pi/2.)
-    
+    data_th.append(np.pi / 2.)
+
     while i < rep:
         theta += delta_theta
-        if abs(theta*180/np.pi - 90) < 1e-15:
-            i += 1 
+        if abs(theta * 180 / np.pi - 90) < 1e-15:
+            i += 1
             pass
         else:
             m = np.tan(theta)
-            y = m*x.copy()                       
+            y = m * x.copy()
 
-            zdev=np.zeros(len(x))        
+            zdev = np.zeros(len(x))
             for i in range(len(x)):
-                coordx=x[i]
-                coordy=y[i]
-                zdev[i]=take_derivative(rbf, coordx, coordy, m, delta)        
-            #Shear strength in GPa
-            ss = np.amax(np.abs(zdev))*10.0
-            
+                coordx = x[i]
+                coordy = y[i]
+                zdev[i] = take_derivative(rbf, coordx, coordy, m, delta)
+                # Shear strength in GPa
+            ss = np.amax(np.abs(zdev)) * 10.0
+
             data_th.append(theta)
             data_ss.append(float(ss))
-            i +=1
-    
+            i += 1
+
     index = data_ss.index(np.amin(np.abs(data_ss)))
     theta = data_th[index]
     ss_bsmep = data_ss[index]
-    
-    if theta == np.pi/2. :
+
+    if theta == np.pi / 2.:
         x = np.zeros(n)
-        y = (yb-ya)*g+xa
-    elif theta == 0. :
-        x = (xb-xa)*g+xa
+        y = (yb - ya) * g + xa
+    elif theta == 0.:
+        x = (xb - xa) * g + xa
         y = np.zeros(n)
     else:
-        x = (xb-xa)*g+xa
-        y = np.tan(theta)*x.copy()
-    
+        x = (xb - xa) * g + xa
+        y = np.tan(theta) * x.copy()
+
     # Tiny perturbation of the string
-    x += np.random.rand(len(x))*alat_x/100
-    y += np.random.rand(len(y))*alat_y/100
+    x += np.random.rand(len(x)) * alat_x / 100
+    y += np.random.rand(len(y)) * alat_y / 100
     bsmep = np.column_stack([x, y])
-    
+
     return bsmep, ss_bsmep, theta
