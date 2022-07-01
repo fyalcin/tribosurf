@@ -171,7 +171,18 @@ class FT_RetrievePESEnergies(FiretaskBase):
 
         struct_min = Structure.from_dict(struct_min_dict)
         struct_max = Structure.from_dict(struct_max_dict)
-        
+
+        struct_min.site_properties = ref_struct.site_properties
+        struct_max.site_properties = ref_struct.site_properties
+
+        struct_min_dict = struct_min.as_dict()
+        struct_max_dict = struct_max.as_dict()
+        struct_min_dict.update({'interface_properties': ref_struct.interface_properties})
+        struct_max_dict.update({'interface_properties': ref_struct.interface_properties})
+
+        interface_min = Interface.from_dict(struct_min_dict)
+        interface_max = Interface.from_dict(struct_max_dict)
+
         #add site properties from ref_struct to get back interface_labels:
         for k, v in ref_struct.site_properties.items():
             struct_min.add_site_property(k, v)
@@ -187,9 +198,9 @@ class FT_RetrievePESEnergies(FiretaskBase):
             new_values={
                 '$set':
                     {'relaxed_structure@min':
-                         struct_min_dict,
+                         interface_min.as_dict(),
                      'relaxed_structure@max':
-                         struct_max_dict,
+                         interface_max.as_dict(),
                      'interface_distance@min':
                          inter_dist_min,
                      'interface_distance@max':
