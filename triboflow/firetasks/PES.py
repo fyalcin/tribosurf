@@ -172,8 +172,9 @@ class FT_RetrievePESEnergies(FiretaskBase):
         struct_min = Structure.from_dict(struct_min_dict)
         struct_max = Structure.from_dict(struct_max_dict)
 
-        struct_min.site_properties = ref_struct.site_properties
-        struct_max.site_properties = ref_struct.site_properties
+        for index in range(ref_struct.num_sites):
+            struct_min[index].site_properties = ref_struct[index].properties
+            struct_max[index].site_properties = ref_struct[index].properties
 
         struct_min_dict = struct_min.as_dict()
         struct_max_dict = struct_max.as_dict()
