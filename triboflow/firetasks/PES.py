@@ -75,7 +75,7 @@ class FT_ComputePES(FiretaskBase):
             collection=functional + '.interface_data',
             fltr={'name': name},
             new_values={'$set': {'PES.all_energies': jsanitize(PG.extended_energies),
-                                 'PES.pes_data': jsanitize(PG.PES_on_meshgrid),
+                                 'PES.pes_data': pickle.dumps(PG.PES_on_meshgrid),
                                  'PES.image': PG.PES_as_bytes,
                                  'PES.rbf': pickle.dumps(PG.rbf),
                                  'corrugation': PG.corrugation,
