@@ -74,6 +74,91 @@ def get_initial_strings(extended_energy_list, xlim, ylim, npts=100, add_noise=0.
     return string_d, string_x, string_y
 
 
+def new_evolve_string(string, rbf, nstepmax=99999, mintol=1e-8, delta=0.005, h=0.01):
+    """
+    Find a minumum energy path from an initial string.
+    
+    Simplified zero temperature string method as described by Weinan E et al.
+    J. Chem. Phys. 126, 164103 (2007)
+    
+
+    Parameters
+    ----------
+    string : numpy.ndarray
+        The initial string
+    rbf : scipy.interpolate._rbfinterp.RBFInterpolator
+        Radial Basis Function that describes the potential in which the string
+        is evolved
+    nstepmax : int, optional
+        Maximum number of time steps. The default is 99999.
+    mintol : float, optional
+        Minimal tolerance to define convergence. The default is 1e-8.
+    delta : float, optional
+        Delta parameter for the gradient calculation. The default is 0.005.
+    h : float, optional
+        timestep. The default is 0.01.
+
+    Returns
+    -------
+    dict
+        Minimum energy path as a numpy array as well as the convergence
+        parameters.
+
+    """
+    n = len(string)
+    g = np.linspace(0, 1, n)
+    x = string[:,0]
+    y = string[:,1]
+    
+    for nstep in range(int(nstepmax)):
+        xp = x + delta
+        xm = x - delta
+        yp = y + delta
+        ym = y - delta
+        
+        #energy = rbf(string)
+        energy_xm = rbf(np.stack((xm, y), axis=1))
+        energy_xp = rbf(np.stack((xp, y), axis=1))
+        energy_ym = rbf(np.stack((x, ym), axis=1))
+        energy_yp = rbf(np.stack((x, yp), axis=1))
+        
+        # pot_x = np.stack((energy_xm, energy, energy_xp), axis=1)
+        # pot_y = np.stack((energy_ym, energy, energy_yp), axis=1)
+        pot_x = np.stack((energy_xm, energy_xp), axis=1)
+        pot_y = np.stack((energy_ym, energy_yp), axis=1)
+        #cannot get this to work in one step
+        #gradient = np.gradient(energy, string[:,0], string[:,1], axis=0)
+        # gradx = np.gradient(pot_x, delta, axis=1)[:,1]
+        # grady = np.gradient(pot_y, delta, axis=1)[:,1]
+        gradx = np.gradient(pot_x, 2*delta, axis=1)[:,0]
+        grady = np.gradient(pot_y, 2*delta, axis=1)[:,0]
+        
+        string_old = string.copy()
+        #evolve the string
+        string_new = np.stack((string[:,0] - h * gradx, string[:,1] - h * grady), axis=1)
+        
+        
+        # 3. reparametrize  
+        x = string_new[:,0]
+        y = string_new[:,1]
+        dx = np.ediff1d(x, to_begin=0)
+        dy = np.ediff1d(y, to_begin=0)
+        lxy = np.cumsum(np.sqrt(dx ** 2 + dy ** 2))
+        lxy /= lxy[n - 1]
+        xf = interp1d(lxy, x, kind='cubic')
+        x = xf(g)
+        yf = interp1d(lxy, y, kind='cubic')
+        y = yf(g)
+        string = np.stack((x, y), axis=1)
+        
+        #check for convergence
+        tol = (np.linalg.norm(string - string_old)) / n
+        if tol <= mintol:
+            break
+        
+    mep_convergency = (nstep, tol)
+    return {'mep': string, 'convergence': mep_convergency}
+    
 def evolve_string(string, rbf, nstepmax=99999, mintol=1e-7, delta=0.005, h=0.001):
     x = string[:, 0]
     y = string[:, 1]
