@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pymatgen.core.interface import Interface
 from scipy.interpolate import RBFInterpolator
-from triboflow.phys.minimum_energy_path import get_initial_strings, evolve_string
+from triboflow.phys.minimum_energy_path import get_initial_strings, new_evolve_string
 from triboflow.utils.database import convert_image_to_bytes, StructureNavigator
 
 
@@ -266,7 +266,7 @@ class PESGenerator():
 
         # evolve the stings parallel by using a Pool
         evolve_pool = multiprocessing.Pool(3)
-        mep_d, mep_x, mep_y = evolve_pool.starmap(evolve_string,
+        mep_d, mep_x, mep_y = evolve_pool.starmap(new_evolve_string,
                                                   [[string_d, self.rbf, self.max_iter],
                                                    [string_x, self.rbf, self.max_iter],
                                                    [string_y, self.rbf, self.max_iter]])
