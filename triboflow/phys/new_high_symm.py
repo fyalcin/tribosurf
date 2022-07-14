@@ -313,7 +313,7 @@ class InterfaceSymmetryAnalyzer:
                         # The %1 is used to map all fractional coordinates back
                         # into the unit cell and get rid of -0.0 etc. We convert
                         # to a list to facilitate comparison with previous shifts.
-                        shift = np.round((bs - ts) % 1, 12).tolist()
+                        shift = np.round((bs - ts) % 1, 5).tolist()
                         # only add a new shift if the exact same one is not already present
                         if shift not in all_shifts_list:
                             all_shifts_list.append(shift)

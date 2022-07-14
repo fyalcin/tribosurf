@@ -334,7 +334,7 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
         uis['LREAL'] = '.FALSE.'
 
     # Adjust mixing for slabs that have a very large c axis:
-    if structure.lattice.matrix[-1, 1] > 50.0:
+    if structure.lattice.c > 50.0:
         uis['AMIN'] = 0.05
 
     if comp_parameters.get('functional') in SCAN_list:
@@ -525,7 +525,7 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
         uis['LREAL'] = '.FALSE.'
 
     # Adjust mixing for slabs that have a very large c axis:
-    if structure.lattice.matrix[-1, 1] > 50.0:
+    if structure.lattice.c > 50.0:
         uis['AMIN'] = 0.05
 
     if relax_type.startswith('slab_') or relax_type.startswith('interface_'):

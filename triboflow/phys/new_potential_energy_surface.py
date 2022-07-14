@@ -17,6 +17,8 @@ import multiprocessing
 
 import matplotlib.pyplot as plt
 import numpy as np
+from pymatgen.core import PeriodicSite
+from pymatgen.core.structure import Structure
 from pymatgen.core.interface import Interface
 from scipy.interpolate import RBFInterpolator
 from triboflow.phys.minimum_energy_path import get_initial_strings, new_evolve_string
@@ -64,7 +66,7 @@ def get_PESGenerator_from_db(interface_name, db_file='auto', high_level=True,
                        'normalize_minimum', 'nr_of_contours', 'fig_title',
                        'fig_type', 'plot_path', 'plot_minimum_energy_paths',
                        'string_length', 'add_noise_to_string',
-                       'string_max_iterations']
+                       'string_max_iterations', 'custom_cell_to_plot']
     PG_kwargs = pes_generator_kwargs.copy()
     for k in pes_generator_kwargs.keys():
         if k not in possible_kwargs:
@@ -111,7 +113,8 @@ class PESGenerator():
                  plot_path='./',
                  string_length=50,
                  add_noise_to_string=0.01,
-                 string_max_iterations=99999
+                 string_max_iterations=99999,
+                 custom_cell_to_plot=None
                  ):
         """
         Class for generating PES interpolation and plots for interfaces.
@@ -195,6 +198,8 @@ class PESGenerator():
         string_max_iterations : int, optional
             How long the zero temperature string method will run to find the
             minimum energy paths.
+        custom_cell_to_plot : pymatgen.core.lattice.Lattice, optional
+            If a custom cell is to be plotted, this can be passed.
 
         """
         self.ppA = points_per_angstrom
@@ -211,6 +216,7 @@ class PESGenerator():
         self.noise = add_noise_to_string
         self.max_iter = string_max_iterations
         self.plot_mep = plot_minimum_energy_paths
+        self.custom_cell_to_plot = custom_cell_to_plot
 
     def __call__(self,
                  interface,
@@ -249,6 +255,7 @@ class PESGenerator():
         self.__get_limits_and_multiples()
 
         X, Y, Z = self.__interpolate_on_grid()
+        self.__get_pes_unit_cell()
 
         self.__plot_grid(X, Y, Z)
         self.PES_as_bytes = self.__get_pes_as_bytes()
@@ -445,11 +452,11 @@ class PESGenerator():
 
         Parameters
         ----------
-        X : nump.yndarray
+        X : numpy.ndarray
             X part of meshgrid
-        Y : nump.yndarray
+        Y : numpy.ndarray
             Y part of meshgrid
-        Z : nump.yndarray
+        Z : numpy.ndarray
             Interpolation ready for plotting
         """
         levels = np.linspace(np.amin(Z), np.amax(Z), self.contours)
@@ -501,14 +508,14 @@ class PESGenerator():
 
         Parameters
         ----------
-        X : nump.yndarray
+        X : numpy.ndarray
             X part of meshgrid
-        Y : nump.yndarray
+        Y : numpy.ndarray
             Y part of meshgrid
 
         Returns
         -------
-        Z : nump.yndarray
+        Z : numpy.ndarray
             Interpolation ready for plotting.
         """
         xy = np.vstack([X.ravel(), Y.ravel()]).T
@@ -531,9 +538,9 @@ class PESGenerator():
 
         Returns
         -------
-        X : nump.yndarray
+        X : numpy.ndarray
             X part of meshgrid
-        Y : nump.yndarray
+        Y : numpy.ndarray
             Y part of meshgrid
         """
         nr_pts_x = int(xmax * self.ppA)
@@ -565,6 +572,46 @@ class PESGenerator():
         high = max(Z.ravel())
         return np.linspace(low, high, nr_of_ticks).tolist()
 
+    def __get_pes_unit_cell(self):
+        """
+        Calculates the minimum repeating unit in the PES data by creating
+        a pymatgen Structure with sites at the high symmetry points (all) with
+        site properties assigned to discern different groups, and then
+        running a cell reduction algorithm (Structure.get_primitive_structure())
+        on the generated structure.
+
+        Returns
+        -------
+        pymatgen.core.lattice.Lattice
+            Lattice object with the periodicity of the PES unit cell
+        """
+        try:
+            pes_unit_cell = self.pes_unit_cell
+        except:
+            interface = self.interface
+            sites = []
+            specie = interface[0].species
+            lattice = interface.lattice
+            hsp_all = self.all_shifts
+
+            for group_name, shifts in hsp_all.items():
+                for shift in shifts:
+                    coord = shift + [0]
+                    site = PeriodicSite(species=specie,
+                                        coords=coord,
+                                        lattice=lattice,
+                                        to_unit_cell=True,
+                                        properties={'group_name': group_name})
+                    sites.append(site)
+            pbc_struct = Structure.from_sites(sites)
+            pbc_struct_prim = pbc_struct.get_primitive_structure(tolerance=0.01,
+                                                                 use_site_props=True)
+            pes_unit_cell = pbc_struct_prim.lattice
+            self.pes_unit_cell = pes_unit_cell
+
+        return pes_unit_cell
+
+
     def __plot_unit_cell(self, ax):
         """
         Adds the unit cell to the plot
@@ -579,9 +626,25 @@ class PESGenerator():
         import matplotlib.patches as patches
         x = [0, a[0], a[0] + b[0], b[0]]
         x_shifted = [i + self.shift_x for i in x]
-        y = [0, 0, b[1], a[1] + b[1], b[1]]
+        y = [0, a[1], a[1] + b[1], b[1]]
         ax.add_patch(patches.Polygon(xy=list(zip(x_shifted, y)),
                                      fill=False, lw=2))
+
+
+        custom_cell = self.custom_cell_to_plot
+        try:
+            a, b = custom_cell.matrix[0: 2]
+        except:
+            pass
+        else:
+            x = [0, a[0], a[0] + b[0], b[0]]
+            x_min = min(x)
+            x_shifted = [i - x_min for i in x]
+            y = [0, a[1], a[1] + b[1], b[1]]
+            y_min = min(y)
+            y_shifted = [i - y_min for i in y]
+            ax.add_patch(patches.Polygon(xy=list(zip(x_shifted, y_shifted)),
+                                         fill=False, lw=2, color='blue'))
 
     def __get_fig_and_ax(self):
         """

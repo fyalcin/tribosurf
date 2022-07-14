@@ -8,6 +8,7 @@ Created on Tue Oct 13 14:52:57 2020
 from operator import itemgetter
 
 import numpy as np
+import pickle
 from atomate.utils.utils import env_chk
 from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
@@ -74,8 +75,9 @@ class FT_ComputePES(FiretaskBase):
             collection=functional + '.interface_data',
             fltr={'name': name},
             new_values={'$set': {'PES.all_energies': jsanitize(PG.extended_energies),
-                                 'PES.pes_data': jsanitize(PG.PES_on_meshgrid),
+                                 'PES.pes_data': pickle.dumps(PG.PES_on_meshgrid),
                                  'PES.image': PG.PES_as_bytes,
+                                 'PES.rbf': pickle.dumps(PG.rbf),
                                  'corrugation': PG.corrugation,
                                  'hsp@min': PG.hsp_min,
                                  'hsp@max': PG.hsp_max}},
@@ -169,7 +171,19 @@ class FT_RetrievePESEnergies(FiretaskBase):
 
         struct_min = Structure.from_dict(struct_min_dict)
         struct_max = Structure.from_dict(struct_max_dict)
-        
+
+        for index in range(ref_struct.num_sites):
+            struct_min[index].properties = ref_struct[index].properties
+            struct_max[index].properties = ref_struct[index].properties
+
+        struct_min_dict = struct_min.as_dict()
+        struct_max_dict = struct_max.as_dict()
+        struct_min_dict.update({'interface_properties': ref_struct.interface_properties})
+        struct_max_dict.update({'interface_properties': ref_struct.interface_properties})
+
+        interface_min = Interface.from_dict(struct_min_dict)
+        interface_max = Interface.from_dict(struct_max_dict)
+
         #add site properties from ref_struct to get back interface_labels:
         for k, v in ref_struct.site_properties.items():
             struct_min.add_site_property(k, v)
@@ -185,9 +199,9 @@ class FT_RetrievePESEnergies(FiretaskBase):
             new_values={
                 '$set':
                     {'relaxed_structure@min':
-                         struct_min_dict,
+                         interface_min.as_dict(),
                      'relaxed_structure@max':
-                         struct_max_dict,
+                         interface_max.as_dict(),
                      'interface_distance@min':
                          inter_dist_min,
                      'interface_distance@max':
