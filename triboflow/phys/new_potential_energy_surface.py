@@ -20,7 +20,7 @@ import numpy as np
 from pymatgen.core import PeriodicSite
 from pymatgen.core.structure import Structure
 from pymatgen.core.interface import Interface
-from scipy.interpolate import RBFInterpolator
+from scipy.interpolate import RBFInterpolator, interp1d
 from triboflow.phys.minimum_energy_path import get_initial_strings, new_evolve_string
 from triboflow.utils.database import convert_image_to_bytes, StructureNavigator
 
@@ -261,6 +261,8 @@ class PESGenerator():
         self.PES_as_bytes = self.__get_pes_as_bytes()
         self.corrugation = self.__get_corrugation(Z)
         self.PES_on_meshgrid = {'X': X, 'Y': Y, 'Z': Z}
+        
+        self.__get_shear_strength()
 
     def __get_mep(self):
         string_d, string_x, string_y = get_initial_strings(extended_energy_list=self.extended_energies,
@@ -280,6 +282,35 @@ class PESGenerator():
         self.mep = {'mep_d': mep_d,
                     'mep_x': mep_x,
                     'mep_y': mep_y}
+    
+    def __get_shear_strength(self):
+        self.shear_strength = {}
+        for k, v in self.mep.items():
+            mep = v['mep']
+            dx = np.ediff1d(mep[:,0], to_begin=0)
+            dy = np.ediff1d(mep[:,1], to_begin=0)
+            lxy = np.cumsum(np.sqrt(dx ** 2 + dy ** 2))
+            potential = self.rbf(mep) - min(self.rbf(mep))
+            x=np.linspace(0.0, lxy[-1], len(lxy)*10)
+            pot_int = interp1d(lxy, potential, kind='cubic')
+            y=pot_int(x)
+            shrstrgth = np.gradient(y, x[1])
+            max_ss = max(shrstrgth)
+            
+            fig, ax1 = plt.subplots()
+            ax2 = ax1.twinx()
+            ax1.plot(x, y, 'k:', label=k)
+            ax2.plot(x, shrstrgth, 'k-', label='shearstrength')
+            ax1.set_xlabel('path length')
+            ax1.set_ylabel('corrugation')
+            ax2.set_ylabel('force')
+            #ax1.title(k)
+            fig.savefig(self.plot_path+'/'+k+'.png',
+                        dpi=300, 
+                        bbox_inches='tight')
+            fig.clear()
+            self.shear_strength[k] = max_ss
+            
 
     def __get_min_and_max_hsps(self):
         """
@@ -501,6 +532,7 @@ class PESGenerator():
 
         plt.savefig(self.plot_path + self.fig_name + '.' + self.fig_type,
                     dpi=300, bbox_inches='tight')
+        fig.clear()
 
     def __evaluate_on_grid(self, X, Y):
         """

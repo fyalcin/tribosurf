@@ -73,8 +73,31 @@ def get_initial_strings(extended_energy_list, xlim, ylim, npts=100, add_noise=0.
         string_y += noise
     return string_d, string_x, string_y
 
+def numgrad(string, rbf, delta=0.002):
+    x=string[:,0]
+    y=string[:,1]
+    
+    xp = x + delta
+    xm = x - delta
+    yp = y + delta
+    ym = y - delta
+    
+    energy = rbf(string)
+    energy_xm = rbf(np.stack((xm, y), axis=1))
+    energy_xp = rbf(np.stack((xp, y), axis=1))
+    energy_ym = rbf(np.stack((x, ym), axis=1))
+    energy_yp = rbf(np.stack((x, yp), axis=1))
+    
+    potx = np.stack((energy_xm, energy, energy_xp), axis=1)
+    poty = np.stack((energy_ym, energy, energy_yp), axis=1)
+    
+    gradientx = np.gradient(potx, delta, axis=1)[:,1]
+    gradienty = np.gradient(poty, delta, axis=1)[:,1]
+    
+    return np.stack((gradientx, gradienty), axis=1)
 
-def new_evolve_string(string, rbf, nstepmax=99999, mintol=1e-8, delta=0.005, h=0.01):
+
+def new_evolve_string(string, rbf, nstepmax=99999, mintol=1e-7, delta=0.005, h=0.005):
     """
     Find a minumum energy path from an initial string.
     
@@ -94,7 +117,7 @@ def new_evolve_string(string, rbf, nstepmax=99999, mintol=1e-8, delta=0.005, h=0
     mintol : float, optional
         Minimal tolerance to define convergence. The default is 1e-8.
     delta : float, optional
-        Delta parameter for the gradient calculation. The default is 0.005.
+        Delta parameter for the gradient calculation. The default is 0.002.
     h : float, optional
         timestep. The default is 0.01.
 
@@ -107,48 +130,26 @@ def new_evolve_string(string, rbf, nstepmax=99999, mintol=1e-8, delta=0.005, h=0
     """
     n = len(string)
     g = np.linspace(0, 1, n)
-    x = string[:,0]
-    y = string[:,1]
     
     for nstep in range(int(nstepmax)):
-        xp = x + delta
-        xm = x - delta
-        yp = y + delta
-        ym = y - delta
         
-        #energy = rbf(string)
-        energy_xm = rbf(np.stack((xm, y), axis=1))
-        energy_xp = rbf(np.stack((xp, y), axis=1))
-        energy_ym = rbf(np.stack((x, ym), axis=1))
-        energy_yp = rbf(np.stack((x, yp), axis=1))
-        
-        # pot_x = np.stack((energy_xm, energy, energy_xp), axis=1)
-        # pot_y = np.stack((energy_ym, energy, energy_yp), axis=1)
-        pot_x = np.stack((energy_xm, energy_xp), axis=1)
-        pot_y = np.stack((energy_ym, energy_yp), axis=1)
-        #cannot get this to work in one step
-        #gradient = np.gradient(energy, string[:,0], string[:,1], axis=0)
-        # gradx = np.gradient(pot_x, delta, axis=1)[:,1]
-        # grady = np.gradient(pot_y, delta, axis=1)[:,1]
-        gradx = np.gradient(pot_x, 2*delta, axis=1)[:,0]
-        grady = np.gradient(pot_y, 2*delta, axis=1)[:,0]
+        gradient = numgrad(string, rbf, delta)
         
         string_old = string.copy()
         #evolve the string
-        string_new = np.stack((string[:,0] - h * gradx, string[:,1] - h * grady), axis=1)
+        string_new = string - h * gradient
         
-        
-        # 3. reparametrize  
+        # 3. reparametrize the string so the arc length is equal everywhere.
         x = string_new[:,0]
         y = string_new[:,1]
         dx = np.ediff1d(x, to_begin=0)
         dy = np.ediff1d(y, to_begin=0)
-        lxy = np.cumsum(np.sqrt(dx ** 2 + dy ** 2))
-        lxy /= lxy[n - 1]
-        xf = interp1d(lxy, x, kind='cubic')
-        x = xf(g)
-        yf = interp1d(lxy, y, kind='cubic')
-        y = yf(g)
+        lxy = np.cumsum(np.sqrt(dx ** 2 + dy ** 2)) #lxy[n-1] = sum(lxy[:n])
+        lxy /= lxy[-1] #rescale distance between points to [0,1] interval
+        xf = interp1d(lxy, x, kind='cubic') # interpolate x=f(lxy) 
+        x = xf(g) # since g is evenly spaced, now the new points are evenly distributed
+        yf = interp1d(lxy, y, kind='cubic') # interpolate y=f(lxy) 
+        y = yf(g) # since g is evenly spaced, now the new points are evenly distributed
         string = np.stack((x, y), axis=1)
         
         #check for convergence
@@ -182,7 +183,7 @@ def evolve_string(string, rbf, nstepmax=99999, mintol=1e-7, delta=0.005, h=0.001
         x -= 2. * delta
         tempValm = rbf(np.stack((x, y), axis=1))
         dVx = 0.5 * (tempValp - tempValm) / delta
-        x += delta
+        x += delta 
         y += delta
         tempValp = rbf(np.stack((x, y), axis=1))
         y -= 2. * delta
