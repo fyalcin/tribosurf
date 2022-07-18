@@ -20,9 +20,7 @@ from pymatgen.core import PeriodicSite
 from pymatgen.core.structure import Structure
 from pymatgen.core.interface import Interface
 from scipy.interpolate import RBFInterpolator
-from triboflow.phys.minimum_energy_path import (get_initial_strings, 
-                                                new_evolve_string,
-                                                reparametrize_string_with_equal_spacing)
+from triboflow.phys.minimum_energy_path import get_initial_strings, new_evolve_string
 from triboflow.utils.database import convert_image_to_bytes, StructureNavigator
 from mep.optimize import ScipyOptimizer
 from mep.path import Path
@@ -31,26 +29,31 @@ from mep.models import Model
 from mep.path import Image
 import numpy as np
 
+
 def run_neb(neb, nsteps, tol):
     history = neb.run(n_steps=nsteps, force_tol=tol, verbose=False)
     mep = np.array([n.data.tolist()[0] for n in neb.path])
     return {'mep': mep,
-            'convergence': (1, 1)}
+            'neb': neb,
+            'convergence': neb.stop}
+
 
 class RBFModel(Model):
-        def __init__(self, rbf):
-            self.rbf = rbf
-        def predict_energy(self, image):
-            if isinstance(image, Image):
-                image = image.data
-            image = np.atleast_2d(image)
-            return self.rbf(image)
+    def __init__(self, rbf):
+        self.rbf = rbf
+
+    def predict_energy(self, image):
+        if isinstance(image, Image):
+            image = image.data
+        image = np.atleast_2d(image)
+        return self.rbf(image)
+
 
 def get_PESGenerator_from_db(interface_name, db_file='auto', high_level=True,
                              functional='PBE', pes_generator_kwargs={}):
     """
     Return a PESGenerator object using input arguments from the high_level db.
-    
+
     An interface object is loaded from the high level database alongside info
     about the high symmetry points and their energies. A PESGenerator is
     constructed using the optional pes_generator_kwargs, and called for the
@@ -69,7 +72,7 @@ def get_PESGenerator_from_db(interface_name, db_file='auto', high_level=True,
     functional : str, optional
         'PBE' or 'SCAN'. The default is 'PBE'.
     pes_generator_kwargs : dict, optional
-        Dictionary with keyword arguments for the initialization of the 
+        Dictionary with keyword arguments for the initialization of the
         PESGenerator object. The default is {}.
 
     Returns
@@ -144,15 +147,15 @@ class PESGenerator():
                  ):
         """
         Class for generating PES interpolation and plots for interfaces.
-        
+
         Given an interface, and a couple of dictionaries, see the __call__
         method, a smooth PES is constructed using radial basis function
         interpolation. The interpolation object, as well as a figure of the
         PES are provided as properties of the class once the class has been
         called as a funcion on the interface object and the necessary dicts
         with high-symmetry point and energy data.
-        
-        
+
+
         Important properties of the class:
             .rbf contains the scipy.interpolate._rbfinterp.RBFInterpolator
             .PES_on_meshgrid returns a dict with the meshgrid (X and Y) and the
@@ -165,17 +168,17 @@ class PESGenerator():
             .mep is a dictionary with the x and y components of the minimum
                 energy paths as well as their convergence data. The MEPs can
                 be evaluated directly using the rbf.
-            
-        
-        
-        
+
+
+
+
         Parameters
         ----------
         points_per_angstrom : int, optional
             Points in the interpolation meshgrid per Angstrom.
             The default is 50.
         interpolation_kernel : str, optional
-            Option for the RBFInterpolator. Possibilities are: 
+            Option for the RBFInterpolator. Possibilities are:
                 - 'linear'               : ``-r``
                 - 'thin_plate_spline'    : ``r**2 * log(r)``
                 - 'cubic'                : ``r**3``
@@ -291,11 +294,9 @@ class PESGenerator():
         self.PES_as_bytes = self.__get_pes_as_bytes()
         self.corrugation = self.__get_corrugation(Z)
         self.PES_on_meshgrid = {'X': X, 'Y': Y, 'Z': Z}
-        
-        self.__get_shear_strength()
 
     def __get_mep(self):
-        puc = self.pes_unit_cell 
+        puc = self.pes_unit_cell
         string_d, string_x, string_y = get_initial_strings(extended_energy_list=self.extended_energies,
                                                            xlim=self.xlim,
                                                            ylim=self.ylim,
@@ -328,9 +329,9 @@ class PESGenerator():
             x1 = string_y[-1]  # minima two
             path_y = Path.from_linear_end_points(x0, x1, nimages, 1)  # set 101 images, and k=1
 
-            neb_d = NEB(rbfmodel, path_d, climbing=False)  # initialize NEB
-            neb_x = NEB(rbfmodel, path_x, climbing=False)
-            neb_y = NEB(rbfmodel, path_y, climbing=False)
+            neb_d = NEB(rbfmodel, path_d, climbing=True)  # initialize NEB
+            neb_x = NEB(rbfmodel, path_x, climbing=True)
+            neb_y = NEB(rbfmodel, path_y, climbing=True)
 
             nsteps = self.neb_nsteps
             forcetol = self.neb_forcetol
@@ -343,33 +344,6 @@ class PESGenerator():
         self.mep = {'mep_d': mep_d,
                     'mep_x': mep_x,
                     'mep_y': mep_y}
-        
-    def __get_shear_strength(self):
-        self.shear_strength = {}
-        for k, v in self.mep.items():
-            mep = v['mep']
-            fine_mep = reparametrize_string_with_equal_spacing(mep, len(mep)*20)
-            dx = np.ediff1d(fine_mep[:,0], to_begin=0)
-            dy = np.ediff1d(fine_mep[:,1], to_begin=0)
-            spacing = np.cumsum(np.sqrt(dx ** 2 + dy ** 2))
-            potential = self.rbf(fine_mep)
-            potential -= min(potential)
-            shrstrgth = np.gradient(potential, spacing)
-            max_ss = max(shrstrgth)
-            
-            fig, ax1 = plt.subplots()
-            ax2 = ax1.twinx()
-            ax1.plot(spacing, potential, 'k:', label=k)
-            ax2.plot(spacing, shrstrgth, 'k-', label='shearstrength')
-            ax1.set_xlabel('path length')
-            ax1.set_ylabel('corrugation')
-            ax2.set_ylabel('force')
-            #ax1.title(k)
-            fig.savefig(self.plot_path+'/'+k+'.png',
-                        dpi=300, 
-                        bbox_inches='tight')
-            fig.clear()
-            self.shear_strength[k] = max_ss
 
     def __get_min_and_max_hsps(self):
         """
@@ -451,7 +425,7 @@ class PESGenerator():
     def __make_energies_list(self):
         """
         Create a list of points with their respective PES energies.
-        
+
         [[x1, y1, E1],
          [x2, y2, E2],
          :
@@ -701,7 +675,6 @@ class PESGenerator():
 
         return pes_unit_cell
 
-
     def __plot_unit_cell(self, ax):
         """
         Adds the unit cell to the plot
@@ -719,7 +692,6 @@ class PESGenerator():
         y = [0, a[1], a[1] + b[1], b[1]]
         ax.add_patch(patches.Polygon(xy=list(zip(x_shifted, y)),
                                      fill=False, lw=2))
-
 
         custom_cell = self.custom_cell_to_plot
         try:
@@ -739,7 +711,7 @@ class PESGenerator():
     def __get_fig_and_ax(self):
         """
         Generate a matplotlib figure and corresponding axes.
-        
+
         Figure size depends on the aspect ratio and if high symmetry points
         should be plotted.
 
@@ -828,7 +800,7 @@ class PESGenerator():
         # buf.seek(0)
         # img = Image.open(buf)
         # return img.tobytes()
-        # im = Image.frombytes(mode = 'RGB', 
+        # im = Image.frombytes(mode = 'RGB',
         #                       size = self.PES_fig.canvas.get_width_height(),
         #                       data = self.PES_fig.canvas.tostring_rgb())
         # image_bytes = BytesIO()
@@ -838,7 +810,7 @@ class PESGenerator():
     def __interpolate_on_grid(self):
         """
         Generate RBF interpolation, get a meshgrid and evaluate the RBF there.
-        
+
         Interpolation is done initially on a rectangular meshgrid that just
         fits the unit cell. Edge effects are circumvented by replicating the
         input date laterally.
