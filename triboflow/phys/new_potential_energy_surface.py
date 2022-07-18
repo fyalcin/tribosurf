@@ -291,6 +291,8 @@ class PESGenerator():
         self.PES_as_bytes = self.__get_pes_as_bytes()
         self.corrugation = self.__get_corrugation(Z)
         self.PES_on_meshgrid = {'X': X, 'Y': Y, 'Z': Z}
+        
+        self.__get_shear_strength()
 
     def __get_mep(self):
         string_d, string_x, string_y = get_initial_strings(extended_energy_list=self.extended_energies,
@@ -340,6 +342,7 @@ class PESGenerator():
         self.mep = {'mep_d': mep_d,
                     'mep_x': mep_x,
                     'mep_y': mep_y}
+        
     def __get_shear_strength(self):
         self.shear_strength = {}
         for k, v in self.mep.items():
@@ -348,7 +351,6 @@ class PESGenerator():
             dx = np.ediff1d(fine_mep[:,0], to_begin=0)
             dy = np.ediff1d(fine_mep[:,1], to_begin=0)
             spacing = np.cumsum(np.sqrt(dx ** 2 + dy ** 2))
-            print(spacing)
             potential = self.rbf(fine_mep)
             potential -= min(potential)
             shrstrgth = np.gradient(potential, spacing)
