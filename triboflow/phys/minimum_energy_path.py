@@ -96,6 +96,20 @@ def numgrad(string, rbf, delta=0.002):
     
     return np.stack((gradientx, gradienty), axis=1)
 
+def reparametrize_string_with_equal_spacing(string, nr_of_points):
+    g = np.linspace(0, 1, nr_of_points)
+    x = string[:,0]
+    y = string[:,1]
+    dx = np.ediff1d(x, to_begin=0)
+    dy = np.ediff1d(y, to_begin=0)
+    lxy = np.cumsum(np.sqrt(dx ** 2 + dy ** 2)) #lxy[n-1] = sum(lxy[:n])
+    lxy /= lxy[-1] #rescale distance between points to [0,1] interval
+    xf = interp1d(lxy, x, kind='cubic') # interpolate x=f(lxy) 
+    x = xf(g) # since g is evenly spaced, now the new points are evenly distributed
+    yf = interp1d(lxy, y, kind='cubic') # interpolate y=f(lxy) 
+    y = yf(g) # since g is evenly spaced, now the new points are evenly distributed
+    return np.stack((x, y), axis=1)
+
 
 def new_evolve_string(string, rbf, nstepmax=99999, mintol=1e-7, delta=0.005, h=0.005):
     """
@@ -129,7 +143,6 @@ def new_evolve_string(string, rbf, nstepmax=99999, mintol=1e-7, delta=0.005, h=0
 
     """
     n = len(string)
-    g = np.linspace(0, 1, n)
     
     for nstep in range(int(nstepmax)):
         
@@ -140,17 +153,7 @@ def new_evolve_string(string, rbf, nstepmax=99999, mintol=1e-7, delta=0.005, h=0
         string_new = string - h * gradient
         
         # 3. reparametrize the string so the arc length is equal everywhere.
-        x = string_new[:,0]
-        y = string_new[:,1]
-        dx = np.ediff1d(x, to_begin=0)
-        dy = np.ediff1d(y, to_begin=0)
-        lxy = np.cumsum(np.sqrt(dx ** 2 + dy ** 2)) #lxy[n-1] = sum(lxy[:n])
-        lxy /= lxy[-1] #rescale distance between points to [0,1] interval
-        xf = interp1d(lxy, x, kind='cubic') # interpolate x=f(lxy) 
-        x = xf(g) # since g is evenly spaced, now the new points are evenly distributed
-        yf = interp1d(lxy, y, kind='cubic') # interpolate y=f(lxy) 
-        y = yf(g) # since g is evenly spaced, now the new points are evenly distributed
-        string = np.stack((x, y), axis=1)
+        string = reparametrize_string_with_equal_spacing(string_new, n)
         
         #check for convergence
         tol = (np.linalg.norm(string - string_old)) / n

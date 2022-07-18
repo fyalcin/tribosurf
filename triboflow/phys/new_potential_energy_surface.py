@@ -21,7 +21,9 @@ from pymatgen.core import PeriodicSite
 from pymatgen.core.structure import Structure
 from pymatgen.core.interface import Interface
 from scipy.interpolate import RBFInterpolator, interp1d
-from triboflow.phys.minimum_energy_path import get_initial_strings, new_evolve_string
+from triboflow.phys.minimum_energy_path import (get_initial_strings, 
+                                                new_evolve_string,
+                                                reparametrize_string_with_equal_spacing)
 from triboflow.utils.database import convert_image_to_bytes, StructureNavigator
 
 
@@ -287,20 +289,20 @@ class PESGenerator():
         self.shear_strength = {}
         for k, v in self.mep.items():
             mep = v['mep']
-            dx = np.ediff1d(mep[:,0], to_begin=0)
-            dy = np.ediff1d(mep[:,1], to_begin=0)
-            lxy = np.cumsum(np.sqrt(dx ** 2 + dy ** 2))
-            potential = self.rbf(mep) - min(self.rbf(mep))
-            x=np.linspace(0.0, lxy[-1], len(lxy)*10)
-            pot_int = interp1d(lxy, potential, kind='cubic')
-            y=pot_int(x)
-            shrstrgth = np.gradient(y, x[1])
+            fine_mep = reparametrize_string_with_equal_spacing(mep, len(mep)*20)
+            dx = np.ediff1d(fine_mep[:,0], to_begin=0)
+            dy = np.ediff1d(fine_mep[:,1], to_begin=0)
+            spacing = np.cumsum(np.sqrt(dx ** 2 + dy ** 2))
+            print(spacing)
+            potential = self.rbf(fine_mep)
+            potential -= min(potential)
+            shrstrgth = np.gradient(potential, spacing)
             max_ss = max(shrstrgth)
             
             fig, ax1 = plt.subplots()
             ax2 = ax1.twinx()
-            ax1.plot(x, y, 'k:', label=k)
-            ax2.plot(x, shrstrgth, 'k-', label='shearstrength')
+            ax1.plot(spacing, potential, 'k:', label=k)
+            ax2.plot(spacing, shrstrgth, 'k-', label='shearstrength')
             ax1.set_xlabel('path length')
             ax1.set_ylabel('corrugation')
             ax2.set_ylabel('force')
