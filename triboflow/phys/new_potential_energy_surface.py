@@ -20,7 +20,7 @@ from pymatgen.core import PeriodicSite
 from pymatgen.core.structure import Structure
 from pymatgen.core.interface import Interface
 from scipy.interpolate import RBFInterpolator
-from triboflow.phys.minimum_energy_path import get_initial_strings, new_evolve_string
+from triboflow.phys.minimum_energy_path import get_initial_strings, new_evolve_string, reparametrize_string_with_equal_spacing
 from triboflow.utils.database import convert_image_to_bytes, StructureNavigator
 from mep.optimize import ScipyOptimizer
 from mep.path import Path
@@ -288,18 +288,37 @@ class PESGenerator():
         self.__get_limits_and_multiples()
 
         X, Y, Z = self.__interpolate_on_grid()
+        
         self.__get_pes_unit_cell()
+        
+        self.__get_mep()
 
         self.__plot_grid(X, Y, Z)
         self.PES_as_bytes = self.__get_pes_as_bytes()
         self.corrugation = self.__get_corrugation(Z)
         self.PES_on_meshgrid = {'X': X, 'Y': Y, 'Z': Z}
 
-    def __get_mep(self):
+        self.__get_shear_strength()
+        
+    def __get_mep_limits(self, puc_mult=2):
         puc = self.pes_unit_cell
+        a, b = puc.matrix[0: 2]
+        x = [0, a[0], a[0] + b[0], b[0]]
+        y = [0, a[1], a[1] + b[1], b[1]]
+        x_d = max(x)-min(x)
+        y_d = max(y)-min(y)
+        
+        max_x = self.xlim if self.xlim < puc_mult*x_d else puc_mult*x_d
+        max_y = self.ylim if self.ylim < puc_mult*y_d else puc_mult*y_d
+        
+        return max_x, max_y
+        
+        
+    def __get_mep(self):
+        max_x, max_y = self.__get_mep_limits()
         string_d, string_x, string_y = get_initial_strings(extended_energy_list=self.extended_energies,
-                                                           xlim=self.xlim,
-                                                           ylim=self.ylim,
+                                                           xlim=max_x,
+                                                           ylim=max_y,
                                                            npts=self.string_length)
         self.initial_string_d = string_d
         self.initial_string_x = string_x
@@ -345,20 +364,48 @@ class PESGenerator():
                     'mep_x': mep_x,
                     'mep_y': mep_y}
 
+    def __get_shear_strength(self):
+        self.shear_strength = {}
+        for k, v in self.mep.items():
+            mep = v['mep']
+            fine_mep = reparametrize_string_with_equal_spacing(mep, len(mep)*20)
+            dx = np.ediff1d(fine_mep[:,0], to_begin=0)
+            dy = np.ediff1d(fine_mep[:,1], to_begin=0)
+            spacing = np.cumsum(np.sqrt(dx ** 2 + dy ** 2))
+            potential = self.rbf(fine_mep)
+            potential -= min(potential)
+            shrstrgth = np.gradient(potential, spacing)
+            max_ss = max(shrstrgth)
+            
+            fig, ax1 = plt.subplots()
+            ax2 = ax1.twinx()
+            ax1.plot(spacing, potential, 'k:', label=k)
+            ax2.plot(spacing, shrstrgth, 'k-', label='shearstrength')
+            ax1.set_xlabel('path length')
+            ax1.set_ylabel('corrugation')
+            ax2.set_ylabel('force')
+            #ax1.title(k)
+            fig.savefig(self.plot_path+'/'+k+'.png',
+                        dpi=300, 
+                        bbox_inches='tight')
+            fig.clear()
+            self.shear_strength[k] = max_ss
+
+
     def __get_min_and_max_hsps(self):
         """
         Find the group or stacking of the minimum and maximum PES positions.
         """
-        min_group = ['', 1000]
-        max_group = ['', -1000]
+        min_group = ['', 100000]
+        max_group = ['', -100000]
         for k, v in self.energies_dict.items():
             if v < min_group[1]:
                 min_group = [k, v]
             if v > max_group[1]:
                 max_group = [k, v]
         if self.group_names_dict:
-            self.hsp_min = self.group_names_dict[min_group[0]]
-            self.hsp_max = self.group_names_dict[max_group[0]]
+            self.hsp_min = [min_group[0], self.group_names_dict[min_group[0]]]
+            self.hsp_max = [max_group[0], self.group_names_dict[max_group[0]]]
         else:
             self.hsp_min = min_group[0]
             self.hsp_max = max_group[0]
@@ -684,8 +731,7 @@ class PESGenerator():
         ax : matplotlib.axes._subplots.AxesSubplot
             Subplot axes
         """
-        a = self.interface.lattice.matrix[0]
-        b = self.interface.lattice.matrix[1]
+        a, b = self.interface.lattice.matrix[0: 2]
         import matplotlib.patches as patches
         x = [0, a[0], a[0] + b[0], b[0]]
         x_shifted = [i + self.shift_x for i in x]
@@ -693,7 +739,7 @@ class PESGenerator():
         ax.add_patch(patches.Polygon(xy=list(zip(x_shifted, y)),
                                      fill=False, lw=2))
 
-        custom_cell = self.custom_cell_to_plot
+        custom_cell = self.pes_unit_cell
         try:
             a, b = custom_cell.matrix[0: 2]
         except:
@@ -705,7 +751,11 @@ class PESGenerator():
             y = [0, a[1], a[1] + b[1], b[1]]
             y_min = min(y)
             y_shifted = [i - y_min for i in y]
-            ax.add_patch(patches.Polygon(xy=list(zip(x_shifted, y_shifted)),
+            vertices = np.stack((x_shifted, y_shifted), axis=1)
+            min_vx = vertices.argmin(axis=0)[0]
+            start = self.initial_string_d[0]-vertices[min_vx]
+            vertices = vertices + start
+            ax.add_patch(patches.Polygon(xy=vertices,
                                          fill=False, lw=2, color='blue'))
 
     def __get_fig_and_ax(self):
