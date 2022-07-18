@@ -295,6 +295,7 @@ class PESGenerator():
         self.__get_shear_strength()
 
     def __get_mep(self):
+        puc = self.pes_unit_cell 
         string_d, string_x, string_y = get_initial_strings(extended_energy_list=self.extended_energies,
                                                            xlim=self.xlim,
                                                            ylim=self.ylim,
