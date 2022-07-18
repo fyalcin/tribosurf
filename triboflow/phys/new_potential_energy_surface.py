@@ -16,37 +16,15 @@ __date__ = 'April 14th, 2022'
 import multiprocessing
 
 import matplotlib.pyplot as plt
-from pymatgen.core import PeriodicSite
-from pymatgen.core.structure import Structure
-from pymatgen.core.interface import Interface
-from scipy.interpolate import RBFInterpolator
-from triboflow.phys.minimum_energy_path import get_initial_strings, new_evolve_string, reparametrize_string_with_equal_spacing
-from triboflow.utils.database import convert_image_to_bytes, StructureNavigator
-from mep.optimize import ScipyOptimizer
-from mep.path import Path
-from mep.neb import NEB
-from mep.models import Model
-from mep.path import Image
 import numpy as np
-
-
-def run_neb(neb, nsteps, tol):
-    history = neb.run(n_steps=nsteps, force_tol=tol, verbose=False)
-    mep = np.array([n.data.tolist()[0] for n in neb.path])
-    return {'mep': mep,
-            'neb': neb,
-            'convergence': neb.stop}
-
-
-class RBFModel(Model):
-    def __init__(self, rbf):
-        self.rbf = rbf
-
-    def predict_energy(self, image):
-        if isinstance(image, Image):
-            image = image.data
-        image = np.atleast_2d(image)
-        return self.rbf(image)
+from mep.path import Path
+from pymatgen.core import PeriodicSite
+from pymatgen.core.interface import Interface
+from pymatgen.core.structure import Structure
+from scipy.interpolate import RBFInterpolator
+from triboflow.phys.minimum_energy_path import get_initial_strings, new_evolve_string, \
+    reparametrize_string_with_equal_spacing, run_neb, RBFModel
+from triboflow.utils.database import convert_image_to_bytes, StructureNavigator
 
 
 def get_PESGenerator_from_db(interface_name, db_file='auto', high_level=True,
@@ -288,9 +266,9 @@ class PESGenerator():
         self.__get_limits_and_multiples()
 
         X, Y, Z = self.__interpolate_on_grid()
-        
+
         self.__get_pes_unit_cell()
-        
+
         self.__get_mep()
 
         self.__plot_grid(X, Y, Z)
@@ -299,21 +277,20 @@ class PESGenerator():
         self.PES_on_meshgrid = {'X': X, 'Y': Y, 'Z': Z}
 
         self.__get_shear_strength()
-        
+
     def __get_mep_limits(self, puc_mult=2):
         puc = self.pes_unit_cell
         a, b = puc.matrix[0: 2]
         x = [0, a[0], a[0] + b[0], b[0]]
         y = [0, a[1], a[1] + b[1], b[1]]
-        x_d = max(x)-min(x)
-        y_d = max(y)-min(y)
-        
-        max_x = self.xlim if self.xlim < puc_mult*x_d else puc_mult*x_d
-        max_y = self.ylim if self.ylim < puc_mult*y_d else puc_mult*y_d
-        
+        x_d = max(x) - min(x)
+        y_d = max(y) - min(y)
+
+        max_x = self.xlim if self.xlim < puc_mult * x_d else puc_mult * x_d
+        max_y = self.ylim if self.ylim < puc_mult * y_d else puc_mult * y_d
+
         return max_x, max_y
-        
-        
+
     def __get_mep(self):
         max_x, max_y = self.__get_mep_limits()
         string_d, string_x, string_y = get_initial_strings(extended_energy_list=self.extended_energies,
@@ -332,33 +309,17 @@ class PESGenerator():
                                                        [string_x, self.rbf, self.max_iter],
                                                        [string_y, self.rbf, self.max_iter]])
         elif self.mep_method == 'neb':
-            rbfmodel = RBFModel(self.rbf)
-
-            nimages = self.neb_nimages
-            op = ScipyOptimizer(rbfmodel)  # local optimizer for finding local minima
-            x0 = string_d[0]  # minima one
-            x1 = string_d[-1]  # minima two
-            path_d = Path.from_linear_end_points(x0, x1, nimages, 1)  # set 101 images, and k=1
-
-            x0 = string_x[0]  # minima one
-            x1 = string_x[-1]  # minima two
-            path_x = Path.from_linear_end_points(x0, x1, nimages, 1)  # set 101 images, and k=1
-
-            x0 = string_y[0]  # minima one
-            x1 = string_y[-1]  # minima two
-            path_y = Path.from_linear_end_points(x0, x1, nimages, 1)  # set 101 images, and k=1
-
-            neb_d = NEB(rbfmodel, path_d, climbing=True)  # initialize NEB
-            neb_x = NEB(rbfmodel, path_x, climbing=True)
-            neb_y = NEB(rbfmodel, path_y, climbing=True)
+            nimages = self.neb_nimages  # this is obsolete for now
+            path_d, path_x, path_y = Path(string_d, 1), Path(string_x, 1), Path(string_y, 1)
+            model = RBFModel(self.rbf)
 
             nsteps = self.neb_nsteps
             forcetol = self.neb_forcetol
             evolve_pool = multiprocessing.Pool(3)
             mep_d, mep_x, mep_y = evolve_pool.starmap(run_neb,
-                                                      [[neb_d, nsteps, forcetol],
-                                                       [neb_x, nsteps, forcetol],
-                                                       [neb_y, nsteps, forcetol]])
+                                                      [[model, path_d, nsteps, forcetol],
+                                                       [model, path_x, nsteps, forcetol],
+                                                       [model, path_y, nsteps, forcetol]])
 
         self.mep = {'mep_d': mep_d,
                     'mep_x': mep_x,
@@ -368,15 +329,15 @@ class PESGenerator():
         self.shear_strength = {}
         for k, v in self.mep.items():
             mep = v['mep']
-            fine_mep = reparametrize_string_with_equal_spacing(mep, len(mep)*20)
-            dx = np.ediff1d(fine_mep[:,0], to_begin=0)
-            dy = np.ediff1d(fine_mep[:,1], to_begin=0)
+            fine_mep = reparametrize_string_with_equal_spacing(mep, len(mep) * 20)
+            dx = np.ediff1d(fine_mep[:, 0], to_begin=0)
+            dy = np.ediff1d(fine_mep[:, 1], to_begin=0)
             spacing = np.cumsum(np.sqrt(dx ** 2 + dy ** 2))
             potential = self.rbf(fine_mep)
             potential -= min(potential)
             shrstrgth = np.gradient(potential, spacing)
             max_ss = max(shrstrgth)
-            
+
             fig, ax1 = plt.subplots()
             ax2 = ax1.twinx()
             ax1.plot(spacing, potential, 'k:', label=k)
@@ -384,13 +345,12 @@ class PESGenerator():
             ax1.set_xlabel('path length')
             ax1.set_ylabel('corrugation')
             ax2.set_ylabel('force')
-            #ax1.title(k)
-            fig.savefig(self.plot_path+'/'+k+'.png',
-                        dpi=300, 
+            # ax1.title(k)
+            fig.savefig(self.plot_path + '/' + k + '.png',
+                        dpi=300,
                         bbox_inches='tight')
             fig.clear()
             self.shear_strength[k] = max_ss
-
 
     def __get_min_and_max_hsps(self):
         """
@@ -700,11 +660,11 @@ class PESGenerator():
             pes_unit_cell = self.pes_unit_cell
         except:
             interface = self.interface
-            sites = []
             specie = interface[0].species
             lattice = interface.lattice
             hsp_all = self.all_shifts
 
+            sites = []
             for group_name, shifts in hsp_all.items():
                 for shift in shifts:
                     coord = shift + [0]
@@ -752,8 +712,10 @@ class PESGenerator():
             y_min = min(y)
             y_shifted = [i - y_min for i in y]
             vertices = np.stack((x_shifted, y_shifted), axis=1)
-            min_vx = vertices.argmin(axis=0)[0]
-            start = self.initial_string_d[0]-vertices[min_vx]
+            vertices = np.round(vertices, 8)
+            # min_vx = vertices.argmin(axis=0)[0]
+            min_vx = np.argmin(np.sum(vertices, axis=1))
+            start = self.initial_string_d[0] - vertices[min_vx]
             vertices = vertices + start
             ax.add_patch(patches.Polygon(xy=vertices,
                                          fill=False, lw=2, color='blue'))

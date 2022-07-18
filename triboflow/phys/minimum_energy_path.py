@@ -23,9 +23,10 @@ __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 8th, 2021'
 
 import numpy as np
+from mep.models import Model
+from mep.neb import NEB
+from mep.path import Image
 from scipy.interpolate import interp1d
-
-from triboflow.phys.shear_strength import take_derivative, get_shear_strength_xy
 
 
 # =============================================================================
@@ -73,41 +74,43 @@ def get_initial_strings(extended_energy_list, xlim, ylim, npts=100, add_noise=0.
         string_y += noise
     return string_d, string_x, string_y
 
+
 def numgrad(string, rbf, delta=0.002):
-    x=string[:,0]
-    y=string[:,1]
-    
+    x = string[:, 0]
+    y = string[:, 1]
+
     xp = x + delta
     xm = x - delta
     yp = y + delta
     ym = y - delta
-    
+
     energy = rbf(string)
     energy_xm = rbf(np.stack((xm, y), axis=1))
     energy_xp = rbf(np.stack((xp, y), axis=1))
     energy_ym = rbf(np.stack((x, ym), axis=1))
     energy_yp = rbf(np.stack((x, yp), axis=1))
-    
+
     potx = np.stack((energy_xm, energy, energy_xp), axis=1)
     poty = np.stack((energy_ym, energy, energy_yp), axis=1)
-    
-    gradientx = np.gradient(potx, delta, axis=1)[:,1]
-    gradienty = np.gradient(poty, delta, axis=1)[:,1]
-    
+
+    gradientx = np.gradient(potx, delta, axis=1)[:, 1]
+    gradienty = np.gradient(poty, delta, axis=1)[:, 1]
+
     return np.stack((gradientx, gradienty), axis=1)
+
 
 def reparametrize_string_with_equal_spacing(string, nr_of_points):
     g = np.linspace(0, 1, nr_of_points)
-    x = string[:,0]
-    y = string[:,1]
+    x = string[:, 0]
+    y = string[:, 1]
     dx = np.ediff1d(x, to_begin=0)
     dy = np.ediff1d(y, to_begin=0)
-    lxy = np.cumsum(np.sqrt(dx ** 2 + dy ** 2)) #lxy[n-1] = sum(lxy[:n])
-    lxy /= lxy[-1] #rescale distance between points to [0,1] interval
-    xf = interp1d(lxy, x, kind='cubic') # interpolate x=f(lxy) 
-    x = xf(g) # since g is evenly spaced, now the new points are evenly distributed
-    yf = interp1d(lxy, y, kind='cubic') # interpolate y=f(lxy) 
-    y = yf(g) # since g is evenly spaced, now the new points are evenly distributed
+    lxy = np.cumsum(np.sqrt(dx ** 2 + dy ** 2))  # lxy[n-1] = sum(lxy[:n])
+    lxy /= lxy[-1]  # rescale distance between points to [0,1] interval
+    xf = interp1d(lxy, x, kind='cubic')  # interpolate x=f(lxy)
+    x = xf(g)  # since g is evenly spaced, now the new points are evenly distributed
+    yf = interp1d(lxy, y, kind='cubic')  # interpolate y=f(lxy)
+    y = yf(g)  # since g is evenly spaced, now the new points are evenly distributed
     return np.stack((x, y), axis=1)
 
 
@@ -143,24 +146,42 @@ def new_evolve_string(string, rbf, nstepmax=99999, mintol=1e-7, delta=0.005, h=0
 
     """
     n = len(string)
-    
+
     for nstep in range(int(nstepmax)):
-        
+
         gradient = numgrad(string, rbf, delta)
-        
+
         string_old = string.copy()
-        #evolve the string
+        # evolve the string
         string_new = string - h * gradient
-        
+
         # 3. reparametrize the string so the arc length is equal everywhere.
         string = reparametrize_string_with_equal_spacing(string_new, n)
-        
-        #check for convergence
+
+        # check for convergence
         tol = (np.linalg.norm(string - string_old)) / n
         if tol <= mintol:
             break
-        
+
     mep_convergency = (nstep, tol)
     return {'mep': string, 'convergence': mep_convergency}
 
 
+def run_neb(model, path, nsteps, tol):
+    neb = NEB(model, path)
+    history = neb.run(n_steps=nsteps, force_tol=tol, verbose=True)
+    mep = np.array([n.data.tolist()[0] for n in neb.path])
+    return {'mep': mep,
+            'neb': neb,
+            'convergence': neb.stop}
+
+
+class RBFModel(Model):
+    def __init__(self, rbf):
+        self.rbf = rbf
+
+    def predict_energy(self, image):
+        if isinstance(image, Image):
+            image = image.data
+        image = np.atleast_2d(image)
+        return self.rbf(image)
