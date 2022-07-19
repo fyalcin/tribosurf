@@ -67,7 +67,7 @@ def get_PESGenerator_from_db(interface_name, db_file='auto', high_level=True,
                        'plot_hs_points', 'plot_unit_cell', 'plotting_ratio',
                        'normalize_minimum', 'nr_of_contours', 'fig_title',
                        'fig_type', 'plot_path', 'plot_minimum_energy_paths',
-                       'mep_method', 'neb_nsteps', 'neb_nimages', 'neb_forcetol',
+                       'mep_method', 'neb_forcetol', 'plot_pes_unit_cell',
                        'string_length', 'add_noise_to_string',
                        'string_max_iterations', 'custom_cell_to_plot']
     PG_kwargs = pes_generator_kwargs.copy()
@@ -107,6 +107,7 @@ class PESGenerator():
                  interpolation_kernel='linear',
                  plot_hs_points=False,
                  plot_unit_cell=True,
+                 plot_pes_unit_cell=True,
                  plot_minimum_energy_paths=True,
                  plotting_ratio=1.0,
                  normalize_minimum=True,
@@ -114,14 +115,11 @@ class PESGenerator():
                  fig_title='PES',
                  fig_type='png',
                  plot_path='./',
-                 mep_method='zts',
-                 neb_nsteps=5000,
-                 neb_nimages=100,
+                 mep_method='neb',
                  neb_forcetol=1e-3,
-                 string_length=50,
-                 add_noise_to_string=0.01,
-                 string_max_iterations=99999,
-                 custom_cell_to_plot=None
+                 string_length=100,
+                 add_noise_to_string=0.005,
+                 string_max_iterations=10000,
                  ):
         """
         Class for generating PES interpolation and plots for interfaces.
@@ -146,8 +144,10 @@ class PESGenerator():
             .mep is a dictionary with the x and y components of the minimum
                 energy paths as well as their convergence data. The MEPs can
                 be evaluated directly using the rbf.
-
-
+            .shear_strength is a dictionary containing information about the
+                gradients of the PES along the minimum energy paths, as well
+                as their maxima, which are the shear strength in the respective
+                directions.
 
 
         Parameters
@@ -171,7 +171,9 @@ class PESGenerator():
             Plot 'all' or 'unique' high symmetry point if those strings are
             passed. If not, no points are plotted. The default is False.
         plot_unit_cell : bool, optional
-            Plot the unit cell in the PES. The default is True.
+            Plot the unit cell of the interface in the PES. The default is True.
+        plot_pes_unit_cell : bool, optional
+            Plot the unit cell of the PES in the PES. The default is True.
         plot_minimum_energy_paths : bool, optional
             Whether to calculate and plot the minimum energy paths along x, y,
             and diagonally.
@@ -215,19 +217,17 @@ class PESGenerator():
         self.normalize = normalize_minimum
         self.contours = nr_of_contours
         self.plot_unit_cell = plot_unit_cell
+        self.plot_pes_unit_cell = plot_pes_unit_cell
         self.plot_hs_points = plot_hs_points
         self.fig_name = fig_title
         self.fig_type = fig_type
         self.plot_path = plot_path
         self.mep_method = mep_method
-        self.neb_nsteps = neb_nsteps
-        self.neb_nimages = neb_nimages
         self.neb_forcetol = neb_forcetol
         self.string_length = string_length
         self.noise = add_noise_to_string
         self.max_iter = string_max_iterations
         self.plot_mep = plot_minimum_energy_paths
-        self.custom_cell_to_plot = custom_cell_to_plot
 
     def __call__(self,
                  interface,
@@ -278,7 +278,28 @@ class PESGenerator():
 
         self.__get_shear_strength()
 
-    def __get_mep_limits(self, puc_mult=2):
+    def __get_mep_limits(self, puc_mult = 2, delta = 0.5):
+        """
+        Get reasonable limits for the initial MEP string lengths
+
+        Parameters
+        ----------
+        puc_mult : int, optional
+            multiples of the PES unit cell (NOT the interface cell), that is
+            used to define the limits for the initial MEP string search.
+            The default is 2.
+        delta : float, optional
+            Additional room for the intial MEP search to consider a minimum.
+            The default is 0.5.
+
+        Returns
+        -------
+        max_x : float
+            maximal search space in x direction
+        max_y : float
+            maximal search space in y direction
+
+        """
         puc = self.pes_unit_cell
         a, b = puc.matrix[0: 2]
         x = [0, a[0], a[0] + b[0], b[0]]
@@ -286,12 +307,25 @@ class PESGenerator():
         x_d = max(x) - min(x)
         y_d = max(y) - min(y)
 
-        max_x = self.xlim if self.xlim < puc_mult * x_d else puc_mult * x_d
-        max_y = self.ylim if self.ylim < puc_mult * y_d else puc_mult * y_d
+        max_x = self.xlim if self.xlim < puc_mult * x_d + delta else puc_mult * x_d + delta
+        max_y = self.ylim if self.ylim < puc_mult * y_d + delta else puc_mult * y_d + delta
 
         return max_x, max_y
 
     def __get_mep(self):
+        """
+        Compute minimum energy paths for three initial directions.
+        
+        Either use the nudged elastiv band ('neb', default) or zero temperature
+        string method ('zts') to find the MEPs. All three directions are
+        optimized in parallel, but depending on the PES, this might still take
+        around a couple of minutes or half an hour...
+
+        Returns
+        -------
+        None.
+
+        """
         max_x, max_y = self.__get_mep_limits()
         string_d, string_x, string_y = get_initial_strings(extended_energy_list=self.extended_energies,
                                                            xlim=max_x,
@@ -309,11 +343,10 @@ class PESGenerator():
                                                        [string_x, self.rbf, self.max_iter],
                                                        [string_y, self.rbf, self.max_iter]])
         elif self.mep_method == 'neb':
-            nimages = self.neb_nimages  # this is obsolete for now
             path_d, path_x, path_y = Path(string_d, 1), Path(string_x, 1), Path(string_y, 1)
             model = RBFModel(self.rbf)
 
-            nsteps = self.neb_nsteps
+            nsteps = self.max_iter
             forcetol = self.neb_forcetol
             evolve_pool = multiprocessing.Pool(3)
             mep_d, mep_x, mep_y = evolve_pool.starmap(run_neb,
@@ -326,6 +359,19 @@ class PESGenerator():
                     'mep_y': mep_y}
 
     def __get_shear_strength(self):
+        """
+        Compute the derivative of the potential energy surface along the MEPs.
+        
+        The three MEPs gets refined by a factor of 20 and evaluated again on
+        the RBF function. The derivative is computed with numpy.gradient and
+        plotted along the potential. The shear strength is the maximum of this
+        derivative. All is saved as an attribute of the class.
+
+        Returns
+        -------
+        None.
+
+        """
         self.shear_strength = {}
         for k, v in self.mep.items():
             mep = v['mep']
@@ -335,22 +381,32 @@ class PESGenerator():
             spacing = np.cumsum(np.sqrt(dx ** 2 + dy ** 2))
             potential = self.rbf(fine_mep)
             potential -= min(potential)
-            shrstrgth = np.gradient(potential, spacing)
+            shrstrgth = np.gradient(potential, spacing) * 10 #convert to GPa
             max_ss = max(shrstrgth)
 
             fig, ax1 = plt.subplots()
             ax2 = ax1.twinx()
             ax1.plot(spacing, potential, 'k:', label=k)
             ax2.plot(spacing, shrstrgth, 'k-', label='shearstrength')
-            ax1.set_xlabel('path length')
-            ax1.set_ylabel('corrugation')
-            ax2.set_ylabel('force')
+            ax1.set_xlabel(r'path length l [$\rm\AA$]')
+            ax1.set_ylabel(r'$\Delta\gamma$ along MEP (dotted line) $[\rm J/ \rm m^2]$')
+            ax2.set_ylabel(r'$\rm d \gamma / \rm d \rm l$ (solid line) [GPa]')
             # ax1.title(k)
-            fig.savefig(self.plot_path + '/' + k + '.png',
+            fig.savefig(self.plot_path + '/' + k + '.' + self.fig_type,
                         dpi=300,
                         bbox_inches='tight')
             fig.clear()
-            self.shear_strength[k] = max_ss
+            bytes_image = convert_image_to_bytes(self.plot_path +
+                                                 '/' + k +
+                                                 '.' + self.fig_type)
+            self.shear_strength[k] = {}
+            self.shear_strength[k]['max'] = max_ss
+            self.shear_strength[k]['figure_as_bytes'] = bytes_image
+            self.shear_strength[k]['path'] = spacing
+            self.shear_strength[k]['potential'] = potential
+            self.shear_strength[k]['derivative'] = shrstrgth
+            self.shear_strength[k]['units'] = {'potential': 'J/m2',
+                                               'derivative': 'GPa'}
 
     def __get_min_and_max_hsps(self):
         """
@@ -699,26 +755,27 @@ class PESGenerator():
         ax.add_patch(patches.Polygon(xy=list(zip(x_shifted, y)),
                                      fill=False, lw=2))
 
-        custom_cell = self.pes_unit_cell
-        try:
-            a, b = custom_cell.matrix[0: 2]
-        except:
-            pass
-        else:
-            x = [0, a[0], a[0] + b[0], b[0]]
-            x_min = min(x)
-            x_shifted = [i - x_min for i in x]
-            y = [0, a[1], a[1] + b[1], b[1]]
-            y_min = min(y)
-            y_shifted = [i - y_min for i in y]
-            vertices = np.stack((x_shifted, y_shifted), axis=1)
-            vertices = np.round(vertices, 8)
-            # min_vx = vertices.argmin(axis=0)[0]
-            min_vx = np.argmin(np.sum(vertices, axis=1))
-            start = self.initial_string_d[0] - vertices[min_vx]
-            vertices = vertices + start
-            ax.add_patch(patches.Polygon(xy=vertices,
-                                         fill=False, lw=2, color='blue'))
+        if self.plot_pes_unit_cell:
+        
+            try:
+                a, b = self.pes_unit_cell.matrix[0: 2]
+            except:
+                pass
+            else:
+                x = [0, a[0], a[0] + b[0], b[0]]
+                x_min = min(x)
+                x_shifted = [i - x_min for i in x]
+                y = [0, a[1], a[1] + b[1], b[1]]
+                y_min = min(y)
+                y_shifted = [i - y_min for i in y]
+                vertices = np.stack((x_shifted, y_shifted), axis=1)
+                vertices = np.round(vertices, 8)
+                # min_vx = vertices.argmin(axis=0)[0]
+                min_vx = np.argmin(np.sum(vertices, axis=1))
+                start = self.initial_string_d[0] - vertices[min_vx]
+                vertices = vertices + start
+                ax.add_patch(patches.Polygon(xy=vertices,
+                                             fill=False, lw=2, color='blue'))
 
     def __get_fig_and_ax(self):
         """
@@ -794,11 +851,6 @@ class PESGenerator():
     def __get_pes_as_bytes(self):
         """
         Transform a figure into a bytes object to store in the MongoDB database.
-
-        Parameters
-        ----------
-        fig : matplotlib.figure.Figure
-            Figure to be converted
 
         Returns
         -------

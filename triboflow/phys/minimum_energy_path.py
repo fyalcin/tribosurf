@@ -169,7 +169,7 @@ def new_evolve_string(string, rbf, nstepmax=99999, mintol=1e-7, delta=0.005, h=0
 
 def run_neb(model, path, nsteps, tol):
     neb = NEB(model, path)
-    history = neb.run(n_steps=nsteps, force_tol=tol, verbose=True)
+    history = neb.run(n_steps=nsteps, force_tol=tol, verbose=False)
     mep = np.array([n.data.tolist()[0] for n in neb.path])
     return {'mep': mep,
             'neb': neb,
