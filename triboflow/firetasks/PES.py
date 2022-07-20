@@ -80,7 +80,12 @@ class FT_ComputePES(FiretaskBase):
                                  'PES.rbf': pickle.dumps(PG.rbf),
                                  'corrugation': PG.corrugation,
                                  'hsp@min': PG.hsp_min,
-                                 'hsp@max': PG.hsp_max}},
+                                 'hsp@max': PG.hsp_max,
+                                 'mep': PG.mep,
+                                 'shear_strength': PG.shear_strength,
+                                 'initial_strings': {'x': PG.initial_string_x,
+                                                     'y': PG.initial_string_y,
+                                                     'd': PG.initial_string_d}}},
             dolog=False)
 
 
