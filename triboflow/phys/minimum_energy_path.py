@@ -23,6 +23,7 @@ __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 8th, 2021'
 
 import numpy as np
+import math as m
 from mep.models import Model
 from mep.neb import NEB
 from mep.path import Image
@@ -33,7 +34,40 @@ from scipy.interpolate import interp1d
 # EVALUATION OF THE MEP
 # =============================================================================
 
-def get_initial_strings(extended_energy_list, xlim, ylim, npts=100, add_noise=0.01):
+def get_initial_strings(extended_energy_list, xlim, ylim, point_density=20, add_noise=0.01):
+    """
+    Make 3 straigth strings that connect minima of the PES.
+    
+    One string each is set up be parallel to the cartesian x and y directions,
+    while the third one is roughly diagonal. The number of points is controlled
+    by the density parameter, and noise can be added to the strings to ensure
+    that some forces are present even if the string is located alongside a 
+    path were no normal forces are found for symmetry reasons.
+
+    Parameters
+    ----------
+    extended_energy_list : np.array
+        High symmetry points with x and y coordinates and the total energy
+        as third collumn.
+    xlim : float
+        maximum x value for the minima search
+    ylim : float
+        maximum y value for the minima search
+    point_density : int, optional
+        Number of points/images per Angstrom. The default is 20.
+    add_noise : float or bool, optional
+        Set either to False or a float value in Angstrom. The default is 0.01.
+
+    Returns
+    -------
+    string_d : np.array
+        Diagonal string
+    string_x : np.array
+        String in x direction
+    string_y : np.array
+        String in y direction
+
+    """
     energies = extended_energy_list.copy()
     energies[:, 2] = energies[:, 2] - min(energies[:, 2])
 
@@ -63,19 +97,40 @@ def get_initial_strings(extended_energy_list, xlim, ylim, npts=100, add_noise=0.
     for p in minima:
         if p[1] > end_y[1] and np.isclose(p[0], start[0], atol=0.01):
             end_y = p
+        
+    npts_x = m.ceil((np.linalg.norm(end_x) - np.linalg.norm(start)) * point_density)
+    npts_y = m.ceil((np.linalg.norm(end_y) - np.linalg.norm(start)) * point_density)
+    npts_d = m.ceil((np.linalg.norm(end) - np.linalg.norm(start)) * point_density)
 
-    string_d = np.linspace(start, end, npts)
-    string_x = np.linspace(start, end_x, npts)
-    string_y = np.linspace(start, end_y, npts)
+    string_d = np.linspace(start, end, npts_d)
+    string_x = np.linspace(start, end_x, npts_x)
+    string_y = np.linspace(start, end_y, npts_y)
     if add_noise:
-        noise = np.random.normal(0, add_noise, string_d.shape)
-        string_d += noise
-        string_x += noise
-        string_y += noise
+        string_d += np.random.normal(0, add_noise, string_d.shape)
+        string_x += np.random.normal(0, add_noise, string_x.shape)
+        string_y += np.random.normal(0, add_noise, string_y.shape)
     return string_d, string_x, string_y
 
 
 def numgrad(string, rbf, delta=0.002):
+    """
+    Numerically compute the gradient of a potential given by rbf at the points in string.
+
+    Parameters
+    ----------
+    string : np.array
+        The string in the potential
+    rbf : TYPEscipy.interpolate._rbfinterp.RBFInterpolator or other callable
+        potential for which the gradient is calculated
+    delta : float, optional
+        step size for the gradient evaluation. The default is 0.002.
+
+    Returns
+    -------
+    np.array
+        The gradient at each string point.
+
+    """
     x = string[:, 0]
     y = string[:, 1]
 
@@ -100,6 +155,22 @@ def numgrad(string, rbf, delta=0.002):
 
 
 def reparametrize_string_with_equal_spacing(string, nr_of_points):
+    """
+    Reparametrize the string so that the arc length are constant again.
+
+    Parameters
+    ----------
+    string : np.array
+        String with non equal arc lengths.
+    nr_of_points : int
+        New number of points for the string
+
+    Returns
+    -------
+    np.array
+        String with equal arc lengths.
+
+    """
     g = np.linspace(0, 1, nr_of_points)
     x = string[:, 0]
     y = string[:, 1]
@@ -141,11 +212,11 @@ def new_evolve_string(string, rbf, nstepmax=99999, mintol=1e-7, delta=0.005, h=0
     Returns
     -------
     dict
-        Minimum energy path as a numpy array as well as the convergence
-        parameters.
+        Minimum energy path as a numpy array as well as info on convergence.
 
     """
     n = len(string)
+    is_converged = False
 
     for nstep in range(int(nstepmax)):
 
@@ -161,18 +232,16 @@ def new_evolve_string(string, rbf, nstepmax=99999, mintol=1e-7, delta=0.005, h=0
         # check for convergence
         tol = (np.linalg.norm(string - string_old)) / n
         if tol <= mintol:
+            is_converged = True
             break
 
-    mep_convergency = (nstep, tol)
-    return {'mep': string, 'convergence': mep_convergency}
+    return {'mep': string, 'convergence': is_converged}
 
 
 def run_neb(model, path, nsteps, tol):
     neb = NEB(model, path)
-    history = neb.run(n_steps=nsteps, force_tol=tol, verbose=False)
     mep = np.array([n.data.tolist()[0] for n in neb.path])
     return {'mep': mep,
-            'neb': neb,
             'convergence': neb.stop}
 
 
