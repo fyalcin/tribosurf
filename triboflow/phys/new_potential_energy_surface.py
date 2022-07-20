@@ -68,7 +68,7 @@ def get_PESGenerator_from_db(interface_name, db_file='auto', high_level=True,
                        'normalize_minimum', 'nr_of_contours', 'fig_title',
                        'fig_type', 'plot_path', 'plot_minimum_energy_paths',
                        'mep_method', 'neb_forcetol', 'plot_pes_unit_cell',
-                       'string_length', 'add_noise_to_string',
+                       'string_point_density', 'add_noise_to_string',
                        'string_max_iterations', 'custom_cell_to_plot']
     PG_kwargs = pes_generator_kwargs.copy()
     for k in pes_generator_kwargs.keys():
@@ -104,7 +104,7 @@ def get_PESGenerator_from_db(interface_name, db_file='auto', high_level=True,
 class PESGenerator():
     def __init__(self,
                  points_per_angstrom=50,
-                 interpolation_kernel='linear',
+                 interpolation_kernel='cubic',
                  plot_hs_points=False,
                  plot_unit_cell=True,
                  plot_pes_unit_cell=True,
@@ -117,7 +117,7 @@ class PESGenerator():
                  plot_path='./',
                  mep_method='neb',
                  neb_forcetol=1e-3,
-                 string_length=100,
+                 string_point_density=20,
                  add_noise_to_string=0.005,
                  string_max_iterations=10000,
                  ):
@@ -161,12 +161,9 @@ class PESGenerator():
                 - 'thin_plate_spline'    : ``r**2 * log(r)``
                 - 'cubic'                : ``r**3``
                 - 'quintic'              : ``-r**5``
-                - 'multiquadric'         : ``-sqrt(1 + r**2)``
-                - 'inverse_multiquadric' : ``1/sqrt(1 + r**2)``
-                - 'inverse_quadratic'    : ``1/(1 + r**2)``
-                - 'gaussian'             : ``exp(-r**2)``
-            The default is 'linear' and should probably not be changed to
-            keep proper symmetry!
+            The default is 'cubic' for a more physical smooth interpolation,
+            although 'linear' could be necessary to perserve symmtery in some
+            cases.
         plot_hs_points : bool or str, optional
             Plot 'all' or 'unique' high symmetry point if those strings are
             passed. If not, no points are plotted. The default is False.
@@ -196,9 +193,9 @@ class PESGenerator():
             The PES will be saved at this path. USE A
             TRAILING SLASH! E.g.: /home/user/test/PES/
             The default is "./".
-        string_length : int, optional
-            The number of nodes in the strings that will be used to find the
-            minimum energy path. The default is 50.
+        string_point_density : float, optional
+            The density of nodes/images in the strings that will be used to find the
+            minimum energy path. The default is 0.03/Angstrom.
         add_noise_to_string : float or None, optional
             Select if some noise should be added to the initial string nodes,
             to avoid having symmetry related problems where the string is
@@ -224,7 +221,7 @@ class PESGenerator():
         self.plot_path = plot_path
         self.mep_method = mep_method
         self.neb_forcetol = neb_forcetol
-        self.string_length = string_length
+        self.string_density = string_point_density
         self.noise = add_noise_to_string
         self.max_iter = string_max_iterations
         self.plot_mep = plot_minimum_energy_paths
@@ -278,7 +275,7 @@ class PESGenerator():
 
         self.__get_shear_strength()
 
-    def __get_mep_limits(self, puc_mult = 2, delta = 0.5):
+    def __get_mep_limits(self, puc_mult = 2, delta = 0.05):
         """
         Get reasonable limits for the initial MEP string lengths
 
@@ -309,8 +306,17 @@ class PESGenerator():
 
         max_x = self.xlim if self.xlim < puc_mult * x_d + delta else puc_mult * x_d + delta
         max_y = self.ylim if self.ylim < puc_mult * y_d + delta else puc_mult * y_d + delta
+        
+        #the following is a simple but rather crude way to add the start position
+        #of the string to the mep limits.
+        string, _, _ = get_initial_strings(extended_energy_list=self.extended_energies,
+                                           xlim=max_x,
+                                           ylim=max_y,
+                                           point_density=self.string_density,
+                                           add_noise=self.noise)
+        shift_x, shift_y = string[0]
 
-        return max_x, max_y
+        return max_x + shift_x, max_y + shift_y
 
     def __get_mep(self):
         """
@@ -330,7 +336,8 @@ class PESGenerator():
         string_d, string_x, string_y = get_initial_strings(extended_energy_list=self.extended_energies,
                                                            xlim=max_x,
                                                            ylim=max_y,
-                                                           npts=self.string_length)
+                                                           point_density=self.string_density,
+                                                           add_noise=self.noise)
         self.initial_string_d = string_d
         self.initial_string_x = string_x
         self.initial_string_y = string_y
