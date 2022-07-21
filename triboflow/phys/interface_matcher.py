@@ -12,10 +12,8 @@ The module contains:
         (_find_lattice_match method) is done by the implementation of the
         algorithm by Zur and McGill
         (Journal of Applied Physics 55, 378 (1984); doi: 10.1063/1.333084)
-        as implemented in python in the MPInterfaces package
-        (Computational Materials Science 122 (2016) 183–190;
-        doi: 10.1016/j.commatsci.2016.05.020). However, in
-        contrast to the MPInterfaces implementation the strain put on the
+        as implemented in python in the pymatgen. However, in
+        contrast to the pymatgen implementation the strain put on the
         lattices to get them to match is more flexible and achieved via a
         weighted average.
         The class contains the following modules, of which the last 4 alone
