@@ -10,7 +10,7 @@ from triboflow.fireworks.init_fws import InitWF
 from triboflow.firetasks.structure_manipulation import (
     FT_MakeHeteroStructure, FT_StartBulkPreRelax)
 from triboflow.firetasks.init_check import unbundle_input, material_from_mp
-from triboflow.firetasks.check_inputs import FT_UpdateCompParams
+from triboflow.firetasks.check_inputs import FT_UpdateInterfaceCompParams
 from triboflow.firetasks.adhesion import (
     FT_RelaxMatchedSlabs, FT_RetrieveMatchedSlabs)
 from triboflow.firetasks.start_swfs import FT_StartAdhesionSWF, FT_StartBulkConvoSWF, FT_StartDielectricSWF, \
@@ -107,11 +107,11 @@ def heterogeneous_wf(inputs):
     WF.append(CalcDielectric_M2)
     
     
-    Final_Params = Firework(FT_UpdateCompParams(mp_id_1=mp_id_1,
-                                                mp_id_2=mp_id_2,
-                                                miller_1=mat_1.get('miller'),
-                                                miller_2=mat_2.get('miller'),
-                                                functional=functional),
+    Final_Params = Firework(FT_UpdateInterfaceCompParams(mp_id_1=mp_id_1,
+                                                         mp_id_2=mp_id_2,
+                                                         miller_1=mat_1.get('miller'),
+                                                         miller_2=mat_2.get('miller'),
+                                                         functional=functional),
                             name='Consolidate computational parameters')
     WF.append(Final_Params)
     

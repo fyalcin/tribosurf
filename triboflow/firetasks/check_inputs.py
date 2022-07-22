@@ -14,7 +14,7 @@ from triboflow.utils.structure_manipulation import (
 
 
 @explicit_serialize
-class FT_UpdateCompParams(FiretaskBase):
+class FT_UpdateInterfaceCompParams(FiretaskBase):
     """ Update the comp-params for interface calculations after convergence.
 
     This Firetask reads the converged bulk parameters from two materials and
