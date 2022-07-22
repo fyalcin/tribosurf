@@ -86,6 +86,11 @@ def dielectric_constant_swf(structure,
         epsilon = bulk_data['comp_parameters'].get('epsilon', False)
     except:
         epsilon = False
+        
+    #if we know that the material is metallic, no need to calculate epsilon
+    #since it should be infinite.
+    if comp_parameters.get('is_metal', False):
+        epsilon = 1000000
 
     formula = structure.composition.reduced_formula
     wf_name = f'Dielectric calculation WF for {formula} {mpid}'
