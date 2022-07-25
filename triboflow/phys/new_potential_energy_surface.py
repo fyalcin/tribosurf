@@ -275,7 +275,7 @@ class PESGenerator():
 
         self.__get_shear_strength()
 
-    def __get_mep_limits(self, puc_mult = 2, delta = 0.05):
+    def __get_mep_limits(self, puc_mult = 2, delta = 0.1):
         """
         Get reasonable limits for the initial MEP string lengths
 
@@ -304,8 +304,8 @@ class PESGenerator():
         x_d = max(x) - min(x)
         y_d = max(y) - min(y)
 
-        max_x = self.xlim if self.xlim < puc_mult * x_d + delta else puc_mult * x_d + delta
-        max_y = self.ylim if self.ylim < puc_mult * y_d + delta else puc_mult * y_d + delta
+        max_x = self.xlim if self.xlim < (puc_mult * x_d + delta) else puc_mult * x_d + delta
+        max_y = self.ylim if self.ylim < (puc_mult * y_d + delta) else puc_mult * y_d + delta
         
         #the following is a simple but rather crude way to add the start position
         #of the string to the mep limits.
@@ -315,8 +315,10 @@ class PESGenerator():
                                            point_density=self.string_density,
                                            add_noise=self.noise)
         shift_x, shift_y = string[0]
+        max_x = self.xlim if self.xlim < max_x + shift_x else max_x + shift_x
+        max_y = self.ylim if self.ylim < max_y + shift_y else max_y + shift_y
 
-        return max_x + shift_x, max_y + shift_y
+        return max_x, max_y
 
     def __get_mep(self):
         """
@@ -332,12 +334,20 @@ class PESGenerator():
         None.
 
         """
-        max_x, max_y = self.__get_mep_limits()
-        string_d, string_x, string_y = get_initial_strings(extended_energy_list=self.extended_energies,
-                                                           xlim=max_x,
-                                                           ylim=max_y,
-                                                           point_density=self.string_density,
-                                                           add_noise=self.noise)
+        string_d = string_x = string_y = []
+        puc_mult=2
+        while len(string_d) < 10 or len(string_x) < 10 or len(string_y) < 10:
+            max_x, max_y = self.__get_mep_limits(puc_mult=puc_mult)
+            string_d, string_x, string_y = get_initial_strings(extended_energy_list=self.extended_energies,
+                                                               xlim=max_x,
+                                                               ylim=max_y,
+                                                               point_density=self.string_density,
+                                                               add_noise=self.noise)
+            print(puc_mult)
+            if puc_mult > 5:
+                break
+            puc_mult += 1
+            
         self.initial_string_d = string_d
         self.initial_string_x = string_x
         self.initial_string_y = string_y
