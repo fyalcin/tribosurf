@@ -81,11 +81,11 @@ class FT_ComputePES(FiretaskBase):
                                  'corrugation': PG.corrugation,
                                  'hsp@min': PG.hsp_min,
                                  'hsp@max': PG.hsp_max,
-                                 'mep': PG.mep,
-                                 'shear_strength': PG.shear_strength,
-                                 'initial_strings': {'x': PG.initial_string_x,
-                                                     'y': PG.initial_string_y,
-                                                     'd': PG.initial_string_d}}},
+                                 'mep': jsanitize(PG.mep),
+                                 'shear_strength': jsanitize(PG.shear_strength),
+                                 'initial_strings': {'x': PG.initial_string_x.tolist(),
+                                                     'y': PG.initial_string_y.tolist(),
+                                                     'd': PG.initial_string_d.tolist()}}},
             dolog=False)
 
 
