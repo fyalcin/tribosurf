@@ -343,7 +343,6 @@ class PESGenerator():
                                                                ylim=max_y,
                                                                point_density=self.string_density,
                                                                add_noise=self.noise)
-            print(puc_mult)
             if puc_mult > 5:
                 break
             puc_mult += 1
