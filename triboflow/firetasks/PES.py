@@ -102,20 +102,21 @@ class FT_ComputePES(FiretaskBase):
                                      'shear_strength': jsanitize(PG.shear_strength)}},
                 dolog=False)
             for k, v in {'all_energies': 'extended_energies',
-                         'pes_data': 'PES_on_meshgrid',
-                         'image': 'PES_as_bytes',
-                         'rbf': 'rbf'}:
+             'pes_data': 'PES_on_meshgrid',
+             'image': 'PES_as_bytes',
+             'rbf': 'rbf'}.items():
                 try:
                     if k == 'rbf':
-                        data = pickle.dumps(v)
+                        data = pickle.dumps(getattr(PG, v))
                     else:
-                        data = jsanitize(v)
+                        data = jsanitize(getattr(PG, v))
                     nav_high.update_data(
-                        collection=functional + '.interface_data',
+                        collection='PBE.interface_data',
                         fltr={'name': name},
-                        new_values={'$set': {k: data}},
+                        new_values={'$set': {'PES.'+k: data}},
                         dolog=False)
                 except:
+                    print(f'document {k} is too large to be put into DB.')
                     pass
                     
 
