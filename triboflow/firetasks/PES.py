@@ -71,23 +71,53 @@ class FT_ComputePES(FiretaskBase):
                                       pes_generator_kwargs={'fig_title': name})
 
         nav_high = Navigator(db_file=db_file, high_level=hl_db)
-        nav_high.update_data(
-            collection=functional + '.interface_data',
-            fltr={'name': name},
-            new_values={'$set': {'PES.all_energies': jsanitize(PG.extended_energies),
-                                 'PES.pes_data': jsanitize(PG.PES_on_meshgrid),
-                                 'PES.image': PG.PES_as_bytes,
-                                 'PES.rbf': pickle.dumps(PG.rbf),
-                                 'corrugation': PG.corrugation,
-                                 'hsp@min': PG.hsp_min,
-                                 'hsp@max': PG.hsp_max,
-                                 'mep': jsanitize(PG.mep),
-                                 'shear_strength': jsanitize(PG.shear_strength),
-                                 'initial_strings': {'x': PG.initial_string_x.tolist(),
-                                                     'y': PG.initial_string_y.tolist(),
-                                                     'd': PG.initial_string_d.tolist()}}},
-            dolog=False)
-
+        #the data here might be too large to write to the DB, so if initial
+        #write fails, we try bit by bit...
+        #maybe should be replaced by gridFS instead?
+        try:
+            nav_high.update_data(
+                collection=functional + '.interface_data',
+                fltr={'name': name},
+                new_values={'$set': {'PES.all_energies': jsanitize(PG.extended_energies),
+                                     'PES.pes_data': jsanitize(PG.PES_on_meshgrid),
+                                     'PES.image': PG.PES_as_bytes,
+                                     'PES.rbf': pickle.dumps(PG.rbf),
+                                     'corrugation': PG.corrugation,
+                                     'hsp@min': PG.hsp_min,
+                                     'hsp@max': PG.hsp_max,
+                                     'mep': jsanitize(PG.mep),
+                                     'shear_strength': jsanitize(PG.shear_strength),
+                                     'initial_strings': {'x': PG.initial_string_x.tolist(),
+                                                         'y': PG.initial_string_y.tolist(),
+                                                         'd': PG.initial_string_d.tolist()}}},
+                dolog=False)
+        except:
+            nav_high.update_data(
+                collection=functional + '.interface_data',
+                fltr={'name': name},
+                new_values={'$set': {'corrugation': PG.corrugation,
+                                     'hsp@min': PG.hsp_min,
+                                     'hsp@max': PG.hsp_max,
+                                     'mep': jsanitize(PG.mep),
+                                     'shear_strength': jsanitize(PG.shear_strength)}},
+                dolog=False)
+            for k, v in {'all_energies': 'extended_energies',
+                         'pes_data': 'PES_on_meshgrid',
+                         'image': 'PES_as_bytes',
+                         'rbf': 'rbf'}:
+                try:
+                    if k == 'rbf':
+                        data = pickle.dumps(v)
+                    else:
+                        data = jsanitize(v)
+                    nav_high.update_data(
+                        collection=functional + '.interface_data',
+                        fltr={'name': name},
+                        new_values={'$set': {k: data}},
+                        dolog=False)
+                except:
+                    pass
+                    
 
 @explicit_serialize
 class FT_RetrievePESEnergies(FiretaskBase):
