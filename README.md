@@ -6,32 +6,32 @@ Triboflow uses the [FireWorks](https://materialsproject.github.io/fireworks/inde
 The project is a collaboration between [Michael Wolloch](https://www.researchgate.net/profile/Michael_Wolloch) at the University of Vienna and the [Group of Prof. M. Clelia Righi](http://www.tribchem.it/) at the University of Bologna.
 
  1. [Download and Installation](#install)
-	  1. [Create a virtual environment for TriboFlow](#virtualenv)
-	  2. [ Install and configure MonogoDB locally if you want your database to run also in conda](#mongodb)
-	  3. [Create a folder structure, download and install](#triboflowinstall)
-	  4. [Configuring FireWorks](#configurefw)
-	  5. [Configuring pymatgen](#configurepymatgen)
+     1. [Create a virtual environment for TriboFlow](#virtualenv)
+     2. [Install and configure MongoDB locally if you want your database to run also in conda](#mongodb)
+     3. [Create a folder structure, download and install](#triboflowinstall)
+     4. [Configuring FireWorks](#configurefw)
+     5. [Configuring pymatgen](#configurepymatgen)
  2. [Testing your installation of FireWorks](#testing)
  3. [A note about atomate](#customatomate) 
  4. [Using TriboFlow](#using)
-	 1. [Running a workflow](#runningawf)
-	 2. [Looking at the results](#results)
+    1. [Running a workflow](#runningawf)
+    2. [Looking at the results](#results)
 
 
 ## Download and Installation <a name="install"></a>
-Here we assume that you install Triboflow within a virtual python environment. We use [conda](https://docs.conda.io/en/latest/) in this guide, but [virtualenv](https://virtualenv.pypa.io/en/latest/) or similar is also possible.
+Here we assume that you install Triboflow within a virtual python environment. We use [mamba](https://github.com/mamba-org/mamba) in this guide, but [conda](https://docs.conda.io/en/latest/), [virtualenv](https://virtualenv.pypa.io/en/latest/), or similar are also possible. We currently recommend mamba because it is essentially conda, but with much faster environment solving and package installation. If you prefer to proceed with conda instead, you can just replace all the mamba commands with conda. In fact, in the later sections of this guide, we use mamba and conda interchangeably in some commands and when referring to environments.
 
 ### Create a virtual environment for TriboFlow <a name="virtualenv"></a>
- 1. Make sure that you have conda installed or download and install miniconda from [here](https://docs.conda.io/en/latest/miniconda.html).
- 2. Update conda and then create a new python 3 environment named "TriboFlow" (or whatever you decide) by typing `conda update conda` followed by `conda create --name TriboFlow python=3`
- 3. Switch to your new environment: `conda activate TriboFlow`
+ 1. Make sure that you have mamba installed or download and install mambaforge from [here](https://github.com/conda-forge/miniforge). If you already have conda installed, you can also install mamba by running `conda install mamba -n base -c conda-forge`. Be aware that this installation may take a bit long, and we suggest just getting mambaforge.
+ 2. Update mamba and then create a new python 3 environment with some of the necessary packages named "TriboFlow" (or whatever you decide) by typing `mamba update mamba` followed by `mamba create --name TriboFlow pymatgen fireworks custodian`
+ 3. Switch to your new environment: `mamba activate TriboFlow`
 
 
 [Back to top](#toc)
-### Install and configure MonogoDB locally if you want your database to run also in conda<a name="mongodb"></a>
-This is **optional** and you should skip these steps if you **already have a database running** somewhere that you want to use and can access from the machine you are using. See also [this section](https://atomate.org/installation.html#mongodb) of the atomate installation instructions.
- 1. Install the conda package (use conda-forge for a newer version; 4.2.10 instead of 4.0.3) of MongoDB by simply running `conda install -c anaconda mongodb=4.2.10 -c conda-forge` while the TriboFlow environment is active.
- 2. You should now have access to the mongo shell via the `mongo`  command and the daemon via the `mongod` command. Before we create the database and set up the daemon, we have to prepare a configuration file and decide where the database should be located. The location will be referred to as `<YourMongoPath>`, and you put the configuration file `mongod.conf` there. It should look somewhat similar to the yaml file below, but you can also tune it according to the options given [here](https://docs.mongodb.com/v4.0/reference/configuration-options/). Importand settings are `storage.dbPath` (where your database will be located), `processManagement.fork` (If true, the process will run in the background and not block your shell), `net.port` (use the standard port for MongoDB: 27017), and `security.authorization` (should be disabled in the beginning to set up the users). Note that you must use spaces and not tabs in YAML!
+### Install and configure MongoDB locally if you want your database to run also in conda environment<a name="mongodb"></a>
+This is **optional**, and you should skip these steps if you **already have a database running** somewhere that you want to use and can access from the machine you are using. See also [this section](https://atomate.org/installation.html#mongodb) of the atomate installation instructions.
+ 1. Install the mamba package of MongoDB by simply running `mamba install mongodb=4.2.10` while the TriboFlow environment is active.
+ 2. You should now have access to the mongo shell via the `mongo`  command and the daemon via the `mongod` command. Before we create the database and set up the daemon, we have to prepare a configuration file and decide where the database should be located. The location will be referred to as `<YourMongoPath>`, and you put the configuration file `mongod.conf` there. It should look somewhat similar to the yaml file below, but you can also tune it according to the options given [here](https://docs.mongodb.com/v4.0/reference/configuration-options/). Important settings are `storage.dbPath` (where your database will be located), `processManagement.fork` (If true, the process will run in the background and not block your shell), `net.port` (use the standard port for MongoDB: 27017), and `security.authorization` (should be disabled in the beginning to set up the users). Note that you must use spaces and not tabs in YAML!
 
 Example mongod.conf file:<a name="mongodconf"></a>
  ~~~
@@ -71,10 +71,10 @@ net:
 security:  
     authorization: disabled
 ~~~
-3. Now create the folder for the database to be put in by typing:  
+3. Now, create the folder for the database to be put in by typing:  
     `cd <YourMongoPath>; mkdir data; mkdir data/db` and then start the mongo daemon using the configuration file by executing: `mongod --config mongod.conf` which should result in something ending with : `child process started successfully, parent exiting` and produce a `mongod.log` and a `pidfile`. If you have some problems, check the logfile.
 
-4. Now we will use the mongo shell to create two users for the databases. We start by going in the shell and switching to the admin database (which we will use for authorization):  
+4. Now, we will use the mongo shell to create two users for the databases. We start by going in the shell and switching to the admin database (which we will use for authorization):  
 `mongo`
 `use admin`
 Now we will create an adminUser and a readOnlyUser by typing:
@@ -82,7 +82,7 @@ Now we will create an adminUser and a readOnlyUser by typing:
 Now exit the mongo shell: 
 `exit`
 
-5. Stop the mongo daemon by executing `mongod --shutdown --dbpath <YoutMongoPath>/data/db` and activate authorization in the `mongod.conf` file by changing the last line to `authorization: enabled`. Now, your database is password protected and you have to the username and password you created before in the mongo shell. To do that, while in the mongo shell, switch to the admin database by executing `use admin` and then authenticate with `db.auth(<RootUser>, <RootPassword>)`. Then exit the mongo shell again.
+5. Stop the mongo daemon by executing `mongod --shutdown --dbpath <YoutMongoPath>/data/db` and activate authorization in the `mongod.conf` file by changing the last line to `authorization: enabled`. Now, your database is password-protected, and you have to the username and password you created before in the mongo shell. To do that, while in the mongo shell, switch to the admin database by executing `use admin` and then authenticate with `db.auth(<RootUser>, <RootPassword>)`. Then exit the mongo shell again.
 
 6. It might be a good idea to define some aliases in your `.bashrc` or `.myaliases` files to start and stop the mongod daemon, so you can do it quickly if needed. E.g.:
 ```
@@ -93,27 +93,27 @@ alias mongo_stop="mongod --shutdown --dbpath <YourMongoPath>/data/db"
 [Back to top](#toc)
 ### Create a folder structure, download and install TriboFlow<a name="triboflowinstall"></a>
 1. Select a location where you want to have your TriboFlow files located. We will assume this is `<YourPath>`. Now create two subfolders: `<YourPath>/config` for your configuration files and `<YourPath>/pps` for your pseudopotentials.
-2. In the same folder we will now download the TriboFlow files from gitlab (using ssh to facilitate automatic login with ssh-keys) by typing `git clone git@gitlab.com:triboteam/TriboFlow.git`. This will (for now) only work if your gitlab account has authorisation!
+2. In the same folder, we will now download the TriboFlow files from GitLab (using ssh to facilitate automatic login with ssh-keys) by typing `git clone git@gitlab.com:triboteam/TriboFlow.git`. This will (for now) only work if your GitLab account has authorisation!
 3. You should now see a folder `<YourPath>/TriboFlow`. `cd` into it and run `pip install -e .` to install TriboFlow and all the other packages that are required to run it into your active conda environment. 
 
 [Back to top](#toc)
 ### Configuring FireWorks<a name="configurefw"></a>
 Here we assume that the database is locally installed in the same conda environment, but the procedure is not much different if a cloud service like Atlas is used or if the database is hosted on a different server.
 
-1. Change into your `<YourPath>/config` folder and write a `db.json` file so FireWorks can access your database (If your database is not local, the "host" has to change of course, e.g. for a Atlas DB you might have something like `"mongodb+srv://cluster0-4bevc.mongodb.net"` instead of `"localhost"`.) The "high_level" field is for the name of your high_level database which contains your results. Both "high_level" and "database" (FireWorks database) can be changed here if you want to do some testing later.
+1. Change into your `<YourPath>/config` folder and write a `db.json` file so FireWorks can access your database (If your database is not local, the "host" has to change, of course, e.g., for an Atlas DB you might have something like `"mongodb+srv://cluster0-4bevc.mongodb.net"` instead of `"localhost"`.) The "high_level" field is for the name of your high_level database, which contains your results. Both "high_level" and "database" (FireWorks database) can be changed here if you want to do some testing later.
 <a name="dbjson"></a>
  ~~~
 {  
-	"host": "localhost",  
-	"port": 27017,  
-	"database": "FireWorks",  
-	"collection": "tasks",  
-	"admin_user": "<RootUser>",  
-	"admin_password": "<RootPassword>",  
-	"readonly_user": "<ReadUser>",  
-	"readonly_password": "<ReadPassword>",  
-	"aliases": {},  
-	"authsource": "admin",
+   "host": "localhost",  
+   "port": 27017,  
+   "database": "FireWorks",  
+   "collection": "tasks",  
+   "admin_user": "<RootUser>",  
+   "admin_password": "<RootPassword>",  
+   "readonly_user": "<ReadUser>",  
+   "readonly_password": "<ReadPassword>",  
+   "aliases": {},  
+   "authsource": "admin",
     "high_level": "triboflow"
 }
 ~~~
@@ -123,10 +123,10 @@ Here we assume that the database is locally installed in the same conda environm
 `x.reset()`
 `print("SUCCESS")`
 All is well if you see "SUCCESS" printed on screen.
-4. Now we setup the launchpad (A database where Fireworks are started from), using functionalities of FireWorks by typing `lpad init` and select the same database name, username (`<RootUser>`) and password as when you created the database. Keep the default (None) for the `ssl_ca_file` parameter, but enter `admin` as the `authsource` parameter as suggested by the prompt. You can check and modify the results by looking into `my_launchpad.yaml`.
-    * In case we are using MongoDB Atlas `my_launchpad.yaml` must have all the settings set to `null` except for `authsource: admin`, `host: mongodb+srv://<username>:<password>@cluster...` (substitute to `username` and `password` the proper values), and `strm_lvl: INFO`. Note that here `host` has a different notation from the one set in `db.json`. For generating the proper host value log in the MongoDB Atlas webpage, select the cluster where the database is saved, and click on `CONNECT` option. Once clicked a menu with three options should pop up. Select `Connect your application` for getting the address to use as `host` in `my_launchpad.yaml`.
+4. Now, we set up the launchpad (A database where Fireworks are started from), using functionalities of FireWorks by typing `lpad init` and selecting the same database name, username (`<RootUser>`), and password as when you created the database. Keep the default (None) for the `ssl_ca_file` parameter, but enter `admin` as the `authsource` parameter as suggested by the prompt. You can check and modify the results by looking into `my_launchpad.yaml`.
+    * In case we are using MongoDB Atlas `my_launchpad.yaml` must have all the settings set to `null` except for `authsource: admin`, `host: mongodb+srv://<username>:<password>@cluster...` (substitute to `username` and `password` the proper values), and `strm_lvl: INFO`. Note that here `host` has a different notation from the one set in `db.json`. For generating the proper host value log in the MongoDB Atlas webpage, select the cluster where the database is saved, and click on `CONNECT` option. Once clicked, a menu with three options should pop up. Select `Connect your application` for getting the address to use as `host` in `my_launchpad.yaml`.
 5. Test this by typing `lpad -l my_launchpad.yaml reset`
-6. Now we will setup the local machine as a FireWorker, which is nothing else than a machine which can pull and execute calculations from the launchpad that are ready to run. It contains information about the database file, the command running VASP on this machine, and other information necessary to run VASP smoothly and efficiently on the local machine. For this we put a `my_fworker.yaml` file into the `<YourPath>/config` folder:
+6. Now, we will set up the local machine as a FireWorker, which is nothing else than a machine that can pull and execute calculations from the launchpad that are ready to run. It contains information about the database file, the command running VASP on this machine, and other information necessary to run VASP smoothly and efficiently on the local machine. For this, we put a `my_fworker.yaml` file into the `<YourPath>/config` folder:
 ~~~
 name: <WorkerName>
 category: ''
@@ -140,8 +140,8 @@ env:
         KPAR: <YourKparSetting>
         NCORE: <YourNcoreSetting>
 ~~~
-7. If the computer or cluster where you are installing TriboFlow has a job scheduler, you have to set up a file called `my_qadapter.yaml` in the `<YourPath>/config` directory. `<SchedulerType>` can be PBS/Torque, SLURM, SGE, or IBM LoadLeveler. `pre_rocket` and `post_rocket` are optional commands to be run in the job script before and after the workflow is executed, this is e.g. useful for loading and unloading modules. You probably will have to activate your conda environment here. The `--timeout` option tells the job to stop pulling new FireWorks from the Launchpad after `<sec>` number of seconds, which should of course be smaller than the walltime. E.g. if you have an allowed walltime of 72 hours, set the `--timeout` option to e.g. 172800 (2 days in seconds).  
-It is important to note that this type of rocket_launch will only work if the compute nodes on your cluster can access the MongoDB database, which is a problem for many clusters, since only the login nodes have access to the internet and firewall rules are strict. Possible solutions are described [here](https://materialsproject.github.io/fireworks/offline_tutorial.html). The `my_qadapter.yaml` file might look something like this:
+7. If the computer or cluster where you are installing TriboFlow has a job scheduler, you have to set up a file called `my_qadapter.yaml` in the `<YourPath>/config` directory. `<SchedulerType>` can be PBS/Torque, SLURM, SGE, or IBM LoadLeveler. `pre_rocket` and `post_rocket` are optional commands to be run in the job script before and after the workflow is executed; this is e.g. useful for loading and unloading modules. You probably will have to activate your conda environment here. The `--timeout` option tells the job to stop pulling new FireWorks from the Launchpad after `<sec>` number of seconds, which should of course be smaller than the walltime. E.g. if you have an allowed walltime of 72 hours, set the `--timeout` option to e.g. 172800 (2 days in seconds).  
+It is important to note that this type of rocket_launch will only work if the compute nodes on your cluster can access the MongoDB database, which is a problem for many clusters since only the login nodes have access to the internet and firewall rules are strict. Possible solutions are described [here](https://materialsproject.github.io/fireworks/offline_tutorial.html). The `my_qadapter.yaml` file might look something like this:
 ~~~
 _fw_name: CommonAdapter  
 _fw_q_type: <SchedulerType>
@@ -155,7 +155,7 @@ pre_rocket: <Custom commands to load modules and conda etc.>
 post_rocket: <Custom commands to unload modules etc.>
 logdir: <YourPath>/logs
 ~~~
-8.  To tell TriboFlow (more precisely FireWorks) where to find the configuration files you just created, we will write the final configuration file `FW_config.yaml` with the line `CONFIG_FILE_DIR: <YourPath>/config`. We will also set an environment variable to tell FireWorks where this file is. Make sure not to use spaces before or after the ‘=’ sign, since this might lead to problems and type
+8. To tell TriboFlow (more precisely FireWorks) where to find the configuration files you just created, we will write the final configuration file `FW_config.yaml` with the line `CONFIG_FILE_DIR: <YourPath>/config`. We will also set an environment variable to tell FireWorks where this file is. Make sure not to use spaces before or after the ‘=’ sign, since this might lead to problems and type
 ~~~
 conda env config vars set FW_CONFIG_FILE=<YourPath>/config/FW_config.yaml  
 ~~~
@@ -184,10 +184,10 @@ pps
     ├── POTCAR.Ag.gz  
     └── ...
 ~~~
-2. Now we have to set a config variable (it will be a file .`pmgrc.yaml` in your home folder) so pymatgen can find the potentials and add your default functional as well (this could also be PBE_54) if you have this potential family and did not rename the folders in the previous step):  
+2. Now, we have to set a config variable (it will be a file .`pmgrc.yaml` in your home folder) so pymatgen can find the potentials and add your default functional as well (this could also be PBE_54) if you have this potential family and did not rename the folders in the previous step):  
 `pmg config --add PMG_VASP_PSP_DIR <YourPath>/pps`
 `pmg config --add PMG_DEFAULT_FUNCTIONAL PBE`
-3. For integration of the Materials Project REST API, you should register for free at the website [https://materialsproject.org/](https://materialsproject.org/) and get an API Key from your dashboard there. Put it in the configuration file:  
+3. For the integration of the Materials Project REST API, you should register for free at the website [https://materialsproject.org/](https://materialsproject.org/) and get an API Key from your dashboard there. Put it in the configuration file:  
     `pmg config --add PMG_MAPI_KEY <Your_API_Key>`
 
 [Back to top](#toc)
@@ -204,20 +204,20 @@ pps
 ]
 ~~~
  - Navigate to a scratch directory and run the workflow (without a scheduler) with `rlaunch rapidfire`
- - Afterwards you can run `lpad get_wflows` again to see that the state has changed from "READY" to "COMPLETED"
+ - Afterwards, you can run `lpad get_wflows` again to see that the state has changed from "READY" to "COMPLETED"
  - It would probably be a good idea to continue with the [tutorial of Atomate](https://atomate.org/running_workflows.html) if you are not familiar with it already, but you can also jump straight into TriboFlow in the next section.
 
 [Back to top](#toc)
 
 ## A note about atomate<a name="customatomate"></a>
-Atomate supplies a buch of Fireworks and workflows that are used in TriboFlow. However, we have added a little more custom functionality to it. Mainly enabling the copy of the `vdw_kernel.bindat` file for `OptimizeFW`, `StaticFW` and `TransmuterFW` completely analogous to the way it was implemented in `ScanOptimizeFW` already. Another small modification concerns the copying of `WAVECAR` files from a relaxation to a `StaticFW`, which was not possible. TriboFlow automatically installs atomate from a forked repo, so those changes are implemented automatically during installation. Of course this is not an ideal solution, and we strive to have something similar implemented in the official atomate version, but so far we were not successful.
+Atomate supplies a bunch of Fireworks and workflows that are used in TriboFlow. However, we have added a little more custom functionality to it. Mainly enabling the copy of the `vdw_kernel.bindat` file for `OptimizeFW`, `StaticFW` and `TransmuterFW` completely analogous to the way it was implemented in `ScanOptimizeFW` already. Another small modification concerns the copying of `WAVECAR` files from a relaxation to a `StaticFW`, which was not possible. TriboFlow automatically installs atomate from a forked repo, so those changes are implemented automatically during installation. Of course, this is not an ideal solution, and we strive to have something similar implemented in the official atomate version, but so far, we were not successful.
 
 [Back to top](#toc)
 
 ## Using TriboFlow<a name="using"></a>
 This section is not really a complete user manual and more of a quickstart guide. More documentation is going to follow once the package is getting ready to be released.
 ### Running a workflow<a name="runningawf"></a>
-Main workflows are located in the `triboflow.workflows.main` module. To run a workflow one has to import it from there and pass the input parameters in a dictionary.
+Main workflows are located in the `triboflow.workflows.main` module. To run a workflow, one has to import it from there and pass the input parameters in a dictionary.
 ### The Heterogeneous_WF
 This workflow converges the computational parameters and the lattice parameters of two materials, constructs slabs from them using the supplied Miller indices to define the surface direction and matches those slabs to an interface.
 In the (near future), also the PES and PPES will be calculated alongside relevant tribological data.
@@ -263,40 +263,40 @@ The input dictionary has to include the  4 keys, which each has to contain anoth
  - `computational_params = {'use_vdw': <True or False>}`
  - `interface_params = {'max_area': <Max crossection of the matched cell>}`
  
-It is pretty self explanatory what these input are for: The two materials need to be defined (note that just defining the formula will fetch the structure with the lowest energy that matches the formula! Provide an 'mp_id' key for a clear selection) and need a surface orientation. Van der Waals forces can be taken into account or disregarded, and a maximal tolerated cell cross section area (in Angstrom squared) needs to be given to avoid humongous cells during the interface matching process. All other inputs have default values, which can be found (and modified on your own risk) in `triboflow/defaults.json` or are derived from the other ones if not especially provided.
+It is pretty self-explanatory what these inputs are for: The two materials need to be defined (note that just defining the formula will fetch the structure with the lowest energy that matches the formula! Provide an 'mp_id' key for a clear selection) and need a surface orientation. Van der Waals forces can be taken into account or disregarded, and a maximal tolerated cell cross-section area (in Angstrom squared) must be given to avoid humongous cells during the interface matching process. All other inputs have default values, which can be found (and modified at your own risk) in `triboflow/defaults.json` or are derived from the other ones if not especially provided.
 A full list of possible inputs with types are:
 1. material_1 (and material_2):
-	- formula (str)
-	- miller (list of int, or single str)
-	- mpid (str)
-	- thick_min (int)
+   - formula (str)
+   - miller (list of int, or single str)
+   - mpid (str)
+   - thick_min (int)
     - thick_max (int)
-	- thick_incr (int)
-	- vacuum (float)
+   - thick_incr (int)
+   - vacuum (float)
 2. computational_params:
-	- use_vdw (bool, or str)
-	- volume_tolerance (float)
-	- energy_tolerance (float)
-	- use_spin (bool, or str)
-	- BM_tolerance (float)
-	- functional (str)
-	- encut (float)
-	- k_dens (float)
-	- is_metal (bool)
-	- surfene_thr (float)
+   - use_vdw (bool, or str)
+   - volume_tolerance (float)
+   - energy_tolerance (float)
+   - use_spin (bool, or str)
+   - BM_tolerance (float)
+   - functional (str)
+   - encut (float)
+   - k_dens (float)
+   - is_metal (bool)
+   - surfene_thr (float)
 3. interface_params:
-	- max_area (float)
-	- interface_distance (float)
-	- max_mismatch (float)
-	- max_angle_diff (float)
-	- r1r2_tol (float)
+   - max_area (float)
+   - interface_distance (float)
+   - max_mismatch (float)
+   - max_angle_diff (float)
+   - r1r2_tol (float)
 
 [Back to top](#toc)
 
 ### Looking at the results<a name="results"></a>
-The results of TribolFlow are saved in a separate MongoDB database, which nevertheless is hosted on the same server  (note that the `directoryPerDB: true` line in [`mongod.conf`](#mongodconf) assures that the results are stored in a different folder). This database of results is set in the [db.json](#dbjson) file under the key "high_level", while the "database" database is used by FireWorks to store all kinds of stuff. The results are stored in different [collections](https://docs.mongodb.com/manual/core/databases-and-collections/#databases), separated for the functional used (PBE, or SCAN) and then split between bulk, slab, and interfaces results. Data in the triboflow database can be queried of course directly from the [mongo shell](https://docs.mongodb.com/manual/mongo/), but it is probably more useful to use the python interface to MongoDB, [pymongo](https://pymongo.readthedocs.io/en/stable/). Some functions to aid with this are provided in the `triboflow.utils` module. To look quickly at single results or get a feel for how the data is structured in the database, it might be beneficial to install a GUI for MongoDB, like [Compass](https://www.mongodb.com/products/compass). (Note that you can use the web-GUI of Atlas when you are using this cloud based solution instead of a local installation of MongoDB.)
+The results of TriboFlow are saved in a separate MongoDB database, which nevertheless is hosted on the same server  (note that the `directoryPerDB: true` line in [`mongod.conf`](#mongodconf) assures that the results are stored in a different folder). This database of results is set in the [db.json](#dbjson) file under the key "high_level", while the "database" database is used by FireWorks to store all kinds of stuff. The results are stored in different [collections](https://docs.mongodb.com/manual/core/databases-and-collections/#databases), separated for the functional used (PBE, or SCAN) and then split between bulk, slab, and interfaces results. Data in the triboflow database can be queried, of course, directly from the [mongo shell](https://docs.mongodb.com/manual/mongo/), but it is probably more useful to use the python interface to MongoDB, [pymongo](https://pymongo.readthedocs.io/en/stable/). Some functions to aid with this are provided in the `triboflow.utils` module. To look quickly at single results or get a feel for how the data is structured in the database, it might be beneficial to install a GUI for MongoDB, like [Compass](https://www.mongodb.com/products/compass). (Note that you can use the web-GUI of Atlas when you are using this cloud-based solution instead of a local installation of MongoDB.)
 
-Also note that there is a web-GUI provided by FireWorks where you can check out the Workflows and Fireworks in your FireWorks database. Just type `lpad web_gui` for that.
+Also, note that there is a web-GUI provided by FireWorks where you can check out the Workflows and Fireworks in your FireWorks database. Just type `lpad web_gui` for that.
 
 [Back to top](#toc)
 

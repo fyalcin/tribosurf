@@ -8,6 +8,7 @@ Functions that deal with the inputs for surface energy calculations.
     Author: Fırat Yalçın
 
 """
+import itertools
 from datetime import datetime
 
 import numpy as np
@@ -64,7 +65,7 @@ def generate_input_dict(struct, calc_type, tag):
     return input_dict
 
 
-def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
+def get_surfen_inputs_from_slab(slab, sg=None, tol=0.1, custom_id=None):
     """
     Generates a dictionary containing all the sub structures needed to compute the
     surface energy of the given slab.
@@ -73,7 +74,7 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
     ----------
     slab : pymatgen.core.surface.Slab
         Pymatgen Slab object.
-    SG : pymatgen.core.surface.SlabGenerator
+    sg : pymatgen.core.surface.SlabGenerator
         Pymatgen SlabGenerator object. Necessary to generate substructures for
         non-stoichiometric slabs with a specific termination.
         The default is None.
@@ -108,6 +109,10 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
     ouc_input = generate_input_dict(ouc, 'static', 'ouc')
     millerstr = ''.join([str(i) for i in slab.miller_index])
     inputs_dict = {'struct': slab,
+                   'primitive': sg.primitive,
+                   'lll_reduce': sg.lll_reduce,
+                   'max_normal_search': sg.max_normal_search,
+                   'sg_modified': getattr(slab, 'param_modified', False),
                    'custom_id': custom_id,
                    'inputs': [ouc_input],
                    'slab_params': {'sym': sym,
@@ -124,9 +129,9 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
         pmg_layer_size = slab.pmg_layer_size
     except AttributeError:
         ouc_layers = len(Shaper.get_layers(ouc, tol))
-        print('Your slab does not have a "pmg_layer_size" attribute which is needed to'
-              'determine if a slab has complementary terminations. The workflow will proceed'
-              'assuming that your slab has complementary terminations, which could lead to'
+        print('Your slab does not have a "pmg_layer_size" attribute which is needed to\n'
+              'determine if a slab has complementary terminations. The workflow will proceed\n'
+              'assuming that your slab has complementary terminations, which could lead to\n'
               'incorrect surface energies.')
         comp = True
         pmg_layer_size = ouc_layers
@@ -143,7 +148,7 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
             # a stoichiometric version of the slab with terminations that are complementary
             # to each other, this is done by SlabGenerator.get_slab() which always creates
             # a stoichiometric slab.
-            sto_slab = SG.get_slab(slab.shift, tol)
+            sto_slab = sg.get_slab(slab.shift, tol)
             sto_slab_layers = len(Shaper.get_layers(sto_slab, tol))
             # Since SlabGenerator creates a larger slab than we want, we remove layers
             # and the number of layers removed is an integer multiple of the number of layers
@@ -171,11 +176,11 @@ def get_surfen_inputs_from_slab(slab, SG=None, tol=0.1, custom_id=None):
             # For non-stoichiometric slabs, we need the stoichiometric versions in order
             # to calculate the cleavage energy which is a component in the surface energy
             # calculation.
-            all_shifts = SG._calculate_possible_shifts(tol)
+            all_shifts = sg._calculate_possible_shifts(tol)
             top_shift_index = all_shifts.index(slab.shift)
             bot_shift_index = (top_shift_index - slab_layers) % len(all_shifts)
-            sto_slab_top = SG.get_slab(slab.shift, tol)
-            sto_slab_bot = SG.get_slab(all_shifts[bot_shift_index], tol)
+            sto_slab_top = sg.get_slab(slab.shift, tol)
+            sto_slab_bot = sg.get_slab(all_shifts[bot_shift_index], tol)
             sto_slab_layers = len(Shaper.get_layers(sto_slab_top, tol))
             layers_to_remove = int(pmg_layer_size * np.floor((sto_slab_layers - slab_layers) / ouc_layers))
             target_layers = sto_slab_layers - layers_to_remove
@@ -253,10 +258,9 @@ def get_surfen_inputs_from_mpid(mpid,
         surface energy calculations of the material described by its MP-id.
 
     """
-
+    tol = sg_params.get('tol')
     coll = f'{functional}.bulk_data'
     candidates = generate_candidate_slabs_from_mpid(mpid, sg_params, sg_filter, coll, db_file, high_level)
-    tol = sg_params.get('tol')
     inputs_list = [get_surfen_inputs_from_slab(c[0], c[1], tol, custom_id) for c in candidates]
     inputs_list = update_inputs_list(inputs_list, comp_params)
 
@@ -444,10 +448,10 @@ def put_surfen_inputs_into_db(inputs_list, sg_params, comp_params, fltr, coll, d
 
     """
     nav = Navigator(db_file, high_level)
-    for slab in inputs_list:
-        inputs = slab.get('inputs')
-        slab_params = slab.get('slab_params')
-        slab = slab.get('struct')
+    for slab_dict in inputs_list:
+        inputs = slab_dict.get('inputs')
+        slab_params = slab_dict.get('slab_params')
+        slab = slab_dict.get('struct')
         for calc in inputs:
             struct = calc['struct']
             uid_input = calc['uid']
@@ -463,11 +467,16 @@ def put_surfen_inputs_into_db(inputs_list, sg_params, comp_params, fltr, coll, d
                 upsert=True)
         loc_slab = '.'.join(loc[:3])
 
-        tol = sg_params.get('tol')
+        tol = sg_params.get('tol', 0.1)
         layers = Shaper.get_layers(slab, tol)
         top_layer = [str(slab[site].species) for site in layers[max(layers)]]
         bot_layer = [str(slab[site].species) for site in layers[min(layers)]]
         terminations = {'top': top_layer, 'bottom': bot_layer}
+
+        sg_params.update({'primitive': slab_dict['primitive'],
+                          'lll_reduce': slab_dict['lll_reduce'],
+                          'max_normal_search': slab_dict['max_normal_search'],
+                          'param_modified': slab_dict['sg_modified']})
 
         nav.update_data(
             collection=coll,
@@ -555,10 +564,10 @@ def generate_candidate_slabs_from_mpid(mpid,
      mpid : str
         Unique MaterialsProject ID describing the structure.
     sg_params : dict
-        Dict of parameters used in the SlabGenerator. For info about required
+        Dictionary of parameters used in the SlabGenerator. For info about required
         and optional keys, refer to Shaper.generate_slabs()
     sg_filter : dict
-        Dict of parameters used to filter the generated slabs.
+        Dictionary of parameters used to filter the generated slabs.
         Required keys are:
             method
             <method_prefix>_param
@@ -584,34 +593,77 @@ def generate_candidate_slabs_from_mpid(mpid,
 
     """
     bulk_conv = get_conv_bulk_from_mpid(mpid, coll, db_file, high_level)
-    slabs_list, SG_dict = Shaper.generate_slabs(bulk_conv, sg_params)
-    bvs = [slab.energy for slab in slabs_list]
+    if sg_params.get('minimize_structures', False):
+        params_dict = {}
+        # it's difficult to predict which combinations of primitive, lll_reduce, and max_normal_search
+        # will result in the smallest structures, so we generate slabs for all possible combinations
+        for prim, lll, mns in itertools.product(*[[True, False], [True, False], ['max', None]]):
+            sg_params.update({'primitive': prim,
+                              'lll_reduce': lll,
+                              'max_normal_search': mns})
+            slabs_dict, sg_dict = Shaper.generate_slabs(bulk_conv, sg_params)
+            params_dict[(prim, lll, mns)] = {}
+            for hkl, slabs in slabs_dict.items():
+                ortho_weight = sum([np.linalg.norm(np.cross(np.cross(slab.lattice.matrix[0], slab.lattice.matrix[1]),
+                                                            slab.lattice.matrix[2])) for slab in slabs])
+                # we assign costs to each combination of parameters using number of sites in structures
+                weight = sum([1.5 * slab.num_sites + slab.oriented_unit_cell.num_sites for slab in slabs])
+                params_dict[(prim, lll, mns)][hkl] = {'weight': round(weight),
+                                                      'slabs': slabs,
+                                                      'slabgen': sg_dict[hkl]}
 
-    # lll = sg_params.get('lll_reduce')
-    # prim = sg_params.get('prim')
-    # sym = sg_params.get('symmetrize')
-    # mns = sg_params.get('mns')
-    # formula = slabs_list[0].composition.reduced_formula
-    # for index, slab in enumerate(slabs_list):
-    #     miller = ''.join([str(m) for m in slab.miller_index])
-    #     slab.to('poscar', f'~/{formula}_{miller}_{index}_lll_{lll}_prim_{prim}_sym_{sym}_mns_{mns}.vasp')
+        # ws = {hkl: {k: v[hkl]['weight'] for k, v in params_dict.items()} for hkl in sg_dict}
+        opt_slabs_dict = {}
+        opt_sg_dict = {}
+        for hkl in slabs_dict:
+            ws = {k: v[hkl]['weight'] for k, v in params_dict.items()}
+            opt_param = min(ws, key=ws.get)
+            # we choose the parameters that minimize the structures for each miller index
+            # In the end, we may have different parameters for different hkl
+            opt_slabs_dict[hkl] = params_dict[opt_param][hkl]['slabs']
+            opt_sg_dict[hkl] = params_dict[opt_param][hkl]['slabgen']
+        slabs_dict = opt_slabs_dict
+        sg_dict = opt_sg_dict
+    else:
+        slabs_dict, sg_dict = Shaper.generate_slabs(bulk_conv, sg_params)
 
+    # this is there further filtering with respect to bond valence sum happens
     method = sg_filter.get('method')
-    if method == 'bvs_threshold':
-        bvs_tol = sg_filter.get('bvs_param')
-        min_bvs = min(bvs)
-        filtered_slabs = [slab for slab in slabs_list if slab.energy / min_bvs - 1 < bvs_tol]
-    elif method == 'bvs_min_N':
-        N = sg_filter.get('bvs_param')
-        if N < len(slabs_list):
-            sorted_ind = np.argsort(bvs)
-            filtered_slabs = [slabs_list[i] for i in sorted_ind[:N]]
+    if method:
+        slabs_list = [slab for slabs_by_hkl in slabs_dict.values() for slab in slabs_by_hkl]
+        bvs_list = [slab.energy for slab in slabs_list]
+        if method == 'bvs_threshold':
+            # here, we take all slabs with BVS values within a threshold of the minimum one encountered
+            bvs_tol = sg_filter.get('bvs_param')
+            min_bvs = min(bvs_list)
+            filtered_slabs = [slab for slab in slabs_list if slab.energy / min_bvs - 1 < bvs_tol]
+        elif method == 'bvs_min_N':
+            # here, we take N slabs with the lowest bond valence sums
+            N = sg_filter.get('bvs_param')
+            if N < len(slabs_list):
+                sorted_ind = np.argsort(bvs_list)
+                filtered_slabs = [slabs_list[i] for i in sorted_ind[:N]]
+            else:
+                filtered_slabs = slabs_list
+        elif method == 'bvs_min_N_hkl':
+            # if we instead want at least some slabs for every hkl, we can use this to get the N
+            # slabs with the lowest BVS for each hkl
+            N = sg_filter.get('bvs_param')
+            filtered_slabs = []
+            for hkl, slabs in slabs_dict.items():
+                if N < len(slabs):
+                    bvs_list_hkl = [slab.energy for slab in slabs]
+                    sorted_ind = np.argsort(bvs_list_hkl)
+                    filtered_slabs += [slabs[i] for i in sorted_ind[:N]]
+                else:
+                    filtered_slabs += slabs
         else:
             filtered_slabs = slabs_list
+        slabs_list = filtered_slabs
     else:
-        filtered_slabs = slabs_list
+        slabs_list = [slab for slab_list in slabs_dict.values() for slab in slab_list]
 
-    return [(slab, SG_dict[slab.miller_index]) for slab in filtered_slabs]
+    return [(slab, sg_dict[slab.miller_index]) for slab in slabs_list]
 
 
 def set_by_path(root, items, value):

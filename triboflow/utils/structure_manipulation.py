@@ -175,13 +175,18 @@ def slab_from_file(filename, mpid, functional, miller, db_file='auto', high_leve
     struct = Structure.from_file(filename)
     SG = get_SG_from_mpid(mpid, functional, miller, db_file, high_level)
     tmp_slab = SG.get_slabs()[0]
-    ouc = Shaper.get_constrained_ouc(tmp_slab)
-    scale_factor = struct.lattice.a/ouc.lattice.a
-    scale_array = ((scale_factor, 0, 0), (0, scale_factor, 0), (0, 0, scale_factor))
-    deformer = DeformStructureTransformation(deformation=scale_array)
-    scaled_ouc = deformer.apply_transformation(ouc)
+    ouc = Shaper.get_matching_ouc(tmp_slab)
+    if ouc:
+        scale_factor = struct.lattice.a/ouc.lattice.a
+        scale_array = [(scale_factor, 0, 0), (0, scale_factor, 0), (0, 0, scale_factor)]
+        deformer = DeformStructureTransformation(deformation=scale_array)
+        ouc = deformer.apply_transformation(ouc)
+    else:
+        print(f'Matching OUC could not be found for the structure loaded from file. A non-matching\n'
+              f'OUC will be used instead. Results are still useful.')
+        ouc = SG.oriented_unit_cell
     slab = Slab(lattice=struct.lattice, species=struct.species, coords=struct.frac_coords, miller_index=miller,
-                oriented_unit_cell=scaled_ouc, shift=0, scale_factor=SG.slab_scale_factor)
+                oriented_unit_cell=ouc, shift=0, scale_factor=SG.slab_scale_factor)
     return slab, SG
 
 

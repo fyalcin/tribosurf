@@ -82,17 +82,13 @@ def attr_to_dict(obj, attrs):
 
 def get_subset_indices(list1, list2):
     """
-    checks if list1 is a sublist of list2
+    checks if list1 is a sublist of list2, and if it is, return all the possible
+    matches
     """
     couples = list(itertools.permutations(list2, len(list1)))
     indices = list(itertools.permutations(range(len(list2)), len(list1)))
-    try:
-        index = indices[couples.index(tuple(list1))]
-    except:
-        return False
-    else:
-
-        return index
+    matches = [indices[i] for i, x in enumerate(couples) if np.allclose(x, list1)]
+    return matches
 
 
 class Shaper:
@@ -102,7 +98,7 @@ class Shaper:
         """
         Simple method to calculate the projected heights of the spacings
         between layers in the given structure.
-    
+
         Parameters
         ----------
         struct : pymatgen.core.surface.Slab
@@ -116,13 +112,13 @@ class Shaper:
             values are 0, 1, and 2, which correspond to the first, second,
             and third lattice vectors respectively.
             The default is 2.
-    
+
         Returns
         -------
         list
             list of floats representing the projected distances between layers
             along the surface normal direction in angstroms
-    
+
         """
 
         # Layer info that contains the c-coordinates and sites
@@ -150,7 +146,7 @@ class Shaper:
         """
         Internal method to calculate the projected height of a specific region.
         For more than one slab region, the total height is calculated.
-    
+
         Parameters
         ----------
         struct : pymatgen.core.structure.Structure
@@ -166,19 +162,19 @@ class Shaper:
             values are 0, 1, and 2, which correspond to the first, second,
             and third lattice vectors respectively.
             The default is 2.
-    
+
         Raises
         ------
         ValueError
             Simple check for region keyword to see if it's one of allowed values.
-    
+
         Returns
         -------
         proj_height : float
             Projected height of the region. The thickness or height is projected
             along the hkl direction which is assumed to be the normal direction
             to the first two lattice vectors of the passed structure.
-    
+
         """
 
         # proj_height = Shaper.get_hkl_projection(struct.lattice.matrix[direction], struct)
@@ -239,7 +235,7 @@ class Shaper:
         """
         # Input slab is first centered for the cases where the slab spills
         # outside the box from the top and the bottom
-        struct_centered = center_slab(struct.copy(sanitize=True))
+        struct_centered = center_slab(struct.copy())
         initial_thickness = Shaper.get_proj_height(struct_centered, 'slab')
 
         if slab_thickness:
@@ -253,6 +249,7 @@ class Shaper:
                     while initial_thickness - sum(spacings[:layers_to_remove]) < min_thick_A:
                         layers_to_remove -= chunk_size
                 else:
+                    print(f'Slab is already smaller than min_thick_A, resizing halted..')
                     layers_to_remove = 0
             if layers_to_remove > 0:
                 struct_resized = Shaper.remove_layers(struct_centered, layers_to_remove,
@@ -290,7 +287,7 @@ class Shaper:
     def modify_vacuum(struct, vac_thick, method='to_value', center=True):
         """
         Method to modify the vacuum region in a structure.
-    
+
         Parameters
         ----------
         struct : pymatgen.core.structure.Structure
@@ -305,12 +302,12 @@ class Shaper:
             Whether to center the slab in the resulting structure inside
             the vacuum region.
             The default is True.
-    
+
         Returns
         -------
         modified_struct : pymatgen.core.structure.Structure
             Modified pymatgen Structure object.
-    
+
         """
 
         # Check if a Slab or Structure is passed and proceed accordingly
@@ -386,14 +383,14 @@ class Shaper:
         """
         Finds the layers in the structure taking z-direction as the primary
         direction such that the layers form planes parallel to xy-plane.
-    
+
         Parameters
         ----------
         struct : pymatgen.core.structure.Structure
             Main object in pymatgen to store structures. Has to be given in a
             way that the first two lattice vectors lie on a plane perpendicular
             to a given miller direction.
-    
+
         tol : float, optional
             Tolerance parameter to cluster sites into layers. The default is 0.1.
 
@@ -402,13 +399,13 @@ class Shaper:
             and they correspond to the first, second, and the third lattice
             vectors respectively.
             The default is 2.
-    
+
         Returns
         -------
         layers : dict
             Dictionary with keys as z-coords of layers and values as the
             indices of sites that belong to that layer.
-    
+
         """
         # number of sites in the structure
         n = len(struct)
@@ -445,7 +442,7 @@ class Shaper:
         """
         Removes layers from the bottom of the slab while updating the number
         of bonds broken in the meantime.
-    
+
         Parameters
         ----------
         slab : pymatgen.core.surface.Slab
@@ -453,7 +450,7 @@ class Shaper:
         num_layers : int
             Number of layers to remove from the structure
         tol : float, optional
-            Tolerance to use in the identification of the layers. 
+            Tolerance to use in the identification of the layers.
             The default is 0.1.
         method : str, optional
             Whether to remove num_layers or remove layers until the
@@ -465,12 +462,12 @@ class Shaper:
         center : bool, optional
             Whether to center the slab in the vacuum after removing layers.
             The default is 'True'.
-    
+
         Returns
         -------
         slab_copy : pymatgen.core.surface.Slab
             Copy of the input Slab structure with layers removed.
-    
+
         """
         layers = Shaper.get_layers(slab, tol)
         if num_layers > len(layers):
@@ -496,7 +493,7 @@ class Shaper:
         """
         Compute the average distance between the slabs layers disregarding the
         vacuum region.
-    
+
         Parameters
         ----------
         slab : pymatgen.core.surface.Slab
@@ -508,7 +505,7 @@ class Shaper:
         -------
         av_spacing : float
             Average layer spacing
-    
+
         """
         spacings = Shaper.get_layer_spacings(slab, tol)
         spacings_no_vac = np.delete(spacings,
@@ -635,6 +632,8 @@ class Shaper:
         species = [str(i) for i in struct.species]
         for s_index, site in enumerate(struct):
             for nn in nn_list[s_index]:
+                if nn_method == 'BNN':
+                    nn = nn['site']
                 c_range = np.round(sorted([site.frac_coords[2], nn.frac_coords[2]]), 3)
                 if c_range[0] != c_range[1]:
                     nn_site_index = nn.index
@@ -665,14 +664,14 @@ class Shaper:
         return np.linalg.norm(np.cross(mat[0], mat[1]))
 
     @staticmethod
-    def bonds_by_shift(SG, nn_method='all', tol=0.1, cutoff=5.0):
+    def bonds_by_shift(sg, nn_method='all', tol=0.1, cutoff=5.0):
         """
         Calculates the bond valence sums of the broken bonds corresponding to
         all the possible shifts
 
         Parameters
         ----------
-        SG : pymatgen.core.surface.SlabGenerator
+        sg : pymatgen.core.surface.SlabGenerator
             Pymatgen SlabGenerator object to extract the possible shifts in a
             specific orientation.
         tol : float, optional
@@ -689,10 +688,10 @@ class Shaper:
             broken bonds at each shift, scaled by the area of the x-y plane.
 
         """
-        ouc = SG.oriented_unit_cell
+        ouc = sg.oriented_unit_cell
         area = Shaper.get_surface_area(ouc)
         c_ranges = Shaper.get_c_ranges(ouc, nn_method, cutoff)
-        shifts = np.round(SG._calculate_possible_shifts(tol=tol), 4)
+        shifts = np.round(sg._calculate_possible_shifts(tol=tol), 4)
         bbs = {}
         for shift in shifts:
             bbs[shift] = 0
@@ -820,7 +819,7 @@ class Shaper:
                 preserve_terminations: value -> bool, optional
                 Context: Pymatgen sometimes generates more than one unique slab for a given miller
                          index, meaning there are distinct terminations for each one. This tag
-                         determines whether or not to preserve the terminations when resizing slabs.
+                         determines whether to preserve the terminations when resizing slabs.
                          This is done accomplished by removing layers in 'chunks' where each chunk
                          corresponds to a portion of the oriented unit cell with height equal to
                          the distance between miller planes for the given conventional bulk structure.
@@ -845,14 +844,19 @@ class Shaper:
         -------
         slabs : list
             List of all the slabs consistent with the given parameters
-        SG_dict: dict
+        sg_dict: dict
             Dict with keys as miller indices and values corresponding
             pymatgen.core.surface.SlabGenerator objects.
 
         """
+
+        # if there is a max_index parameter in sg_params, it takes precedence
+        # over miller parameters, and we generate all symmetrically distinct
+        # miller indices up to a maximum index of max_index
         max_index = sg_params.get('max_index')
         if max_index:
             miller = get_symmetrically_distinct_miller_indices(bulk_conv, max_index)
+            # miller = [m for m in miller if max_index in m]
         else:
             miller = sg_params.get('miller')
             if isinstance(miller[0], int):
@@ -860,29 +864,32 @@ class Shaper:
             else:
                 miller = [(*m,) for m in miller]
 
-        slab_thick = sg_params.get('slab_thick')
-        vac_thick = sg_params.get('vac_thick')
-        mns = sg_params.get('max_normal_search')
-        lll_reduce = sg_params.get('lll_reduce', True)
-        primitive = sg_params.get('prim', True)
         tol = sg_params.get('tol')
-
-        SG_dict = {}
-        slabs_list = []
+        mns = sg_params.get('max_normal_search')
+        sg_dict = {}
+        slabs_dict = {}
         for m in miller:
-            print(m)
+            # we need some parameters to use in SlabGenerator, so we extract those
+            # from the input sg_params and put them in pmg_sg_params
+            pmg_sg_params = {'initial_structure': bulk_conv,
+                             'min_slab_size': sg_params['slab_thick'],
+                             'min_vacuum_size': sg_params['vac_thick'],
+                             'lll_reduce': sg_params['lll_reduce'],
+                             'center_slab': sg_params.get('center_slab', True),
+                             'in_unit_planes': sg_params.get('in_unit_planes', True),
+                             'primitive': sg_params['primitive'],
+                             'reorient_lattice': True}
+
+            # the actual max_normal_search used in SlabGenerator is defined using
+            # the corresponding max_normal_search in sg_params. We use two options,
+            # either "max" or None. Then the pmg_sg_params is updated with these
             max_normal_search = max([abs(i) for i in m]) if mns == 'max' else mns
-            SG = SlabGenerator(initial_structure=bulk_conv,
-                               miller_index=m,
-                               min_slab_size=slab_thick,
-                               min_vacuum_size=vac_thick,
-                               lll_reduce=lll_reduce,
-                               center_slab=sg_params.get('center_slab', True),
-                               in_unit_planes=sg_params.get('in_unit_planes', True),
-                               primitive=primitive,
-                               max_normal_search=max_normal_search,
-                               reorient_lattice=True)
-            slabs = SG.get_slabs(ftol=tol, symmetrize=sg_params.get('symmetrize', False))
+            pmg_sg_params.update({'max_normal_search': max_normal_search,
+                                  'miller_index': m})
+
+            # we first try a SlabGenerator with the given sg_params, if things go as
+            # expected we proceed with this
+            sg = SlabGenerator(**pmg_sg_params)
 
             ouc = Shaper.get_matching_ouc(slabs[0])
             if not ouc:
@@ -905,17 +912,61 @@ class Shaper:
             # the distance between miller planes, we need to figure out how many
             # layers this d_hkl portion corresponds to in order to preserve terminations
             d_hkl = bulk_conv.lattice.d_hkl(m)
-            ouc_layers = len(Shaper.get_layers(ouc, tol))
-            ouc_height = Shaper.get_proj_height(ouc)
-            print(f'OUC RATIO THING IS {ouc_height / d_hkl}')
+            ouc_layers = len(Shaper.get_layers(sg.oriented_unit_cell, tol))
+            ouc_height = Shaper.get_proj_height(sg.oriented_unit_cell)
             # we calculate how many layers pymatgen considers a single layer here
             pmg_layer_size = int(ouc_layers / round(ouc_height / d_hkl))
+            min_thick_A = sg_params.get('min_thick_A', None)
+            # if there is a min_thick_A key in sg_params, we have to ensure that the slabs we initially
+            # generate (before resizing) have thicknesses greater than this value. For this, we modify
+            # the corresponding min_slab_size parameter in pmg_sg_params by calculating the number of layers
+            # needed to reach min_thick_A.
+            if min_thick_A:
+                pmg_sg_params['min_slab_size'] = max(np.ceil(min_thick_A / d_hkl) + 1, sg_params['slab_thick'])
+                sg = SlabGenerator(**pmg_sg_params)
+            slabs = sg.get_slabs(ftol=tol, symmetrize=sg_params.get('symmetrize', False))
 
+            # we check if we can get an oriented unit cell with the same lateral lattice
+            # parameters and gamma angle as the slab, for consistency with brillouin zone
+            # sampling
+            ouc = Shaper.get_matching_ouc(slabs[0])
+            if not ouc:
+                # if no such ouc exists, we turn off primitive and lll_reduce, since
+                # only when either one or both of these are True, we have issues with
+                # finding matching ouc
+                print('OUC matching failed with given sg params, modifying primitive and lll_reduce..')
+                pmg_sg_params.update({'primitive': False,
+                                      'lll_reduce': False})
+                sg = SlabGenerator(**pmg_sg_params)
+                slabs = sg.get_slabs(ftol=tol, symmetrize=sg_params.get('symmetrize', False))
+                # we set a flag to show that sg params are modified, and we will assign
+                # this as an attribute to the Slab objects, so that we can tell if the slabs
+                # generated result from a modified sg
+                param_modified = True
+                ouc = Shaper.get_matching_ouc(slabs[0])
+                if not ouc:
+                    # if we still don't have a matching ouc, which should not happen
+                    # we print and a non-matching ouc is used instead.
+                    print(f'Matching oriented unit cell cannot be found. Your reference energies'
+                          f'might not be suitable for a surface energy convergence scheme.')
+            else:
+                param_modified = False
+
+            # we change the oriented unit cells of slabs to the matching ouc that we find.
+            for slab in slabs:
+                slab.oriented_unit_cell = ouc
+
+            # resize flag is used generate slabs with user-defined thicknesses in number of layers.
+            # This is done by removing layers from the bottom of the pymatgen generated slabs since
+            # they are usually thicker than one would expect.
             resize = sg_params.get('resize', True)
+            slab_thick, vac_thick = sg_params['slab_thick'], sg_params['vac_thick']
             if resize:
+                # if we want to preserve terminations, we must remove layers in chunks
+                # and these chunk sizes are determined by pmg_layer_size
                 preserve_terminations = sg_params.get('preserve_terminations')
                 chunk_size = pmg_layer_size if preserve_terminations else 1
-                min_thick_A = sg_params.get('min_thick_A', None)
+
                 slabs = [Shaper.resize(slab, slab_thick, vac_thick, tol=tol,
                                        chunk_size=chunk_size, min_thick_A=min_thick_A)
                          for slab in slabs]
@@ -923,19 +974,20 @@ class Shaper:
                 # TODO: Remove this once resize is confirmed working. Only here to generate
                 # TODO: slabs with sizes comparable to the initial slab_thick with pymatgen
                 slab_thick_pmg = np.ceil(slab_thick / pmg_layer_size)
-                SG = SlabGenerator(initial_structure=bulk_conv,
-                                   miller_index=m,
-                                   min_slab_size=slab_thick_pmg,
-                                   min_vacuum_size=vac_thick,
-                                   lll_reduce=lll_reduce,
-                                   center_slab=sg_params.get('center_slab', True),
-                                   in_unit_planes=sg_params.get('in_unit_planes', True),
-                                   primitive=primitive,
-                                   max_normal_search=max_normal_search,
-                                   reorient_lattice=True)
-                slabs = SG.get_slabs(ftol=tol, symmetrize=sg_params.get('symmetrize', False))
+                pmg_sg_params.update({'slab_thick': slab_thick_pmg})
+                sg = SlabGenerator(**pmg_sg_params)
+                slabs = sg.get_slabs(ftol=tol, symmetrize=sg_params.get('symmetrize', False))
                 slabs = [Shaper.resize(slab, vacuum_thickness=vac_thick, tol=tol) for slab in slabs]
 
+            # we assign attributes to slabs if they result from a modified sg, and this is done after resizing
+            # because as soon as a pymatgen structure is copied (such is the case in Shaper.resize()), it loses
+            # all attributes not defined in the copy method. Since param_modified is such an attribute, we need
+            # to add it after resizing the slabs.
+            for slab in slabs:
+                slab.param_modified = param_modified
+
+            # check if slabs list is empty, which only happens when symmetrize is True
+            # and the sg can not find symmetric slabs.
             try:
                 slab = slabs[0]
             except IndexError:
@@ -943,18 +995,21 @@ class Shaper:
                       ' may or may not solve this issue.')
                 continue
 
+            # we assign energies (bond valence sums of broken bonds) to each slab, in this case
+            # unique terminations, and also the pymatgen layer size, which is the number of layers
+            # we can safely remove at once without modifying terminations
             nn_method = 'all'
-            bbs = Shaper.bonds_by_shift(SG, nn_method, tol, cutoff=max(bulk_conv.lattice.abc))
+            bbs = Shaper.bonds_by_shift(sg, nn_method, tol, cutoff=max(bulk_conv.lattice.abc))
             for slab in slabs:
                 slab.energy = bbs[np.round(slab.shift, 4)]
                 slab.pmg_layer_size = pmg_layer_size
 
-            print(
-                f'{ouc.composition.reduced_formula}{m} has {[len(Shaper.get_layers(s, tol)) for s in slabs]} layer slabs'
-                f' with {[s.num_sites for s in slabs]} sites and\n'
-                f'thicknesses {[np.round(Shaper.get_proj_height(s, "slab"), 3) for s in slabs]} Angstroms.')
-            print(f'The OUC has {ouc_layers} layers and d_hkl is {pmg_layer_size} layers.')
-            print(f'Their BVS are {[s.energy for s in slabs]}.\n')
+            # print(
+            #     f'{ouc.composition.reduced_formula}{m} has {[len(Shaper.get_layers(s, tol)) for s in slabs]} layer slabs'
+            #     f' with {[s.num_sites for s in slabs]} sites and\n'
+            #     f'thicknesses {[np.round(Shaper.get_proj_height(s, "slab"), 3) for s in slabs]} Angstroms.')
+            # print(f'The OUC has {ouc_layers} layers and d_hkl is {pmg_layer_size} layers.')
+            # print(f'Their BVS are {[s.energy for s in slabs]}.\n')
 
             if to_file:
                 formula = slabs[0].composition.reduced_formula
@@ -963,10 +1018,10 @@ class Shaper:
                     area = np.round(slab.surface_area, 2)
                     slab.to('poscar', f'{formula}_{hkl}_{area}_{index}.vasp')
 
-            slabs_list += slabs
-            SG_dict[m] = SG
+            slabs_dict[m] = slabs
+            sg_dict[m] = sg
 
-        return slabs_list, SG_dict
+        return slabs_dict, sg_dict
 
     @staticmethod
     def get_constrained_ouc(slab):
@@ -993,22 +1048,79 @@ class Shaper:
 
     @staticmethod
     def get_matching_ouc(slab):
+        """
+        Given a slab, finds an oriented unit cell that matches the lateral lattice parameters
+        and the gamma angle of the slab. Useful for constructing an oriented unit cell to be
+        used as a reference structure for surface energy calculations.
+
+        Parameters
+        ----------
+        slab : pymatgen.core.surface.Slab
+            Pymatgen Slab object whose oriented unit cell we want to constrain.
+
+        Returns
+        -------
+        ouc : pymatgen.core.structure.Structure
+            Constrained oriented unit cell of the input Slab.
+
+        """
+        # applying LLL reduction on a structure sometimes changes the orders of the lattice
+        # parameters and hence, the ordering of the lattice vectors. In order to have a
+        # consistent sampling of Brillouin zone between the slab and the oriented unit cell
+        # we rotate the oriented unit cell to have the same orientation as the slab.
         trans = {0: ((0, 0, 1), (0, 1, 0), (1, 0, 0)),
                  1: ((1, 0, 0), (0, 0, 1), (0, 1, 0))}
-        slab_lattice = np.round(slab.lattice.abc[:2], 6)
         ouc = slab.oriented_unit_cell
-        indices = get_subset_indices(slab_lattice, np.round(ouc.lattice.abc, 6))
-        if not indices:
+        # we first check if the preset OUC matches
+        lattice_match = Shaper._check_lattice_match(slab.lattice, ouc.lattice)
+        # angle_check = ouc.lattice.angles[3 - sum(indices)] == slab.lattice.gamma
+        if not lattice_match:
             ouc = ouc.copy(sanitize=True)
-            indices = get_subset_indices(slab_lattice, np.round(ouc.lattice.abc, 6))
-            if not indices:
+            lattice_match = Shaper._check_lattice_match(slab.lattice, ouc.lattice)
+            if not lattice_match:
                 ouc = Shaper.get_constrained_ouc(slab)
-                indices = get_subset_indices(slab_lattice, np.round(ouc.lattice.abc, 6))
-                if not indices:
+                lattice_match = Shaper._check_lattice_match(slab.lattice, ouc.lattice)
+                if not lattice_match:
                     return None
-        trans_index = 3 - sum(indices)
-        if trans_index == 2:
-            return ouc
+
+        # since the whole reason we do this is to match the kpoint sampling of the slab
+        # and the oriented unit cell in the plane parallel to the surface, we need to align
+        # the matched lattice vectors, and that's why we perform this SupercellTransformation
+        # to make sure we transform the OUC to have the same base vectors as the slab
+        if lattice_match != 2:
+            st = SupercellTransformation(trans[lattice_match])
+            ouc = st.apply_transformation(ouc)
+        return ouc
+
+    @staticmethod
+    def _check_lattice_match(lattice1, lattice2):
+        """
+        checks if lattice1 has the same base as lattice2, ignoring orientations.
+        lattice1 is considered to be the slab in this case. returns the index of
+        the third vector that is not shared between the lattices.
+
+            Parameters
+            ----------
+            lattice1 : pymatgen.core.lattice.Lattice
+                Pymatgen Lattice object that we want to use as a reference.
+            lattice2 : pymatgen.core.lattice.Lattice
+                Pymatgen Lattice object that we want to compare against the reference.
+
+            Returns
+            -------
+            angle_index (int) or None
+            if there is a match, we return the index of the angle between the matched
+            base vectors. This is enough information to go further. If no match is found,
+            we return None
+
+            """
+        matches_ab = get_subset_indices(lattice1.abc[:2], lattice2.abc)
+        if not matches_ab:
+            return None
         else:
-            st = SupercellTransformation(trans[trans_index])
-            return st.apply_transformation(ouc)
+            for match_ab in matches_ab:
+                angle_index = 3 - sum(match_ab)
+                check = np.isclose(lattice1.gamma, lattice2.angles[angle_index])
+                if check:
+                    return angle_index
+            return None

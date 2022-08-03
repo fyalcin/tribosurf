@@ -628,7 +628,6 @@ class FT_MakeHeteroStructure(FiretaskBase):
 
             
 
-
 @explicit_serialize
 class FT_AddSelectiveDynamics(FiretaskBase):
     """Write a POSCAR with selective dynamics added.
