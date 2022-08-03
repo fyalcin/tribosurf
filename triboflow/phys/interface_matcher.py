@@ -337,13 +337,8 @@ class InterfaceMatcher:
         try:
             self.inter_dist = float(initial_distance)
         except:
-<<<<<<< triboflow/phys/interface_matcher.py
             av_spacing_top = Shaper.get_average_layer_spacing(self.top_slab)
             av_spacing_bot = Shaper.get_average_layer_spacing(self.bot_slab)
-=======
-            av_spacing_top = Shaper._get_average_layer_spacing(self.top_slab)
-            av_spacing_bot = Shaper._get_average_layer_spacing(self.bot_slab)
->>>>>>> triboflow/phys/interface_matcher.py
             self.inter_dist = np.mean([av_spacing_top, av_spacing_bot]) + distance_boost
                 
     
@@ -410,11 +405,7 @@ class InterfaceMatcher:
             self.top_miller = slab_2.miller_index
             self.bot_slab = slab_1.get_orthogonal_c_slab()
             self.bot_weight = weight_1
-<<<<<<< triboflow/phys/interface_matcher.py
             self.bot_miller = slab_1.miller_index
-=======
-            self.bot_miller = slab_2.miller_index
->>>>>>> triboflow/phys/interface_matcher.py
             
             
     def __make_3d_lattice_from_2d_lattice(self, slab, uv):
@@ -587,14 +578,7 @@ class InterfaceMatcher:
                                                         
             sc_top.lattice = l_top
             sc_bot.lattice = l_bot
-<<<<<<< triboflow/phys/interface_matcher.py
-
             self.aligned_top_slab, self.aligned_bot_slab = sc_top, sc_bot
-=======
-            
-            flipped_slab = flip_slab(sc_top)
-            self.aligned_top_slab, self.aligned_bot_slab = flipped_slab, sc_bot
->>>>>>> triboflow/phys/interface_matcher.py
 
         return self.aligned_top_slab, self.aligned_bot_slab        
         
@@ -646,16 +630,11 @@ class InterfaceMatcher:
         tcs, bcs = self.get_centered_slabs()
         if not tcs and not bcs:
                 return None
-<<<<<<< triboflow/phys/interface_matcher.py
         
         # Note that the from_slab method of the Inteface object flips the film over!
         # UPDATE ON 27.06.22: After noticing some discrepancies with the high symmetry points
         # we decided to leave the film as is, since it gets flipped once more by the Interface
         # class. This seems to fix the issues with the high symmetry points.
-=======
-        #interface = stack_aligned_slabs(bcs, tcs)
-        
->>>>>>> triboflow/phys/interface_matcher.py
         self.interface = Interface.from_slabs(substrate_slab=bcs,
                                               film_slab=tcs,
                                               gap=self.inter_dist,
