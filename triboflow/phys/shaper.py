@@ -891,6 +891,23 @@ class Shaper:
             # expected we proceed with this
             sg = SlabGenerator(**pmg_sg_params)
 
+            ouc = Shaper.get_matching_ouc(slabs[0])
+            if not ouc:
+                SG = SlabGenerator(initial_structure=bulk_conv,
+                                   miller_index=m,
+                                   min_slab_size=slab_thick,
+                                   min_vacuum_size=vac_thick,
+                                   lll_reduce=False,
+                                   center_slab=sg_params.get('center_slab', True),
+                                   in_unit_planes=sg_params.get('in_unit_planes', True),
+                                   primitive=False,
+                                   max_normal_search=max_normal_search,
+                                   reorient_lattice=True)
+                slabs = SG.get_slabs(ftol=tol, symmetrize=sg_params.get('symmetrize', False))
+                ouc = Shaper.get_matching_ouc(slabs[0])
+            for slab in slabs:
+                slab.oriented_unit_cell = ouc
+
             # since the terminations repeat every d_hkl distance in c direction,
             # the distance between miller planes, we need to figure out how many
             # layers this d_hkl portion corresponds to in order to preserve terminations

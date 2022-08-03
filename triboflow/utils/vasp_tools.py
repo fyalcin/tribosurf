@@ -256,7 +256,7 @@ def get_generalized_kmesh(structure, k_dist, RemoveSymm=False, Vasp6=True):
 
 
 def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
-                                    k_dens_default=12.5, ups={'W': 'W_sv'}):
+                                    k_dens_default=8.5, ups={'W': 'W_sv'}):
     """Make custom vasp settings for static calculations.
     
     Parameters
@@ -313,6 +313,15 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
     uis['ISMEAR'] = -5
     uis['EDIFF'] = 1.0e-6
     uis['SYMPREC'] = 1e-04  # compat some issues that VASP 6.2 has with kpoint lattices
+    #include electrons with l-quantum number up to 6 into the mixer. Helps with convergence
+    #maybe include functionality that sets LMAXMIX dependent on periodic table group
+    # e.g.:
+    # for element in structure.composition.elements:
+    #     if element.group == 3:
+    #         uis['LMAXMIX'] = 6
+    #     elif element.group in [4,5,6,7,8,9,10,11,12]:
+    #         uis['LMAXMIX'] = 4
+    uis['LMAXMIX'] = 6 
 
     if static_type.startswith('bulk_'):
         uis['ALGO'] = 'Fast'
@@ -325,7 +334,7 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
         uis['LREAL'] = '.FALSE.'
 
     # Adjust mixing for slabs that have a very large c axis:
-    if structure.lattice.matrix[-1, 1] > 50.0:
+    if structure.lattice.c > 50.0:
         uis['AMIN'] = 0.05
 
     if comp_parameters.get('functional') in SCAN_list:
@@ -441,7 +450,7 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
 
 
 def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
-                                   k_dens_default=12.5, ups={'W': 'W_sv'}):
+                                   k_dens_default=8.5, ups={'W': 'W_sv'}):
     """Make custom vasp settings for relaxations.
     
     Parameters
@@ -502,12 +511,21 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
     uis['EDIFF'] = 0.5E-5
     uis['LAECHG'] = '.FALSE.'
     uis['SYMPREC'] = 1e-04  # compat some issues that VASP 6.2 has with kpoint lattices
+    #include electrons with l-quantum number up to 6 into the mixer. Helps with convergence
+    #maybe include functionality that sets LMAXMIX dependent on periodic table group
+    # e.g.:
+    # for element in structure.composition.elements:
+    #     if element.group == 3:
+    #         uis['LMAXMIX'] = 6
+    #     elif element.group in [4,5,6,7,8,9,10,11,12]:
+    #         uis['LMAXMIX'] = 4
+    uis['LMAXMIX'] = 6 
 
     if structure.num_sites < 20:
         uis['LREAL'] = '.FALSE.'
 
     # Adjust mixing for slabs that have a very large c axis:
-    if structure.lattice.matrix[-1, 1] > 50.0:
+    if structure.lattice.c > 50.0:
         uis['AMIN'] = 0.05
 
     if relax_type.startswith('slab_') or relax_type.startswith('interface_'):

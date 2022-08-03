@@ -23,6 +23,7 @@ from triboflow.firetasks.utils import FT_UpdateCompParams
 from triboflow.fireworks.common import run_pes_calc_fw, make_pes_fw
 from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
 from triboflow.utils.surfen_tools import get_surfen_inputs_from_mpid
+from triboflow.utils.structure_manipulation import slab_from_structure
 from triboflow.utils.vasp_tools import get_emin_and_emax, get_custom_vasp_static_settings
 
 
@@ -85,6 +86,11 @@ def dielectric_constant_swf(structure,
         epsilon = bulk_data['comp_parameters'].get('epsilon', False)
     except:
         epsilon = False
+        
+    #if we know that the material is metallic, no need to calculate epsilon
+    #since it should be infinite.
+    if comp_parameters.get('is_metal', False):
+        epsilon = 1000000
 
     formula = structure.composition.reduced_formula
     wf_name = f'Dielectric calculation WF for {formula} {mpid}'
@@ -244,7 +250,7 @@ def adhesion_energy_swf(top_slab,
     return add_modify_incar(SWF)
 
 
-def calc_pes_swf(top_slab, bottom_slab,
+def calc_pes_swf(interface,
                  interface_name=None,
                  functional='PBE',
                  comp_parameters={},
@@ -266,17 +272,12 @@ def calc_pes_swf(top_slab, bottom_slab,
     
     Parameters
     ----------
-    top_slab : pymatgen.core.surface.Slab
-        Top slab of the interface.
-    bottom_slab : pymatgen.core.surface.Slab
-        Bottom slab of the interface.
+    interface : pymatgen.core.interface.Interface
+        Interface, Slab or Structrue object containing the unrelaxed interface.
     interface_name : str, optional
         Unique name to find the interface in the database with.
         The default is None, which will lead to an automatic interface_name
         generation which will be printed on screen.
-    bottom_mpid : str, optional
-        ID of the bulk material of the top slab in the MP database.
-        The default is None.
     functional : str, optional
         Which functional to use; has to be 'PBE' or 'SCAN'. The default is 'PBE'
     comp_parameters : dict, optional
@@ -308,27 +309,24 @@ def calc_pes_swf(top_slab, bottom_slab,
 
     """
     try:
-        top_miller = list(top_slab.miller_index)
+        top_miller = interface.interface_properties['film_miller']
+        bot_miller = interface.interface_properties['substrate_miller']
+        if not interface_name:
+            mt = ''.join(str(s) for s in top_miller)
+            mb = ''.join(str(s) for s in bot_miller)
+            interface_name = (interface.film.composition.reduced_formula + '_' + mt + '_' +
+                              interface.substrate.composition.reduced_formula + '_' + mb +
+                              '_AutoGen')
+            print('\nYour interface name has been automatically generated to be:'
+                  '\n {}'.format(interface_name))
     except:
-        raise AssertionError("You have used {} as an input for <top_slab>.\n"
-                             "Please use <class 'pymatgen.core.surface.Slab'>"
-                             " instead.".format(type(top_slab)))
-
-    try:
-        bot_miller = list(bottom_slab.miller_index)
-    except:
-        raise AssertionError("You have used {} as an input for <bot_slab>.\n"
-                             "Please use <class 'pymatgen.core.surface.Slab'>"
-                             " instead.".format(type(bottom_slab)))
-
-    if not interface_name:
-        mt = ''.join(str(s) for s in top_miller)
-        mb = ''.join(str(s) for s in bot_miller)
-        interface_name = (top_slab.composition.reduced_formula + '_' + mt + '_' +
-                          bottom_slab.composition.reduced_formula + '_' + mb +
-                          '_AutoGen')
-        print('\nYour interface name has been automatically generated to be:'
-              '\n {}'.format(interface_name))
+        if not interface_name:
+            mt = mb = 'unkown_miller'
+            interface_name = (interface.film.composition.reduced_formula + '_' + mt + '_' +
+                              interface.substrate.composition.reduced_formula + '_' + mb +
+                              '_AutoGen')
+            print('\nYour interface name has been automatically generated to be:'
+                  '\n {}'.format(interface_name))    
 
     if comp_parameters == {}:
         print('\nNo computational parameters have been defined!\n'
@@ -336,7 +334,7 @@ def calc_pes_swf(top_slab, bottom_slab,
               '   ISPIN = 1\n'
               '   ISMEAR = 0\n'
               '   ENCUT = 520\n'
-              '   kpoint density kappa = 5000\n'
+              '   kpoints_density = 8.5\n'
               'We recommend to pass a comp_parameters dictionary'
               ' of the form:\n'
               '   {"use_vdw": <True/False>,\n'
@@ -346,9 +344,19 @@ def calc_pes_swf(top_slab, bottom_slab,
               '    "k_dens": <int>}\n')
 
     tag = interface_name + '_' + str(uuid4())
+    
+    nav = StructureNavigator('auto', high_level=True)
+    try:
+        nav.get_interface_from_db(interface_name, functional)['unrelaxed_structure']
+    except:
+        nav.insert_data(collection = functional+'.interface_data',
+                        data = {'name': interface_name,
+                                'comp_parameters': comp_parameters,
+                                'unrelaxed_structure': interface.as_dict(),
+                                'top_aligned': interface.film.as_dict(),
+                                'bottom_aligned': interface.substrate.as_dict()})
 
-    FW_1 = run_pes_calc_fw(top_slab=top_slab,
-                           bottom_slab=bottom_slab,
+    FW_1 = run_pes_calc_fw(interface = interface,
                            interface_name=interface_name,
                            functional=functional,
                            comp_parameters=comp_parameters,

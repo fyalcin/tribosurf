@@ -14,7 +14,7 @@ from triboflow.utils.structure_manipulation import (
 
 
 @explicit_serialize
-class FT_UpdateCompParams(FiretaskBase):
+class FT_UpdateInterfaceCompParams(FiretaskBase):
     """ Update the comp-params for interface calculations after convergence.
 
     This Firetask reads the converged bulk parameters from two materials and
@@ -85,6 +85,12 @@ class FT_UpdateCompParams(FiretaskBase):
         metal_1 = bulk_1['comp_parameters']['is_metal']
         metal_2 = bulk_2['comp_parameters']['is_metal']
         metal_inter = any((metal_1, metal_2))
+        if not metal_inter:
+            epsilon_1 = bulk_1['comp_parameters']['epsilon']
+            epsilon_2 = bulk_2['comp_parameters']['epsilon']
+            epsilon_inter = min(epsilon_1, epsilon_2)
+        else:
+            epsilon_inter = 100000
 
         nav_high = Navigator(db_file=db_file, high_level=True)
         nav_high.update_data(
@@ -104,7 +110,8 @@ class FT_UpdateCompParams(FiretaskBase):
             fltr={'name': inter_name},
             new_values={'$set': {'comp_parameters.encut': encut_inter,
                                  'comp_parameters.k_dens': k_dens_inter,
-                                 'comp_parameters.is_metal': metal_inter}})
+                                 'comp_parameters.is_metal': metal_inter,
+                                 'comp_parameters.epsilon': epsilon_inter}})
         
 @explicit_serialize
 class FT_CopyCompParamsToSlab(FiretaskBase):
@@ -532,13 +539,13 @@ class FT_CheckInterfaceParamDict(FiretaskBase):
         #Edit this block according to need, but be careful with the defaults!
         #####################################################################
         essential_keys = ['max_area']
-        additional_keys = ['interface_distance', 'max_mismatch',
-                           'max_angle_diff', 'r1r2_tol']
+        additional_keys = ['interface_distance', 'max_length_tol',
+                           'max_angle_tol', 'max_area_ratio_tol']
         
         defaults = {'interface_distance': 2.0,
-                    'max_mismatch': 0.01,
-                    'max_angle_diff': 1.5,
-                    'r1r2_tol': 0.05}
+                    'max_length_tol': 0.03,
+                    'max_angle_tol': 0.01,
+                    'max_area_ratio_tol': 0.1}
         #####################################################################
          
         input_dict = self['input_dict']

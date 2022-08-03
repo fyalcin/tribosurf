@@ -23,305 +23,235 @@ __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 8th, 2021'
 
 import numpy as np
+import math as m
+from mep.models import Model
+from mep.neb import NEB
+from mep.path import Image
+from scipy.interpolate import interp1d
 
-from triboflow.phys.shear_strength import take_derivative, get_shear_strength_xy
 
 # =============================================================================
 # EVALUATION OF THE MEP
 # =============================================================================
 
-
-def get_mep(lattice, rbf, theta=0., params=None):
+def get_initial_strings(extended_energy_list, xlim, ylim, point_density=20, add_noise=0.01):
     """
-    Calculate the Minimum Energy Path on top of the Potential Surface rbf
+    Make 3 straigth strings that connect minima of the PES.
+    
+    One string each is set up be parallel to the cartesian x and y directions,
+    while the third one is roughly diagonal. The number of points is controlled
+    by the density parameter, and noise can be added to the strings to ensure
+    that some forces are present even if the string is located alongside a 
+    path were no normal forces are found for symmetry reasons.
 
     Parameters
     ----------
-    lattice : numpy.ndarray
-        Vectors of the lattice cell containing the studied interface or surface
-        
-    rbf : scipy.interpolate.rbf.Rbf
-        Contain the information of the interpolation of the potential energy.
-        
-    theta : float, optional
-        Slope of the starting string with respect to the x axis. The MEP will 
-        be calculated starting from this directoin. To select a meaningful
-        starting angle, run get_bs_mep first. Units are radiants.
-        The default value is 0, i.e. x-axis
-        
-    params : dict, optional
-        Computational parameters needed to the algorightm computing the MEP. 
-        The default is None. If left to None, the following values are used:
-        
-        n = 101
-        fac = [0.75, 0.75]
-        h = 0.001
-        nstepmax = 99999
-        tol1 = 1e-7
-        delta = 0.01
-        
-        n : Number of points along the string.
-        fac : the string extension is (-fac, fac)*v, v=x,y. fac = [facx, facy] 
-        h : time-step, limited by ODE step but independent from n1 
-        nstepmax : max number of iteration to get the MEP to converge
-        tol1 : tolerance for the convergence of the MEP
-        delta : discretized step along x and y for integration 
-        
-        You can change these values by providing a dictionary containing where
-        the name of the variables are the keys. Ex. {'n' : 200}
-        You can change all or just some of the parameters.
+    extended_energy_list : np.array
+        High symmetry points with x and y coordinates and the total energy
+        as third collumn.
+    xlim : float
+        maximum x value for the minima search
+    ylim : float
+        maximum y value for the minima search
+    point_density : int, optional
+        Number of points/images per Angstrom. The default is 20.
+    add_noise : float or bool, optional
+        Set either to False or a float value in Angstrom. The default is 0.01.
 
     Returns
     -------
-    mep : numpy.dnarray
-        Set of coordinates along the MEP [x, y]. Run rbf(mep) to see the 
-        potential energy profile along the MEP.
-        
-    mep_convergency : tuple
-        Contains information about the algorithm convergence, i.e. (nstep,tol).
-        nstep : number of steps done by the algorithm
-        tol : final difference between the points of the string
+    string_d : np.array
+        Diagonal string
+    string_x : np.array
+        String in x direction
+    string_y : np.array
+        String in y direction
 
     """
+    energies = extended_energy_list.copy()
+    energies[:, 2] = energies[:, 2] - min(energies[:, 2])
 
-    from scipy.interpolate import interp1d, Rbf
-    
-    # WARNING: A squared lattice need to be provided
-    a = lattice[0, :]
-    b = lattice[1, :]
-    alat_x = a[0]
-    alat_y = b[1]
-    
-    # Initialize the parameters to run the algorithm 
-    n = 101
-    fac = [0.75, 0.75]
-    h = 0.001
-    nstepmax = 99999
-    tol1 = 1e-7
-    delta = 0.01
-    
-    # Check wether some parameters are inserted by the user
-    if params != None and isinstance(params, dict):
-        for k in params.keys():
-            if k == 'n':
-                n = params[k]
-            elif k == 'fac':
-                fac = params[k]
-            elif k == 'h':
-                h = params[k]
-            elif k == 'nstepmax':
-                nstepmax = params[k]
-            elif k == 'tol':
-                tol1 = params[k]
-            elif k == 'delta':
-                delta = params[k]    
-    
-    facx=fac[0]
-    facy=fac[1]
-    xa =-facx*alat_x
-    ya =-facy*alat_y
-    xb = facx*alat_x
-    yb = facy*alat_y    
-    g = np.linspace(0,1,n)
+    minima = [x[:2] for x in energies if (x[2] == 0.0 and
+                                          x[0] >= 0.1 and
+                                          x[0] < xlim - 0.1 and
+                                          x[1] >= 0.1 and
+                                          x[1] < ylim - 0.1)]
 
-    if theta == np.pi/2 or theta == 3*np.pi/2: # y direction
-        x = np.zeros(n)
-        y = (yb-ya)*g+ya
-    else: # best starting direction or x direction
-        x = (xb-xa)*g+xa
-        y = np.tan(theta)*x.copy()
+    start = [xlim, ylim]
+    end = [0.0, 0.0]
+    end_x = [0.0, ylim]
+    end_y = [0.0, 0.0]
+
+    # make a path mostly diagonal through the plotting region
+    for p in minima:
+        if np.linalg.norm(p) < np.linalg.norm(start):
+            start = p
+        if np.linalg.norm(p) > np.linalg.norm(end):
+            end = p
+
+    # make a path mostly in x direction through the plotting region
+    for p in minima:
+        if p[0] > end_x[0] and np.isclose(p[1], start[1], atol=0.01):
+            end_x = p
+    # make a path mostly in y direction through the plotting region
+    for p in minima:
+        if p[1] > end_y[1] and np.isclose(p[0], start[0], atol=0.01):
+            end_y = p
+        
+    npts_x = m.ceil((np.linalg.norm(end_x) - np.linalg.norm(start)) * point_density)
+    npts_y = m.ceil((np.linalg.norm(end_y) - np.linalg.norm(start)) * point_density)
+    npts_d = m.ceil((np.linalg.norm(end) - np.linalg.norm(start)) * point_density)
+
+    string_d = np.linspace(start, end, npts_d)
+    string_x = np.linspace(start, end_x, npts_x)
+    string_y = np.linspace(start, end_y, npts_y)
+    if add_noise:
+        string_d += np.random.normal(0, add_noise, string_d.shape)
+        string_x += np.random.normal(0, add_noise, string_x.shape)
+        string_y += np.random.normal(0, add_noise, string_y.shape)
+    return string_d, string_x, string_y
+
+
+def numgrad(string, rbf, delta=0.002):
+    """
+    Numerically compute the gradient of a potential given by rbf at the points in string.
+
+    Parameters
+    ----------
+    string : np.array
+        The string in the potential
+    rbf : TYPEscipy.interpolate._rbfinterp.RBFInterpolator or other callable
+        potential for which the gradient is calculated
+    delta : float, optional
+        step size for the gradient evaluation. The default is 0.002.
+
+    Returns
+    -------
+    np.array
+        The gradient at each string point.
+
+    """
+    x = string[:, 0]
+    y = string[:, 1]
+
+    xp = x + delta
+    xm = x - delta
+    yp = y + delta
+    ym = y - delta
+
+    energy = rbf(string)
+    energy_xm = rbf(np.stack((xm, y), axis=1))
+    energy_xp = rbf(np.stack((xp, y), axis=1))
+    energy_ym = rbf(np.stack((x, ym), axis=1))
+    energy_yp = rbf(np.stack((x, yp), axis=1))
+
+    potx = np.stack((energy_xm, energy, energy_xp), axis=1)
+    poty = np.stack((energy_ym, energy, energy_yp), axis=1)
+
+    gradientx = np.gradient(potx, delta, axis=1)[:, 1]
+    gradienty = np.gradient(poty, delta, axis=1)[:, 1]
+
+    return np.stack((gradientx, gradienty), axis=1)
+
+
+def reparametrize_string_with_equal_spacing(string, nr_of_points):
+    """
+    Reparametrize the string so that the arc length are constant again.
+
+    Parameters
+    ----------
+    string : np.array
+        String with non equal arc lengths.
+    nr_of_points : int
+        New number of points for the string
+
+    Returns
+    -------
+    np.array
+        String with equal arc lengths.
+
+    """
+    g = np.linspace(0, 1, nr_of_points)
+    x = string[:, 0]
+    y = string[:, 1]
+    dx = np.ediff1d(x, to_begin=0)
+    dy = np.ediff1d(y, to_begin=0)
+    lxy = np.cumsum(np.sqrt(dx ** 2 + dy ** 2))  # lxy[n-1] = sum(lxy[:n])
+    lxy /= lxy[-1]  # rescale distance between points to [0,1] interval
+    xf = interp1d(lxy, x, kind='cubic')  # interpolate x=f(lxy)
+    x = xf(g)  # since g is evenly spaced, now the new points are evenly distributed
+    yf = interp1d(lxy, y, kind='cubic')  # interpolate y=f(lxy)
+    y = yf(g)  # since g is evenly spaced, now the new points are evenly distributed
+    return np.stack((x, y), axis=1)
+
+
+def new_evolve_string(string, rbf, nstepmax=99999, mintol=1e-7, delta=0.005, h=0.005):
+    """
+    Find a minumum energy path from an initial string.
     
-    dx = x - np.roll(x,1)
-    dy = y - np.roll(y,1)
-    dx[0]=0.
-    dy[0]=0.
-    lxy  = np.cumsum(np.sqrt(dx**2+dy**2))
-    lxy /= lxy[n-1]
-    xf = interp1d(lxy,x,kind='cubic')
-    x  =  xf(g)
-    yf = interp1d(lxy,y,kind='cubic')
-    y  =  yf(g)
+    Simplified zero temperature string method as described by Weinan E et al.
+    J. Chem. Phys. 126, 164103 (2007)
     
-    # Main loop
+
+    Parameters
+    ----------
+    string : numpy.ndarray
+        The initial string
+    rbf : scipy.interpolate._rbfinterp.RBFInterpolator
+        Radial Basis Function that describes the potential in which the string
+        is evolved
+    nstepmax : int, optional
+        Maximum number of time steps. The default is 99999.
+    mintol : float, optional
+        Minimal tolerance to define convergence. The default is 1e-8.
+    delta : float, optional
+        Delta parameter for the gradient calculation. The default is 0.002.
+    h : float, optional
+        timestep. The default is 0.01.
+
+    Returns
+    -------
+    dict
+        Minimum energy path as a numpy array as well as info on convergence.
+
+    """
+    n = len(string)
+    is_converged = False
+
     for nstep in range(int(nstepmax)):
-        # Calculation of the x and y-components of the force.
-        # dVx and dVy are derivative of the potential
-        x += delta
-        tempValp=rbf(x,y)
-        x -= 2.*delta
-        tempValm=rbf(x,y)
-        dVx = 0.5*(tempValp-tempValm)/delta
-        x += delta
-        y += delta
-        tempValp=rbf(x,y)
-        y -= 2.*delta
-        tempValm=rbf(x,y)
-        y += delta
-        dVy = 0.5*(tempValp-tempValm)/delta
 
-        x0 = x.copy()
-        y0 = y.copy()
-        # string steps:
-        # 1. evolve
-        xt = x- h*dVx
-        yt = y - h*dVy
-        # 2. derivative
-        xt += delta
-        tempValp=rbf(xt,yt)
-        xt -= 2.*delta
-        tempValm=rbf(xt,yt)
-        dVxt = 0.5*(tempValp-tempValm)/delta
-        xt += delta
-        yt += delta
-        tempValp=rbf(xt,yt)
-        yt -= 2.*delta
-        tempValm=rbf(xt,yt)
-        yt += delta
-        dVyt = 0.5*(tempValp-tempValm)/delta
+        gradient = numgrad(string, rbf, delta)
 
-        x -= 0.5*h*(dVx+dVxt)
-        y -= 0.5*h*(dVy+dVyt)
-        # 3. reparametrize  
-        dx = x-np.roll(x,1)
-        dy = y-np.roll(y,1)
-        dx[0] = 0.
-        dy[0] = 0.
-        lxy  = np.cumsum(np.sqrt(dx**2+dy**2))
-        lxy /= lxy[n-1]
-        xf = interp1d(lxy,x,kind='cubic')
-        x  =  xf(g)
-        yf = interp1d(lxy,y,kind='cubic')
-        y  =  yf(g)
-        tol = (np.linalg.norm(x-x0)+np.linalg.norm(y-y0))/n
-        if tol <= tol1:
-           break
-      
-    mep = np.column_stack([x, y])
-    mep_convergency = (nstep, tol)
-    
-    return mep, mep_convergency
+        string_old = string.copy()
+        # evolve the string
+        string_new = string - h * gradient
+
+        # 3. reparametrize the string so the arc length is equal everywhere.
+        string = reparametrize_string_with_equal_spacing(string_new, n)
+
+        # check for convergence
+        tol = (np.linalg.norm(string - string_old)) / n
+        if tol <= mintol:
+            is_converged = True
+            break
+
+    return {'mep': string, 'convergence': is_converged}
 
 
-def get_bs_mep(lattice, rbf, params=None):
-    """
-    Evaluate the best starting MEP from which start the calculation of the MEP.
+def run_neb(model, path, nsteps, tol):
+    neb = NEB(model, path)
+    history = neb.run(n_steps=nsteps, force_tol=tol, verbose=False)
+    mep = np.array([n.data.tolist()[0] for n in neb.path])
+    return {'mep': mep,
+            'convergence': neb.stop}
 
-    Parameters
-    ----------
-    lattice : numpy.ndarray
-        Vectors of the lattice cell containing the studied interface or surface
-        
-    rbf : scipy.interpolate.rbf.Rbf
-        Contain the information of the interpolation of the potential energy.
-    
-    params : dict, optional
-        Computational parameters needed to the algorightm computing the MEP. 
-        The default is None. If left to None, the following values are used:
-        
-        n = 1000
-        fac = [1.5, 1.5]
-        delta = 0.001
-        delta_theta = 0.5
-        
-        n : Number of points along the string.
-        fac : the string extension is (-fac, fac)*v, v=x,y. fac = [facx, facy] 
-        delta : discretized step along x and y for integration 
-        delta_theta : angle interval (degrees) to calculate the BSMEP
-        
-        You can change these values by providing a dictionary containing where
-        the name of the variables are the keys. Ex. {'n' : 200}
-        You can change all or just some of the parameters.
 
-    Returns
-    -------
-    bsmep : TYPE
-        DESCRIPTION.
-    ss_bsmep : TYPE
-        DESCRIPTION.
-    theta : float
-        Best orientation for starting calculating the MEP. Units are radiants
+class RBFModel(Model):
+    def __init__(self, rbf):
+        self.rbf = rbf
 
-    """
-    
-    n = 1000
-    fac = [1.5, 1.5]
-    delta = 0.001
-    delta_theta = 0.5
-    
-    if params != None and isinstance(params, dict):
-        for k in params:
-            if k == 'n':
-                n = params[k]
-            elif k == 'fac':
-                fac = params[k]
-            elif k == 'delta':
-                delta = params[k]
-            elif k == 'delta_theta':
-                delta_theta = params[k]
-    
-    facx=fac[0]
-    facy=fac[1]
-    alat_x = lattice[0, 0]
-    alat_y = lattice[1, 1]   
-    xa =-facx*alat_x
-    ya =-facy*alat_y
-    xb = facx*alat_x
-    yb = facy*alat_y    
-    
-    g = np.linspace(0,1,n)
-    x = (xb-xa)*g+xa
-    
-    delta_theta *= np.pi/180 # Convert the angle to radiants
-    rep = int(np.pi/delta_theta)    
-    data_ss = []
-    data_th = []   
-    theta = 0
-    i = 0
-    
-    ss_x, ss_y = get_shear_strength_xy(lattice, rbf)
-    data_ss.append(float(ss_x))
-    data_ss.append(float(ss_y))
-    data_th.append(0.)
-    data_th.append(np.pi/2.)
-    
-    while i < rep:
-        theta += delta_theta
-        if abs(theta*180/np.pi - 90) < 1e-15:
-            i += 1 
-            pass
-        else:
-            m = np.tan(theta)
-            y = m*x.copy()                       
-
-            zdev=np.zeros(len(x))        
-            for i in range(len(x)):
-                coordx=x[i]
-                coordy=y[i]
-                zdev[i]=take_derivative(rbf, coordx, coordy, m, delta)        
-            #Shear strength in GPa
-            ss = np.amax(np.abs(zdev))*10.0
-            
-            data_th.append(theta)
-            data_ss.append(float(ss))
-            i +=1
-    
-    index = data_ss.index(np.amin(np.abs(data_ss)))
-    theta = data_th[index]
-    ss_bsmep = data_ss[index]
-    
-    if theta == np.pi/2. :
-        x = np.zeros(n)
-        y = (yb-ya)*g+xa
-    elif theta == 0. :
-        x = (xb-xa)*g+xa
-        y = np.zeros(n)
-    else:
-        x = (xb-xa)*g+xa
-        y = np.tan(theta)*x.copy()
-    
-    # Tiny perturbation of the string
-    x += np.random.rand(len(x))*alat_x/100
-    y += np.random.rand(len(y))*alat_y/100
-    bsmep = np.column_stack([x, y])
-    
-    return bsmep, ss_bsmep, theta
+    def predict_energy(self, image):
+        if isinstance(image, Image):
+            image = image.data
+        image = np.atleast_2d(image)
+        return self.rbf(image)

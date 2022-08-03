@@ -87,7 +87,7 @@ if __name__ == "__main__":
     #     mpid = materials_dict[formula]['mpids'][materials_dict[formula]['default']]
     #     materials_list.append({'formula': formula, 'mpid': mpid})
         
-    materials_list = [{'formula': 'CuAu', 'mpid': 'mp-522'}]
+    materials_list = [{'formula': 'WC', 'mpid': 'mp-13136'}]
     
     workflow_list = []
     for mat in materials_list:

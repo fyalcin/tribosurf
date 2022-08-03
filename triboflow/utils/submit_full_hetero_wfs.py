@@ -33,9 +33,9 @@ computational_params = {'functional': 'PBE',
                    'vacuum': 15}
 
 interface_params = {'max_area': 100,
-                    'r1r2_tol': 0.1,
-                    'max_mismatch': 0.025,
-                    'max_angle_diff': 1.0}
+                    'max_area_ratio_tol': 0.1,
+                    'max_length_tol': 0.025,
+                    'max_angle_tol': 0.01}
 
 
 def create_triboflow_inputs(materials_list,

@@ -30,7 +30,7 @@ inputs = {'material_1': {'formula': 'C',
                                   'use_vdw': 'False'},
           'interface_params':{'interface_distance': 2.5,
                               'max_area': 500,
-                              'r1r2_tol': 0.05
+                              'max_length_tol': 0.05
                               }
           }
 

@@ -44,6 +44,11 @@ class FT_GetEpsilon(FiretaskBase):
                                     fltr={'task_label': label})
         eps_tensor = output_data['output']['epsilon_static']
         eps_average = sum([eps_tensor[0][0], eps_tensor[1][1], eps_tensor[1][1]])/3.0
+        bandgap = output_data['output']['bandgap']
+        
+        # If we are dealing with a metal, set epsilon very high since it should be inf.
+        if bandgap < 0.05:
+            eps_average = 1000000
         
         return FWAction(update_spec={'epsilon_tensor': eps_tensor,
                                      'epsilon': eps_average})

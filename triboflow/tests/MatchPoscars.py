@@ -2,9 +2,8 @@
 import pprint
 import argparse
 from pymatgen.io.vasp.inputs import Poscar
-from mpinterfaces.utils import slab_from_file
-from mpinterfaces.transformations import get_aligned_lattices, \
-    get_interface
+from triboflow.phys.interface_matcher import InterfaceMatcher
+from tirboflow.utils import slab_from_file
 """
 Match interfaces using Slabs from POSCAR files.
 """
@@ -13,25 +12,24 @@ Match interfaces using Slabs from POSCAR files.
 def match_the_interface(slab_1, slab_2, inter_params={}):
     
     max_area = inter_params.get('max_area', 500)
-    max_missmatch = inter_params.get('max_missmatch', 0.01)
-    max_angle_diff = inter_params.get('max_angle_diff', 2.0)
-    r1r2_tol = inter_params.get('r1r2_tol', 0.05)
-    separation = inter_params.get('separation', 2.5)
+    max_length_tol = inter_params.get('max_length_tol', 0.01)
+    max_angle_tol = inter_params.get('max_angle_tol', 0.01)
+    max_area_ratio_tol = inter_params.get('max_area_ratio_tol', 0.1)
+    separation = inter_params.get('separation', 'auto')
     
-    bottom_aligned, top_aligned = get_aligned_lattices(
-                                        slab_1,
-                                        slab_2,
-                                        max_area = max_area,
-                                        max_mismatch = max_missmatch,
-                                        max_angle_diff = max_angle_diff,
-                                        r1r2_tol = r1r2_tol)
-    if bottom_aligned:
-        hetero_interfaces = get_interface(bottom_aligned,
-                                      top_aligned,
-                                      nlayers_2d = 1,
-                                      nlayers_substrate = 1,
-                                      separation = separation)
-        return_dict = {"interface": hetero_interfaces,
+    IM = InterfaceMatcher(slab_1, slab_2,
+                          max_area=max_area,
+                          max_length_tol=max_length_tol,
+                          max_angle_tol=max_angle_tol,
+                          max_area_ratio_tol=max_area_ratio_tol,
+                          interface_distance=separation)
+    
+    top_aligned, bottom_aligned = IM.get_centered_slabs()
+
+    if top_aligned and bottom_aligned:
+
+        interface = IM.get_interface()
+        return_dict = {"interface": interface,
                        "matched_bottom_slab": bottom_aligned,
                        "matched_top_slab": top_aligned}
         return return_dict
@@ -59,15 +57,15 @@ def GetUserInput():
     parser.add_argument("-marea", "--max_area", dest = "max_area",
                         type = float, default = 200.0,
                         help = "Maximally allowed cell cross section area")
-    parser.add_argument("-mangle", "--max_angle_diff", dest = "max_angle_diff",
-                        type = float, default = 1.0,
-                        help = "Maximally allowed missmatch angle difference")
-    parser.add_argument("-mm", "--max_missmatch", dest = "max_missmatch",
-                        type = float, default = 0.05,
-                        help = "Maximally allowed missmatch")
-    parser.add_argument("-rt", "--r1r2_tol", dest = "r1r2_tol",
-                        type = float, default = 0.2,
-                        help = "Tolerance parameter for matching lattices.")
+    parser.add_argument("-mat", "--max_angle_tol", dest = "max_angle_tol",
+                        type = float, default = 0.01,
+                        help = "Maximal relative missmatch for angles")
+    parser.add_argument("-mlt", "--max_length_tol", dest = "max_length_tol",
+                        type = float, default = 0.01,
+                        help = "Maximal relative missmatch in vector length")
+    parser.add_argument("-rt", "--max_area_ratio_tol", dest = "max_area_ratio_tol",
+                        type = float, default = 0.1,
+                        help = "Maximal relative difference in area ratio.")
     parser.add_argument("-s", "--separation", dest = "separation",
                         type = float, default = 2.5,
                         help = "Distance between slabs in Angstrom.")

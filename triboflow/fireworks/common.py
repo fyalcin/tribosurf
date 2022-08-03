@@ -22,7 +22,7 @@ __date__ = 'March 11th, 2020'
 # Custom FireWorks
 # =============================================================================
 
-def run_pes_calc_fw(top_slab, bottom_slab, interface_name,
+def run_pes_calc_fw(interface, interface_name,
                     functional, comp_parameters, tag, FW_name):
     """Compute high-symmetry points for an interface and start PES calculations.
     
@@ -33,10 +33,8 @@ def run_pes_calc_fw(top_slab, bottom_slab, interface_name,
 
     Parameters
     ----------
-    top_slab : pymatgen.core.surface.Slab
-        Top slab of the interface.
-    bottom_slab : pymatgen.core.surface.Slab
-        Bottom slab of the interface.
+    interface : pymatgen.core.interface.Interface
+        Interface object for which the PES is to be constructed
     interface_name : str
         Unique name for the interface that is used in the output and the
         database.
@@ -56,11 +54,11 @@ def run_pes_calc_fw(top_slab, bottom_slab, interface_name,
         First Firework of a PES subworkflow.
 
     """
-    FT_1 = FT_FindHighSymmPoints(top_slab=top_slab, bot_slab=bottom_slab,
+    FT_1 = FT_FindHighSymmPoints(interface=interface,
                                  interface_name=interface_name,
                                  functional=functional)
 
-    FT_2 = FT_StartPESCalcs(top_slab=top_slab, bot_slab=bottom_slab,
+    FT_2 = FT_StartPESCalcs(interface=interface,
                             interface_name=interface_name,
                             comp_parameters=comp_parameters,
                             tag=tag)
@@ -124,9 +122,7 @@ def make_pes_fw(interface_name, functional, tag, FW_name, file_output,
                          file_output=file_output)
 
     if file_output:
-        output_files = ['Computed_PES_data_' + interface_name + '.dat',
-                        'Interpolated_PES_data_' + interface_name + '.dat',
-                        'PES_' + str(interface_name) + '.png']
+        output_files = [str(interface_name) + '.png']
         FT_3 = copy_output_files(file_list=output_files,
                                  output_dir=output_dir,
                                  remote_copy=remote_copy,

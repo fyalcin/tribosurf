@@ -12,6 +12,20 @@ from triboflow.phys.shaper import Shaper
 from triboflow.utils.database import NavigatorMP, Navigator
 
 
+def get_interface_distance(structure):
+    z_max_substrate = -10000
+    z_min_film = 10000
+    for s in structure.sites:
+        if s.properties['interface_label'] == 'substrate':
+            if s.coords[-1] > z_max_substrate:
+                z_max_substrate = s.coords[-1]
+        elif s.properties['interface_label'] == 'film':
+            if s.coords[-1] < z_min_film:
+                z_min_film = s.coords[-1]
+        else:
+            return None
+    return z_min_film - z_max_substrate
+
 def get_SG_from_mpid(mpid, functional, miller, db_file='auto', high_level=True, min_slab=15, min_vac=15,
                      lll_reduce=True, center=True, in_unit_planes=True, prim=True, reorient_lattice=True):
     """

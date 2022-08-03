@@ -15,10 +15,9 @@
    "interface_params":{
       "max_area":"NO_DEFAULT",
       "interface_distance":"auto",
-      "max_angle_diff":1.5,
-      "max_mismatch":0.01,
-      "r1r2_tol":0.02,
-      "best_match":"area"
+      "max_angle_tol":0.01,
+      "max_length_tol":0.03,
+      "max_area_ratio_tol":0.1
    },
    "material_params":{
       "formula":"NO_DEFAULT",

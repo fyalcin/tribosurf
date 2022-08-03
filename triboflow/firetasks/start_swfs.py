@@ -4,6 +4,7 @@ from atomate.utils.utils import env_chk
 from fireworks import explicit_serialize, FiretaskBase, FWAction
 from pymatgen.core import Structure
 from pymatgen.core.surface import Slab
+from pymatgen.core.interface import Interface
 
 from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.structure_manipulation import interface_name
@@ -340,13 +341,11 @@ class FT_StartPESCalcSWF(FiretaskBase):
             functional=functional
         )
         comp_params = interface_dict['comp_parameters']
-        top_slab = Slab.from_dict(interface_dict['top_aligned'])
-        bot_slab = Slab.from_dict(interface_dict['bottom_aligned'])
+        interface = Interface.from_dict(interface_dict['unrelaxed_structure'])
         already_done = interface_dict.get('relaxed_structure@min')
 
         if not already_done:
-            SWF = calc_pes_swf(top_slab=top_slab,
-                               bottom_slab=bot_slab,
+            SWF = calc_pes_swf(interface=interface,
                                interface_name=name,
                                functional=functional,
                                comp_parameters=comp_params,

@@ -600,21 +600,6 @@ class FT_MakeHeteroStructure(FiretaskBase):
 
             bm_1 = bulk_dat_1['bulk_moduls']
             bm_2 = bulk_dat_2['bulk_moduls']
-            # =============================================================================
-            # Running into crashes for max_angle_diff > ~1.5 for MPInterfaces 2020.6.19,
-            # at least for certain interfaces. A match is found, but than there is a
-            # LinAlgError("Singular matrix") error in forming the matched slabs?
-            # The following lines ensures that max_angle_diff > 1.5. This is not a great
-            # solution obviously. I also changed the default in FT_CheckInterfaceParamDict
-            #
-            # Ran into this problem again only more severe in November 2020. For Ag111 and
-            # Pt111 matching the error appears for max_angle_diff > ~0.4!
-            # Please see issue #25 on gitlab.
-            # =============================================================================
-            # =============================================================================
-            # The new interface matching class seems to have resolved the above issue
-            # completely. See issue #38 and now closed issue #25 on gitlab.
-            # =============================================================================
 
             MI = InterfaceMatcher(slab_1=slab_1,
                                   slab_2=slab_2,
@@ -637,13 +622,11 @@ class FT_MakeHeteroStructure(FiretaskBase):
                     new_values={'$set': {'unrelaxed_structure': inter_dict,
                                          'bottom_aligned': bottom_dict,
                                          'top_aligned': top_dict}})
-
+                return
             else:
-
                 return FWAction(defuse_workflow=True)
 
-                return FWAction(detours=new_fw)
-
+            
 
 @explicit_serialize
 class FT_AddSelectiveDynamics(FiretaskBase):

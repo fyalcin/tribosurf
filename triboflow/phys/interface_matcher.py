@@ -12,10 +12,8 @@ The module contains:
         (_find_lattice_match method) is done by the implementation of the
         algorithm by Zur and McGill
         (Journal of Applied Physics 55, 378 (1984); doi: 10.1063/1.333084)
-        as implemented in python in the MPInterfaces package
-        (Computational Materials Science 122 (2016) 183–190;
-        doi: 10.1016/j.commatsci.2016.05.020). However, in
-        contrast to the MPInterfaces implementation the strain put on the
+        as implemented in python in the pymatgen. However, in
+        contrast to the pymatgen implementation the strain put on the
         lattices to get them to match is more flexible and achieved via a
         weighted average.
         The class contains the following modules, of which the last 4 alone
@@ -49,6 +47,7 @@ import warnings
 from pymatgen.core.lattice import Lattice
 from pymatgen.core.surface import center_slab, Slab
 from pymatgen.core.interface import Interface
+from pymatgen.core.structure import Structure
 from pymatgen.analysis.interfaces.zsl import ZSLGenerator
 
 
@@ -140,17 +139,24 @@ def flip_slab(slab):
                             [0., 1., 0.],
                             [0., 0., -1.]])
     flipped_coords = np.dot(slab.cart_coords, flip_matrix)
-        
-    flipped_slab = Slab(lattice=slab.lattice,
-                        species=slab.species,
-                        coords=flipped_coords,
-                        miller_index=slab.miller_index,
-                        oriented_unit_cell=slab.oriented_unit_cell,
-                        shift=slab.shift,
-                        scale_factor=slab.scale_factor,
-                        reconstruction=slab.reconstruction,
-                        coords_are_cartesian=True,
-                        site_properties=slab.site_properties)
+    
+    try:
+        flipped_slab = Slab(lattice=slab.lattice,
+                            species=slab.species,
+                            coords=flipped_coords,
+                            miller_index=slab.miller_index,
+                            oriented_unit_cell=slab.oriented_unit_cell,
+                            shift=slab.shift,
+                            scale_factor=slab.scale_factor,
+                            reconstruction=slab.reconstruction,
+                            coords_are_cartesian=True,
+                            site_properties=slab.site_properties)
+    except:
+        flipped_slab = Structure(lattice=slab.lattice,
+                                 species=slab.species,
+                                 coords=flipped_coords,
+                                 coords_are_cartesian=True,
+                                 site_properties=slab.site_properties)
     return center_slab(flipped_slab)
     
 
@@ -331,8 +337,13 @@ class InterfaceMatcher:
         try:
             self.inter_dist = float(initial_distance)
         except:
+<<<<<<< triboflow/phys/interface_matcher.py
+            av_spacing_top = Shaper.get_average_layer_spacing(self.top_slab)
+            av_spacing_bot = Shaper.get_average_layer_spacing(self.bot_slab)
+=======
             av_spacing_top = Shaper._get_average_layer_spacing(self.top_slab)
             av_spacing_bot = Shaper._get_average_layer_spacing(self.bot_slab)
+>>>>>>> triboflow/phys/interface_matcher.py
             self.inter_dist = np.mean([av_spacing_top, av_spacing_bot]) + distance_boost
                 
     
@@ -399,7 +410,11 @@ class InterfaceMatcher:
             self.top_miller = slab_2.miller_index
             self.bot_slab = slab_1.get_orthogonal_c_slab()
             self.bot_weight = weight_1
+<<<<<<< triboflow/phys/interface_matcher.py
+            self.bot_miller = slab_1.miller_index
+=======
             self.bot_miller = slab_2.miller_index
+>>>>>>> triboflow/phys/interface_matcher.py
             
             
     def __make_3d_lattice_from_2d_lattice(self, slab, uv):
@@ -557,8 +572,7 @@ class InterfaceMatcher:
         """
         if are_slabs_aligned(self.top_slab, self.bot_slab):
             print("\n  Slabs are already aligned!\n")
-            flipped_slab = center_slab(flip_slab(self.top_slab))
-            self.aligned_top_slab, self.aligned_bot_slab = flipped_slab, self.bot_slab
+            self.aligned_top_slab, self.aligned_bot_slab = self.top_slab, self.bot_slab
         else:
             sc_top, sc_bot = self._get_matching_supercells()
             # Return None, None if no match was found for the given parameters.
@@ -573,9 +587,14 @@ class InterfaceMatcher:
                                                         
             sc_top.lattice = l_top
             sc_bot.lattice = l_bot
+<<<<<<< triboflow/phys/interface_matcher.py
+
+            self.aligned_top_slab, self.aligned_bot_slab = sc_top, sc_bot
+=======
             
             flipped_slab = flip_slab(sc_top)
             self.aligned_top_slab, self.aligned_bot_slab = flipped_slab, sc_bot
+>>>>>>> triboflow/phys/interface_matcher.py
 
         return self.aligned_top_slab, self.aligned_bot_slab        
         
@@ -627,8 +646,16 @@ class InterfaceMatcher:
         tcs, bcs = self.get_centered_slabs()
         if not tcs and not bcs:
                 return None
+<<<<<<< triboflow/phys/interface_matcher.py
+        
+        # Note that the from_slab method of the Inteface object flips the film over!
+        # UPDATE ON 27.06.22: After noticing some discrepancies with the high symmetry points
+        # we decided to leave the film as is, since it gets flipped once more by the Interface
+        # class. This seems to fix the issues with the high symmetry points.
+=======
         #interface = stack_aligned_slabs(bcs, tcs)
         
+>>>>>>> triboflow/phys/interface_matcher.py
         self.interface = Interface.from_slabs(substrate_slab=bcs,
                                               film_slab=tcs,
                                               gap=self.inter_dist,
