@@ -5,74 +5,157 @@ Created on Thu Oct 28 16:23:42 2021
 
 @author: mwo
 """
+from uuid import uuid4
+
 from fireworks import LaunchPad
-from fireworks import Workflow, Firework, FWAction, FiretaskBase
-from fireworks.utilities.fw_utilities import explicit_serialize
+from fireworks import Workflow, Firework
 
-from triboflow.utils.database import StructureNavigator
-
-from pymatgen.core.interface import Interface
-from pymatgen.core.structure import Structure
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 from atomate.vasp.powerups import add_modify_incar
 from atomate.vasp.fireworks.core import StaticFW
 
 from triboflow.utils.vasp_tools import get_custom_vasp_static_settings
-from triboflow.utils.database import NavigatorMP, Navigator
+from triboflow.utils.database import NavigatorMP
 from triboflow.phys.interface_matcher import InterfaceMatcher
 from triboflow.phys.shaper import Shaper
+from triboflow.firetasks.adhesion import FT_CalcAdhesion
+from triboflow.firetasks.charge_density_analysis import FT_MakeChargeDensityDiff
 
 
-def plot_charge_profile(chgcar, axis=2):
-    z=chgcar.zpoints
-    x=chgcar.structure.lattice.c*z
-    y=chgcar.get_average_along_axis(axis)
-    from matplotlib import pyplot as plt
-    fig = plt.figure()
-    ax = plt.axes()
-    ax.plot(x, y)
-    fig.savefig(f'charge_profile_{chgcar.structure.formula}.png')
+def adhesion_and_charge_swf(interface,
+                            interface_name=None,
+                            functional='PBE',
+                            db_file=None,
+                            high_level_db='auto',
+                            comp_parameters={}):
+    """Create a subworkflow to compute the adhesion energy for an interface.
     
+    This workflow takes two matched slabs (their cells must be identical) and
+    a relaxed interface structure of those slabs and computes the andhesion
+    energy. The two matched slabs must be relaxed as well to get correct
+    results.
+    Output are saved in a high-level database, but may also be also written
+    as files and copied to a chosen location. Note that this copy operation
+    is generally dependent on which machine the calculations are executed,
+    and not on the machine where the workflow is submitted. Also ssh-keys need
+    to be set up for remote_copy to work!
     
+    Parameters
+    ----------.
+    interface : pymatgen.core.interface.Interface
+        Relaxed interface structure.
+    interface_name : str, optional
+        Unique name to find the interface in the database with.
+        The default is None, which will lead to an automatic interface_name
+        generation which will be printed on screen.
+    bottom_mpid : str, optional
+        ID of the bulk material of the top slab in the MP database.
+        The default is None.
+    functional : str, optional
+        Which functional to use; has to be 'PBE' or 'SCAN'. The default is 'PBE'
+    comp_parameters : dict, optional
+        Computational parameters to be passed to the vasp input file generation.
+        The default is {}.
 
-@explicit_serialize
-class FT_MakeChargeCalc(FiretaskBase):
-    
-    required_params = ['structure', 'comp_params', 'calc_name']
-    optional_params = ['db_file', 'high_level_db']
-    
-    def run_task(self, fw_spec):
-        
-        struct = self.get('structure')
-        comp_params = self.get('comp_params')
-        label = self.get('calc_name')
-        
-        vis = get_custom_vasp_static_settings(struct, comp_params,
+    Returns
+    -------
+    SWF : fireworks.core.firework.Workflow
+        A subworkflow intended to compute the adhesion of a certain interface.
+
+    """
+    top_slab = interface.film
+    bot_slab = interface.substrate
+    try:
+        top_miller = interface.interface_properties['film_miller']
+        bot_miller = interface.interface_properties['substrate_miller']
+    except:
+        AssertionError('Interface object is missing the "interface_properties"\n'
+                       '"film_miller", and "substrate_miller"')
+
+    if not interface_name:
+        mt = ''.join(str(s) for s in top_miller)
+        mb = ''.join(str(s) for s in bot_miller)
+        interface_name = (top_slab.composition.reduced_formula + '_' + mt + '_' +
+                          bot_slab.composition.reduced_formula + '_' + mb +
+                          '_AutoGen')
+        print('\nYour interface name has been automatically generated to be:'
+              '\n {}'.format(interface_name))
+
+    if comp_parameters == {}:
+        print('\nNo computational parameters have been defined!\n'
+              'Workflow will run with:\n'
+              '   ISPIN = 1\n'
+              '   ISMEAR = 0\n'
+              '   ENCUT = 520\n'
+              '   kpoint density kappa = 5000\n'
+              'We recommend to pass a comp_parameters dictionary'
+              ' of the form:\n'
+              '   {"use_vdw": <True/False>,\n'
+              '    "use_spin": <True/False>,\n'
+              '    "is_metal": <True/False>,\n'
+              '    "encut": <float>,\n'
+              '    "k_dens": <int>}\n')
+
+    tag = interface_name + '_' + str(uuid4())
+
+    vis_top = get_custom_vasp_static_settings(top_slab,
+                                              comp_parameters,
                                               'slab_from_scratch')
-                       
-        FW = StaticFW(structure=struct,
-                      vasp_input_set=vis,
-                      name=label,
-                      vasptodb_kwargs = {'store_volumetric_data': ['chgcar']})
-        WF = add_modify_incar(Workflow.from_Firework(FW))
-        return FWAction(detours=WF)
-    
-@explicit_serialize
-class FT_GetCharge(FiretaskBase):
-    
-    required_params = ['calc_name']
-    optional_params = ['db_file', 'high_level_db']
-    
-    def run_task(self, fw_spec):
-        label = self.get('calc_name')
-        nav = Navigator()
-        chgcar = nav.get_chgcar_from_label(label)
-        plot_charge_profile(chgcar)
+    vis_bot = get_custom_vasp_static_settings(bot_slab,
+                                              comp_parameters,
+                                              'slab_from_scratch')
+    vis_interface = get_custom_vasp_static_settings(interface,
+                                                    comp_parameters,
+                                                    'slab_from_scratch')
 
+    FW_top = StaticFW(structure=top_slab, vasp_input_set=vis_top,
+                      name=tag + 'top',
+                      vasptodb_kwargs = {'store_volumetric_data': ['chgcar']})
+    FW_bot = StaticFW(structure=bot_slab, vasp_input_set=vis_bot,
+                      name=tag + 'bottom',
+                      vasptodb_kwargs = {'store_volumetric_data': ['chgcar']})
+    FW_interface = StaticFW(structure=interface, vasp_input_set=vis_interface,
+                            name=tag + 'interface',
+                            vasptodb_kwargs = {'store_volumetric_data': ['chgcar']})
+
+    FW_adhesion_results = Firework(FT_CalcAdhesion(interface_name=interface_name,
+                                          functional=functional,
+                                          top_label=tag + 'top',
+                                          bottom_label=tag + 'bottom',
+                                          interface_label=tag + 'interface',
+                                          db_file=db_file,
+                                          high_level_db=high_level_db),
+                                   name=f'Calculate adhesion for {interface_name}')
+
+    FW_charge_analysis = Firework(FT_MakeChargeDensityDiff(interface=interface,
+                                                           interface_name=interface_name,
+                                                           interface_calc_name=tag + 'interface',
+                                                           top_calc_name=tag + 'top',
+                                                           bot_calc_name=tag + 'bottom',
+                                                           functional = functional,
+                                                           db_file=db_file,
+                                                           high_level_db=high_level_db),
+                                  name=f'Calculate charge density redistribution for {interface_name}')
     
+    SWF = Workflow(fireworks=[FW_top, FW_bot, FW_interface,
+                              FW_adhesion_results, FW_charge_analysis],
+                   links_dict={FW_top: [FW_adhesion_results, FW_charge_analysis],
+                               FW_bot: [FW_adhesion_results, FW_charge_analysis],
+                               FW_interface: [FW_adhesion_results, FW_charge_analysis]},
+                   name='Calculate adhesion SWF for {}'.format(interface_name))
+
+    return add_modify_incar(SWF)
+
 if __name__ == "__main__":
-     
+    
+    comp_params = {'encut': 400,
+                   'use_spin': False,
+                   'k_dens': 3.0,
+                   'is_metal': True,
+                   'epsilon': 100000,
+                   'use_vdw': False,
+                   'functional': 'PBE'}
     nav_mp = NavigatorMP()
     graphite, _ = nav_mp.get_low_energy_structure('C', mp_id='mp-48')
     nickel, _ = nav_mp.get_low_energy_structure('Ni', mp_id='mp-23')
@@ -102,6 +185,13 @@ if __name__ == "__main__":
     
     IM = InterfaceMatcher(gr_slab, ni_slab)
     interface = IM.get_interface()
+    
+    WF = adhesion_and_charge_swf(interface=interface,
+                                 comp_parameters=comp_params,
+                                 high_level_db='test',
+                                 functional='PBE')
+    lpad = LaunchPad.auto_load()
+    lpad.add_wf(WF)
     # FW1 = Firework(tasks=[FT_MakeChargeCalc(structure=slab, 
     #                                        comp_params=comp_params, 
     #                                        calc_name=calc_name)],
