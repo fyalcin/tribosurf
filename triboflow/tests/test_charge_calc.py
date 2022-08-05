@@ -19,27 +19,24 @@ from triboflow.utils.vasp_tools import get_custom_vasp_static_settings
 from triboflow.utils.database import NavigatorMP
 from triboflow.phys.interface_matcher import InterfaceMatcher
 from triboflow.phys.shaper import Shaper
-from triboflow.firetasks.adhesion import FT_CalcAdhesion
 from triboflow.firetasks.charge_density_analysis import FT_MakeChargeDensityDiff
 
 
-def adhesion_and_charge_swf(interface,
-                            interface_name=None,
-                            functional='PBE',
-                            db_file=None,
-                            high_level_db='auto',
-                            comp_parameters={}):
-    """Create a subworkflow to compute the adhesion energy for an interface.
+def charge_analysis_swf(interface,
+                        interface_name=None,
+                        functional='PBE',
+                        db_file=None,
+                        high_level_db='auto',
+                        comp_parameters={}):
+    """Subworkflow to compute the charge redistribution of an interface.
     
-    This workflow takes two matched slabs (their cells must be identical) and
-    a relaxed interface structure of those slabs and computes the andhesion
-    energy. The two matched slabs must be relaxed as well to get correct
-    results.
-    Output are saved in a high-level database, but may also be also written
-    as files and copied to a chosen location. Note that this copy operation
-    is generally dependent on which machine the calculations are executed,
-    and not on the machine where the workflow is submitted. Also ssh-keys need
-    to be set up for remote_copy to work!
+    This workflow takes an interface object as an input and makes 3 static
+    calculations of the interface, and the top and bottom slabs, respectively.
+    The charge densities are parsed and subsequently analyzed. The difference
+    is computed (chgcar_interface - chgcar_top - chgcar_bottom) and charge
+    redistribution is computed similar to PRL 121, 026804 (2018).
+
+    Output are saved in a high-level database.
     
     Parameters
     ----------.
@@ -49,11 +46,14 @@ def adhesion_and_charge_swf(interface,
         Unique name to find the interface in the database with.
         The default is None, which will lead to an automatic interface_name
         generation which will be printed on screen.
-    bottom_mpid : str, optional
-        ID of the bulk material of the top slab in the MP database.
-        The default is None.
     functional : str, optional
         Which functional to use; has to be 'PBE' or 'SCAN'. The default is 'PBE'
+    db_file : str, optional
+        Full path of the db.json file to be used. The default is to use
+        env_chk to find the file.
+    high_level_db : str, optional
+        Name of the high_level database to use. Defaults to 'auto', in which
+        case it is read from the db.json file.
     comp_parameters : dict, optional
         Computational parameters to be passed to the vasp input file generation.
         The default is {}.
@@ -61,7 +61,8 @@ def adhesion_and_charge_swf(interface,
     Returns
     -------
     SWF : fireworks.core.firework.Workflow
-        A subworkflow intended to compute the adhesion of a certain interface.
+        A subworkflow to compute the charge density differnece of a certain
+        interface.
 
     """
     top_slab = interface.film
@@ -70,7 +71,8 @@ def adhesion_and_charge_swf(interface,
         top_miller = interface.interface_properties['film_miller']
         bot_miller = interface.interface_properties['substrate_miller']
     except:
-        AssertionError('Interface object is missing the "interface_properties"\n'
+        top_miller = bot_miller = [0,0,0]
+        RuntimeWarning('Interface object is missing the "interface_properties"\n'
                        '"film_miller", and "substrate_miller"')
 
     if not interface_name:
@@ -119,15 +121,6 @@ def adhesion_and_charge_swf(interface,
                             name=tag + 'interface',
                             vasptodb_kwargs = {'store_volumetric_data': ['chgcar']})
 
-    FW_adhesion_results = Firework(FT_CalcAdhesion(interface_name=interface_name,
-                                          functional=functional,
-                                          top_label=tag + 'top',
-                                          bottom_label=tag + 'bottom',
-                                          interface_label=tag + 'interface',
-                                          db_file=db_file,
-                                          high_level_db=high_level_db),
-                                   name=f'Calculate adhesion for {interface_name}')
-
     FW_charge_analysis = Firework(FT_MakeChargeDensityDiff(interface=interface,
                                                            interface_name=interface_name,
                                                            interface_calc_name=tag + 'interface',
@@ -138,11 +131,10 @@ def adhesion_and_charge_swf(interface,
                                                            high_level_db=high_level_db),
                                   name=f'Calculate charge density redistribution for {interface_name}')
     
-    SWF = Workflow(fireworks=[FW_top, FW_bot, FW_interface,
-                              FW_adhesion_results, FW_charge_analysis],
-                   links_dict={FW_top: [FW_adhesion_results, FW_charge_analysis],
-                               FW_bot: [FW_adhesion_results, FW_charge_analysis],
-                               FW_interface: [FW_adhesion_results, FW_charge_analysis]},
+    SWF = Workflow(fireworks=[FW_top, FW_bot, FW_interface, FW_charge_analysis],
+                   links_dict={FW_top: [FW_charge_analysis],
+                               FW_bot: [FW_charge_analysis],
+                               FW_interface: [FW_charge_analysis]},
                    name='Calculate adhesion SWF for {}'.format(interface_name))
 
     return add_modify_incar(SWF)
@@ -186,7 +178,7 @@ if __name__ == "__main__":
     IM = InterfaceMatcher(gr_slab, ni_slab)
     interface = IM.get_interface()
     
-    WF = adhesion_and_charge_swf(interface=interface,
+    WF = charge_analysis_swf(interface=interface,
                                  comp_parameters=comp_params,
                                  high_level_db='test',
                                  functional='PBE')

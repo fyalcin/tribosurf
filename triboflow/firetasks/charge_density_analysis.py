@@ -149,6 +149,7 @@ class FT_MakeChargeDensityDiff(FiretaskBase):
         nav_high.update_data(
             collection=functional+'.interface_data',
             fltr={'name': name},
-            new_values={'$set': {'charge_density_redist': rho_dict}})
+            new_values={'$set': {'charge_density_redist': rho_dict}},
+            upsert=True)
         
         return

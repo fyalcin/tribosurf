@@ -13,8 +13,11 @@ from triboflow.firetasks.init_check import unbundle_input, material_from_mp
 from triboflow.firetasks.check_inputs import FT_UpdateInterfaceCompParams
 from triboflow.firetasks.adhesion import (
     FT_RelaxMatchedSlabs, FT_RetrieveMatchedSlabs)
-from triboflow.firetasks.start_swfs import FT_StartAdhesionSWF, FT_StartBulkConvoSWF, FT_StartDielectricSWF, \
-    FT_StartPESCalcSWF
+from triboflow.firetasks.start_swfs import (FT_StartAdhesionSWF,
+                                            FT_StartBulkConvoSWF,
+                                            FT_StartDielectricSWF,
+                                            FT_StartPESCalcSWF,
+                                            FT_StartChargeAnalysisSWF)
 from triboflow.utils.structure_manipulation import interface_name
 from triboflow.firetasks.run_slabs_wfs import FT_SlabOptThick
 
@@ -178,6 +181,16 @@ def heterogeneous_wf(inputs):
         name='Calculate Adhesion')
     WF.append(ComputeAdhesion)
     
+    ChargeAnalysis = Firework(
+        FT_StartChargeAnalysisSWF(
+            mp_id_1=mp_id_1,
+            mp_id_2=mp_id_2,
+            miller_1=mat_1.get('miller'),
+            miller_2=mat_2.get('miller'),
+            functional=functional),
+        name='Charge Analysis')
+    WF.append(ChargeAnalysis)
+    
     # Define dependencies:
     Dependencies = {Initialize: [PreRelaxation_M1, PreRelaxation_M2],
                     PreRelaxation_M1: [ConvergeEncut_M1],
@@ -193,7 +206,7 @@ def heterogeneous_wf(inputs):
                     MakeSlabs_M2: [MakeInterface],
                     MakeInterface: [CalcPESPoints, RelaxMatchedSlabs],
                     RelaxMatchedSlabs: [RetrieveMatchedSlabs],
-                    CalcPESPoints: [ComputeAdhesion],
+                    CalcPESPoints: [ComputeAdhesion, ChargeAnalysis],
                     RetrieveMatchedSlabs: [ComputeAdhesion]}
 
     WF_Name = 'TriboFlow ' + interface_name(mp_id_1, mat_1.get('miller'),
