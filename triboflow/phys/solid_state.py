@@ -19,18 +19,18 @@ __copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, Universi
 __contact__ = 'clelia.righi@unibo.it'
 __date__ = 'February 22nd, 2021'
 
-
 from pymatgen.core.surface import SlabGenerator
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 from triboflow.phys.shaper import Shaper
 from triboflow.utils.structure_manipulation import transfer_average_magmoms
 
+
 # ============================================================================
 # Functions to deal with crystalline slabs
 # ============================================================================
 
-def orient_bulk(structure, miller, thickness, primitive=False, lll_reduce=False, 
+def orient_bulk(structure, miller, thickness, primitive=False, lll_reduce=False,
                 in_unit_planes=True):
     """
     Orient a bulk unit cell along a direction identified by Miller indexes.
@@ -45,14 +45,15 @@ def orient_bulk(structure, miller, thickness, primitive=False, lll_reduce=False,
                             in_unit_planes=in_unit_planes,
                             min_slab_size=thickness,
                             min_vacuum_size=0)
-    
+
     bulk_miller = slabgen.oriented_unit_cell
 
     return bulk_miller
 
+
 def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
                    center_slab=True, primitive=True, lll_reduce=True,
-                   in_unit_planes=True, ext_index=0, bonds=None, ftol=0.1, 
+                   in_unit_planes=True, ext_index=0, bonds=None, ftol=0.1,
                    tol=0.1, repair=False, max_broken_bonds=0, symmetrize=False):
     """
     Create and return a single slab or a list of slabs out of a structure.
@@ -89,7 +90,7 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
 
     slabs = []
     for hkl, thk, vac in zip(miller, thickness, vacuum):
-        
+
         # If thk is zero, then we want to construct an oriented unit bulk by
         # our conversion, so we define a "fake" thickness > 1 to be used to
         # build the slabs, otherwise errors are raised by pymatgen
@@ -116,12 +117,14 @@ def generate_slabs(structure, miller, thickness, vacuum, thick_bulk=12,
         if thk == 0:
             s = s[ext_index].oriented_unit_cell.get_primitive_structure(
                 constrain_latt={'a': s[ext_index].lattice.a,
-                                'b':s[ext_index].lattice.b,
-                                'gamma':s[ext_index].lattice.gamma})
+                                'b': s[ext_index].lattice.b,
+                                'gamma': s[ext_index].lattice.gamma})
 
         # Case of a slab
         else:
-            s = [Shaper.resize(slab, thk, vac) for slab in s]
+            ouc = s[ext_index].oriented_unit_cell
+            max_layer_spacing = max(Shaper.get_layer_spacings(ouc, ftol))
+            s = [Shaper.resize(slab, thk, vac, min_vac=1.2 * max_layer_spacing) for slab in s]
             s = s[ext_index]
 
         slabs.append(s)
