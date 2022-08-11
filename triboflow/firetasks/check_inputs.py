@@ -444,13 +444,17 @@ class FT_CheckCompParamDict(FiretaskBase):
         # Create lists for input options considered to be True:
         true_list = ['true', 'True', 'TRUE', '.TRUE.', '.true.', True, 
                      'yes', 'Yes', 'YES', '.YES.', '.yes.']
+        # List for possible vdW options for PBE:
+        vdw_keywords = ['dftd2', 'dftd3', 'dftd3-bj', 'ts', 'ts-hirshfeld',
+                        'mbd@rsc', 'ddsc', 'df', 'optpbe', 'optb88', 'optb86b',
+                        'df2', 'rvv10']
 
         # Initialize checking dictionary for essential inputs and output dict
         out_dict = {}
         check_essential = {}
         for key in essential_keys:
             check_essential[key] = False
-        for key in input_dict.keys():
+        for key, value in input_dict.items():
         # Check for unknown parameters:
             if key not in known_keys:
                 raise SystemExit('The input parameter <'+str(key)+
@@ -458,8 +462,11 @@ class FT_CheckCompParamDict(FiretaskBase):
                               'and use only the following parameters:\n'
                               '{}'.format(known_keys))
             elif key == 'use_vdw':
-                if input_dict[key] in true_list:
+                if value in true_list:
                     out_dict['use_vdw'] = True
+                elif (value in vdw_keywords and
+                      input_dict.get('functional', functional_default) == 'PBE'):
+                    out_dict['use_vdw'] = value
                 else:
                     out_dict['use_vdw'] = False
                 check_essential[key] = True
@@ -475,28 +482,18 @@ class FT_CheckCompParamDict(FiretaskBase):
         
         for key in additional_keys:
             if key == 'use_spin':
-                if key in input_dict:
-                    if input_dict[key] in true_list:
-                        out_dict['use_spin'] = True
-                    else:
-                        out_dict['use_spin'] = False
+                if input_dict.get(key, False) in true_list:
+                    out_dict['use_spin'] = True
                 else:
-                    out_dict['use_spin'] = use_spin_default
+                    out_dict['use_spin'] = False
+            else:
+                out_dict['use_spin'] = use_spin_default
             if key == 'volume_tolerance':
-                if key in input_dict:
-                    out_dict['volume_tolerance'] = float(input_dict[key])
-                else:
-                    out_dict['volume_tolerance'] = volume_tolerance_default
+                out_dict['volume_tolerance'] = float(input_dict.get(key) or volume_tolerance_default)
             if key == 'functional':
-                if key in input_dict:
-                    out_dict['functional'] = str(input_dict[key])
-                else:
-                    out_dict['functional'] = functional_default
+                out_dict['functional'] = str(input_dict.get(key) or functional_default)
             if key == 'BM_tolerance':
-                if key in input_dict:
-                    out_dict['BM_tolerance'] = float(input_dict[key])
-                else:
-                    out_dict['BM_tolerance'] = BM_tolerance_default
+                out_dict['BM_tolerance'] = float(input_dict.get(key) or BM_tolerance_default)
                 
         return FWAction(mod_spec=[{'_set': {output_dict_name: out_dict}}])
 
