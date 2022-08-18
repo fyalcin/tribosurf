@@ -263,7 +263,6 @@ class PESGenerator():
         self.__get_limits_and_multiples()
 
         X, Y, Z = self.__interpolate_on_grid()
-
         self.__get_pes_unit_cell()
 
         self.__get_mep()
@@ -287,7 +286,7 @@ class PESGenerator():
             The default is 2.
         delta : float, optional
             Additional room for the intial MEP search to consider a minimum.
-            The default is 0.5.
+            The default is 0.1.
 
         Returns
         -------
@@ -309,12 +308,24 @@ class PESGenerator():
         
         #the following is a simple but rather crude way to add the start position
         #of the string to the mep limits.
-        string, _, _ = get_initial_strings(extended_energy_list=self.extended_energies,
-                                           xlim=max_x,
-                                           ylim=max_y,
-                                           point_density=self.string_density,
-                                           add_noise=self.noise)
-        shift_x, shift_y = string[0]
+        
+        try:
+            string, _, _ = get_initial_strings(extended_energy_list=self.extended_energies,
+                                               xlim=max_x,
+                                               ylim=max_y,
+                                               point_density=self.string_density,
+                                               add_noise=self.noise,
+                                               border_padding=delta)
+            shift_x, shift_y = string[0]
+        except:
+            string, _, _ = get_initial_strings(extended_energy_list=self.extended_energies,
+                                               xlim=max_x,
+                                               ylim=max_y,
+                                               point_density=self.string_density,
+                                               add_noise=self.noise,
+                                               border_padding=0.0)
+            shift_x, shift_y = string[0]
+            
         max_x = self.xlim if self.xlim < max_x + shift_x else max_x + shift_x
         max_y = self.ylim if self.ylim < max_y + shift_y else max_y + shift_y
 
@@ -335,44 +346,66 @@ class PESGenerator():
 
         """
         string_d = string_x = string_y = []
-        puc_mult=2
-        while len(string_d) < 10 or len(string_x) < 10 or len(string_y) < 10:
-            max_x, max_y = self.__get_mep_limits(puc_mult=puc_mult)
-            string_d, string_x, string_y = get_initial_strings(extended_energy_list=self.extended_energies,
-                                                               xlim=max_x,
-                                                               ylim=max_y,
+        puc_mult=1
+        while len(string_d) < 10 and len(string_x) < 10 and len(string_y) < 10:
+            try:
+                max_x, max_y = self.__get_mep_limits(puc_mult=puc_mult, delta=0.0)
+                string_d, string_x, string_y = get_initial_strings(extended_energy_list=self.extended_energies,
+                                                                   xlim=max_x,
+                                                                   ylim=max_y,
+                                                                   point_density=self.string_density,
+                                                                   add_noise=self.noise,
+                                                                   border_padding=0.1)
+            except:
+                string_d, string_x, string_y = get_initial_strings(extended_energy_list=self.extended_energies,
+                                                               xlim=self.xlim,
+                                                               ylim=self.ylim,
                                                                point_density=self.string_density,
-                                                               add_noise=self.noise)
+                                                               add_noise=self.noise,
+                                                               border_padding=0.0)
             if puc_mult > 5:
                 break
             puc_mult += 1
-            
+
         self.initial_string_d = string_d
         self.initial_string_x = string_x
         self.initial_string_y = string_y
 
         if self.mep_method == 'zts':
             # evolve the stings parallel by using a Pool
-            evolve_pool = multiprocessing.Pool(3)
-            mep_d, mep_x, mep_y = evolve_pool.starmap(new_evolve_string,
-                                                      [[string_d, self.rbf, self.max_iter],
-                                                       [string_x, self.rbf, self.max_iter],
-                                                       [string_y, self.rbf, self.max_iter]])
+            pool_inputs = []
+            mep_list = []
+            nsteps = self.max_iter
+            for name, s in {'mep_d': string_d, 'mep_x': string_x, 'mep_y': string_y}.items():
+                if len(s) > 10:
+                    pool_inputs.append([s, self.rbf, nsteps])
+                    mep_list.append(name)
+            if len(pool_inputs) > 0:
+                evolve_pool = multiprocessing.Pool(len(pool_inputs))
+                meps = evolve_pool.starmap(new_evolve_string, pool_inputs)
+            else:
+                meps = None
+            
         elif self.mep_method == 'neb':
-            path_d, path_x, path_y = Path(string_d, 1), Path(string_x, 1), Path(string_y, 1)
+            pool_inputs = []
+            mep_list = []
             model = RBFModel(self.rbf)
-
             nsteps = self.max_iter
             forcetol = self.neb_forcetol
-            evolve_pool = multiprocessing.Pool(3)
-            mep_d, mep_x, mep_y = evolve_pool.starmap(run_neb,
-                                                      [[model, path_d, nsteps, forcetol],
-                                                       [model, path_x, nsteps, forcetol],
-                                                       [model, path_y, nsteps, forcetol]])
+            for name, s in {'mep_d': string_d, 'mep_x': string_x, 'mep_y': string_y}.items():
+                if len(s) > 10:
+                    pool_inputs.append([model, Path(s, 1), nsteps, forcetol])
+                    mep_list.append(name)
+            if len(pool_inputs) > 0:
+                evolve_pool = multiprocessing.Pool(len(pool_inputs))
+                meps = evolve_pool.starmap(run_neb, pool_inputs)
+            else:
+                meps = None
+        
+        self.mep = {}
+        for i, name in enumerate(mep_list):
+            self.mep[name] = meps[i]
 
-        self.mep = {'mep_d': mep_d,
-                    'mep_x': mep_x,
-                    'mep_y': mep_y}
 
     def __get_shear_strength(self):
         """
@@ -619,12 +652,15 @@ class PESGenerator():
         if self.plot_mep:
             if not getattr(self, 'mep', None):
                 self.__get_mep()
-            mep_d = self.mep['mep_d']['mep']
-            mep_x = self.mep['mep_x']['mep']
-            mep_y = self.mep['mep_y']['mep']
-            plt.plot(mep_x[:, 0], mep_x[:, 1], 'r:')
-            plt.plot(mep_y[:, 0], mep_y[:, 1], 'b:')
-            plt.plot(mep_d[:, 0], mep_d[:, 1], 'g:')
+            for k, v in self.mep.items():
+                if k == 'mep_d':
+                    l = 'g:'
+                elif k == 'mep_x':
+                    l = 'r:'
+                else:
+                    l = 'b:'
+                mep = v['mep']
+                plt.plot(mep[:, 0], mep[:, 1], l)
 
         plt.xlabel(r"x [$\rm\AA$]", fontsize=20, family='sans-serif')
         plt.ylabel(r"y [$\rm\AA$]", fontsize=20, family='sans-serif')
@@ -778,20 +814,23 @@ class PESGenerator():
             except:
                 pass
             else:
-                x = [0, a[0], a[0] + b[0], b[0]]
-                x_min = min(x)
-                x_shifted = [i - x_min for i in x]
-                y = [0, a[1], a[1] + b[1], b[1]]
-                y_min = min(y)
-                y_shifted = [i - y_min for i in y]
-                vertices = np.stack((x_shifted, y_shifted), axis=1)
-                vertices = np.round(vertices, 8)
-                # min_vx = vertices.argmin(axis=0)[0]
-                min_vx = np.argmin(np.sum(vertices, axis=1))
-                start = self.initial_string_d[0] - vertices[min_vx]
-                vertices = vertices + start
-                ax.add_patch(patches.Polygon(xy=vertices,
-                                             fill=False, lw=2, color='blue'))
+                if ((a, b) == self.interface.lattice.matrix[0:2]).all():
+                    pass
+                else:
+                    x = [0, a[0], a[0] + b[0], b[0]]
+                    x_min = min(x)
+                    x_shifted = [i - x_min for i in x]
+                    y = [0, a[1], a[1] + b[1], b[1]]
+                    y_min = min(y)
+                    y_shifted = [i - y_min for i in y]
+                    vertices = np.stack((x_shifted, y_shifted), axis=1)
+                    vertices = np.round(vertices, 8)
+                    # min_vx = vertices.argmin(axis=0)[0]
+                    min_vx = np.argmin(np.sum(vertices, axis=1))
+                    start = self.initial_string_d[0] - vertices[min_vx]
+                    vertices = vertices + start
+                    ax.add_patch(patches.Polygon(xy=vertices,
+                                                 fill=False, lw=2, color='blue'))
 
     def __get_fig_and_ax(self):
         """

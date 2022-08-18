@@ -34,7 +34,20 @@ from scipy.interpolate import interp1d
 # EVALUATION OF THE MEP
 # =============================================================================
 
-def get_initial_strings(extended_energy_list, xlim, ylim, point_density=20, add_noise=0.01):
+def find_minima(extended_energy_list, xlim, ylim, border_padding):
+    energies = extended_energy_list.copy()
+    energies[:, 2] = energies[:, 2] - min(energies[:, 2])
+
+    minima = [x[:2] for x in energies if (x[2] == 0.0 and
+                                          x[0] >= border_padding and
+                                          x[0] < xlim - border_padding and
+                                          x[1] >= border_padding and
+                                          x[1] < ylim - border_padding)]
+    return minima
+    
+
+def get_initial_strings(extended_energy_list, xlim, ylim, point_density=20,
+                        add_noise=0.01, border_padding=0.1):
     """
     Make 3 straigth strings that connect minima of the PES.
     
@@ -68,14 +81,8 @@ def get_initial_strings(extended_energy_list, xlim, ylim, point_density=20, add_
         String in y direction
 
     """
-    energies = extended_energy_list.copy()
-    energies[:, 2] = energies[:, 2] - min(energies[:, 2])
-
-    minima = [x[:2] for x in energies if (x[2] == 0.0 and
-                                          x[0] >= 0.1 and
-                                          x[0] < xlim - 0.1 and
-                                          x[1] >= 0.1 and
-                                          x[1] < ylim - 0.1)]
+    
+    minima = find_minima(extended_energy_list, xlim, ylim, border_padding)
 
     start = [xlim, ylim]
     end = [0.0, 0.0]
