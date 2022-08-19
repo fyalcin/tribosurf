@@ -56,7 +56,10 @@ class FT_CopyHomogeneousSlabs(FiretaskBase):
         
         nav = Navigator(db_file, high_level=hl_db)
         
-        inter_name = interface_name(mpid, mpid, miller, miller)
+        inter_name = interface_name(mp_id_1=mpid,
+                                    miller_1=miller,
+                                    mp_id_2=mpid,
+                                    miller_2=miller)
         interface_data = nav.find_data(collection=functional+'.interface_data',
                       fltr={'name': inter_name})
         top_slab = interface_data['top_aligned']
