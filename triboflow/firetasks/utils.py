@@ -16,6 +16,59 @@ from triboflow.utils.surfen_tools import move_result
 
 
 @explicit_serialize
+class FT_CopyHomogeneousSlabs(FiretaskBase):
+    """
+    Firetask to copy aligned slabs from unrelaxed to realxed.
+    
+    Since for homogeneous interfaces there cannot be any strain on the already
+    relaxed slabs (from convergence), they do not have to be relaxed again.
+    We just use this Firetask to copy them over in the interface_data
+    collections.
+    
+    Parameters
+    ----------
+    mpid : str
+        Material Project's material identifier ID.
+    functional : str
+        Functional for the identification of the high_level db.
+    miller : str
+        Miller indices of the slab
+    db_file : str, optional
+        Full path of the db.json. The default is 'auto'.
+    high_level_db : str or bool, optional
+        If a string is given, the high-level database will be chosen based on
+        that string. If True, the db.json file will be used to determine the
+        name of the high_level_db. The default is True.
+
+    """
+    _fw_name = 'Copy slabs for homogeneous interfaces'
+    required_params = ['mpid', 'functional', 'miller']
+    optional_params = ['db_file', 'high_level_db']
+    def run_task(self, fw_spec):
+
+        mpid = self.get('mpid')
+        functional = self.get('functional')
+        miller = self.get('miller')
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
+        hl_db = self.get('high_level_db', True)
+        
+        nav = Navigator(db_file, high_level=hl_db)
+        
+        inter_name = interface_name(mpid, mpid, miller, miller)
+        interface_data = nav.find_data(collection=functional+'.interface_data',
+                      fltr={'name': inter_name})
+        top_slab = interface_data['top_aligned']
+        bot_slab = interface_data['bottom_aligned']
+        
+        nav.update_data(
+            collection=functional+'.interface_data',
+            fltr={'name': inter_name},
+            new_values={'$set': {'top_aligned_relaxed': top_slab,
+                                 'bottom_aligned_relaxed': bot_slab}})
+
+@explicit_serialize
 class FT_UpdateCompParams(FiretaskBase):
     """
     Firetask to update computational parameters for bulk and/or slabs

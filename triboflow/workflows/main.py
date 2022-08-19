@@ -10,6 +10,7 @@ from triboflow.fireworks.init_fws import InitWF
 from triboflow.firetasks.structure_manipulation import (
     FT_MakeHeteroStructure, FT_StartBulkPreRelax)
 from triboflow.firetasks.init_check import unbundle_input, material_from_mp
+from triboflow.firetasks.utils import FT_CopyHomogeneousSlabs
 from triboflow.firetasks.check_inputs import FT_UpdateInterfaceCompParams
 from triboflow.firetasks.adhesion import (
     FT_RelaxMatchedSlabs, FT_RetrieveMatchedSlabs)
@@ -20,6 +21,105 @@ from triboflow.firetasks.start_swfs import (FT_StartAdhesionSWF,
                                             FT_StartChargeAnalysisSWF)
 from triboflow.utils.structure_manipulation import interface_name
 from triboflow.firetasks.run_slabs_wfs import FT_SlabOptThick
+
+def homogeneous_wf(inputs):
+    
+    mat, comp_params, inter_params = unbundle_input(inputs,
+                                                    keys=['material',
+                                                          'computational_params',
+                                                          'interface_params'])
+    struct, mp_id = material_from_mp(mat)
+    functional = comp_params.get('functional', 'PBE')
+    
+    WF = []
+    
+    Initialize = InitWF.checkinp_homo_interface(material=mat,
+                                                computational=comp_params,
+                                                interface=inter_params)
+    WF.append(Initialize)
+    
+    PreRelaxation = Firework(FT_StartBulkPreRelax(mp_id=mp_id,
+                                                  functional=functional),
+                             name=f'Start pre-relaxation for {mat["formula"]}')
+    WF.append(PreRelaxation)
+    
+    ConvergeEncut = Firework(FT_StartBulkConvoSWF(conv_type='encut',
+                                                  mp_id=mp_id,
+                                                  functional=functional),
+                                name='Start encut convergence for {mat["formula"]}')
+    WF.append(ConvergeEncut)
+    
+    ConvergeKpoints = Firework(FT_StartBulkConvoSWF(conv_type='kpoints',
+                                                  mp_id=mp_id,
+                                                  functional=functional),
+                                name='Start kpoints convergence for {mat["formula"]}')
+    WF.append(ConvergeKpoints)
+    
+    CalcDielectric = Firework(FT_StartDielectricSWF(mp_id=mp_id,
+                                                    functional=functional,
+                                                    update_bulk=True,
+                                                    update_slabs=True),
+                              name=f'Start dielectric SWF for {mat["formula"]}')
+    WF.append(CalcDielectric)
+    
+    Final_Params = Firework(FT_UpdateInterfaceCompParams(mp_id_1=mp_id,
+                                                         mp_id_2=mp_id,
+                                                         miller_1=mat.get('miller'),
+                                                         miller_2=mat.get('miller'),
+                                                         functional=functional),
+                            name='Consolidate computational parameters')
+    WF.append(Final_Params)
+    
+    MakeSlabs = Firework(FT_SlabOptThick(mp_id=mp_id,
+                                         miller=mat.get('miller'),
+                                         functional=functional),
+                         name='Slab thickness optimization for {mat["formula"]}')
+    WF.append(MakeSlabs)
+    
+    MakeInterface = Firework(FT_MakeHeteroStructure(
+        mp_id_1=mp_id,
+        mp_id_2=mp_id,
+        miller_1=mat.get('miller'),
+        miller_2=mat.get('miller'),
+        functional=functional),
+        name='Match the interface')
+    WF.append(MakeInterface)
+    
+    CopySlabs = Firework(FT_CopyHomogeneousSlabs(mp_id=mp_id,
+                                                 miller=mat.get('miller'),
+                                                 functional=functional),
+                         name='Copy homogeneous slabs')
+    WF.append(CopySlabs)
+    
+    CalcPESPoints = Firework(
+        FT_StartPESCalcSWF(
+            mp_id_1=mp_id,
+            mp_id_2=mp_id,
+            miller_1=mat.get('miller'),
+            miller_2=mat.get('miller'),
+            functional=functional),
+        name='Compute PES high-symmetry points')
+    WF.append(CalcPESPoints)
+    
+    ComputeAdhesion = Firework(
+        FT_StartAdhesionSWF(
+            mp_id_1=mp_id,
+            mp_id_2=mp_id,
+            miller_1=mat.get('miller'),
+            miller_2=mat.get('miller'),
+            functional=functional),
+        name='Calculate Adhesion')
+    WF.append(ComputeAdhesion)
+    
+    ChargeAnalysis = Firework(
+        FT_StartChargeAnalysisSWF(
+            mp_id_1=mp_id,
+            mp_id_2=mp_id,
+            miller_1=mat.get('miller'),
+            miller_2=mat.get('miller'),
+            functional=functional),
+        name='Charge Analysis')
+    WF.append(ChargeAnalysis)
 
 def heterogeneous_wf(inputs):
     """Return main workflow for heterogeneous interfaces within Triboflow.
