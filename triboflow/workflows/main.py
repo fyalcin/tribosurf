@@ -24,10 +24,9 @@ from triboflow.firetasks.run_slabs_wfs import FT_SlabOptThick
 
 def homogeneous_wf(inputs):
     
-    mat, comp_params, inter_params = unbundle_input(inputs,
+    mat, comp_params = unbundle_input(inputs,
                                                     keys=['material',
-                                                          'computational_params',
-                                                          'interface_params'])
+                                                          'computational_params'])
     struct, mp_id = material_from_mp(mat)
     functional = comp_params.get('functional', 'PBE')
     
@@ -35,7 +34,7 @@ def homogeneous_wf(inputs):
     
     Initialize = InitWF.checkinp_homo_interface(material=mat,
                                                 computational=comp_params,
-                                                interface=inter_params)
+                                                interface={})
     WF.append(Initialize)
     
     PreRelaxation = Firework(FT_StartBulkPreRelax(mp_id=mp_id,
