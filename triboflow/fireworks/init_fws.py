@@ -138,17 +138,17 @@ class InitWF:
         """
         
         # Firetasks checking the material parameters
-        ft_mat = FTCheckInput(input_dict = material, read_key = 'material',
+        ft_mat = FTCheckInput(input_dict = material, read_key = 'material_params',
                                output_dict_name = 'mat')
         
         # Firetask checking the computational parameters
         ft_computation = FTCheckInput(input_dict = computational, 
-                                      read_key = 'computational',
+                                      read_key = 'comp_params',
                                       output_dict_name = 'comp')
         
         # Firetask checking the interfacial matching parameters
         ft_interface = FTCheckInput(input_dict = interface,
-                                    read_key = 'interface',
+                                    read_key = 'interface_params',
                                     output_dict_name = 'inter')
         
         # Put materials bulk and slab in DB
