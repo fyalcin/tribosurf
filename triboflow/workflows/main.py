@@ -119,6 +119,25 @@ def homogeneous_wf(inputs):
             functional=functional),
         name='Charge Analysis')
     WF.append(ChargeAnalysis)
+    
+    # Define dependencies:
+    Dependencies = {Initialize: [PreRelaxation],
+                    PreRelaxation: [ConvergeEncut],
+                    ConvergeEncut: [ConvergeKpoints],
+                    ConvergeKpoints: [CalcDielectric],
+                    CalcDielectric: [Final_Params],
+                    Final_Params: [MakeSlabs],
+                    MakeSlabs: [MakeInterface],
+                    MakeInterface: [CalcPESPoints, CopySlabs],
+                    CalcPESPoints: [ComputeAdhesion, ChargeAnalysis],
+                    CopySlabs: [ComputeAdhesion]}
+
+    WF_Name = 'TriboFlow ' + interface_name(mp_id, mat.get('miller'),
+                              mp_id, mat.get('miller')) +' '+functional
+
+    WF = Workflow(WF, Dependencies, name=WF_Name)
+
+    return WF
 
 def heterogeneous_wf(inputs):
     """Return main workflow for heterogeneous interfaces within Triboflow.
