@@ -42,11 +42,11 @@ class FT_CopyHomogeneousSlabs(FiretaskBase):
 
     """
     _fw_name = 'Copy slabs for homogeneous interfaces'
-    required_params = ['mpid', 'functional', 'miller']
+    required_params = ['mp_id', 'functional', 'miller']
     optional_params = ['db_file', 'high_level_db']
     def run_task(self, fw_spec):
 
-        mpid = self.get('mpid')
+        mpid = self.get('mp_id')
         functional = self.get('functional')
         miller = self.get('miller')
         db_file = self.get('db_file')
