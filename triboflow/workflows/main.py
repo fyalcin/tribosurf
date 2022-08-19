@@ -32,9 +32,11 @@ def homogeneous_wf(inputs):
     
     WF = []
     
+    #define max area here large, even if it will not matter since this is a
+    #homogeneous interface. However, max_area is a necessary key.
     Initialize = InitWF.checkinp_homo_interface(material=mat,
                                                 computational=comp_params,
-                                                interface={})
+                                                interface={'max_area': 200})
     WF.append(Initialize)
     
     PreRelaxation = Firework(FT_StartBulkPreRelax(mp_id=mp_id,
