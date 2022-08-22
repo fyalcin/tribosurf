@@ -107,9 +107,14 @@ class FTCheckInput(FiretaskBase):
         # Check vdw and spin usage and correct to bool input:
         true_list = ['true', 'True', 'TRUE', '.TRUE.', '.true.', True, 
                      'yes', 'Yes', 'YES', '.YES.', '.yes.']
+        vdw_keywords = ['dftd2', 'dftd3', 'dftd3-bj', 'ts', 'ts-hirshfeld',
+                        'mbd@rsc', 'ddsc', 'df', 'optpbe', 'optb88', 'optb86b',
+                        'df2', 'rvv10']
         if input_dict.get('use_vdw'):
             if input_dict.get('use_vdw') in true_list:
                 out_dict['use_vdw'] = True
+            elif input_dict.get('use_vdw') in vdw_keywords:
+                out_dict['use_vdw'] = input_dict.get('use_vdw')
             else:
                 out_dict['use_vdw'] = False
         if input_dict.get('use_spin'):        

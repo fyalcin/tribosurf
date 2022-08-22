@@ -8,9 +8,83 @@ from pymatgen.core.interface import Interface
 
 from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.structure_manipulation import interface_name
-from triboflow.workflows.subworkflows import adhesion_energy_swf, surface_energy_swf, calc_pes_swf, calc_ppes_swf, \
-    converge_swf, dielectric_constant_swf, make_and_relax_slab_swf
+from triboflow.workflows.subworkflows import (adhesion_energy_swf,
+                                              surface_energy_swf,
+                                              calc_pes_swf, calc_ppes_swf,
+                                              converge_swf,
+                                              dielectric_constant_swf,
+                                              make_and_relax_slab_swf,
+                                              charge_analysis_swf)
 
+
+@explicit_serialize
+class FT_StartChargeAnalysisSWF(FiretaskBase):
+    """Start an charge redistribution analysis subworkflow.
+
+    Take an interface from the high_level_db and compute
+    the charge density redistribution through a subworkflow.
+
+    Parameters
+    ----------
+    mp_id_1 : str
+        MaterialsProject ID number for the first material
+    mp_id_2 : str
+        MaterialsProject ID number for the second material
+    miller_1 : str or [int]
+        Miller indices of the first material
+    miller_2 : str or [int]
+        Miller indices of the second material
+    functional : str
+        Functional with which the workflow is run. PBE or SCAN.
+    db_file : str, optional
+        Full path of the db.json file to be used. The default is to use
+        env_chk to find the file.
+    high_level_db : str or True, optional
+        Name of the high_level database to use. Defaults to 'True', in which
+        case it is read from the db.json file.
+    interface_label : str, optional
+        Label that the relaxed interface has in the high-level database. Can
+        be either structure@min (default), or structure@max at the moment.
+    """
+    required_params = ['mp_id_1', 'mp_id_2', 'miller_1', 'miller_2',
+                       'functional']
+    optional_params = ['db_file', 'high_level_db', 'interface_label']
+
+    def run_task(self, fw_spec):
+        mp_id_1 = self.get('mp_id_1')
+        mp_id_2 = self.get('mp_id_2')
+        miller_1 = self.get('miller_1')
+        miller_2 = self.get('miller_2')
+        functional = self.get('functional')
+        db_file = self.get('db_file')
+        if not db_file:
+            db_file = env_chk('>>db_file<<', fw_spec)
+        hl_db = self.get('high_level_db', True)
+        interface_label = self.get('interface_label', 'relaxed_structure@min')
+
+        nav = Navigator(db_file, high_level=hl_db)
+
+        name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
+
+        interface_dict = nav.find_data(collection=functional + '.interface_data',
+                                       fltr={'name': name})
+
+        redistribution_was_calculated = interface_dict.get('charge_density_redist')
+        comp_params = interface_dict.get('comp_parameters', {})
+
+        if not redistribution_was_calculated:
+            interface = Interface.from_dict(interface_dict[interface_label])
+
+            SWF = charge_analysis_swf(interface = interface,
+                                      interface_name = name,
+                                      functional = functional,
+                                      db_file = db_file,
+                                      high_level_db = hl_db,
+                                      comp_parameters = comp_params)
+
+            return FWAction(detours=SWF)
+        else:
+            return FWAction(update_spec=fw_spec)
 
 @explicit_serialize
 class FT_StartAdhesionSWF(FiretaskBase):

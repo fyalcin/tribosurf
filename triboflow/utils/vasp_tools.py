@@ -369,12 +369,18 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
 
     # set van der Waals functional. Note that as of now, 'functional' must be
     # specified for vdw to work!
+    vdw_keywords = ['dftd2', 'dftd3', 'dftd3-bj', 'ts', 'ts-hirshfeld',
+                    'mbd@rsc', 'ddsc', 'df', 'optpbe', 'optb88', 'optb86b',
+                    'df2', 'rvv10']
     if set(('use_vdw', 'functional')) <= comp_parameters.keys():
         if comp_parameters['use_vdw']:
             if comp_parameters.get('functional') in SCAN_list:
                 vdw = 'rVV10'
             else:
-                vdw = 'optB86b'
+                if comp_parameters['use_vdw'] in vdw_keywords:
+                    vdw = comp_parameters['use_vdw']
+                else:
+                    vdw = 'optB86b'
         else:
             vdw = None
     else:
@@ -599,12 +605,18 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
 
     # set van der Waals functional. Note that as of now, 'functional' must be
     # specified for vdw to work!
+    vdw_keywords = ['dftd2', 'dftd3', 'dftd3-bj', 'ts', 'ts-hirshfeld',
+                    'mbd@rsc', 'ddsc', 'df', 'optpbe', 'optb88', 'optb86b',
+                    'df2', 'rvv10']
     if set(('use_vdw', 'functional')) <= comp_parameters.keys():
         if comp_parameters['use_vdw']:
             if comp_parameters.get('functional') in SCAN_list:
                 vdw = 'rVV10'
             else:
-                vdw = 'optB86b'
+                if comp_parameters['use_vdw'] in vdw_keywords:
+                    vdw = comp_parameters['use_vdw']
+                else:
+                    vdw = 'optB86b'
         else:
             vdw = None
     else:

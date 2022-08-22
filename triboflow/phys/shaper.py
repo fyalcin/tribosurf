@@ -194,7 +194,7 @@ class Shaper:
 
     @staticmethod
     def resize(struct, slab_thickness=None, vacuum_thickness=None, tol=0.1,
-               chunk_size=1, min_thick_A=None, center=True):
+               chunk_size=1, min_thick_A=None, center=True, min_vac=4.0):
         """
         resize the input slab with the desired slab thickness in
         number of layers and the vacuum region in Angstroms. All the attributes
@@ -236,7 +236,7 @@ class Shaper:
         # Input slab is first centered for the cases where the slab spills
         # outside the box from the top and the bottom
         struct_centered = center_slab(struct.copy())
-        initial_thickness = Shaper.get_proj_height(struct_centered, 'slab')
+        initial_thickness = Shaper.get_proj_height(struct_centered, 'slab', min_vac)
 
         if slab_thickness:
             # Layers (containing sites) are removed from the bottom until
@@ -260,7 +260,7 @@ class Shaper:
             struct_resized = struct_centered
         # Vacuum region is modified to the desired thickness
         if vacuum_thickness:
-            resized_struct = Shaper.modify_vacuum(struct_resized, vacuum_thickness)
+            resized_struct = Shaper.modify_vacuum(struct_resized, vacuum_thickness, min_vac=min_vac)
         else:
             resized_struct = struct_resized
 
@@ -284,7 +284,7 @@ class Shaper:
         return resized_struct
 
     @staticmethod
-    def modify_vacuum(struct, vac_thick, method='to_value', center=True):
+    def modify_vacuum(struct, vac_thick, method='to_value', center=True, min_vac=4.0):
         """
         Method to modify the vacuum region in a structure.
 
@@ -340,7 +340,7 @@ class Shaper:
         # 'c' parameter of the Lattice is modified to adjust vacuum
         # to the desired thickness
         if method == 'to_value':
-            initial_vac = Shaper.get_proj_height(struct, 'vacuum')
+            initial_vac = Shaper.get_proj_height(struct, 'vacuum', min_vac)
             lat_params['c'] += (vac_thick - initial_vac) * lat_params['c'] / proj_height
         elif method == 'by_value':
             lat_params['c'] += vac_thick * lat_params['c'] / proj_height
