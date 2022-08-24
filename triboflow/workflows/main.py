@@ -47,13 +47,13 @@ def homogeneous_wf(inputs):
     ConvergeEncut = Firework(FT_StartBulkConvoSWF(conv_type='encut',
                                                   mp_id=mp_id,
                                                   functional=functional),
-                                name='Start encut convergence for {mat["formula"]}')
+                                name=f'Start encut convergence for {mat["formula"]}')
     WF.append(ConvergeEncut)
     
     ConvergeKpoints = Firework(FT_StartBulkConvoSWF(conv_type='kpoints',
                                                   mp_id=mp_id,
                                                   functional=functional),
-                                name='Start kpoints convergence for {mat["formula"]}')
+                                name=f'Start kpoints convergence for {mat["formula"]}')
     WF.append(ConvergeKpoints)
     
     CalcDielectric = Firework(FT_StartDielectricSWF(mp_id=mp_id,
@@ -74,7 +74,7 @@ def homogeneous_wf(inputs):
     MakeSlabs = Firework(FT_SlabOptThick(mp_id=mp_id,
                                          miller=mat.get('miller'),
                                          functional=functional),
-                         name='Slab thickness optimization for {mat["formula"]}')
+                         name=f'Slab thickness optimization for {mat["formula"]}')
     WF.append(MakeSlabs)
     
     MakeInterface = Firework(FT_MakeHeteroStructure(
