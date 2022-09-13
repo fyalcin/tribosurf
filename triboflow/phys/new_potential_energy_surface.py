@@ -69,7 +69,8 @@ def get_PESGenerator_from_db(interface_name, db_file='auto', high_level=True,
                        'fig_type', 'plot_path', 'plot_minimum_energy_paths',
                        'mep_method', 'neb_forcetol', 'plot_pes_unit_cell',
                        'string_point_density', 'add_noise_to_string',
-                       'string_max_iterations', 'custom_cell_to_plot']
+                       'string_max_iterations', 'custom_cell_to_plot',
+                       'calculate_mep']
     PG_kwargs = pes_generator_kwargs.copy()
     for k in pes_generator_kwargs.keys():
         if k not in possible_kwargs:
@@ -105,6 +106,7 @@ class PESGenerator():
     def __init__(self,
                  points_per_angstrom=50,
                  interpolation_kernel='cubic',
+                 calculate_mep=True,
                  plot_hs_points=False,
                  plot_unit_cell=True,
                  plot_pes_unit_cell=True,
@@ -210,6 +212,7 @@ class PESGenerator():
         """
         self.ppA = points_per_angstrom
         self.interpolation_kernel = interpolation_kernel
+        self.calc_mep = calculate_mep
         self.plotting_ratio = plotting_ratio
         self.normalize = normalize_minimum
         self.contours = nr_of_contours
@@ -224,7 +227,11 @@ class PESGenerator():
         self.string_density = string_point_density
         self.noise = add_noise_to_string
         self.max_iter = string_max_iterations
-        self.plot_mep = plot_minimum_energy_paths
+        
+        if self.calc_mep:
+            self.plot_mep = plot_minimum_energy_paths
+        else:
+            self.plot_mep = False
 
     def __call__(self,
                  interface,
@@ -265,14 +272,16 @@ class PESGenerator():
         X, Y, Z = self.__interpolate_on_grid()
         self.__get_pes_unit_cell()
 
-        self.__get_mep()
+        if self.calc_mep:
+            self.__get_mep()
+            self.__get_shear_strength()
 
         self.__plot_grid(X, Y, Z)
         self.PES_as_bytes = self.__get_pes_as_bytes()
         self.corrugation = self.__get_corrugation(Z)
         self.PES_on_meshgrid = {'X': X, 'Y': Y, 'Z': Z}
-
-        self.__get_shear_strength()
+        
+        
 
     def __get_mep_limits(self, puc_mult = 2, delta = 0.1):
         """
@@ -331,20 +340,7 @@ class PESGenerator():
 
         return max_x, max_y
 
-    def __get_mep(self):
-        """
-        Compute minimum energy paths for three initial directions.
-        
-        Either use the nudged elastiv band ('neb', default) or zero temperature
-        string method ('zts') to find the MEPs. All three directions are
-        optimized in parallel, but depending on the PES, this might still take
-        around a couple of minutes or half an hour...
-
-        Returns
-        -------
-        None.
-
-        """
+    def __get_initial_strings(self):
         string_d = string_x = string_y = []
         puc_mult=1
         while len(string_d) < 10 and len(string_x) < 10 and len(string_y) < 10:
@@ -370,13 +366,31 @@ class PESGenerator():
         self.initial_string_d = string_d
         self.initial_string_x = string_x
         self.initial_string_y = string_y
+        
+    def __get_mep(self):
+        """
+        Compute minimum energy paths for three initial directions.
+        
+        Either use the nudged elastiv band ('neb', default) or zero temperature
+        string method ('zts') to find the MEPs. All three directions are
+        optimized in parallel, but depending on the PES, this might still take
+        around a couple of minutes or half an hour...
 
+        Returns
+        -------
+        None.
+
+        """
+        self.__get_initial_strings()
+        
         if self.mep_method == 'zts':
             # evolve the stings parallel by using a Pool
             pool_inputs = []
             mep_list = []
             nsteps = self.max_iter
-            for name, s in {'mep_d': string_d, 'mep_x': string_x, 'mep_y': string_y}.items():
+            for name, s in {'mep_d': self.string_d,
+                            'mep_x': self.string_x,
+                            'mep_y': self.string_y}.items():
                 if len(s) > 10:
                     pool_inputs.append([s, self.rbf, nsteps])
                     mep_list.append(name)
@@ -389,18 +403,37 @@ class PESGenerator():
         elif self.mep_method == 'neb':
             pool_inputs = []
             mep_list = []
-            model = RBFModel(self.rbf)
             nsteps = self.max_iter
-            forcetol = self.neb_forcetol
-            for name, s in {'mep_d': string_d, 'mep_x': string_x, 'mep_y': string_y}.items():
-                if len(s) > 10:
-                    pool_inputs.append([model, Path(s, 1), nsteps, forcetol])
-                    mep_list.append(name)
-            if len(pool_inputs) > 0:
-                evolve_pool = multiprocessing.Pool(len(pool_inputs))
-                meps = evolve_pool.starmap(run_neb, pool_inputs)
-            else:
-                meps = None
+            #neb implementation relies on recursion which can run into a limit
+            #on some systems, so we wrap it in a try/except block
+            try:
+                model = RBFModel(self.rbf)
+                forcetol = self.neb_forcetol
+                for name, s in {'mep_d': self.string_d,
+                                'mep_x': self.string_x,
+                                'mep_y': self.string_y}.items():
+                    if len(s) > 10:
+                        pool_inputs.append([model, Path(s, 1), nsteps, forcetol])
+                        mep_list.append(name)
+                if len(pool_inputs) > 0:
+                    evolve_pool = multiprocessing.Pool(len(pool_inputs))
+                    meps = evolve_pool.starmap(run_neb, pool_inputs)
+                else:
+                    meps = None
+            except:
+                print('NEB method failed and crashed. Swiching to ZTS.')
+                self.mep_method = 'zts'
+                for name, s in {'mep_d': self.string_d,
+                                'mep_x': self.string_x,
+                                'mep_y': self.string_y}.items():
+                    if len(s) > 10:
+                        pool_inputs.append([s, self.rbf, nsteps])
+                        mep_list.append(name)
+                if len(pool_inputs) > 0:
+                    evolve_pool = multiprocessing.Pool(len(pool_inputs))
+                    meps = evolve_pool.starmap(new_evolve_string, pool_inputs)
+                else:
+                    meps = None
         
         self.mep = {}
         for i, name in enumerate(mep_list):
@@ -827,6 +860,7 @@ class PESGenerator():
                     vertices = np.round(vertices, 8)
                     # min_vx = vertices.argmin(axis=0)[0]
                     min_vx = np.argmin(np.sum(vertices, axis=1))
+                    self.__get_initial_strings()
                     start = self.initial_string_d[0] - vertices[min_vx]
                     vertices = vertices + start
                     ax.add_patch(patches.Polygon(xy=vertices,

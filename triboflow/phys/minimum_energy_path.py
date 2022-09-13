@@ -192,7 +192,7 @@ def reparametrize_string_with_equal_spacing(string, nr_of_points):
     return np.stack((x, y), axis=1)
 
 
-def new_evolve_string(string, rbf, nstepmax=99999, mintol=1e-7, delta=0.005, h=0.005):
+def new_evolve_string(string, rbf, nstepmax=9999, mintol=1e-7, delta=0.005, h=0.005):
     """
     Find a minumum energy path from an initial string.
     
