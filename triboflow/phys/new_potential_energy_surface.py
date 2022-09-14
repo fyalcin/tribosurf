@@ -420,6 +420,7 @@ class PESGenerator():
                         evolve_pool = multiprocessing.Pool(len(pool_inputs))
                         meps = evolve_pool.starmap(run_neb, pool_inputs)
                     except:
+                        print('Parallel NEB method failed and crashed. Swiching to sequential.')
                         #try running sequentially
                         meps = []
                         for inputs in pool_inputs:
