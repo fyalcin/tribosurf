@@ -363,9 +363,9 @@ class PESGenerator():
                 break
             puc_mult += 1
 
-        self.initial_string_d = string_d
-        self.initial_string_x = string_x
-        self.initial_string_y = string_y
+        self.initial_string_d = self.string_d = string_d
+        self.initial_string_x = self.string_x = string_x
+        self.initial_string_y = self.string_y = string_y
         
     def __get_mep(self):
         """
