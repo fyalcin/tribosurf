@@ -416,8 +416,18 @@ class PESGenerator():
                         pool_inputs.append([model, Path(s, 1), nsteps, forcetol])
                         mep_list.append(name)
                 if len(pool_inputs) > 0:
-                    evolve_pool = multiprocessing.Pool(len(pool_inputs))
-                    meps = evolve_pool.starmap(run_neb, pool_inputs)
+                    try:
+                        evolve_pool = multiprocessing.Pool(len(pool_inputs))
+                        meps = evolve_pool.starmap(run_neb, pool_inputs)
+                    except:
+                        #try running sequentially
+                        meps = []
+                        for inputs in pool_inputs:
+                            mep = run_neb(model=inputs[0],
+                                          path=inputs[1],
+                                          nsteps=inputs[2],
+                                          tol=inputs[3])
+                            meps.append(mep)
                 else:
                     meps = None
             except:
