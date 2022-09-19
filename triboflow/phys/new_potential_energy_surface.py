@@ -13,17 +13,14 @@ __credits__ = 'Code partly inspired by a previous version of M. Wolloch and Gabr
 __contact__ = 'michael.wolloch@univie.ac.at'
 __date__ = 'April 14th, 2022'
 
-import multiprocessing
-
 import matplotlib.pyplot as plt
 import numpy as np
-from mep.path import Path
 from pymatgen.core import PeriodicSite
 from pymatgen.core.interface import Interface
 from pymatgen.core.structure import Structure
 from scipy.interpolate import RBFInterpolator
-from triboflow.phys.minimum_energy_path import get_initial_strings, new_evolve_string, \
-    reparametrize_string_with_equal_spacing, run_neb, RBFModel
+from triboflow.phys.minimum_energy_path import (get_initial_strings,
+    reparametrize_string_with_equal_spacing, evolve_mep)
 from triboflow.utils.database import convert_image_to_bytes, StructureNavigator
 
 
@@ -227,10 +224,9 @@ class PESGenerator():
         self.string_density = string_point_density
         self.noise = add_noise_to_string
         self.max_iter = string_max_iterations
+        self.plot_mep = plot_minimum_energy_paths
         
-        if self.calc_mep:
-            self.plot_mep = plot_minimum_energy_paths
-        else:
+        if not self.calc_mep:
             self.plot_mep = False
 
     def __call__(self,
@@ -341,6 +337,18 @@ class PESGenerator():
         return max_x, max_y
 
     def __get_initial_strings(self):
+        """
+        Find initial placements for the strings that then get evoved with NEB or ZTS.
+        
+        Initially we try to make the strings short, using small multiples
+        of the PES unit cell (puc). If that does not lead to viable strings,
+        we use the plotting limits instead.
+
+        Returns
+        -------
+        None.
+
+        """
         string_d = string_x = string_y = []
         puc_mult=1
         while len(string_d) < 10 and len(string_x) < 10 and len(string_y) < 10:
@@ -383,72 +391,12 @@ class PESGenerator():
         """
         self.__get_initial_strings()
         
-        if self.mep_method == 'zts':
-            # evolve the stings parallel by using a Pool
-            pool_inputs = []
-            mep_list = []
-            nsteps = self.max_iter
-            for name, s in {'mep_d': self.string_d,
-                            'mep_x': self.string_x,
-                            'mep_y': self.string_y}.items():
-                if len(s) > 10:
-                    pool_inputs.append([s, self.rbf, nsteps])
-                    mep_list.append(name)
-            if len(pool_inputs) > 0:
-                evolve_pool = multiprocessing.Pool(len(pool_inputs))
-                meps = evolve_pool.starmap(new_evolve_string, pool_inputs)
-            else:
-                meps = None
-            
-        elif self.mep_method == 'neb':
-            pool_inputs = []
-            mep_list = []
-            nsteps = self.max_iter
-            #neb implementation relies on recursion which can run into a limit
-            #on some systems, so we wrap it in a try/except block
-            try:
-                model = RBFModel(self.rbf)
-                forcetol = self.neb_forcetol
-                for name, s in {'mep_d': self.string_d,
-                                'mep_x': self.string_x,
-                                'mep_y': self.string_y}.items():
-                    if len(s) > 10:
-                        pool_inputs.append([model, Path(s, 1), nsteps, forcetol])
-                        mep_list.append(name)
-                if len(pool_inputs) > 0:
-                    try:
-                        evolve_pool = multiprocessing.Pool(len(pool_inputs))
-                        meps = evolve_pool.starmap(run_neb, pool_inputs)
-                    except:
-                        print('Parallel NEB method failed and crashed. Swiching to sequential.')
-                        #try running sequentially
-                        meps = []
-                        for inputs in pool_inputs:
-                            mep = run_neb(model=inputs[0],
-                                          path=inputs[1],
-                                          nsteps=inputs[2],
-                                          tol=inputs[3])
-                            meps.append(mep)
-                else:
-                    meps = None
-            except:
-                print('NEB method failed and crashed. Swiching to ZTS.')
-                self.mep_method = 'zts'
-                for name, s in {'mep_d': self.string_d,
-                                'mep_x': self.string_x,
-                                'mep_y': self.string_y}.items():
-                    if len(s) > 10:
-                        pool_inputs.append([s, self.rbf, nsteps])
-                        mep_list.append(name)
-                if len(pool_inputs) > 0:
-                    evolve_pool = multiprocessing.Pool(len(pool_inputs))
-                    meps = evolve_pool.starmap(new_evolve_string, pool_inputs)
-                else:
-                    meps = None
-        
-        self.mep = {}
-        for i, name in enumerate(mep_list):
-            self.mep[name] = meps[i]
+        self.mep = evolve_mep(method=self.mep_method,
+                              rbf=self.rbf,
+                              string_dict={'mep_d': self.string_d,
+                                           'mep_x': self.string_x,
+                                           'mep_y': self.string_y},
+                              neb_forcetol=self.neb_forcetol)
 
 
     def __get_shear_strength(self):
