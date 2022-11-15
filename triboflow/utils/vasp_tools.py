@@ -345,16 +345,14 @@ def get_custom_vasp_static_settings(structure, comp_parameters, static_type,
         uis['NELMDL'] = -15
         uis['NELM'] = 200
         # set dipole corrections.
-        if structure.is_polar():
-            try:
+        try:
+            if structure.is_polar():
                 uis['DIPOL'] = list(structure.center_of_mass)
                 uis['IDIPOL'] = 3
                 uis['EPSILON'] = comp_parameters.get('epsilon') or 1.0
                 uis['LDIPOL'] = True
-            except:
-                uis['IDIPOL'] = 3
-                uis['EPSILON'] = comp_parameters.get('epsilon') or 1.0
-                uis['LDIPOL'] = True
+        except:
+            pass
     elif comp_parameters.get('functional') in SCAN_list:
         uis['NELMDL'] = -10
     else:
@@ -549,16 +547,14 @@ def get_custom_vasp_relax_settings(structure, comp_parameters, relax_type,
         # uis['AMIX_MAG'] = 0.8
         # uis['BMIX_MAG'] = 0.0001
         # set dipole corrections.
-        if structure.is_polar():
-            try:
+        try:
+            if structure.is_polar():
                 uis['DIPOL'] = list(structure.center_of_mass)
                 uis['IDIPOL'] = 3
                 uis['EPSILON'] = comp_parameters.get('epsilon') or 1.0
                 uis['LDIPOL'] = True
-            except:
-                uis['IDIPOL'] = 3
-                uis['EPSILON'] = comp_parameters.get('epsilon') or 1.0
-                uis['LDIPOL'] = True
+        except:
+            pass
     else:
         uis['NELMDL'] = -6
         uis['EDIFFG'] = -0.01
