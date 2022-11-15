@@ -445,3 +445,53 @@ def interface_name(mp_id_1, miller_1, mp_id_2, miller_2):
     ids = min(mp_id_1 + '_' + mp_id_2, mp_id_2 + '_' + mp_id_1)
     name = '_'.join((n1, n2, ids))
     return name
+
+def make_pymatgen_slab(bulk_struct: Structure,
+                       miller: list,
+                       min_thickness: int = 8,
+                       min_vacuum: float = 20) -> Slab:
+    """
+    Uses pmg slab generator to create 1 slab from a bulk struct and miller index.
+    
+    First a conventional unit cell is created using SpacegroupAnalyzer, then 
+    possible magnetic moments get transfered and the slab is created using
+    pymatgen.core.surface.SlabGenerator. Only the first slab of the returned
+    list is taken! Oxidation states are guessed, so polarity of the slab might
+    be quaried.
+
+    Parameters
+    ----------
+    bulk_struct : pymatgen.core.structure.Structure
+        the bulk structure from which the slab will be constructed.
+    miller : list
+        List of three miller indices
+    min_thickness : int, optional
+        Thickness of the slab in layers (probably will end up thicker).
+        The default is 8.
+    min_vacuum : float, optional
+        Thickness of the vacuum layer in Angstrom. The default is 20.
+
+    Returns
+    -------
+    pymatgen.core.surface.Slab
+        pymatgen Slab object.
+
+    """
+    
+    bulk_conv = SpacegroupAnalyzer(bulk_struct).get_conventional_standard_structure()
+    bulk_conv = transfer_average_magmoms(bulk_struct, bulk_conv)
+
+    SG = SlabGenerator(initial_structure=bulk_conv,
+                       miller_index=miller,
+                       center_slab=True,
+                       primitive=True,
+                       lll_reduce=True,
+                       max_normal_search=max([abs(l) for l in miller]),
+                       min_slab_size=min_thickness,
+                       min_vacuum_size=min_vacuum)
+
+
+    slab = SG.get_slabs(bonds=None, ftol=0.1, tol=0.1, max_broken_bonds=0,
+                    symmetrize=False, repair=False)[0]
+    slab.add_oxidation_state_by_guess()
+    return slab
