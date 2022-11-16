@@ -3,7 +3,7 @@ from setuptools import setup
 if __name__ == "__main__":
     setup(
         name='triboflow',
-        version='1.0.0',
+        version='1.1.0',
         description='triboflow contains complex workflows for interface '
                     'tribology based on atomate and FireWorks.',
         long_description=open('README.md').read(),
@@ -11,7 +11,7 @@ if __name__ == "__main__":
         author='Michael Wolloch, Gabriele Losi, Omar Chehaimi, Firat Yalcin',
         author_email='michael.wolloch@univie.ac.at, gabriele.losi@unimore.it',
         license='Not public yet',
-        install_requires=['atomate@git+https://github.com/MichaelWolloch/atomate.git',
+        install_requires=['surfen@git+ssh://git@gitlab.com/hit_group/SurfGen.git',
                           'mep@git+https://github.com/fyalcin/mep.git'],
         classifiers=["Programming Language :: Python :: 3",
                      "Programming Language :: Python :: 3.6",
