@@ -1,100 +1,28 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Apr 21 01:05:05 2021
-
-Class and methods that deal with the classification, construction, and modification of structures.
-
-The module contains:
-
-    ** Shaper **:
-        General class to examine layers, bonds, lattice parameters,
-        and resizes slabs with desired transformations.
-        It includes the following methods:
-            - get_layer_spacings
-            - get_proj_height
-            - resize
-            - modify_vacuum
-            - get_hkl_projection
-            - get_layers
-            - remove_layers
-            - get_average_layer_spacing
-            - get_bonds
-            - get_c_ranges
-            - get_bv
-            - get_surface_area
-            - bonds_by_shift
-            - fix_regions
-            - identify_slab
-            - generate_slabs
-            - get_constrained_ouc
-
-    Functions:
-    - range_diff
-    - multirange_diff
-    - attr_to_dict
-
-    Author: Fırat Yalçın
-
-"""
-
-__author__ = 'Fırat Yalçın'
-__contact__ = 'firat.yalcin@univie.ac.at'
-__date__ = 'April 21st, 2021'
-
 import itertools
-from collections import defaultdict
+from collections import defaultdict, Counter
+from typing import Union, Any
 
 import numpy as np
-from pymatgen.analysis.local_env import BrunnerNN_real
+from numpy import ndarray
+from pymatgen.analysis.local_env import BrunnerNN_real, VoronoiNN
 from pymatgen.analysis.molecule_structure_comparator import CovalentRadius
-from pymatgen.core.lattice import Lattice
-from pymatgen.core.structure import Structure
-from pymatgen.core.surface import center_slab, Slab, SlabGenerator, get_symmetrically_distinct_miller_indices
+from pymatgen.core import Structure, Lattice
+from pymatgen.core.interface import Interface
+from pymatgen.core.surface import center_slab, Slab, get_symmetrically_distinct_miller_indices, SlabGenerator
 from pymatgen.io.cif import CifParser
 from pymatgen.transformations.standard_transformations import SupercellTransformation
-from scipy.cluster.hierarchy import fcluster, linkage
+from scipy.cluster.hierarchy import linkage, fcluster
 from scipy.spatial.distance import squareform
 
-
-def range_diff(r1, r2):
-    s1, e1 = r1
-    s2, e2 = r2
-    endpoints = sorted((s1, s2, e1, e2))
-    result = []
-    if endpoints[0] == s1:
-        result.append((endpoints[0], endpoints[1]))
-    if endpoints[3] == e1:
-        result.append((endpoints[2], endpoints[3]))
-    return result
-
-
-def multirange_diff(r1_list, r2_list):
-    for r2 in r2_list:
-        r1_list = list(itertools.chain(*[range_diff(r1, r2) for r1 in r1_list]))
-    return r1_list
-
-
-def attr_to_dict(obj, attrs):
-    attr_dict = {attr: getattr(obj, attr, None) for attr in attrs}
-    return attr_dict
-
-
-def get_subset_indices(list1, list2):
-    """
-    checks if list1 is a sublist of list2, and if it is, return all the possible
-    matches
-    """
-    couples = list(itertools.permutations(list2, len(list1)))
-    indices = list(itertools.permutations(range(len(list2)), len(list1)))
-    matches = [indices[i] for i, x in enumerate(couples) if np.allclose(x, list1)]
-    return matches
+from surfen.utils.misc_tools import attr_to_dict, get_subset_indices, get_pmg_sg_params
+from surfen.utils.misc_tools import check_input
 
 
 class Shaper:
 
     @staticmethod
-    def get_layer_spacings(struct, tol=0.1, direction=2):
+    def get_layer_spacings(struct: Union[Structure, Slab, Interface],
+                           tol: float = 0.1, direction: int = 2) -> np.array:
         """
         Simple method to calculate the projected heights of the spacings
         between layers in the given structure.
@@ -142,7 +70,8 @@ class Shaper:
         return np.round([spacing * proj_height for spacing in d], 10)
 
     @staticmethod
-    def get_proj_height(struct, region='cell', min_vac=4.0, direction=2):
+    def get_proj_height(struct: Union[Structure, Slab, Interface], region: str = 'cell', min_vac: float = 4.0,
+                        direction: int = 2, tol: float = 0.1) -> float:
         """
         Internal method to calculate the projected height of a specific region.
         For more than one slab region, the total height is calculated.
@@ -162,6 +91,8 @@ class Shaper:
             values are 0, 1, and 2, which correspond to the first, second,
             and third lattice vectors respectively.
             The default is 2.
+        tol : float, optional
+            Tolerance parameter to cluster sites into layers. The default is 0.1.
 
         Raises
         ------
@@ -186,15 +117,17 @@ class Shaper:
         if region == "cell":
             return proj_height
         elif region == "slab" or region == "vacuum":
-            spacings = Shaper.get_layer_spacings(struct)
+            spacings = Shaper.get_layer_spacings(struct, tol)
             slab_height = sum([s for s in spacings if s < min_vac])
             return slab_height if region == "slab" else proj_height - slab_height
         else:
             raise ValueError('Region must be one of "cell", "vacuum", or "slab"')
 
     @staticmethod
-    def resize(struct, slab_thickness=None, vacuum_thickness=None, tol=0.1,
-               chunk_size=1, min_thick_A=None, center=True, min_vac=4.0):
+    def resize(struct: Union[Structure, Slab, Interface], slab_thickness: Union[int, float] = None,
+               vacuum_thickness: Union[int, float] = None, tol: float = 0.1,
+               chunk_size: int = 1, min_thick_A: Union[int, float] = None, center: bool = True,
+               min_vac: Union[int, float] = 4.0) -> Union[Structure, Slab, Interface]:
         """
         resize the input slab with the desired slab thickness in
         number of layers and the vacuum region in Angstroms. All the attributes
@@ -202,6 +135,9 @@ class Shaper:
 
         Parameters
         ----------
+        min_vac : float, optional
+            Thickness threshold in angstroms to define a region as a
+            vacuum region. The default is 4.0 A.
         struct : pymatgen.core.structure.Structure
             Structure object that is to be resized. Input object
             is not modified with this method.
@@ -284,12 +220,16 @@ class Shaper:
         return resized_struct
 
     @staticmethod
-    def modify_vacuum(struct, vac_thick, method='to_value', center=True, min_vac=4.0):
+    def modify_vacuum(struct: Union[Structure, Slab, Interface], vac_thick: Union[int, float], method: str = 'to_value',
+                      center: bool = True, min_vac: Union[int, float] = 4.0) -> Union[Structure, Slab, Interface]:
         """
         Method to modify the vacuum region in a structure.
 
         Parameters
         ----------
+        min_vac : float, optional
+            Thickness threshold in angstroms to define a region as a
+            vacuum region. The default is 4.0 A.
         struct : pymatgen.core.structure.Structure
             Main object in pymatgen to store structures.
         vac_thick : float
@@ -379,7 +319,8 @@ class Shaper:
     #     return np.abs(np.dot(vector, normal))
 
     @staticmethod
-    def get_layers(struct, tol=0.1, direction=2):
+    def get_layers(struct: Union[Structure, Slab, Interface], tol: float = 0.1,
+                   direction: int = 2) -> dict:
         """
         Finds the layers in the structure taking z-direction as the primary
         direction such that the layers form planes parallel to xy-plane.
@@ -437,8 +378,8 @@ class Shaper:
         return layers
 
     @staticmethod
-    def remove_layers(slab, num_layers, tol=0.1, method='target', position='bottom',
-                      center=True):
+    def remove_layers(slab: Union[Slab, Interface], num_layers: int, tol: float = 0.1, method: str = 'target',
+                      position: str = 'bottom', center: bool = True) -> Union[Slab, Interface]:
         """
         Removes layers from the bottom of the slab while updating the number
         of bonds broken in the meantime.
@@ -489,13 +430,17 @@ class Shaper:
         return center_slab(slab_copy) if center else slab_copy
 
     @staticmethod
-    def get_average_layer_spacing(slab, tol=0.1, vacuum_threshold=6.0):
+    def get_average_layer_spacing(slab: Union[Slab, Interface], tol: float = 0.1,
+                                  vacuum_threshold: Union[int, float] = 6.0) -> ndarray:
         """
         Compute the average distance between the slabs layers disregarding the
         vacuum region.
 
         Parameters
         ----------
+        tol : float, optional
+            Tolerance to use in the identification of the layers.
+            The default is 0.1 Angstroms.
         slab : pymatgen.core.surface.Slab
             Standard pymatgen Slab object.
         vacuum_threshold : float, optional
@@ -514,7 +459,8 @@ class Shaper:
         return av_spacing
 
     @staticmethod
-    def get_bonds(struct, method='covalent_radii', dtol=0.20, wtol=0.15):
+    def get_bonds(struct: Union[Slab, Structure], method: str = 'covalent_radii',
+                  dtol: float = 0.20) -> dict:
         """
         Finds all unique bonds in the structure and orders them by bond strength
         using bond valance method and with the assumption that the ideal bond length
@@ -523,7 +469,7 @@ class Shaper:
         Parameters
         ----------
         struct : pymatgen.core.structure.Structure
-            Conventional standart structure that is used to generate the slabs.
+            Conventional standard structure that is used to generate the slabs.
 
         method : string, optional
             Method used to calculate the bond valence parameters
@@ -536,29 +482,25 @@ class Shaper:
             Added tolerance to form a bond for the dictionary passed to the
             slab generation algorithm.
 
-        wtol : float, optional
-            Added tolerance to eliminate bonds by their weights calculated by
-            exp((R_0 - R_i/b)) where R_0 is the 'ideal' bond length, R_i is
-            the observed bond length in the structure, and b is an empirical
-            constant roughly 0.37 Angstroms.
-
         Returns
         -------
         dict : Collection of bonds that has a 'weight' within a delta of the highest
         weight.
         """
         # struct = struct.get_primitive_structure()
-        BNN = BrunnerNN_real(cutoff=max(struct.lattice.abc))
+        bnn = BrunnerNN_real(cutoff=2 * max(struct.lattice.abc))
+        # cutoff = 1.5*max(struct.lattice.abc)
         species, indices = np.unique([str(x) for x in struct.species],
                                      return_index=True)
         bonds = {}
         wmax = 0
         for i, site_index in enumerate(indices):
             sp1 = species[i]
-            for neighbor in BNN.get_nn_info(struct, site_index):
-                sp2 = str(struct.species[neighbor['site_index']])
-                dist = np.linalg.norm(struct[site_index].coords
-                                      - neighbor['site'].coords)
+            # for neighbor in struct.get_neighbors(site=struct[site_index], r=cutoff):
+            for neighbor in bnn.get_nn_info(struct, site_index):
+                neighbor = neighbor['site']
+                sp2 = str(neighbor.specie)
+                dist = neighbor.nn_distance
                 if method == 'covalent_radii':
                     cr = CovalentRadius().radius
                     R_0 = cr[sp1] + cr[sp2]
@@ -591,14 +533,104 @@ class Shaper:
                 w = np.exp((R_0 - dist) / b)
                 wmax = w if w > wmax else wmax
                 if ((sp1, sp2) not in bonds) and ((sp2, sp1) not in bonds):
-                    bonds[(sp1, sp2)] = (dist + dtol, w)
+                    bonds[(sp1, sp2)] = (dist * (1 + dtol), w)
         # bonds = {k: v[0] for k, v in bonds.items() if abs(v[1]-wmax)/wmax <= wtol}
         return bonds
 
     @staticmethod
-    def get_c_ranges(struct, nn_method='all', cutoff=5.0):
+    def get_c_ranges_old(struct, nn_method='all', cutoff=5.0, weights='bvs', c_range_pmg=True):
         """
-        Calculates all the bonds in the given structure
+        Calculates all the bond valence sums for bonds that would be broken for each
+        possible shift in the given structure.
+
+        Parameters
+        ----------
+        weights : string, optional
+            Method used to calculate the bond valence parameters
+            - 'bvs' : uses the bond valence sums from the pymatgen BrunnerNN_real
+        struct : pymatgen.core.structure.Structure
+            Pymatgen Structure object.
+        nn_method: str, optional
+            Nearest-neighbor algorithm to be used. Currently, supports
+            'all' and 'BNN'. For more info, check out BrunnerNN documentation.
+        cutoff : float, optional
+            Cutoff radius used in neighbor searching. The value is in Angstroms.
+            The default value is 5.0A.
+
+        Returns
+        -------
+        c_ranges : list
+            List with elements describing every bond in the structure, with
+            the endpoints of the bond and the bond valence values for each bond.
+
+        """
+        cr = CovalentRadius().radius
+        if nn_method == 'all':
+            nn_list = struct.get_all_neighbors(r=cutoff)
+        elif nn_method == 'BNN':
+            bnn = BrunnerNN_real(cutoff=cutoff)
+            nn_list = bnn.get_all_nn_info(struct)
+        else:
+            raise ValueError('"nn_method" must be one of "all" or "BNN"')
+
+        print('Neighbor finding done!')
+        if nn_method == 'all' and weights == 'equal':
+            print(f'WARNING! Setting nn_method to "all" and weights to "equal" will lead to incorrect results.')
+
+        c_ranges = []
+        species = [str(i) for i in struct.species]
+        c_ranges_uc = []
+        for s_index, site in enumerate(struct):
+            for nn in nn_list[s_index]:
+                if nn_method == 'BNN':
+                    image = nn['image']
+                    nn = nn['site']
+                c_range = np.round(sorted([site.frac_coords[2], nn.frac_coords[2]]), 3)
+                # c_range = np.round([site.frac_coords[2], nn.frac_coords[2]], 3)
+
+                # if c_range[0] != c_range[1]:
+                if True:
+                    # if image == (0, 0, 0):
+                    #     continue
+                    # if c_range.tolist() in c_ranges_uc:
+                    #     continue
+                    # else:
+                    #     c_ranges_uc.append(c_range.tolist())
+                    nn_site_index = nn.index
+                    sp1 = species[s_index]
+                    sp2 = species[nn_site_index]
+                    dist = nn.nn_distance
+                    if weights == 'bvs':
+                        w = Shaper.calculate_bv(cr[sp1], cr[sp2], dist)
+                    elif weights == 'equal':
+                        w = 1
+                    elif weights == 'bvs_squared':
+                        w = Shaper.calculate_bv(cr[sp1], cr[sp2], dist) ** 2
+                    else:
+                        raise Exception(f'Weights for c_ranges must be one of "bvs", "equal", or "bvs_squared".')
+                    bv = ((sp1, s_index), (sp2, nn_site_index), dist, w)
+                    if c_range_pmg:
+                        # while c_range[1] <= 0:
+                        #     c_range += 1
+                        c_ranges.append((c_range, bv))
+
+                        # if c_range[0] < 0:
+                        #     c_ranges.append((0, c_range[1], bv))
+                        #     c_ranges.append((c_range[0] + 1, 1, bv))
+                        # elif c_range[1] > 1:
+                        #     c_ranges.append((c_range[0], 1, bv))
+                        #     c_ranges.append((0, c_range[1] - 1, bv))
+                        # else:
+                        #     c_ranges.append((c_range[0], c_range[1], bv))
+                    else:
+                        c_ranges.append((c_range[0], c_range[1], bv))
+        return c_ranges
+
+    @staticmethod
+    def get_c_ranges(struct: Union[Slab, Structure], nn_method: str = 'all', cutoff: Union[int, float] = 5.0):
+        """
+        Calculates all the bond valence sums for bonds that would be broken for each
+        possible shift in the given structure.
 
         Parameters
         ----------
@@ -621,56 +653,59 @@ class Shaper:
         cr = CovalentRadius().radius
         # cutoff = 2 * max([a[0] for a in list(Shaper.get_bonds(struct).values())])
         if nn_method == 'all':
+            # print('Finding all neighbors!')
             nn_list = struct.get_all_neighbors(r=cutoff)
         elif nn_method == 'BNN':
-            BNN = BrunnerNN_real(cutoff=cutoff)
-            nn_list = BNN.get_all_nn_info(struct)
+            # print('Using BrunnerNN algorithm!')
+            bnn = BrunnerNN_real(cutoff=cutoff)
+            nn_list = bnn.get_all_nn_info(struct)
+        elif nn_method == 'VNN':
+            vnn = VoronoiNN(cutoff=cutoff)
+            nn_list = vnn.get_all_nn_info(struct)
         else:
             raise ValueError('"nn_method" must be one of "all" or "BNN"')
+
+        # if nn_method == 'all' and weight == 'equal':
+        #     print(f'WARNING! Setting nn_method to "all" and weights to "equal" will lead to incorrect results.')
 
         c_ranges = []
         species = [str(i) for i in struct.species]
         for s_index, site in enumerate(struct):
             for nn in nn_list[s_index]:
                 if nn_method == 'BNN':
+                    # w = nn['weight']
+                    # if np.round(w, 2) < 1.0:
+                    #     continue
                     nn = nn['site']
-                c_range = np.round(sorted([site.frac_coords[2], nn.frac_coords[2]]), 3)
-                if c_range[0] != c_range[1]:
-                    nn_site_index = nn.index
-                    sp1 = species[s_index]
-                    sp2 = species[nn_site_index]
-                    dist = nn.nn_distance
-                    bv = Shaper.get_bv(cr[sp1], cr[sp2], dist)
-                    bv = ((sp1, s_index), (sp2, nn_site_index), dist, bv)
-                    if c_range[0] < 0:
-                        c_ranges.append((0, c_range[1], bv))
-                        c_ranges.append((c_range[0] + 1, 1, bv))
-                    elif c_range[1] > 1:
-                        c_ranges.append((c_range[0], 1, bv))
-                        c_ranges.append((0, c_range[1] - 1, bv))
-                    else:
-                        c_ranges.append((c_range[0], c_range[1], bv))
-        return c_ranges
+                c_range = np.round(sorted([site.frac_coords[2], nn.frac_coords[2]]), 4)
+                sp1, sp2, dist = species[s_index], species[nn.index], nn.nn_distance
+                cr_dist = (cr[sp1], cr[sp2], dist)
+                c_ranges.append((c_range, cr_dist))
+        return c_ranges, nn_list
 
     @staticmethod
-    def get_bv(r1, r2, bond_dist):
-        b = 0.37
-        R_0 = r1 + r2
-        return np.exp((R_0 - bond_dist) / b)
+    def calculate_bv(r1: float, r2: float, bond_dist: float) -> float:
+        b, r_0 = 0.37, r1 + r2
+        return np.exp((r_0 - bond_dist) / b)
 
     @staticmethod
-    def get_surface_area(struct):
+    def get_surface_area(struct: Union[Structure, Slab, Interface]) -> float:
         mat = struct.lattice.matrix
         return np.linalg.norm(np.cross(mat[0], mat[1]))
 
     @staticmethod
-    def bonds_by_shift(sg, nn_method='all', tol=0.1, cutoff=5.0):
+    def bonds_by_shift_old(sg, nn_methods=('all',), tol=0.1, cutoff=5.0, weights=('bvs',)):
         """
         Calculates the bond valence sums of the broken bonds corresponding to
         all the possible shifts
 
         Parameters
         ----------
+        weights : list, optional
+            List of weights to be used for each shift. The default is ['bvs'].
+        nn_methods : list, optional
+            List of nearest-neighbor algorithms to be used. Currently supports
+            'all' and 'BNN'. For more info, check out BrunnerNN documentation.
         sg : pymatgen.core.surface.SlabGenerator
             Pymatgen SlabGenerator object to extract the possible shifts in a
             specific orientation.
@@ -689,20 +724,284 @@ class Shaper:
 
         """
         ouc = sg.oriented_unit_cell
-        area = Shaper.get_surface_area(ouc)
-        c_ranges = Shaper.get_c_ranges(ouc, nn_method, cutoff)
         shifts = np.round(sg._calculate_possible_shifts(tol=tol), 4)
+
+        scaling_matrix = ((1, 0, 0), (0, 1, 0), (0, 0, 3))
+        ouc.make_supercell(scaling_matrix=scaling_matrix)
+
+        shifts = [0.33 + shift / 3 for shift in shifts]
+
         bbs = {}
-        for shift in shifts:
-            bbs[shift] = 0
-            for c_range in c_ranges:
-                if c_range[0] < shift < c_range[1]:
-                    bbs[shift] += c_range[2][3]
-            bbs[shift] = np.round(bbs[shift] / area, 4)
+        for nn_method in nn_methods:
+            c_ranges, nn_list = Shaper.get_c_ranges(ouc, nn_method, cutoff)
+            for weight in weights:
+                bbs[(nn_method, weight)] = {}
+                for shift in shifts:
+                    tmp = sum(
+                        [Shaper.calculate_bv(*c[1]) if weight == 'bvs' else 1 for c in c_ranges if
+                         c[0][0] < shift < c[0][1]])
+                    bbs[(nn_method, weight)][shift] = np.round(tmp, 4)
         return bbs
 
     @staticmethod
-    def fix_regions(struct, tol=0.1, fix_type='z_pos'):
+    def bonds_by_shift(sg: SlabGenerator, nn_methods: tuple = ('all',), tol: float = 0.1,
+                       cutoff: Union[int, float] = 5.0,
+                       weights: tuple = ('bvs',)) -> tuple[dict[tuple[tuple, tuple], dict[Any, Any]], dict]:
+        """
+        Calculates the bond valence sums of the broken bonds corresponding to
+        all the possible shifts
+
+        Parameters
+        ----------
+        nn_methods : list, optional
+            List of nearest-neighbor algorithms to be used. Currently supports
+            'all' and 'BNN'. For more info, check out BrunnerNN documentation.
+        sg : pymatgen.core.surface.SlabGenerator
+            Pymatgen SlabGenerator object to extract the possible shifts in a
+            specific orientation.
+        nn_method: str, optional
+            Nearest-neighbor algorithm to be used. Currently supported algorithms are
+            'all' and 'BNN'. For more info, check out BrunnerNN documentation.
+        tol : float, optional
+            Tolerance value used in the layering of sites in units of Angstroms.
+            The default is 0.1.
+        cutoff : float, optional
+            Cutoff radius used in neighbor searching. The value is in Angstroms.
+            The default value is 5.0A.
+        weights : string, optional
+            Weight scheme used when counting the bonds broken. Supported options are
+            "bvs", "bvs_squared", and "equal". "bvs" and "bvs_squared" schemes calculate
+            and add up the bond valence sum and square of bond valence sum of broken bonds,
+            respectively, while "equal" treats each broken bond as equal. Usage of "equal"
+            should be avoided when nn_method is set to "all" as this will consider each broken
+            bond, even when there is no actual bond due to a large bond length equally.
+
+        Returns
+        -------
+        bbs : dict
+            Dictionary with keys as shifts and values as the bond valence sum of the
+            broken bonds at each shift, scaled by the area of the x-y plane.
+
+        """
+        if not isinstance(nn_methods, list):
+            nn_methods = [nn_methods]
+        if not isinstance(weights, list):
+            weights = [weights]
+
+        ouc = sg.oriented_unit_cell
+        bvs_bulk = {}
+        for nn_method in nn_methods:
+            cutoff_nn = 2 * cutoff if nn_method == 'BNN' else cutoff
+            c_ranges_bulk, nn_list_bulk = Shaper.get_c_ranges(ouc, nn_method, cutoff_nn)
+            for weight in weights:
+                # if weight == 'bvs' or nn_method == 'BNN':
+                #     cutoff_nn = 2 * cutoff
+                # else:
+                #     cutoff_nn = cutoff
+                c_ranges_bulk, nn_list_bulk = Shaper.get_c_ranges(ouc, nn_method, cutoff_nn)
+                bv_bulk = sum([Shaper.calculate_bv(*c[1]) if weight == 'bvs' else 1 for c in c_ranges_bulk])
+                bv_bulk_per_atom = bv_bulk / ouc.num_sites
+                bvs_bulk[(nn_method, weight)] = bv_bulk_per_atom
+
+        slabs = {np.round(slab.shift, 4): slab for slab in sg.get_slabs(ftol=tol)}
+        # print(f'slab area for {sg.miller_index} is {[slab.surface_area for slab in slabs.values()]}')
+
+        # for shift, slab in slabs.items():
+        #     slab.to('poscar', f'{slab.composition.reduced_formula}_{slab.miller_index}.vasp')
+
+        bbs = {}
+        for nn_method in nn_methods:
+            cutoff_nn = 2 * cutoff if nn_method == 'BNN' else cutoff
+            for weight in weights:
+                # if weight == 'bvs' or nn_method == 'BNN':
+                #     cutoff_nn = 2 * cutoff
+                # else:
+                #     cutoff_nn = cutoff
+                bbs[(nn_method, weight)] = {}
+                for shift, slab in slabs.items():
+                    c_ranges_slab, nn_list_slab = Shaper.get_c_ranges(slab, nn_method, cutoff_nn)
+                    bv_slab = sum([Shaper.calculate_bv(*c[1]) if weight == 'bvs' else 1 for c in c_ranges_slab])
+                    diff = slab.num_sites * bvs_bulk[(nn_method, weight)] - bv_slab
+                    layers = Shaper.get_layers(slab)
+                    num_sites_top_layer = len(layers[max(layers, key=layers.get)])
+                    # bbs[(nn_method, weight)][shift] = np.round((diff / slab.surface_area), 4)
+                    bbs[(nn_method, weight)][shift] = (np.round(diff, 4), num_sites_top_layer, slab.surface_area)
+
+        return bbs, slabs
+
+    @staticmethod
+    def bonds_by_shift_new(sg: SlabGenerator, bulk_conv: Structure, nn_method: str = 'all',
+                           tol: float = 0.1, edge_tol: int = 3, cutoff: Union[int, float] = 5.0
+                           ) -> tuple[dict[str, dict[Any, Any]], Any]:
+        """
+        Calculates the bond valence sums of the broken bonds corresponding to
+        all the possible shifts
+
+        Parameters
+        ----------
+        edge_tol : int, optional
+            Number of layers to be considered as edge layers. The default is 3.
+        nn_method: str, optional
+            Nearest-neighbor algorithm to be used. Currently supported algorithms are
+            'all' and 'BNN'. For more info, check out BrunnerNN documentation.
+        bulk_conv : pymatgen.core.structure.Structure
+            Pymatgen Structure object of the bulk structure.
+        sg : pymatgen.core.surface.SlabGenerator
+            Pymatgen SlabGenerator object to extract the possible shifts in a
+            specific orientation.
+        tol : float, optional
+            Tolerance value used in the layering of sites in units of Angstroms.
+            The default is 0.1.
+        cutoff : float, optional
+            Cutoff radius used in neighbor searching. The value is in Angstroms.
+            The default value is 5.0A.
+        weights : string, optional
+            Weight scheme used when counting the bonds broken. Supported options are
+            "bvs", "bvs_squared", and "equal". "bvs" and "bvs_squared" schemes calculate
+            and add up the bond valence sum and square of bond valence sum of broken bonds,
+            respectively, while "equal" treats each broken bond as equal. Usage of "equal"
+            should be avoided when nn_method is set to "all" as this will consider each broken
+            bond, even when there is no actual bond due to a large bond length equally.
+
+        Returns
+        -------
+        bbs : dict
+            Dictionary with keys as shifts and values as the bond valence sum of the
+            broken bonds at each shift, scaled by the area of the x-y plane.
+
+        """
+        unique_sites = np.unique(bulk_conv.site_properties['bulk_equivalent'], return_index=True)[1]
+        c_bulk = {}
+        bonds_bulk = {}
+        for site_index in unique_sites:
+            site = bulk_conv[site_index]
+            specie = str(site.specie)
+            nn_list = Shaper.get_neighbors(bulk_conv, cutoff, nn_method, site_index)
+            c_bulk[site_index] = len(nn_list)
+            bonds_bulk[f'{specie}-{site_index}'] = [
+                (f'{str(nn.specie)}-{nn.properties["bulk_equivalent"]}',
+                 np.round(nn.nn_distance, 6))
+                for nn in nn_list]
+
+        slabs = {np.round(slab.shift, 4): slab for slab in sg.get_slabs(ftol=tol)}
+        area = list(slabs.values())[0].surface_area
+
+        # for shift, slab in slabs.items():
+        #     slab.add_oxidation_state_by_guess()
+        #     print(f'Polarity of slab with shift {shift} is {slab.is_polar()}')
+
+        # layer_spacings = [spc for spc in Shaper.get_layer_spacings(list(slabs.values())[0], tol) if spc > 4]
+        # print(f'for hkl {sg.miller_index}, {edge_tol} layers is {sum(layer_spacings[-edge_tol:])} thick')
+
+        bbs = {}
+        for shift, slab in slabs.items():
+            layers = Shaper.get_layers(slab, tol)
+            layers_c_sorted = sorted(layers.keys())
+            c_top_layer, c_bot_layer = max(layers), min(layers)
+
+            if edge_tol > len(layers_c_sorted) or edge_tol == 99:
+                top_layers_c_coords = layers_c_sorted
+            else:
+                top_layers_c_coords = layers_c_sorted[-edge_tol:]
+            # top_layers_c_coords = [a for a in layers_c_sorted if a > c_top_layer - edge_tol]
+            # print(f'top layer c coords are {top_layers_c_coords}')
+
+            top_layer_sites = [site for k in top_layers_c_coords for site in layers[k]]
+            # top_layer_sites = [item for sublist in top_layer_sites for item in sublist]
+
+            # bot_layers_c_coords = layers_c_sorted[:edge_tol]
+            # bot_layers_c_coords = [a for a in layers_c_sorted if a < c_bot_layer + edge_tol]
+            # bot_layer_sites = [layers[k] for k in bot_layers_c_coords]
+            # bot_layer_sites = [item for sublist in bot_layer_sites for item in sublist]
+            # num_sites_top_layer = len(layers[max(layers)])
+            # num_sites_bot_layer = len(layers[min(layers)])
+
+            nn_dict = defaultdict(list)
+            # c_slab_tot = 0
+            # c_bulk_tot = 0
+            # n_top = 0
+            for site_index in top_layer_sites:
+                site = slab[site_index]
+                specie = str(site.specie)
+                bulk_eq = site.properties['bulk_equivalent']
+                nn_list = Shaper.get_neighbors(slab, cutoff, nn_method, site_index)
+                nn_list_hr = [(f'{str(nn.specie)}-{nn.properties["bulk_equivalent"]}',
+                               np.round(nn.nn_distance, 6)) for nn in nn_list]
+                nn_list_hr_bulk = bonds_bulk[f'{specie}-{bulk_eq}']
+                diff = Counter(nn_list_hr_bulk) - Counter(nn_list_hr)
+                bonds_broken = list(diff.elements())
+                if bonds_broken:
+                    # n_top += 1
+                    # c_slab_tot += c_bulk[nn_method][bulk_eq] - len(bonds_broken)
+                    # c_bulk_tot += c_bulk[nn_method][bulk_eq]
+                    nn_dict[f'{specie}-{bulk_eq}'] += bonds_broken
+
+            # nn_dict = [aa[-1] if weights[0] == 'bvs' else 1 for sublist in nn_dict.values() for aa in
+            #                sublist]
+
+            # bbs[nn_method][shift] = (sum(nn_dict), 1, slab.surface_area)
+
+            bbs[shift] = nn_dict
+
+            # bbs[(nn_method, weight)][shift] = (fact, n_top, slab.surface_area)
+            # nn_dict_bot = {}
+            # for site_index in bot_layer_sites:
+            #     site = slab[site_index]
+            #     bulk_eq = site.properties['bulk_equivalent']
+            #     nn_list_hr_bulk = bvs_bulk[(nn_method, weight)][bulk_eq]
+            #     # nn_list = slab.get_neighbors(site=site, r=cutoff)
+            #     nn_list = BNN.get_nn_info(slab, site_index)
+            #     nn_list = [nn['site'] for nn in nn_list]
+            #     nn_list_hr = [(str(nn.specie), np.round(nn.nn_distance, 8)) for nn in nn_list]
+            #     c1 = Counter(nn_list_hr_bulk)
+            #     c2 = Counter(nn_list_hr)
+            #     diff = c1 - c2
+            #     aa = list(diff.elements())
+            #     if aa:
+            #         nn_dict_bot[site_index] = [
+            #             (str(site.specie), a[0], a[1], Shaper.calculate_bv(cr[str(site.specie)],
+            #                                                          cr[a[0]], a[1])) for a in aa]
+            #         # nn_dict_bot[site_index] = [(str(site.specie), a[0], a[1]) for a in aa]
+            # nn_dict_bot = [aa[-1] for sublist in nn_dict_bot.values() for aa in sublist]
+            # bbs[(nn_method, weight)][shift]['bot'] = sum(nn_dict_bot) / area
+        return bbs, area
+
+    @staticmethod
+    def get_bvs(bbs, weight):
+        cr = CovalentRadius().radius
+        bvs_by_shift = {}
+        for shift, bonds in bbs.items():
+            shift_tot = 0
+            for site, nn_list in bonds.items():
+                specie = site.split('-')[0]
+                if weight == 'BVS':
+                    shift_tot += sum(
+                        [Shaper.calculate_bv(cr[specie], cr[nn[0].split('-')[0]], nn[1]) for nn in nn_list])
+                elif weight == 'equal':
+                    shift_tot += len(nn_list)
+                else:
+                    raise ValueError(f'weight {weight} not recognized!')
+            bvs_by_shift[shift] = shift_tot
+        return bvs_by_shift
+
+    @staticmethod
+    def get_neighbors(bulk_conv, cutoff, nn_method, site_index):
+        if nn_method == 'BNN':
+            bnn = BrunnerNN_real(cutoff=cutoff)
+            try:
+                nn_list = bnn.get_nn_info(bulk_conv, site_index)
+            except ValueError:
+                bnn = BrunnerNN_real(cutoff=2 * cutoff)
+                nn_list = bnn.get_nn_info(bulk_conv, site_index)
+            nn_list = [nn['site'] for nn in nn_list]
+        else:
+            site = bulk_conv[site_index]
+            nn_list = bulk_conv.get_neighbors(site=site, r=cutoff)
+        return nn_list
+
+    @staticmethod
+    def fix_regions(struct: Union[Slab, Structure], tol: float = 0.1,
+                    fix_type: str = 'z_pos') -> Union[Slab, Structure]:
         """
         Method to add site properties to the structure to fix certain ions
         from moving during a relaxation run. Mostly used to reduce computation
@@ -716,7 +1015,7 @@ class Shaper:
             Tolerance used to cluster sites into layers. The default is 0.1.
         fix_type : str, optional
             Type of region fixing to be used. For PES calculations, 'z_pos'
-            is usually comployed while to simulate bulk in certain slabs,
+            is usually employed while to simulate bulk in certain slabs,
             we can fix part of the slab completely. The default is 'z_pos'.
 
         Raises
@@ -739,7 +1038,7 @@ class Shaper:
         layers = Shaper.get_layers(struct, tol)
         sorted_layers = sorted(layers.keys())
         num_layers = len(layers)
-        fix_arr = np.asarray([[True, True, True] for i in range(len(struct))])
+        fix_arr = np.asarray([[True, True, True] for _ in range(len(struct))])
         if fix_type == 'z_pos':
             fix_arr[:, 2] = False
         elif fix_type in ('top_half', 'bottom_half', 'top_third', 'bottom_third'):
@@ -752,11 +1051,12 @@ class Shaper:
             for site in sites:
                 fix_arr[site] = [False, False, False]
         struct_copy = struct.copy()
+        fix_arr = fix_arr.tolist()
         struct_copy.add_site_property('selective_dynamics', fix_arr)
         return struct_copy
 
     @staticmethod
-    def identify_slab(slab):
+    def identify_slab(slab: Slab) -> dict:
         """
         Identifies the symmetry and the stoichiometry of the given slab.
 
@@ -772,14 +1072,14 @@ class Shaper:
 
         """
         sym = slab.is_symmetric()
-        bulk_ref = slab.oriented_unit_cell
-        slab_comp = slab.composition.reduced_composition
-        bulk_ref_comp = bulk_ref.composition.reduced_composition
-        sto = (slab_comp == bulk_ref_comp)
+        bulk = slab.oriented_unit_cell
+        slab_formula = slab.composition.reduced_formula
+        bulk_formula = bulk.composition.reduced_formula
+        sto = (slab_formula == bulk_formula)
         return {'symmetric': sym, 'stoichiometric': sto}
 
     @staticmethod
-    def generate_slabs(bulk_conv, sg_params, to_file=False):
+    def generate_slabs(bulk_conv: Structure, sg_params: dict, to_file=False) -> tuple[dict, dict]:
         """
         Generates slabs with the given parameters.
 
@@ -849,117 +1149,111 @@ class Shaper:
             pymatgen.core.surface.SlabGenerator objects.
 
         """
+        # First, we check sg_params if it has the required keys and fill the missing
+        # ones with the default values.
+        # TODO: Find a better way, this is ugly.
+        sg_params = check_input({'sg_params': sg_params}, ['sg_params'])['sg_params']
 
-        # if there is a max_index parameter in sg_params, it takes precedence
-        # over miller parameters, and we generate all symmetrically distinct
-        # miller indices up to a maximum index of max_index
         max_index = sg_params.get('max_index')
-        if max_index:
-            miller = get_symmetrically_distinct_miller_indices(bulk_conv, max_index)
-            # miller = [m for m in miller if max_index in m]
-        else:
+        miller = sg_params.get('miller')
+        if miller and not max_index:
+            print(f'Generating slabs for the following miller indices: {miller}')
             miller = sg_params.get('miller')
             if isinstance(miller[0], int):
                 miller = [(*miller,)]
             else:
                 miller = [(*m,) for m in miller]
+        elif max_index and not miller:
+            miller = get_symmetrically_distinct_miller_indices(bulk_conv, max_index)
+        elif max_index and miller:
+            raise ValueError('You cannot specify both max_index and miller parameters.')
+        else:
+            raise ValueError('You must specify either max_index or miller parameters.')
 
         tol = sg_params.get('tol')
-        mns = sg_params.get('max_normal_search')
+        resize = sg_params.get('resize')
+        symmetrize = sg_params.get('symmetrize')
+        match_ouc_lattice = sg_params.get('match_ouc_lattice')
+        calculate_bonds = sg_params.get('calculate_bonds')
         sg_dict = {}
         slabs_dict = {}
         for m in miller:
             # we need some parameters to use in SlabGenerator, so we extract those
             # from the input sg_params and put them in pmg_sg_params
-            pmg_sg_params = {'initial_structure': bulk_conv,
-                             'min_slab_size': sg_params['slab_thick'],
-                             'min_vacuum_size': sg_params['vac_thick'],
-                             'lll_reduce': sg_params['lll_reduce'],
-                             'center_slab': sg_params.get('center_slab', True),
-                             'in_unit_planes': sg_params.get('in_unit_planes', True),
-                             'primitive': sg_params['primitive'],
-                             'reorient_lattice': True}
-
-            # the actual max_normal_search used in SlabGenerator is defined using
-            # the corresponding max_normal_search in sg_params. We use two options,
-            # either "max" or None. Then the pmg_sg_params is updated with these
-            max_normal_search = max([abs(i) for i in m]) if mns == 'max' else mns
-            pmg_sg_params.update({'max_normal_search': max_normal_search,
-                                  'miller_index': m})
+            pmg_sg_params = get_pmg_sg_params(bulk_conv=bulk_conv, miller=m, sg_params=sg_params)
 
             # we first try a SlabGenerator with the given sg_params, if things go as
             # expected we proceed with this
             sg = SlabGenerator(**pmg_sg_params)
 
-            # ouc = Shaper.get_matching_ouc(slabs[0])
-            # if not ouc:
-            #     SG = SlabGenerator(initial_structure=bulk_conv,
-            #                        miller_index=m,
-            #                        min_slab_size=slab_thick,
-            #                        min_vacuum_size=vac_thick,
-            #                        lll_reduce=False,
-            #                        center_slab=sg_params.get('center_slab', True),
-            #                        in_unit_planes=sg_params.get('in_unit_planes', True),
-            #                        primitive=False,
-            #                        max_normal_search=max_normal_search,
-            #                        reorient_lattice=True)
-            #     slabs = SG.get_slabs(ftol=tol, symmetrize=sg_params.get('symmetrize', False))
-            #     ouc = Shaper.get_matching_ouc(slabs[0])
-            # for slab in slabs:
-            #     slab.oriented_unit_cell = ouc
+            d_hkl, pmg_layer_size = Shaper.get_pmg_layer_size(bulk_conv=bulk_conv,
+                                                              miller=m,
+                                                              sg=sg,
+                                                              tol=tol)
 
-            # since the terminations repeat every d_hkl distance in c direction,
-            # the distance between miller planes, we need to figure out how many
-            # layers this d_hkl portion corresponds to in order to preserve terminations
-            d_hkl = bulk_conv.lattice.d_hkl(m)
-            ouc_layers = len(Shaper.get_layers(sg.oriented_unit_cell, tol))
-            ouc_height = Shaper.get_proj_height(sg.oriented_unit_cell)
-            # we calculate how many layers pymatgen considers a single layer here
-            pmg_layer_size = int(ouc_layers / round(ouc_height / d_hkl))
-            min_thick_A = sg_params.get('min_thick_A', None)
+            min_thick_A = sg_params['min_thick_A']
             # if there is a min_thick_A key in sg_params, we have to ensure that the slabs we initially
             # generate (before resizing) have thicknesses greater than this value. For this, we modify
             # the corresponding min_slab_size parameter in pmg_sg_params by calculating the number of layers
             # needed to reach min_thick_A.
             if min_thick_A:
-                pmg_sg_params['min_slab_size'] = max(np.ceil(min_thick_A / d_hkl) + 1, sg_params['slab_thick'])
+                final_layer_spacing = Shaper.get_layer_spacings(sg.oriented_unit_cell, tol)[-1]
+                min_slab_size = max(np.ceil((min_thick_A + final_layer_spacing) / d_hkl), sg_params['slab_thick'])
+                pmg_sg_params['min_slab_size'] = min_slab_size
                 sg = SlabGenerator(**pmg_sg_params)
-            slabs = sg.get_slabs(ftol=tol, symmetrize=sg_params.get('symmetrize', False))
 
-            # we check if we can get an oriented unit cell with the same lateral lattice
-            # parameters and gamma angle as the slab, for consistency with brillouin zone
-            # sampling
-            ouc = Shaper.get_matching_ouc(slabs[0])
-            if not ouc:
-                # if no such ouc exists, we turn off primitive and lll_reduce, since
-                # only when either one or both of these are True, we have issues with
-                # finding matching ouc
-                print('OUC matching failed with given sg params, modifying primitive and lll_reduce..')
-                pmg_sg_params.update({'primitive': False,
-                                      'lll_reduce': False})
-                sg = SlabGenerator(**pmg_sg_params)
-                slabs = sg.get_slabs(ftol=tol, symmetrize=sg_params.get('symmetrize', False))
-                # we set a flag to show that sg params are modified, and we will assign
-                # this as an attribute to the Slab objects, so that we can tell if the slabs
-                # generated result from a modified sg
-                param_modified = True
+            slabs = sg.get_slabs(ftol=tol, symmetrize=symmetrize)
+            if not slabs:
+                continue
+
+            if match_ouc_lattice:
+                # we check if we can get an oriented unit cell with the same lateral lattice
+                # parameters and gamma angle as the slab, for consistency with brillouin zone
+                # sampling
                 ouc = Shaper.get_matching_ouc(slabs[0])
-                if not ouc:
-                    # if we still don't have a matching ouc, which should not happen
-                    # we print and a non-matching ouc is used instead.
-                    print(f'Matching oriented unit cell cannot be found. Your reference energies'
-                          f'might not be suitable for a surface energy convergence scheme.')
+                if ouc:
+                    param_modified = False
+                else:
+                    # if no such ouc exists, we turn off primitive and lll_reduce, since
+                    # only when either one or both of these are True, we have issues with
+                    # finding matching ouc
+                    print('OUC matching failed with the given sg_params, modifying primitive and lll_reduce..')
+                    pmg_sg_params.update({'primitive': False,
+                                          'lll_reduce': False})
+                    sg_modified = SlabGenerator(**pmg_sg_params)
+                    slabs_modified = sg_modified.get_slabs(ftol=tol, symmetrize=symmetrize)
+                    # we set a flag to show that sg params are modified, and we will assign
+                    # this as an attribute to the Slab objects, so that we can tell if the slabs
+                    # generated result from a modified sg
+                    ouc = Shaper.get_matching_ouc(slabs_modified[0])
+                    if ouc:
+                        param_modified = True
+                        slabs = slabs_modified
+                    else:
+                        # if we still don't have a matching ouc, which should not happen
+                        # we print and a non-matching ouc is used instead.
+                        print(f'Matching oriented unit cell cannot be found. Your reference energies'
+                              f'might not be suitable for a surface energy convergence scheme.')
+                        param_modified = False
+
+                # we change the oriented unit cells of slabs to the matching ouc that we find.
+                if ouc:
+                    for slab in slabs:
+                        slab.oriented_unit_cell = ouc
+
+                # we assign attributes to slabs if they result from a modified sg, and this is done after resizing
+                # because as soon as a pymatgen structure is copied (such is the case in Shaper.resize()), it loses
+                # all attributes not defined in the copy method. Since param_modified is such an attribute, we need
+                # to add it after resizing the slabs.
             else:
                 param_modified = False
 
-            # we change the oriented unit cells of slabs to the matching ouc that we find.
             for slab in slabs:
-                slab.oriented_unit_cell = ouc
+                slab.param_modified = param_modified
 
             # resize flag is used generate slabs with user-defined thicknesses in number of layers.
             # This is done by removing layers from the bottom of the pymatgen generated slabs since
             # they are usually thicker than one would expect.
-            resize = sg_params.get('resize', True)
             slab_thick, vac_thick = sg_params['slab_thick'], sg_params['vac_thick']
             if resize:
                 # if we want to preserve terminations, we must remove layers in chunks
@@ -973,18 +1267,12 @@ class Shaper:
             else:
                 # TODO: Remove this once resize is confirmed working. Only here to generate
                 # TODO: slabs with sizes comparable to the initial slab_thick with pymatgen
-                slab_thick_pmg = np.ceil(slab_thick / pmg_layer_size)
-                pmg_sg_params.update({'slab_thick': slab_thick_pmg})
-                sg = SlabGenerator(**pmg_sg_params)
-                slabs = sg.get_slabs(ftol=tol, symmetrize=sg_params.get('symmetrize', False))
+                # slab_thick_pmg = np.ceil(slab_thick / pmg_layer_size)
+                # pmg_sg_params.update({'min_slab_size': slab_thick_pmg})
+                # sg = SlabGenerator(**pmg_sg_params)
+                # slabs = sg.get_slabs(ftol=tol, symmetrize=symmetrize)
+                # THIS NOW JUST RESIZES THE VACUUM AND LEAVES THE SLABS UNTOUCHED
                 slabs = [Shaper.resize(slab, vacuum_thickness=vac_thick, tol=tol) for slab in slabs]
-
-            # we assign attributes to slabs if they result from a modified sg, and this is done after resizing
-            # because as soon as a pymatgen structure is copied (such is the case in Shaper.resize()), it loses
-            # all attributes not defined in the copy method. Since param_modified is such an attribute, we need
-            # to add it after resizing the slabs.
-            for slab in slabs:
-                slab.param_modified = param_modified
 
             # check if slabs list is empty, which only happens when symmetrize is True
             # and the sg can not find symmetric slabs.
@@ -995,28 +1283,46 @@ class Shaper:
                       ' may or may not solve this issue.')
                 continue
 
-            # we assign energies (bond valence sums of broken bonds) to each slab, in this case
-            # unique terminations, and also the pymatgen layer size, which is the number of layers
-            # we can safely remove at once without modifying terminations
-            nn_method = 'all'
-            bbs = Shaper.bonds_by_shift(sg, nn_method, tol, cutoff=max(bulk_conv.lattice.abc))
             for slab in slabs:
-                slab.energy = bbs[np.round(slab.shift, 4)]
                 slab.pmg_layer_size = pmg_layer_size
 
-            # print(
-            #     f'{ouc.composition.reduced_formula}{m} has {[len(Shaper.get_layers(s, tol)) for s in slabs]} layer slabs'
-            #     f' with {[s.num_sites for s in slabs]} sites and\n'
-            #     f'thicknesses {[np.round(Shaper.get_proj_height(s, "slab"), 3) for s in slabs]} Angstroms.')
-            # print(f'The OUC has {ouc_layers} layers and d_hkl is {pmg_layer_size} layers.')
-            # print(f'Their BVS are {[s.energy for s in slabs]}.\n')
+            # TODO: Remove this once we decide where to filter out large slabs
+            # max_nsites = sg_params.get('max_nsites', None)
+            # if max_nsites:
+            #     slabs = [slab for slab in slabs if slab.num_sites <= max_nsites]
+            # try:
+            #     slab = slabs[0]
+            # except IndexError:
+            #     print(f'No slabs could be generated for {m} orientation because all'
+            #           f' slabs have more than {max_nsites} sites.')
+            #     continue
+
+            # we assign energies (bond valence sums of broken bonds) to each slab, in this case
+            # unique terminations, and also the pymatgen layer size, which is the number of layers
+            # we can safely remove at once while preserving terminations.
+
+            if calculate_bonds:
+                nn_method = sg_params.get('nn_method')
+                weight = sg_params.get('weight')
+                max_bl = max([a[0] for a in list(Shaper.get_bonds(bulk_conv).values())])
+                bbs, area = Shaper.bonds_by_shift_new(sg=sg,
+                                                      bulk_conv=bulk_conv,
+                                                      nn_method=nn_method,
+                                                      tol=tol,
+                                                      cutoff=max_bl,
+                                                      edge_tol=99)
+                bvs = Shaper.get_bvs(bbs, weight=weight)
+                for slab in slabs:
+                    slab.energy = {'broken_bonds': bbs[np.round(slab.shift, 4)],
+                                   'bvs_per_area': bvs[np.round(slab.shift, 4)] / area,
+                                   'area': area}
 
             if to_file:
                 formula = slabs[0].composition.reduced_formula
                 for index, slab in enumerate(slabs):
                     hkl = ''.join([str(i) for i in slab.miller_index])
                     area = np.round(slab.surface_area, 2)
-                    slab.to('poscar', f'{formula}_{hkl}_{area}_{index}.vasp')
+                    slab.to(f'{formula}_{hkl}_{area}_{index}.vasp', 'poscar')
 
             slabs_dict[m] = slabs
             sg_dict[m] = sg
@@ -1024,7 +1330,22 @@ class Shaper:
         return slabs_dict, sg_dict
 
     @staticmethod
-    def get_constrained_ouc(slab):
+    def get_pmg_layer_size(bulk_conv, miller, sg, tol):
+        # since the terminations repeat every d_hkl distance in c direction,
+        # the distance between miller planes, we need to figure out how many
+        # layers this d_hkl portion corresponds to in order to preserve terminations
+        d_hkl = bulk_conv.lattice.d_hkl(miller)
+        try:
+            ouc_layers = len(Shaper.get_layers(sg.oriented_unit_cell, tol))
+        except ValueError:
+            ouc_layers = 1
+        ouc_height = Shaper.get_proj_height(sg.oriented_unit_cell)
+        # we calculate how many layers pymatgen considers a single layer here
+        pmg_layer_size = int(ouc_layers / round(ouc_height / d_hkl))
+        return d_hkl, pmg_layer_size
+
+    @staticmethod
+    def get_constrained_ouc(slab: Slab) -> Structure:
         """
         Finds the constrained oriented unit cell of a Slab object. The constraints
         are the a and b parameters of the slab, along with the gamma angle.
@@ -1047,7 +1368,7 @@ class Shaper:
         return ouc
 
     @staticmethod
-    def get_matching_ouc(slab):
+    def get_matching_ouc(slab: Slab) -> Union[Structure, None]:
         """
         Given a slab, finds an oriented unit cell that matches the lateral lattice parameters
         and the gamma angle of the slab. Useful for constructing an oriented unit cell to be
@@ -1093,7 +1414,7 @@ class Shaper:
         return ouc
 
     @staticmethod
-    def _check_lattice_match(lattice1, lattice2):
+    def _check_lattice_match(lattice1: Lattice, lattice2: Lattice) -> Union[int, None]:
         """
         checks if lattice1 has the same base as lattice2, ignoring orientations.
         lattice1 is considered to be the slab in this case. returns the index of
