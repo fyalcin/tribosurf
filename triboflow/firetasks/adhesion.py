@@ -44,6 +44,8 @@ class FT_RetrieveMatchedSlabs(FiretaskBase):
         Miller indices of the second material
     functional : str
         Functional with which the workflow is run. PBE or SCAN.
+    external_pressure : float
+        External pressure in GPa.
     db_file : str, optional
         Full path of the db.json file to be used. The default is to use
         env_chk to find the file.
@@ -60,7 +62,7 @@ class FT_RetrieveMatchedSlabs(FiretaskBase):
 
     
     required_params = ['mp_id_1', 'mp_id_2', 'miller_1', 'miller_2',
-                       'functional']
+                       'functional', 'external_pressure']
     optional_params = ['db_file', 'top_out_name', 'bottom_out_name',
                        'high_level_db']
     
@@ -70,6 +72,7 @@ class FT_RetrieveMatchedSlabs(FiretaskBase):
         miller_1 = self.get('miller_1')
         miller_2 = self.get('miller_2')
         functional = self.get('functional')
+        pressure = self.get('external_pressure')
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
@@ -97,7 +100,8 @@ class FT_RetrieveMatchedSlabs(FiretaskBase):
                     out_name = bot_out_name
                 nav_high = Navigator(db_file, high_level=hl_db)
                 nav_high.update_data(collection=functional+'.interface_data',
-                                     fltr={'name': name},
+                                     fltr={'name': name,
+                                           'pressure': pressure},
                                      new_values={'$set':
                                                  {out_name: slab.as_dict()}})
         
@@ -122,6 +126,8 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
         Miller indices of the second material
     functional : str
         Functional with which the workflow is run. PBE or SCAN.
+    external_pressure : float
+        External pressure in GPa.
     db_file : str, optional
         Full path of the db.json file to be used. The default is to use
         env_chk to find the file.
@@ -142,7 +148,7 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
         case it is read from the db.json file.
     """
     required_params = ['mp_id_1', 'mp_id_2', 'miller_1', 'miller_2',
-                       'functional']
+                       'functional', 'external_pressure']
     optional_params = ['db_file', 'top_in_name', 'top_out_name',
                        'bottom_in_name', 'bottom_out_name', 'high_level_db']
     
@@ -152,6 +158,7 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
         miller_1 = self.get('miller_1')
         miller_2 = self.get('miller_2')
         functional = self.get('functional')
+        pressure = self.get('external_pressure')
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
@@ -166,7 +173,8 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
         nav = Navigator(db_file, high_level=hl_db)
         
         interface_dict = nav.find_data(collection=functional+'.interface_data',
-                                       fltr={'name': name})
+                                       fltr={'name': name,
+                                             'pressure': pressure})
         
         relaxed_top_present = interface_dict.get(top_out_name)
         relaxed_bot_present = interface_dict.get(bot_out_name)
@@ -216,6 +224,8 @@ class FT_CalcAdhesion(FiretaskBase):
         by the 'interface_name' function in triboflow.firetasks.init_db.pyl
     functional : str
         Functional with which the workflow is run. PBE or SCAN.
+    external_pressure : float
+        External pressure in GPa.
     top_label : str
         Task_label in the low level database to find the total energy calculation
         of the top slab.
@@ -238,13 +248,14 @@ class FT_CalcAdhesion(FiretaskBase):
     """
     
     required_params = ['interface_name', 'functional', 'top_label',
-                       'bottom_label', 'interface_label']
+                       'bottom_label', 'interface_label', 'external_pressure']
     optional_params = ['db_file', 'out_name', 'high_level_db']
 
     def run_task(self, fw_spec):
         
         name = self.get('interface_name')
         functional = self.get('functional')
+        pressure = self.get('external_pressure')
         top_label = self.get('top_label')
         bot_label = self.get('bottom_label')
         inter_label = self.get('interface_label')
@@ -286,7 +297,8 @@ class FT_CalcAdhesion(FiretaskBase):
         nav_high = Navigator(db_file=db_file, high_level=hl_db)
         nav_high.update_data(
             collection=functional+'.interface_data',
-            fltr={'name': name},
+            fltr={'name': name,
+                  'pressure': pressure},
             new_values={'$set': {out_name: E_Jm2}})
         
         return FWAction(update_spec=fw_spec)

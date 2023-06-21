@@ -771,14 +771,18 @@ class StructureNavigator(Navigator):
             else:
                 raise StuctNavigatorError(message)
 
-    def get_interface_from_db(self, name, functional, warning=False):
+    def get_interface_from_db(self, name, pressure, functional, warning=False):
         """
-        Get the data about intreface from the eos database.
+        Get the data about interface from the high level database.
 
         Parameters
         ----------
         name : str
-            Unique name of the interface as 
+            Unique name of the interface as defined in
+            triboflow.firetasks.init_db.interface_name
+
+        pressure : float
+            Pressure of the interface in GPa.
         
         functional : str
             Functional. It could be PBE por SCAN.
@@ -795,19 +799,20 @@ class StructureNavigator(Navigator):
         Returns
         -------
         interface : variable object
-            Database object which contains the data for the selected slab.
+            Database object which contains the data for the selected interface.
     
         """
         
         interface = self.find_data(
             functional+'.interface_data',
-            {'name': name})
+            {'name': name,
+             'pressure': pressure})
         
         if interface:
             return interface
         else:
-            message = 'No interface with name {} was found in the ' \
-                      '{}.interface_data collection.'.format(name, functional)
+            message = f'No interface with name {name} and external pressure {pressure} GPa\n' \
+                      f'was found in the {functional}.interface_data collection.'
             if warning:
                 log.warning(message)
                 return None

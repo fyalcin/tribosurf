@@ -33,6 +33,8 @@ class FT_CopyHomogeneousSlabs(FiretaskBase):
         Functional for the identification of the high_level db.
     miller : str
         Miller indices of the slab
+    external_pressure : float
+        External pressure in GPa.
     db_file : str, optional
         Full path of the db.json. The default is 'auto'.
     high_level_db : str or bool, optional
@@ -42,13 +44,14 @@ class FT_CopyHomogeneousSlabs(FiretaskBase):
 
     """
     _fw_name = 'Copy slabs for homogeneous interfaces'
-    required_params = ['mp_id', 'functional', 'miller']
+    required_params = ['mp_id', 'functional', 'miller', 'external_pressure']
     optional_params = ['db_file', 'high_level_db']
     def run_task(self, fw_spec):
 
         mpid = self.get('mp_id')
         functional = self.get('functional')
         miller = self.get('miller')
+        pressure = self.get('external_pressure')
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
@@ -61,13 +64,15 @@ class FT_CopyHomogeneousSlabs(FiretaskBase):
                                     mp_id_2=mpid,
                                     miller_2=miller)
         interface_data = nav.find_data(collection=functional+'.interface_data',
-                      fltr={'name': inter_name})
+                      fltr={'name': inter_name,
+                            'pressure': pressure})
         top_slab = interface_data['top_aligned']
         bot_slab = interface_data['bottom_aligned']
         
         nav.update_data(
             collection=functional+'.interface_data',
-            fltr={'name': inter_name},
+            fltr={'name': inter_name,
+                  'pressure': pressure},
             new_values={'$set': {'top_aligned_relaxed': top_slab,
                                  'bottom_aligned_relaxed': bot_slab}})
 

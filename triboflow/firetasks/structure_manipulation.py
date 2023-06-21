@@ -536,6 +536,8 @@ class FT_MakeHeteroStructure(FiretaskBase):
         single str e.g. '111', or a list of int e.g. [1, 1, 1].
     functional : str
         functional that is used for the calculation.
+    external_pressure : float
+        External pressure in GPa.
     db_file : str, optional
         Full path to the db.json file which holds the location and access
         credentials to the database. If not given uses env_chk.
@@ -547,7 +549,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
 
     _fw_name = 'Make Hetero Structure'
     required_params = ['mp_id_1', 'miller_1', 'mp_id_2', 'miller_2',
-                       'functional']
+                       'functional', 'external_pressure']
     optional_params = ['db_file', 'high_level_db']
 
     def run_task(self, fw_spec):
@@ -563,6 +565,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
         else:
             miller_2 = self['miller_2']
         functional = self.get('functional')
+        pressure = self.get('external_pressure')
 
         db_file = self.get('db_file')
         if not db_file:
@@ -574,7 +577,8 @@ class FT_MakeHeteroStructure(FiretaskBase):
         inter_name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
         inter_data = nav_high.find_data(
             collection=functional + '.interface_data',
-            fltr={'name': inter_name})
+            fltr={'name': inter_name,
+                  'pressure': pressure})
 
         inter_params = inter_data['interface_parameters']
 
@@ -618,7 +622,8 @@ class FT_MakeHeteroStructure(FiretaskBase):
 
                 nav_high.update_data(
                     collection=functional + '.interface_data',
-                    fltr={'name': inter_name},
+                    fltr={'name': inter_name,
+                          'pressure': pressure},
                     new_values={'$set': {'unrelaxed_structure': inter_dict,
                                          'bottom_aligned': bottom_dict,
                                          'top_aligned': top_dict}})

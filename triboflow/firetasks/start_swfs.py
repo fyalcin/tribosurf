@@ -36,6 +36,8 @@ class FT_StartChargeAnalysisSWF(FiretaskBase):
         Miller indices of the second material
     functional : str
         Functional with which the workflow is run. PBE or SCAN.
+    external_pressure : float
+        External pressure in GPa.
     db_file : str, optional
         Full path of the db.json file to be used. The default is to use
         env_chk to find the file.
@@ -47,7 +49,7 @@ class FT_StartChargeAnalysisSWF(FiretaskBase):
         be either structure@min (default), or structure@max at the moment.
     """
     required_params = ['mp_id_1', 'mp_id_2', 'miller_1', 'miller_2',
-                       'functional']
+                       'functional', 'external_pressure']
     optional_params = ['db_file', 'high_level_db', 'interface_label']
 
     def run_task(self, fw_spec):
@@ -56,6 +58,7 @@ class FT_StartChargeAnalysisSWF(FiretaskBase):
         miller_1 = self.get('miller_1')
         miller_2 = self.get('miller_2')
         functional = self.get('functional')
+        pressure = self.get('external_pressure')
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
@@ -67,7 +70,8 @@ class FT_StartChargeAnalysisSWF(FiretaskBase):
         name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
 
         interface_dict = nav.find_data(collection=functional + '.interface_data',
-                                       fltr={'name': name})
+                                       fltr={'name': name,
+                                             'pressure': pressure})
 
         redistribution_was_calculated = interface_dict.get('charge_density_redist')
         comp_params = interface_dict.get('comp_parameters', {})
@@ -78,6 +82,7 @@ class FT_StartChargeAnalysisSWF(FiretaskBase):
             SWF = charge_analysis_swf(interface = interface,
                                       interface_name = name,
                                       functional = functional,
+                                      external_pressure = pressure,
                                       db_file = db_file,
                                       high_level_db = hl_db,
                                       comp_parameters = comp_params)
@@ -106,6 +111,8 @@ class FT_StartAdhesionSWF(FiretaskBase):
         Miller indices of the second material
     functional : str
         Functional with which the workflow is run. PBE or SCAN.
+    external_pressure : float
+        External pressure in GPa.
     db_file : str, optional
         Full path of the db.json file to be used. The default is to use
         env_chk to find the file.
@@ -117,7 +124,7 @@ class FT_StartAdhesionSWF(FiretaskBase):
         case it is read from the db.json file.
     """
     required_params = ['mp_id_1', 'mp_id_2', 'miller_1', 'miller_2',
-                       'functional']
+                       'functional', 'external_pressure']
     optional_params = ['db_file', 'adhesion_handle', 'high_level_db']
 
     def run_task(self, fw_spec):
@@ -126,6 +133,7 @@ class FT_StartAdhesionSWF(FiretaskBase):
         miller_1 = self.get('miller_1')
         miller_2 = self.get('miller_2')
         functional = self.get('functional')
+        pressure = self.get('external_pressure')
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
@@ -137,7 +145,8 @@ class FT_StartAdhesionSWF(FiretaskBase):
         name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
 
         interface_dict = nav.find_data(collection=functional + '.interface_data',
-                                       fltr={'name': name})
+                                       fltr={'name': name,
+                                             'pressure': pressure})
 
         adhesion_was_calculated = interface_dict.get(adhesion_handle)
         comp_params = interface_dict.get('comp_parameters', {})
@@ -151,6 +160,7 @@ class FT_StartAdhesionSWF(FiretaskBase):
                                       bottom_slab,
                                       interface,
                                       interface_name=name,
+                                      external_pressure=pressure,
                                       functional=functional,
                                       comp_parameters=comp_params)
 
@@ -381,6 +391,8 @@ class FT_StartPESCalcSWF(FiretaskBase):
         Miller index of the second material.
     functional : str
         Which functional to use; has to be 'PBE' or 'SCAN'.
+    external_pressure : float
+        External pressure in GPa.
     db_file : str, optional
         Full path to the db.json file that should be used. Defaults to
         '>>db_file<<', to use env_chk.
@@ -390,7 +402,7 @@ class FT_StartPESCalcSWF(FiretaskBase):
     FWAction that produces a detour PES subworkflow.
     """
     required_params = ['mp_id_1', 'mp_id_2', 'miller_1', 'miller_2',
-                       'functional']
+                       'functional', 'external_pressure']
     optional_params = ['db_file', 'high_level_db']
 
     def run_task(self, fw_spec):
@@ -400,6 +412,7 @@ class FT_StartPESCalcSWF(FiretaskBase):
         miller_1 = self.get('miller_1')
         miller_2 = self.get('miller_2')
         functional = self.get('functional')
+        pressure = self.get('external_pressure')
         db_file = self.get('db_file')
         if not db_file:
             db_file = env_chk('>>db_file<<', fw_spec)
@@ -412,6 +425,7 @@ class FT_StartPESCalcSWF(FiretaskBase):
             high_level=hl_db)
         interface_dict = nav_structure.get_interface_from_db(
             name=name,
+            pressure=pressure,
             functional=functional
         )
         comp_params = interface_dict['comp_parameters']
@@ -422,6 +436,7 @@ class FT_StartPESCalcSWF(FiretaskBase):
             SWF = calc_pes_swf(interface=interface,
                                interface_name=name,
                                functional=functional,
+                               pressure=pressure,
                                comp_parameters=comp_params,
                                output_dir=None)
 

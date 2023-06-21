@@ -22,7 +22,7 @@ __date__ = 'March 11th, 2020'
 # Custom FireWorks
 # =============================================================================
 
-def run_pes_calc_fw(interface, interface_name,
+def run_pes_calc_fw(interface, interface_name, external_pressure,
                     functional, comp_parameters, tag, FW_name):
     """Compute high-symmetry points for an interface and start PES calculations.
     
@@ -38,6 +38,8 @@ def run_pes_calc_fw(interface, interface_name,
     interface_name : str
         Unique name for the interface that is used in the output and the
         database.
+    external_pressure : float
+        External pressure in GPa.
     functional : str
         Functional to be used. 'PBE' or 'SCAN' will work.
     comp_parameters : dict
@@ -56,19 +58,21 @@ def run_pes_calc_fw(interface, interface_name,
     """
     FT_1 = FT_FindHighSymmPoints(interface=interface,
                                  interface_name=interface_name,
-                                 functional=functional)
+                                 functional=functional,
+                                 external_pressure=external_pressure)
 
     FT_2 = FT_StartPESCalcs(interface=interface,
                             interface_name=interface_name,
                             comp_parameters=comp_parameters,
-                            tag=tag)
+                            tag=tag,
+                            external_pressure=external_pressure)
 
     FW = Firework([FT_1, FT_2], name=FW_name)
 
     return FW
 
 
-def make_pes_fw(interface_name, functional, tag, FW_name, file_output,
+def make_pes_fw(interface_name, functional, external_pressure, tag, FW_name, file_output,
                 output_dir, remote_copy=False, server=None, user=None,
                 port=None):
     """Retrieve PES calculations from the database and compute the PES.
@@ -86,6 +90,8 @@ def make_pes_fw(interface_name, functional, tag, FW_name, file_output,
         database.
     functional : str
         Functional to be used. 'PBE' or 'SCAN' will work.
+    external_pressure : float
+        External pressure in GPa.
     tag : str
         combination of the interface_name and a uuid. To uniquely identify the
         computations in the database.
@@ -116,9 +122,11 @@ def make_pes_fw(interface_name, functional, tag, FW_name, file_output,
     """
     FT_1 = FT_RetrievePESEnergies(interface_name=interface_name,
                                   functional=functional,
-                                  tag=tag)
+                                  tag=tag,
+                                  external_pressure=external_pressure)
     FT_2 = FT_ComputePES(interface_name=interface_name,
                          functional=functional,
+                         external_pressure=external_pressure,
                          file_output=file_output)
 
     if file_output:
@@ -142,6 +150,9 @@ def check_inputs_fw(mat1_params, mat2_params, compparams,
                     interface_params, FW_name):
     """Check the input parameters for completeness and add default values.
     
+
+    SEEMS TO BE OBSOLETE. CHECK IF IT IS STILL USED SOMEWHERE!
+
     This Firework uses several Firetasks to check if the necessary input for
     the heterogeneous Triboflow workflow is given and assigns default values
     to optional parameters that are not given. Also makes sure that the

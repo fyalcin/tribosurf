@@ -25,6 +25,7 @@ from triboflow.firetasks.charge_density_analysis import FT_MakeChargeDensityDiff
 def charge_analysis_swf(interface,
                         interface_name=None,
                         functional='PBE',
+                        external_pressure=0,
                         db_file=None,
                         high_level_db='auto',
                         comp_parameters={}):
@@ -48,6 +49,8 @@ def charge_analysis_swf(interface,
         generation which will be printed on screen.
     functional : str, optional
         Which functional to use; has to be 'PBE' or 'SCAN'. The default is 'PBE'
+    external_pressure : float, optional
+        External pressure to be applied to the interface. The default is 0.
     db_file : str, optional
         Full path of the db.json file to be used. The default is to use
         env_chk to find the file.
@@ -127,6 +130,7 @@ def charge_analysis_swf(interface,
                                                            top_calc_name=tag + 'top',
                                                            bot_calc_name=tag + 'bottom',
                                                            functional = functional,
+                                                           external_pressure=external_pressure,
                                                            db_file=db_file,
                                                            high_level_db=high_level_db),
                                   name=f'Calculate charge density redistribution for {interface_name}')
@@ -177,11 +181,14 @@ if __name__ == "__main__":
     
     IM = InterfaceMatcher(gr_slab, ni_slab)
     interface = IM.get_interface()
+
+    pressure = 0.0
     
     WF = charge_analysis_swf(interface=interface,
                                  comp_parameters=comp_params,
                                  high_level_db='test',
-                                 functional='PBE')
+                                 functional='PBE',
+                                 external_pressure=pressure)
     lpad = LaunchPad.auto_load()
     lpad.add_wf(WF)
     # FW1 = Firework(tasks=[FT_MakeChargeCalc(structure=slab, 

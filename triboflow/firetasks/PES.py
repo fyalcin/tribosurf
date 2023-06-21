@@ -41,6 +41,8 @@ class FT_ComputePES(FiretaskBase):
         Name of the interface in the high-level database.
     functional : str
         Which functional to use; has to be 'PBE' or 'SCAN'.
+    external_pressure : float
+        External pressure on the interface in GPa.
     file_output : bool
         Determines if results are written to disc.
     db_file : str, optional
@@ -49,13 +51,14 @@ class FT_ComputePES(FiretaskBase):
 
     """
 
-    required_params = ['interface_name', 'functional', 'file_output']
+    required_params = ['interface_name', 'functional', 'file_output', 'external_pressure']
     optional_params = ['db_file', 'high_level_db']
 
     def run_task(self, fw_spec):
 
         name = self.get('interface_name')
         functional = self.get('functional')
+        pressure = self.get('external_pressure')
         file_output = self.get('file_output')
 
         db_file = self.get('db_file')
@@ -63,8 +66,8 @@ class FT_ComputePES(FiretaskBase):
             db_file = env_chk('>>db_file<<', fw_spec)
         hl_db = self.get('high_level_db', True)
 
-
         PG = get_PESGenerator_from_db(interface_name=name,
+                                      pressure=pressure,
                                       db_file=db_file,
                                       high_level=hl_db,
                                       functional=functional,
@@ -77,7 +80,8 @@ class FT_ComputePES(FiretaskBase):
         try:
             nav_high.update_data(
                 collection=functional + '.interface_data',
-                fltr={'name': name},
+                fltr={'name': name,
+                      'pressure': pressure},
                 new_values={'$set': {'PES.all_energies': jsanitize(PG.extended_energies),
                                      'PES.pes_data': jsanitize(PG.PES_on_meshgrid),
                                      'PES.image': PG.PES_as_bytes,
@@ -94,7 +98,8 @@ class FT_ComputePES(FiretaskBase):
         except:
             nav_high.update_data(
                 collection=functional + '.interface_data',
-                fltr={'name': name},
+                fltr={'name': name,
+                      'pressure': pressure},
                 new_values={'$set': {'corrugation': PG.corrugation,
                                      'hsp@min': PG.hsp_min,
                                      'hsp@max': PG.hsp_max,
@@ -112,7 +117,8 @@ class FT_ComputePES(FiretaskBase):
                         data = jsanitize(getattr(PG, v))
                     nav_high.update_data(
                         collection='PBE.interface_data',
-                        fltr={'name': name},
+                        fltr={'name': name,
+                              'pressure': pressure},
                         new_values={'$set': {'PES.'+k: data}},
                         dolog=False)
                 except:
@@ -139,6 +145,8 @@ class FT_RetrievePESEnergies(FiretaskBase):
         Which functional to use; has to be 'PBE' or 'SCAN'.
     tag : str
         Unique tag to identify the calculations.
+    external_pressure : float
+        External pressure on the interface in GPa.
     db_file : str, optional
         Full path to the db.json file that should be used. Defaults to
         '>>db_file<<', to use env_chk.
@@ -148,7 +156,7 @@ class FT_RetrievePESEnergies(FiretaskBase):
     FWActions that produce a detour workflow with relaxations for the PES.
     """
 
-    required_params = ['interface_name', 'functional', 'tag']
+    required_params = ['interface_name', 'functional', 'tag', 'external_pressure']
     optional_params = ['db_file', 'high_level_db']
 
     def run_task(self, fw_spec):
@@ -156,6 +164,7 @@ class FT_RetrievePESEnergies(FiretaskBase):
         name = self.get('interface_name')
         functional = self.get('functional')
         tag = self.get('tag')
+        pressure = self.get('external_pressure')
 
         db_file = self.get('db_file')
         if not db_file:
@@ -231,7 +240,8 @@ class FT_RetrievePESEnergies(FiretaskBase):
         nav_high = Navigator(db_file=db_file, high_level=hl_db)
         nav_high.update_data(
             collection=functional + '.interface_data',
-            fltr={'name': name},
+            fltr={'name': name,
+                  'pressure': pressure},
             new_values={
                 '$set':
                     {'relaxed_structure@min':
@@ -269,6 +279,8 @@ class FT_FindHighSymmPoints(FiretaskBase):
         Which functional to use; has to be 'PBE' or 'SCAN'.
     interface_name : str
         Name of the interface in the high-level database.
+    external_pressure : float
+        External pressure in GPa.
     db_file : str, optional
         Full path to the db.json file that should be used. Defaults to
         '>>db_file<<', to use env_chk.
@@ -278,13 +290,14 @@ class FT_FindHighSymmPoints(FiretaskBase):
     FWActions that updates the fw_spec with lateral shifts.
     """
 
-    required_params = ['interface', 'functional', 'interface_name']
+    required_params = ['interface', 'functional', 'interface_name', 'external_pressure']
     optional_params = ['db_file' 'high_level_db']
 
     def run_task(self, fw_spec):
         interface = self.get('interface')
         name = self.get('interface_name')
         functional = self.get('functional')
+        pressure = self.get('external_pressure')
 
         db_file = self.get('db_file')
         if not db_file:
@@ -298,7 +311,8 @@ class FT_FindHighSymmPoints(FiretaskBase):
         nav_high = Navigator(db_file=db_file, high_level=hl_db)
         nav_high.update_data(
             collection=functional + '.interface_data',
-            fltr={'name': name},
+            fltr={'name': name,
+                  'pressure': pressure},
             new_values={'$set':
                             {'PES.high_symmetry_points':
                                  {'bottom_unique': hsp_dict['bottom_high_symm_points_unique'],

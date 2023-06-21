@@ -24,7 +24,7 @@ from triboflow.phys.minimum_energy_path import (get_initial_strings,
 from triboflow.utils.database import convert_image_to_bytes, StructureNavigator
 
 
-def get_PESGenerator_from_db(interface_name, db_file='auto', high_level=True,
+def get_PESGenerator_from_db(interface_name, pressure, db_file='auto', high_level=True,
                              functional='PBE', pes_generator_kwargs={}):
     """
     Return a PESGenerator object using input arguments from the high_level db.
@@ -38,6 +38,8 @@ def get_PESGenerator_from_db(interface_name, db_file='auto', high_level=True,
     ----------
     interface_name : pymatgen.core.interface.Interface
         The Interface object
+    pressure : float
+        Pressure in GPa.
     db_file : str, optional
         path to a db.json file. If 'auto', it is loaded from the default
         location. The default is 'auto'.
@@ -58,7 +60,7 @@ def get_PESGenerator_from_db(interface_name, db_file='auto', high_level=True,
     """
 
     nav = StructureNavigator(db_file=db_file, high_level=high_level)
-    inter_dict = nav.get_interface_from_db(interface_name, functional)
+    inter_dict = nav.get_interface_from_db(interface_name, pressure, functional)
 
     possible_kwargs = ['points_per_angstrom', 'interpolation_kernel',
                        'plot_hs_points', 'plot_unit_cell', 'plotting_ratio',

@@ -276,23 +276,29 @@ def put_inter_in_db(data_1, data_2, comp_params, inter_params, db_file):
     # Add the vacuum thickness from the comp_params to the inter_params as
     # it is now needed for the interface matching.
     inter_params['vacuum'] = comp_params.get('vacuum')
+
+    # Check the interface parameters for pressure. If None, set to 0.
+    pressure = inter_params.get('external_pressure') or 0.0
     
     # Load the interface structure into the high level DB
     nav = Navigator(db_file, high_level=True)
-    prev_data = nav.find_data(functional+'.interface_data', {'name': name})
+    prev_data = nav.find_data(functional+'.interface_data',
+                              {'name': name, 'pressure': pressure})
     if not prev_data:
         nav.insert_data(functional+'.interface_data', 
                              {'name': name,
                               'mpids': (mp_id_1, mp_id_2),
                               'formulae': (struct_1.composition.reduced_formula,
                                            struct_2.composition.reduced_formula),
+                              'pressure': pressure,
                               'miller_indices': (data_1['miller'],
                                                  data_2['miller']),
                               'comp_parameters': comp_params,
                               'interface_parameters': inter_params})
     else:
-        print('Entry with name: {} already found in {} collection. '
-              'No update.'.format(name, functional+'.interface_data'))
+        print(f'Entry with name: {name} and external pressure {pressure} GPa\n'
+              f'already found in {functional}.interface_data collection.\n'
+              'No update.')
 
 def material_data_for_db(data, comp_params, db_file, metal_thr=None):
     """

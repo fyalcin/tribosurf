@@ -202,7 +202,7 @@ def UBER(x, G, l):
         UBER binding energy at position(s) x.
 
     """
-    return G * (1 -  (1 + x/l) * np.exp(-x/l))
+    return G * (1 - (1 + x/l) * np.exp(-x/l))
 
 def PPES_UBER(distance_energy_array):
     """

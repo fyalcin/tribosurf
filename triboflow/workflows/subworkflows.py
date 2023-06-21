@@ -138,6 +138,7 @@ def dielectric_constant_swf(structure,
 def charge_analysis_swf(interface,
                         interface_name=None,
                         functional='PBE',
+                        external_pressure=0,
                         db_file=None,
                         high_level_db='auto',
                         comp_parameters={}):
@@ -161,6 +162,8 @@ def charge_analysis_swf(interface,
         generation which will be printed on screen.
     functional : str, optional
         Which functional to use; has to be 'PBE' or 'SCAN'. The default is 'PBE'
+    external_pressure : float, optional
+        External pressure to be applied to the interface. The default is 0.
     db_file : str, optional
         Full path of the db.json file to be used. The default is to use
         env_chk to find the file.
@@ -240,6 +243,7 @@ def charge_analysis_swf(interface,
                                                            top_calc_name=tag + 'top',
                                                            bot_calc_name=tag + 'bottom',
                                                            functional = functional,
+                                                           external_pressure=external_pressure,
                                                            db_file=db_file,
                                                            high_level_db=high_level_db),
                                   name=f'Calculate charge density redistribution for {interface_name}')
@@ -255,6 +259,7 @@ def charge_analysis_swf(interface,
 def adhesion_energy_swf(top_slab,
                         bottom_slab,
                         interface,
+                        external_pressure=0,
                         interface_name=None,
                         functional='PBE',
                         comp_parameters={}):
@@ -278,6 +283,8 @@ def adhesion_energy_swf(top_slab,
         Relaxed bottom slab of the interface.
     interface : pymatgen.core.surface.Slab
         Relaxed interface structure.
+    external_pressure : float, optional
+        External pressure to be applied to the interface. The default is 0.
     interface_name : str, optional
         Unique name to find the interface in the database with.
         The default is None, which will lead to an automatic interface_name
@@ -356,6 +363,7 @@ def adhesion_energy_swf(top_slab,
 
     FW_results = Firework(FT_CalcAdhesion(interface_name=interface_name,
                                           functional=functional,
+                                          external_pressure=external_pressure,
                                           top_label=tag + 'top',
                                           bottom_label=tag + 'bottom',
                                           interface_label=tag + 'interface'),
@@ -372,6 +380,7 @@ def adhesion_energy_swf(top_slab,
 def calc_pes_swf(interface,
                  interface_name=None,
                  functional='PBE',
+                 pressure=0,
                  comp_parameters={},
                  file_output=False,
                  output_dir=None,
@@ -399,6 +408,9 @@ def calc_pes_swf(interface,
         generation which will be printed on screen.
     functional : str, optional
         Which functional to use; has to be 'PBE' or 'SCAN'. The default is 'PBE'
+    pressure : float, optional
+        External pressure in GPa to be applied to the interface.
+        The default is 0.
     comp_parameters : dict, optional
         Computational parameters to be passed to the vasp input file generation.
         The default is {}.
@@ -466,10 +478,11 @@ def calc_pes_swf(interface,
     
     nav = StructureNavigator('auto', high_level=True)
     try:
-        nav.get_interface_from_db(interface_name, functional)['unrelaxed_structure']
+        nav.get_interface_from_db(interface_name, pressure, functional)['unrelaxed_structure']
     except:
         nav.insert_data(collection = functional+'.interface_data',
                         data = {'name': interface_name,
+                                'pressure': pressure,
                                 'comp_parameters': comp_parameters,
                                 'unrelaxed_structure': interface.as_dict(),
                                 'top_aligned': interface.film.as_dict(),
@@ -484,6 +497,7 @@ def calc_pes_swf(interface,
 
     FW_2 = make_pes_fw(interface_name=interface_name,
                        functional=functional,
+                       external_pressure=pressure,
                        tag=tag,
                        file_output=file_output,
                        output_dir=output_dir,

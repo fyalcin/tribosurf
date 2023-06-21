@@ -36,6 +36,8 @@ class FT_UpdateInterfaceCompParams(FiretaskBase):
         Miller indices of the second material
     functional : str
         Functional with which the workflow is run. PBE or SCAN.
+    external_pressure : float
+        External pressure in GPa.
     db_file : str, optional
         Full path of the db.json file to be used. The default is to use
         env_chk to find the file.
@@ -43,7 +45,7 @@ class FT_UpdateInterfaceCompParams(FiretaskBase):
     """
     _fw_name = 'Update computational parameters in high level DB'
     required_params = ['mp_id_1', 'miller_1', 'mp_id_2', 'miller_2',
-                       'functional']
+                       'functional', 'external_pressure']
     optional_params = ['db_file']
 
     def run_task(self, fw_spec):
@@ -60,6 +62,7 @@ class FT_UpdateInterfaceCompParams(FiretaskBase):
         else:
             miller_2 = self['miller_2']
         functional = self.get('functional')
+        pressure = self.get('external_pressure')
 
         db_file = self.get('db_file')
         if not db_file:
@@ -107,7 +110,8 @@ class FT_UpdateInterfaceCompParams(FiretaskBase):
         inter_name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
         nav_high.update_data(
             collection=functional+'.interface_data',
-            fltr={'name': inter_name},
+            fltr={'name': inter_name,
+                  'pressure': pressure},
             new_values={'$set': {'comp_parameters.encut': encut_inter,
                                  'comp_parameters.k_dens': k_dens_inter,
                                  'comp_parameters.is_metal': metal_inter,

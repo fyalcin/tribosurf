@@ -24,19 +24,26 @@ from triboflow.firetasks.run_slabs_wfs import FT_SlabOptThick
 
 def homogeneous_wf(inputs):
     
-    mat, comp_params = unbundle_input(inputs,
-                                                    keys=['material',
-                                                          'computational_params'])
+    mat, comp_params, interface_params = unbundle_input(inputs, keys=['material',
+                                                    'computational_params',
+                                                    'interface_params'])
     struct, mp_id = material_from_mp(mat)
     functional = comp_params.get('functional', 'PBE')
     
     WF = []
     
-    #define max area here large, even if it will not matter since this is a
-    #homogeneous interface. However, max_area is a necessary key.
-    Initialize = InitWF.checkinp_homo_interface(material=mat,
-                                                computational=comp_params,
-                                                interface={'max_area': 200})
+    # define max area here large, even if it will not matter since this is a
+    # homogeneous interface. However, max_area is a necessary key.
+
+    # pressure might default to None, so we have to check for that
+    pressure = interface_params.get('external_pressure', 0.0) or 0.0
+
+    Initialize = InitWF.checkinp_homo_interface(
+        material=mat,
+        computational=comp_params,
+        interface={'max_area': 200,
+                   'external_pressure': pressure}
+                   )
     WF.append(Initialize)
     
     PreRelaxation = Firework(FT_StartBulkPreRelax(mp_id=mp_id,
@@ -67,7 +74,8 @@ def homogeneous_wf(inputs):
                                                          mp_id_2=mp_id,
                                                          miller_1=mat.get('miller'),
                                                          miller_2=mat.get('miller'),
-                                                         functional=functional),
+                                                         functional=functional,
+                                                         external_pressure=pressure),
                             name='Consolidate computational parameters')
     WF.append(Final_Params)
     
@@ -82,13 +90,15 @@ def homogeneous_wf(inputs):
         mp_id_2=mp_id,
         miller_1=mat.get('miller'),
         miller_2=mat.get('miller'),
-        functional=functional),
+        functional=functional,
+        external_pressure=pressure),
         name='Match the interface')
     WF.append(MakeInterface)
     
     CopySlabs = Firework(FT_CopyHomogeneousSlabs(mp_id=mp_id,
                                                  miller=mat.get('miller'),
-                                                 functional=functional),
+                                                 functional=functional,
+                                                 external_pressure=pressure),
                          name='Copy homogeneous slabs')
     WF.append(CopySlabs)
     
@@ -98,7 +108,8 @@ def homogeneous_wf(inputs):
             mp_id_2=mp_id,
             miller_1=mat.get('miller'),
             miller_2=mat.get('miller'),
-            functional=functional),
+            functional=functional,
+            external_pressure=pressure),
         name='Compute PES high-symmetry points')
     WF.append(CalcPESPoints)
     
@@ -108,7 +119,8 @@ def homogeneous_wf(inputs):
             mp_id_2=mp_id,
             miller_1=mat.get('miller'),
             miller_2=mat.get('miller'),
-            functional=functional),
+            functional=functional,
+            external_pressure=pressure),
         name='Calculate Adhesion')
     WF.append(ComputeAdhesion)
     
@@ -118,7 +130,8 @@ def homogeneous_wf(inputs):
             mp_id_2=mp_id,
             miller_1=mat.get('miller'),
             miller_2=mat.get('miller'),
-            functional=functional),
+            functional=functional,
+            external_pressure=pressure),
         name='Charge Analysis')
     WF.append(ChargeAnalysis)
     
@@ -164,6 +177,9 @@ def heterogeneous_wf(inputs):
     functional = comp_params.get('functional', 'PBE')
     
     WF = []
+
+    # pressure might default to None, so we have to check for that
+    pressure = inter_params.get('external_pressure', 0.0) or 0.0
 
     Initialize = InitWF.checkinp_hetero_interface(material_1=mat_1,
                                                   material_2=mat_2,
@@ -234,7 +250,8 @@ def heterogeneous_wf(inputs):
                                                          mp_id_2=mp_id_2,
                                                          miller_1=mat_1.get('miller'),
                                                          miller_2=mat_2.get('miller'),
-                                                         functional=functional),
+                                                         functional=functional,
+                                                         external_pressure=pressure),
                             name='Consolidate computational parameters')
     WF.append(Final_Params)
     
@@ -258,7 +275,8 @@ def heterogeneous_wf(inputs):
         miller_1=mat_1.get('miller'),
         miller_2=mat_2.get('miller'),
         functional=functional),
-        name='Match the interface')
+        name='Match the interface',
+        external_pressure=pressure)
     WF.append(MakeInterface)
     
     RelaxMatchedSlabs = Firework(
@@ -267,7 +285,8 @@ def heterogeneous_wf(inputs):
             mp_id_2=mp_id_2,
             miller_1=mat_1.get('miller'),
             miller_2=mat_2.get('miller'),
-            functional=functional),
+            functional=functional,
+            external_pressure=pressure),
         name='Fully relax the matched slabs')
     WF.append(RelaxMatchedSlabs)
     
@@ -277,7 +296,8 @@ def heterogeneous_wf(inputs):
             mp_id_2=mp_id_2,
             miller_1=mat_1.get('miller'),
             miller_2=mat_2.get('miller'),
-            functional=functional),
+            functional=functional,
+            external_pressure=pressure),
         name='Retrieve relaxed matched slabs')
     WF.append(RetrieveMatchedSlabs)
     
@@ -297,7 +317,8 @@ def heterogeneous_wf(inputs):
             mp_id_2=mp_id_2,
             miller_1=mat_1.get('miller'),
             miller_2=mat_2.get('miller'),
-            functional=functional),
+            functional=functional,
+            external_pressure=pressure),
         name='Calculate Adhesion')
     WF.append(ComputeAdhesion)
     
@@ -307,7 +328,8 @@ def heterogeneous_wf(inputs):
             mp_id_2=mp_id_2,
             miller_1=mat_1.get('miller'),
             miller_2=mat_2.get('miller'),
-            functional=functional),
+            functional=functional,
+            external_pressure=pressure),
         name='Charge Analysis')
     WF.append(ChargeAnalysis)
     

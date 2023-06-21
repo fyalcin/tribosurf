@@ -123,7 +123,8 @@ class FT_MakeChargeDensityDiff(FiretaskBase):
                        'interface_calc_name',
                        'top_calc_name',
                        'bot_calc_name',
-                       'functional']
+                       'functional',
+                       'external_pressure']
     optional_params = ['db_file', 'high_level_db']
     
     def run_task(self, fw_spec):
@@ -133,6 +134,7 @@ class FT_MakeChargeDensityDiff(FiretaskBase):
         label_top = self.get('top_calc_name')
         label_bot = self.get('bot_calc_name')
         functional = self.get('functional')
+        pressure = self.get('external_pressure')
         db_file = self.get('db_file')
         hl_db = self.get('high_level_db', 'auto')
         if not db_file:
@@ -148,7 +150,8 @@ class FT_MakeChargeDensityDiff(FiretaskBase):
         nav_high = Navigator(db_file=db_file, high_level=hl_db)
         nav_high.update_data(
             collection=functional+'.interface_data',
-            fltr={'name': name},
+            fltr={'name': name,
+                  'pressure': pressure},
             new_values={'$set': {'charge_density_redist': rho_dict}},
             upsert=True)
         

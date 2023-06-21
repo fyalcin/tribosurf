@@ -78,8 +78,11 @@ comp_params = {'functional': functional,
                'k_dens': 3.0
                }
 
+external_pressure = 1.0
+
 WF = calc_pes_swf(interface=interface,
                   comp_parameters=comp_params,
+                  pressure=external_pressure,
                   file_output=True,
                   output_dir='/fs/home/wolloch/git_test/testdir')
 

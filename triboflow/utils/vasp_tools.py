@@ -69,7 +69,7 @@ class MeshFromDensity:
         self.force_gamma = force_gamma
         self.klm = structure.lattice.reciprocal_lattice.abc
 
-        if is_slab == True:
+        if is_slab is True:
             self.slab = True
         elif is_slab in ["Auto", "auto", "automatic", "Automatic"]:
             self.slab = "detect_automatically"
@@ -120,7 +120,7 @@ class MeshFromDensity:
 
         """
 
-        if self.slab == True:
+        if self.slab is True:
             return True
         elif self.slab == "detect_automatically":
             z_axis = self.struct.lattice.c
@@ -158,7 +158,7 @@ class MeshFromDensity:
         return kpoints
 
     def are_meshes_the_same(self):
-        """Compares conventional Monkhorst-Pack meshes and Gamma centered meshes.
+        """Compares conventional Monkhorst-Pack meshes and Gamma meshes.
 
         To test if a different target density actually provides a different
         mesh than a reference density.
@@ -203,10 +203,10 @@ def get_emin_and_emax(potcar):
     with open("temp_potcar", "r") as pot:
         emin = []
         emax = []
-        for l in pot:
-            if l.strip().startswith("ENMAX"):
-                emin.append(float(l.split()[-2]))
-                emax.append(float(l.split()[2][:-1]))
+        for line in pot:
+            if line.strip().startswith("ENMAX"):
+                emin.append(float(line.split()[-2]))
+                emax.append(float(line.split()[2][:-1]))
     os.remove("temp_potcar")
     return {"ENMIN": max(emin), "ENMAX": max(emax)}
 
@@ -316,7 +316,7 @@ def get_custom_vasp_static_settings(
 
     if static_type not in allowed_types:
         raise SystemExit(
-            "static type is not known. Please select from: {}".format(allowed_types)
+            f"static type is not known. Please select from: {allowed_types}."
         )
 
     SCAN_list = [
@@ -342,16 +342,18 @@ def get_custom_vasp_static_settings(
     uis["SIGMA"] = 0.05
     uis["ISMEAR"] = -5
     uis["EDIFF"] = 1.0e-6
-    uis["SYMPREC"] = 1e-04  # compat some issues that VASP 6.2 has with kpoint lattices
-    # include electrons with l-quantum number up to 6 into the mixer. Helps with convergence
-    # maybe include functionality that sets LMAXMIX dependent on periodic table group
+    uis["SYMPREC"] = 1e-04  # combat issues in VASP 6.2 with kpoint lattices
+    uis["LMAXMIX"] = 6
+    # include electrons with l-quantum number up to 6 into the mixer.
+    # Helps with convergence.
+    # maybe include functionality that sets LMAXMIX dependent on
+    # periodic table group
     # e.g.:
     # for element in structure.composition.elements:
     #     if element.group == 3:
     #         uis['LMAXMIX'] = 6
     #     elif element.group in [4,5,6,7,8,9,10,11,12]:
     #         uis['LMAXMIX'] = 4
-    uis["LMAXMIX"] = 6
 
     if static_type.startswith("bulk_"):
         uis["ALGO"] = "Fast"
@@ -490,7 +492,7 @@ def get_custom_vasp_static_settings(
             vdw=vdw,
             user_kpoints_settings=uks,
             user_potcar_functional="PBE_54",
-            user_potcar_settings={"W": "W_sv"},
+            user_potcar_settings=ups,
         )
     else:
         vis = MPStaticSet(
@@ -499,14 +501,19 @@ def get_custom_vasp_static_settings(
             vdw=vdw,
             user_kpoints_settings=uks,
             user_potcar_functional=upf,
-            user_potcar_settings={"W": "W_sv"},
+            user_potcar_settings=ups,
         )
 
     return vis
 
 
 def get_custom_vasp_relax_settings(
-    structure, comp_parameters, relax_type, k_dens_default=8.5, ups={"W": "W_sv"}
+    structure,
+    comp_parameters,
+    relax_type,
+    k_dens_default=8.5,
+    ups={"W": "W_sv"},
+    apply_pressure=False,
 ):
     """Make custom vasp settings for relaxations.
 
@@ -560,7 +567,7 @@ def get_custom_vasp_relax_settings(
 
     if relax_type not in allowed_types:
         raise SystemExit(
-            "relax type is not known. Please select from: {}".format(allowed_types)
+            f"relax type is not known. Please select from: {allowed_types}"
         )
 
     SCAN_list = [
@@ -586,10 +593,12 @@ def get_custom_vasp_relax_settings(
     uis["NELMIN"] = 5
     uis["EDIFF"] = 0.5e-5
     uis["LAECHG"] = ".FALSE."
-    uis["SYMPREC"] = 1e-04  # compat some issues that VASP 6.2 has with kpoint lattices
+    uis["SYMPREC"] = 1e-04  # combat issues in VASP 6.2 with kpoint lattices
     uis["LMAXMIX"] = 6
-    # include electrons with l-quantum number up to 6 into the mixer. Helps with convergence
-    # maybe include functionality that sets LMAXMIX dependent on periodic table group
+    # include electrons with l-quantum number up to 6 into the mixer.
+    # Helps with convergence.
+    # maybe include functionality that sets LMAXMIX dependent on
+    # periodic table group
     # e.g.:
     # for element in structure.composition.elements:
     #     if element.group == 3:
@@ -736,13 +745,15 @@ def get_custom_vasp_relax_settings(
     else:
         upf = "PBE_54"
 
-    if "pressure" in comp_parameters and (
-        relax_type.startswith("slab_") or relax_type.startswith("interface_")
+    if (
+        apply_pressure and (relax_type.startswith("slab_") or
+                            relax_type.startswith("interface_"))
     ):
-        forces = ext_pressure_to_force_array(structure, comp_parameters["pressure"])
+        forces = ext_pressure_to_force_array(structure, apply_pressure)
         force_str = force_array_to_string(forces)
         uis["EFOR"] = force_str
-
+    elif apply_pressure and relax_type.startswith("bulk_"):
+        UserWarning("External pressure can not be applied to bulk systems.")
     if "functional" in comp_parameters:
         if comp_parameters.get("functional") in SCAN_list:
             # Algo All does not play well with tetrahedron method
@@ -759,7 +770,7 @@ def get_custom_vasp_relax_settings(
                 vdw=vdw,
                 user_kpoints_settings=uks,
                 user_potcar_functional="PBE_54",
-                user_potcar_settings={"W": "W_sv"},
+                user_potcar_settings=ups,
             )
         else:
             vis = MPRelaxSet(
@@ -768,7 +779,7 @@ def get_custom_vasp_relax_settings(
                 vdw=vdw,
                 user_kpoints_settings=uks,
                 user_potcar_functional="PBE_54",
-                user_potcar_settings={"W": "W_sv"},
+                user_potcar_settings=ups,
             )
     else:
         vis = MPRelaxSet(
@@ -777,7 +788,7 @@ def get_custom_vasp_relax_settings(
             vdw=vdw,
             user_kpoints_settings=uks,
             user_potcar_functional=upf,
-            user_potcar_settings={"W": "W_sv"},
+            user_potcar_settings=ups,
         )
 
     return vis
