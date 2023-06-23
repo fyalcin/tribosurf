@@ -17,24 +17,37 @@ from pymatgen.core.surface import Slab
 from pymatgen.core.operations import SymmOp
 from pymatgen.analysis.structure_matcher import StructureMatcher
 
-from triboflow.phys.high_symmetry import get_slab_hs, get_interface_hs, \
-    pbc_hspoints, remove_equivalent_shifts, \
-    RemoveDuplicatesFromHSDicts, RoundPosInDict, AssigneAllPoints, CleanUpHSDicts
+from triboflow.phys.high_symmetry import (
+    get_slab_hs,
+    get_interface_hs,
+    pbc_hspoints,
+    remove_equivalent_shifts,
+    RemoveDuplicatesFromHSDicts,
+    RoundPosInDict,
+    AssigneAllPoints,
+    CleanUpHSDicts,
+)
 from triboflow.phys.potential_energy_surface import unfold_pes, get_pes
 from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.plot_tools import plot_slab_hs, plot_pes
-from triboflow.utils.structure_manipulation import interface_name, \
-    clean_up_site_properties, stack_aligned_slabs, recenter_aligned_slabs
+from triboflow.utils.structure_manipulation import (
+    interface_name,
+    clean_up_site_properties,
+    stack_aligned_slabs,
+    recenter_aligned_slabs,
+)
 
-def test_function(x,y):
-    r = (x**2 + y**2)**0.5
-    z = np.cos(2*r) * np.exp(-0.5*abs(r))
+
+def test_function(x, y):
+    r = (x**2 + y**2) ** 0.5
+    z = np.cos(2 * r) * np.exp(-0.5 * abs(r))
     return z
+
 
 nav = Navigator()
 db_file = nav.path
-functional = 'PBE'
-name = 'FeRh001_MgO001_mp-1265_mp-1918'
+functional = "PBE"
+name = "FeRh001_MgO001_mp-1265_mp-1918"
 
 # =============================================================================
 # rand_points = np.random.rand(500,2)*4*m.pi - 2*m.pi
@@ -45,51 +58,51 @@ name = 'FeRh001_MgO001_mp-1265_mp-1918'
 # ax.set_aspect('equal')
 # plt.plot(x,y, 'ro' )
 # z = test_function(x, y)
-# 
+#
 # # fig = plt.figure()
 # # ax = Axes3D(fig)
-# 
+#
 # # ax.scatter(x, y, z)
-# 
+#
 # rbf = Rbf(x, y, z)
-# 
+#
 # grid_x = np.arange(min(x), max(x), 0.05)
 # grid_y = np.arange(min(y), max(y), 0.05)
-# 
+#
 # X, Y = np.meshgrid(grid_x, grid_y)
 # Z = rbf(X, Y)
-# 
+#
 # #plt.contourf(X, Y, Z)
-# 
+#
 # fig = plt.figure()
 # ax = fig.gca(projection='3d')
 # surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm,
 #                        linewidth=0, antialiased=False)
-# 
+#
 # fig.colorbar(surf, shrink=0.5, aspect=5)
 # =============================================================================
 
 
-nav_structure = StructureNavigator(db_file=db_file, high_level='triboflow')
+nav_structure = StructureNavigator(db_file=db_file, high_level="triboflow")
 interface_dict = nav_structure.get_interface_from_db(
-    name=name, 
-    functional=functional)
-c_u = interface_dict['PES']['high_symmetry_points']['combined_unique']
-c_a = interface_dict['PES']['high_symmetry_points']['combined_all']
-E_l = interface_dict['PES']['high_symmetry_points']['energy_list']
+    name=name, functional=functional
+)
+c_u = interface_dict["PES"]["high_symmetry_points"]["combined_unique"]
+c_a = interface_dict["PES"]["high_symmetry_points"]["combined_all"]
+E_l = interface_dict["PES"]["high_symmetry_points"]["energy_list"]
 
-top_aligned = Slab.from_dict(interface_dict['top_aligned'])
-bottom_aligned = Slab.from_dict(interface_dict['bottom_aligned'])
+top_aligned = Slab.from_dict(interface_dict["top_aligned"])
+bottom_aligned = Slab.from_dict(interface_dict["bottom_aligned"])
 
 cell = bottom_aligned.lattice.matrix
 
 hs_u, hs_a = CleanUpHSDicts(c_u, c_a, top_aligned, bottom_aligned)
 
-#hs_a = AssigneAllPoints(c_u, c_a, top_aligned, bottom_aligned)
+# hs_a = AssigneAllPoints(c_u, c_a, top_aligned, bottom_aligned)
 
 rbf, E_list, pes_data, data, to_plot = get_pes(hs_a, E_l, cell)
 
-plot_pes(to_plot, cell*2)
+plot_pes(to_plot, cell * 2)
 plot_slab_hs(hs_u, top_aligned)
 plot_slab_hs(hs_a, top_aligned)
 # #top slab needs to be mirrored to find the high symmetry points at the
@@ -108,7 +121,6 @@ plot_slab_hs(hs_a, top_aligned)
 
 # hsp_unique = get_interface_hs(bottom_hsp_unique, top_hsp_unique, cell)
 # hsp_all = get_interface_hs(bottom_hsp_all, top_hsp_all, cell)
-
 
 
 # c_hsp_u, c_hsp_a = RemoveDuplicatesFromHSDicts(c_u,
@@ -155,14 +167,14 @@ plot_slab_hs(hs_a, top_aligned)
 # flipped_top = top_aligned.copy()
 # flipped_top.apply_operation(mirror)
 # top_hsp_unique, top_hsp_all = get_slab_hs(flipped_top)
-        
+
 # bottom_hsp_unique, bottom_hsp_all = get_slab_hs(bottom_aligned)
-        
+
 # cell = bottom_aligned.lattice.matrix
-        
+
 # hsp_unique = get_interface_hs(bottom_hsp_unique, top_hsp_unique, cell)
 # hsp_all = get_interface_hs(bottom_hsp_all, top_hsp_all, cell)
-        
+
 # c_hsp_u, c_hsp_a = RemoveDuplicatesFromHSDicts(hsp_unique,
 #                                                hsp_all,
 #                                                decimals=5)
@@ -206,7 +218,7 @@ plot_slab_hs(hs_a, top_aligned)
 #         c_hsp_a_cleaned.pop(key)
 # plot_slab_hs(c_hsp_u_cleaned, top_aligned)
 # plot_slab_hs(c_hsp_a_cleaned, top_aligned)
-    
+
 
 # double_keys = {}
 # for key, value in c_hsp_a.items():
@@ -215,12 +227,12 @@ plot_slab_hs(hs_a, top_aligned)
 #         for key_2, value_2 in c_hsp_a.copy().items():
 #             if point in value_2 and key != key_2:
 #                 double_keys[key].append(key_2)
-                
+
 # E_reduced = []
 # for l in E_l:
 #     if l[0] in c_hsp_u.keys():
 #         E_reduced.append(l)
-        
+
 # c_hsp_all_reduced = {}
 # for key, value in c_hsp_a.items():
 #      array = np.unique(np.array(value), axis=0)

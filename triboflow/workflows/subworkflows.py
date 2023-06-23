@@ -13,31 +13,44 @@ from fireworks import Workflow, Firework
 
 from triboflow.firetasks.PPES import FT_DoPPESCalcs, FT_FitPPES
 from triboflow.firetasks.adhesion import FT_CalcAdhesion
-from triboflow.firetasks.charge_density_analysis import FT_MakeChargeDensityDiff
+from triboflow.firetasks.charge_density_analysis import (
+    FT_MakeChargeDensityDiff,
+)
 
 from triboflow.firetasks.convergence import FT_Convo
 from triboflow.firetasks.dielectric import FT_GetEpsilon
-from triboflow.firetasks.structure_manipulation import FT_MakeSlabInDB, \
-    FT_StartSlabRelax, FT_GetRelaxedSlab
-from triboflow.firetasks.surfen_tools import FT_WriteSurfenInputsToDB, FT_RelaxSurfaceEnergyInputs, \
-    FT_WriteSurfaceEnergiesToDB
+from triboflow.firetasks.structure_manipulation import (
+    FT_MakeSlabInDB,
+    FT_StartSlabRelax,
+    FT_GetRelaxedSlab,
+)
+from triboflow.firetasks.surfen_tools import (
+    FT_WriteSurfenInputsToDB,
+    FT_RelaxSurfaceEnergyInputs,
+    FT_WriteSurfaceEnergiesToDB,
+)
 from triboflow.firetasks.utils import FT_UpdateCompParams
 from triboflow.fireworks.common import run_pes_calc_fw, make_pes_fw
 from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
 from triboflow.utils.surfen_tools import get_surfen_inputs_from_mpid
-from triboflow.utils.vasp_tools import get_emin_and_emax, get_custom_vasp_static_settings
+from triboflow.utils.vasp_tools import (
+    get_emin_and_emax,
+    get_custom_vasp_static_settings,
+)
 
 
-def dielectric_constant_swf(structure,
-                            mpid,
-                            flag,
-                            comp_parameters={},
-                            spec={},
-                            functional='PBE',
-                            db_file='auto',
-                            hl_db=True,
-                            update_bulk=True,
-                            update_slabs=False):
+def dielectric_constant_swf(
+    structure,
+    mpid,
+    flag,
+    comp_parameters={},
+    spec={},
+    functional="PBE",
+    db_file="auto",
+    hl_db=True,
+    update_bulk=True,
+    update_slabs=False,
+):
     """
     Subworkflow that calculates dielectric properties and updates the comp_parameters.
 
@@ -81,69 +94,77 @@ def dielectric_constant_swf(structure,
 
     # check if epsilon is already calculated for that material.
     try:
-        nav_high = StructureNavigator(db_file=db_file,
-                                      high_level=hl_db)
+        nav_high = StructureNavigator(db_file=db_file, high_level=hl_db)
         bulk_data = nav_high.get_bulk_from_db(mpid, functional)
-        epsilon = bulk_data['comp_parameters'].get('epsilon', False)
+        epsilon = bulk_data["comp_parameters"].get("epsilon", False)
     except:
         epsilon = False
-        
-    #if we know that the material is metallic, no need to calculate epsilon
-    #since it should be infinite.
-    if comp_parameters.get('is_metal', False):
+
+    # if we know that the material is metallic, no need to calculate epsilon
+    # since it should be infinite.
+    if comp_parameters.get("is_metal", False):
         epsilon = 1000000
 
     formula = structure.composition.reduced_formula
-    wf_name = f'Dielectric calculation WF for {formula} {mpid}'
+    wf_name = f"Dielectric calculation WF for {formula} {mpid}"
 
     if not epsilon:
-        vis = get_custom_vasp_static_settings(structure,
-                                              comp_parameters,
-                                              'bulk_epsilon_from_scratch')
-        Calc_Eps_FW = StaticFW(structure=structure,
-                               name=flag,
-                               vasp_input_set=vis)
+        vis = get_custom_vasp_static_settings(
+            structure, comp_parameters, "bulk_epsilon_from_scratch"
+        )
+        Calc_Eps_FW = StaticFW(
+            structure=structure, name=flag, vasp_input_set=vis
+        )
 
         Get_Eps_FT = FT_GetEpsilon(label=flag, db_file=db_file)
 
-        Update_Data_FT = FT_UpdateCompParams(mpid=mpid,
-                                             functional=functional,
-                                             new_params=['epsilon'],
-                                             update_bulk=update_bulk,
-                                             update_slabs=update_slabs,
-                                             db_file=db_file,
-                                             high_level_db=hl_db)
-        Update_FW = Firework(tasks=[Get_Eps_FT, Update_Data_FT],
-                             spec=spec,
-                             name=flag + '_update_high_level')
+        Update_Data_FT = FT_UpdateCompParams(
+            mpid=mpid,
+            functional=functional,
+            new_params=["epsilon"],
+            update_bulk=update_bulk,
+            update_slabs=update_slabs,
+            db_file=db_file,
+            high_level_db=hl_db,
+        )
+        Update_FW = Firework(
+            tasks=[Get_Eps_FT, Update_Data_FT],
+            spec=spec,
+            name=flag + "_update_high_level",
+        )
 
-        WF = Workflow([Calc_Eps_FW, Update_FW], {Calc_Eps_FW: [Update_FW]},
-                      name=wf_name)
+        WF = Workflow(
+            [Calc_Eps_FW, Update_FW], {Calc_Eps_FW: [Update_FW]}, name=wf_name
+        )
     else:
-        spec.update({'epsilon': epsilon})
-        Update_Data_FT = FT_UpdateCompParams(mpid=mpid,
-                                             functional=functional,
-                                             new_params=['epsilon'],
-                                             update_bulk=update_bulk,
-                                             update_slabs=update_slabs,
-                                             db_file=db_file,
-                                             high_level_db=hl_db)
-        Update_FW = Firework(tasks=[Update_Data_FT],
-                             spec=spec,
-                             name=flag + '_update_high_level')
+        spec.update({"epsilon": epsilon})
+        Update_Data_FT = FT_UpdateCompParams(
+            mpid=mpid,
+            functional=functional,
+            new_params=["epsilon"],
+            update_bulk=update_bulk,
+            update_slabs=update_slabs,
+            db_file=db_file,
+            high_level_db=hl_db,
+        )
+        Update_FW = Firework(
+            tasks=[Update_Data_FT], spec=spec, name=flag + "_update_high_level"
+        )
         WF = Workflow([Update_FW], name=wf_name)
     return WF
 
 
-def charge_analysis_swf(interface,
-                        interface_name=None,
-                        functional='PBE',
-                        external_pressure=0,
-                        db_file=None,
-                        high_level_db='auto',
-                        comp_parameters={}):
+def charge_analysis_swf(
+    interface,
+    interface_name=None,
+    functional="PBE",
+    external_pressure=0,
+    db_file=None,
+    high_level_db="auto",
+    comp_parameters={},
+):
     """Subworkflow to compute the charge redistribution of an interface.
-    
+
     This workflow takes an interface object as an input and makes 3 static
     calculations of the interface, and the top and bottom slabs, respectively.
     The charge densities are parsed and subsequently analyzed. The difference
@@ -151,7 +172,7 @@ def charge_analysis_swf(interface,
     redistribution is computed similar to PRL 121, 026804 (2018).
 
     Output are saved in a high-level database.
-    
+
     Parameters
     ----------.
     interface : pymatgen.core.interface.Interface
@@ -184,87 +205,120 @@ def charge_analysis_swf(interface,
     top_slab = interface.film
     bot_slab = interface.substrate
     try:
-        top_miller = interface.interface_properties['film_miller']
-        bot_miller = interface.interface_properties['substrate_miller']
+        top_miller = interface.interface_properties["film_miller"]
+        bot_miller = interface.interface_properties["substrate_miller"]
     except:
-        top_miller = bot_miller = [0,0,0]
-        RuntimeWarning('Interface object is missing the "interface_properties"\n'
-                       '"film_miller", and "substrate_miller"')
+        top_miller = bot_miller = [0, 0, 0]
+        RuntimeWarning(
+            'Interface object is missing the "interface_properties"\n'
+            '"film_miller", and "substrate_miller"'
+        )
 
     if not interface_name:
-        mt = ''.join(str(s) for s in top_miller)
-        mb = ''.join(str(s) for s in bot_miller)
-        interface_name = (top_slab.composition.reduced_formula + '_' + mt + '_' +
-                          bot_slab.composition.reduced_formula + '_' + mb +
-                          '_AutoGen')
-        print('\nYour interface name has been automatically generated to be:'
-              '\n {}'.format(interface_name))
+        mt = "".join(str(s) for s in top_miller)
+        mb = "".join(str(s) for s in bot_miller)
+        interface_name = (
+            top_slab.composition.reduced_formula
+            + "_"
+            + mt
+            + "_"
+            + bot_slab.composition.reduced_formula
+            + "_"
+            + mb
+            + "_AutoGen"
+        )
+        print(
+            "\nYour interface name has been automatically generated to be:"
+            "\n {}".format(interface_name)
+        )
 
     if comp_parameters == {}:
-        print('\nNo computational parameters have been defined!\n'
-              'Workflow will run with:\n'
-              '   ISPIN = 1\n'
-              '   ISMEAR = 0\n'
-              '   ENCUT = 520\n'
-              '   kpoint density kappa = 5000\n'
-              'We recommend to pass a comp_parameters dictionary'
-              ' of the form:\n'
-              '   {"use_vdw": <True/False>,\n'
-              '    "use_spin": <True/False>,\n'
-              '    "is_metal": <True/False>,\n'
-              '    "encut": <float>,\n'
-              '    "k_dens": <int>}\n')
+        print(
+            "\nNo computational parameters have been defined!\n"
+            "Workflow will run with:\n"
+            "   ISPIN = 1\n"
+            "   ISMEAR = 0\n"
+            "   ENCUT = 520\n"
+            "   kpoint density kappa = 5000\n"
+            "We recommend to pass a comp_parameters dictionary"
+            " of the form:\n"
+            '   {"use_vdw": <True/False>,\n'
+            '    "use_spin": <True/False>,\n'
+            '    "is_metal": <True/False>,\n'
+            '    "encut": <float>,\n'
+            '    "k_dens": <int>}\n'
+        )
 
-    tag = interface_name + '_' + str(uuid4())
+    tag = interface_name + "_" + str(uuid4())
 
-    vis_top = get_custom_vasp_static_settings(top_slab,
-                                              comp_parameters,
-                                              'slab_from_scratch')
-    vis_bot = get_custom_vasp_static_settings(bot_slab,
-                                              comp_parameters,
-                                              'slab_from_scratch')
-    vis_interface = get_custom_vasp_static_settings(interface,
-                                                    comp_parameters,
-                                                    'slab_from_scratch')
+    vis_top = get_custom_vasp_static_settings(
+        top_slab, comp_parameters, "slab_from_scratch"
+    )
+    vis_bot = get_custom_vasp_static_settings(
+        bot_slab, comp_parameters, "slab_from_scratch"
+    )
+    vis_interface = get_custom_vasp_static_settings(
+        interface, comp_parameters, "slab_from_scratch"
+    )
 
-    FW_top = StaticFW(structure=top_slab, vasp_input_set=vis_top,
-                      name=tag + 'top',
-                      vasptodb_kwargs = {'store_volumetric_data': ['chgcar']})
-    FW_bot = StaticFW(structure=bot_slab, vasp_input_set=vis_bot,
-                      name=tag + 'bottom',
-                      vasptodb_kwargs = {'store_volumetric_data': ['chgcar']})
-    FW_interface = StaticFW(structure=interface, vasp_input_set=vis_interface,
-                            name=tag + 'interface',
-                            vasptodb_kwargs = {'store_volumetric_data': ['chgcar']})
+    FW_top = StaticFW(
+        structure=top_slab,
+        vasp_input_set=vis_top,
+        name=tag + "top",
+        vasptodb_kwargs={"store_volumetric_data": ["chgcar"]},
+    )
+    FW_bot = StaticFW(
+        structure=bot_slab,
+        vasp_input_set=vis_bot,
+        name=tag + "bottom",
+        vasptodb_kwargs={"store_volumetric_data": ["chgcar"]},
+    )
+    FW_interface = StaticFW(
+        structure=interface,
+        vasp_input_set=vis_interface,
+        name=tag + "interface",
+        vasptodb_kwargs={"store_volumetric_data": ["chgcar"]},
+    )
 
-    FW_charge_analysis = Firework(FT_MakeChargeDensityDiff(interface=interface,
-                                                           interface_name=interface_name,
-                                                           interface_calc_name=tag + 'interface',
-                                                           top_calc_name=tag + 'top',
-                                                           bot_calc_name=tag + 'bottom',
-                                                           functional = functional,
-                                                           external_pressure=external_pressure,
-                                                           db_file=db_file,
-                                                           high_level_db=high_level_db),
-                                  name=f'Calculate charge density redistribution for {interface_name}')
-    
-    SWF = Workflow(fireworks=[FW_top, FW_bot, FW_interface, FW_charge_analysis],
-                   links_dict={FW_top: [FW_charge_analysis],
-                               FW_bot: [FW_charge_analysis],
-                               FW_interface: [FW_charge_analysis]},
-                   name='Calculate adhesion SWF for {}'.format(interface_name))
+    FW_charge_analysis = Firework(
+        FT_MakeChargeDensityDiff(
+            interface=interface,
+            interface_name=interface_name,
+            interface_calc_name=tag + "interface",
+            top_calc_name=tag + "top",
+            bot_calc_name=tag + "bottom",
+            functional=functional,
+            external_pressure=external_pressure,
+            db_file=db_file,
+            high_level_db=high_level_db,
+        ),
+        name=f"Calculate charge density redistribution for {interface_name}",
+    )
+
+    SWF = Workflow(
+        fireworks=[FW_top, FW_bot, FW_interface, FW_charge_analysis],
+        links_dict={
+            FW_top: [FW_charge_analysis],
+            FW_bot: [FW_charge_analysis],
+            FW_interface: [FW_charge_analysis],
+        },
+        name="Calculate adhesion SWF for {}".format(interface_name),
+    )
 
     return add_modify_incar(SWF)
 
-def adhesion_energy_swf(top_slab,
-                        bottom_slab,
-                        interface,
-                        external_pressure=0,
-                        interface_name=None,
-                        functional='PBE',
-                        comp_parameters={}):
+
+def adhesion_energy_swf(
+    top_slab,
+    bottom_slab,
+    interface,
+    external_pressure=0,
+    interface_name=None,
+    functional="PBE",
+    comp_parameters={},
+):
     """Create a subworkflow to compute the adhesion energy for an interface.
-    
+
     This workflow takes two matched slabs (their cells must be identical) and
     a relaxed interface structure of those slabs and computes the andhesion
     energy. The two matched slabs must be relaxed as well to get correct
@@ -274,7 +328,7 @@ def adhesion_energy_swf(top_slab,
     is generally dependent on which machine the calculations are executed,
     and not on the machine where the workflow is submitted. Also ssh-keys need
     to be set up for remote_copy to work!
-    
+
     Parameters
     ----------
     top_slab : pymatgen.core.surface.Slab
@@ -307,89 +361,119 @@ def adhesion_energy_swf(top_slab,
     try:
         top_miller = list(top_slab.miller_index)
     except:
-        raise AssertionError("You have used {} as an input for <top_slab>.\n"
-                             "Please use <class 'pymatgen.core.surface.Slab'>"
-                             " instead.".format(type(top_slab)))
+        raise AssertionError(
+            "You have used {} as an input for <top_slab>.\n"
+            "Please use <class 'pymatgen.core.surface.Slab'>"
+            " instead.".format(type(top_slab))
+        )
 
     try:
         bot_miller = list(bottom_slab.miller_index)
     except:
-        raise AssertionError("You have used {} as an input for <bot_slab>.\n"
-                             "Please use <class 'pymatgen.core.surface.Slab'>"
-                             " instead.".format(type(bottom_slab)))
+        raise AssertionError(
+            "You have used {} as an input for <bot_slab>.\n"
+            "Please use <class 'pymatgen.core.surface.Slab'>"
+            " instead.".format(type(bottom_slab))
+        )
 
     if not interface_name:
-        mt = ''.join(str(s) for s in top_miller)
-        mb = ''.join(str(s) for s in bot_miller)
-        interface_name = (top_slab.composition.reduced_formula + '_' + mt + '_' +
-                          bottom_slab.composition.reduced_formula + '_' + mb +
-                          '_AutoGen')
-        print('\nYour interface name has been automatically generated to be:'
-              '\n {}'.format(interface_name))
+        mt = "".join(str(s) for s in top_miller)
+        mb = "".join(str(s) for s in bot_miller)
+        interface_name = (
+            top_slab.composition.reduced_formula
+            + "_"
+            + mt
+            + "_"
+            + bottom_slab.composition.reduced_formula
+            + "_"
+            + mb
+            + "_AutoGen"
+        )
+        print(
+            "\nYour interface name has been automatically generated to be:"
+            "\n {}".format(interface_name)
+        )
 
     if comp_parameters == {}:
-        print('\nNo computational parameters have been defined!\n'
-              'Workflow will run with:\n'
-              '   ISPIN = 1\n'
-              '   ISMEAR = 0\n'
-              '   ENCUT = 520\n'
-              '   kpoint density kappa = 5000\n'
-              'We recommend to pass a comp_parameters dictionary'
-              ' of the form:\n'
-              '   {"use_vdw": <True/False>,\n'
-              '    "use_spin": <True/False>,\n'
-              '    "is_metal": <True/False>,\n'
-              '    "encut": <float>,\n'
-              '    "k_dens": <int>}\n')
+        print(
+            "\nNo computational parameters have been defined!\n"
+            "Workflow will run with:\n"
+            "   ISPIN = 1\n"
+            "   ISMEAR = 0\n"
+            "   ENCUT = 520\n"
+            "   kpoint density kappa = 5000\n"
+            "We recommend to pass a comp_parameters dictionary"
+            " of the form:\n"
+            '   {"use_vdw": <True/False>,\n'
+            '    "use_spin": <True/False>,\n'
+            '    "is_metal": <True/False>,\n'
+            '    "encut": <float>,\n'
+            '    "k_dens": <int>}\n'
+        )
 
-    tag = interface_name + '_' + str(uuid4())
+    tag = interface_name + "_" + str(uuid4())
 
-    vis_top = get_custom_vasp_static_settings(top_slab,
-                                              comp_parameters,
-                                              'slab_from_scratch')
-    vis_bot = get_custom_vasp_static_settings(bottom_slab,
-                                              comp_parameters,
-                                              'slab_from_scratch')
-    vis_interface = get_custom_vasp_static_settings(interface,
-                                                    comp_parameters,
-                                                    'slab_from_scratch')
+    vis_top = get_custom_vasp_static_settings(
+        top_slab, comp_parameters, "slab_from_scratch"
+    )
+    vis_bot = get_custom_vasp_static_settings(
+        bottom_slab, comp_parameters, "slab_from_scratch"
+    )
+    vis_interface = get_custom_vasp_static_settings(
+        interface, comp_parameters, "slab_from_scratch"
+    )
 
-    FW_top = StaticFW(structure=top_slab, vasp_input_set=vis_top,
-                      name=tag + 'top')
-    FW_bot = StaticFW(structure=bottom_slab, vasp_input_set=vis_bot,
-                      name=tag + 'bottom')
-    FW_interface = StaticFW(structure=interface, vasp_input_set=vis_interface,
-                            name=tag + 'interface')
+    FW_top = StaticFW(
+        structure=top_slab, vasp_input_set=vis_top, name=tag + "top"
+    )
+    FW_bot = StaticFW(
+        structure=bottom_slab, vasp_input_set=vis_bot, name=tag + "bottom"
+    )
+    FW_interface = StaticFW(
+        structure=interface,
+        vasp_input_set=vis_interface,
+        name=tag + "interface",
+    )
 
-    FW_results = Firework(FT_CalcAdhesion(interface_name=interface_name,
-                                          functional=functional,
-                                          external_pressure=external_pressure,
-                                          top_label=tag + 'top',
-                                          bottom_label=tag + 'bottom',
-                                          interface_label=tag + 'interface'),
-                          name=f'Calculate Adhesion FW for {interface_name}')
-    SWF = Workflow(fireworks=[FW_top, FW_bot, FW_interface, FW_results],
-                   links_dict={FW_top: [FW_results],
-                               FW_bot: [FW_results],
-                               FW_interface: [FW_results]},
-                   name='Calculate adhesion SWF for {}'.format(interface_name))
+    FW_results = Firework(
+        FT_CalcAdhesion(
+            interface_name=interface_name,
+            functional=functional,
+            external_pressure=external_pressure,
+            top_label=tag + "top",
+            bottom_label=tag + "bottom",
+            interface_label=tag + "interface",
+        ),
+        name=f"Calculate Adhesion FW for {interface_name}",
+    )
+    SWF = Workflow(
+        fireworks=[FW_top, FW_bot, FW_interface, FW_results],
+        links_dict={
+            FW_top: [FW_results],
+            FW_bot: [FW_results],
+            FW_interface: [FW_results],
+        },
+        name="Calculate adhesion SWF for {}".format(interface_name),
+    )
 
     return add_modify_incar(SWF)
 
 
-def calc_pes_swf(interface,
-                 interface_name=None,
-                 functional='PBE',
-                 pressure=0,
-                 comp_parameters={},
-                 file_output=False,
-                 output_dir=None,
-                 remote_copy=False,
-                 server=None,
-                 user=None,
-                 port=None):
+def calc_pes_swf(
+    interface,
+    interface_name=None,
+    functional="PBE",
+    pressure=0,
+    comp_parameters={},
+    file_output=False,
+    output_dir=None,
+    remote_copy=False,
+    server=None,
+    user=None,
+    port=None,
+):
     """Create a subworkflow to compute the PES for an interface of two slabs.
-    
+
     This workflow takes two matched slabs (their cells must be identical) as
     input and computes the potential energy surface (PES) for the interface.
     Output are saved in a high-level database, but may also be also written
@@ -397,7 +481,7 @@ def calc_pes_swf(interface,
     is generally dependent on which machine the calculations are executed,
     and not on the machine where the workflow is submitted. Also ssh-keys need
     to be set up for remote_copy to work!
-    
+
     Parameters
     ----------
     interface : pymatgen.core.interface.Interface
@@ -440,85 +524,122 @@ def calc_pes_swf(interface,
 
     """
     try:
-        top_miller = interface.interface_properties['film_miller']
-        bot_miller = interface.interface_properties['substrate_miller']
+        top_miller = interface.interface_properties["film_miller"]
+        bot_miller = interface.interface_properties["substrate_miller"]
         if not interface_name:
-            mt = ''.join(str(s) for s in top_miller)
-            mb = ''.join(str(s) for s in bot_miller)
-            interface_name = (interface.film.composition.reduced_formula + '_' + mt + '_' +
-                              interface.substrate.composition.reduced_formula + '_' + mb +
-                              '_AutoGen')
-            print('\nYour interface name has been automatically generated to be:'
-                  '\n {}'.format(interface_name))
+            mt = "".join(str(s) for s in top_miller)
+            mb = "".join(str(s) for s in bot_miller)
+            interface_name = (
+                interface.film.composition.reduced_formula
+                + "_"
+                + mt
+                + "_"
+                + interface.substrate.composition.reduced_formula
+                + "_"
+                + mb
+                + "_AutoGen"
+            )
+            print(
+                "\nYour interface name has been automatically generated to be:"
+                "\n {}".format(interface_name)
+            )
     except:
         if not interface_name:
-            mt = mb = 'unkown_miller'
-            interface_name = (interface.film.composition.reduced_formula + '_' + mt + '_' +
-                              interface.substrate.composition.reduced_formula + '_' + mb +
-                              '_AutoGen')
-            print('\nYour interface name has been automatically generated to be:'
-                  '\n {}'.format(interface_name))    
+            mt = mb = "unkown_miller"
+            interface_name = (
+                interface.film.composition.reduced_formula
+                + "_"
+                + mt
+                + "_"
+                + interface.substrate.composition.reduced_formula
+                + "_"
+                + mb
+                + "_AutoGen"
+            )
+            print(
+                "\nYour interface name has been automatically generated to be:"
+                "\n {}".format(interface_name)
+            )
 
     if comp_parameters == {}:
-        print('\nNo computational parameters have been defined!\n'
-              'Workflow will run with:\n'
-              '   ISPIN = 1\n'
-              '   ISMEAR = 0\n'
-              '   ENCUT = 520\n'
-              '   kpoints_density = 8.5\n'
-              'We recommend to pass a comp_parameters dictionary'
-              ' of the form:\n'
-              '   {"use_vdw": <True/False>,\n'
-              '    "use_spin": <True/False>,\n'
-              '    "is_metal": <True/False>,\n'
-              '    "encut": <float>,\n'
-              '    "k_dens": <int>}\n')
+        print(
+            "\nNo computational parameters have been defined!\n"
+            "Workflow will run with:\n"
+            "   ISPIN = 1\n"
+            "   ISMEAR = 0\n"
+            "   ENCUT = 520\n"
+            "   kpoints_density = 8.5\n"
+            "We recommend to pass a comp_parameters dictionary"
+            " of the form:\n"
+            '   {"use_vdw": <True/False>,\n'
+            '    "use_spin": <True/False>,\n'
+            '    "is_metal": <True/False>,\n'
+            '    "encut": <float>,\n'
+            '    "k_dens": <int>}\n'
+        )
 
-    tag = interface_name + '_' + str(uuid4())
-    
-    nav = StructureNavigator('auto', high_level=True)
+    tag = interface_name + "_" + str(uuid4())
+
+    nav = StructureNavigator("auto", high_level=True)
     try:
-        nav.get_interface_from_db(interface_name, pressure, functional)['unrelaxed_structure']
+        nav.get_interface_from_db(interface_name, pressure, functional)[
+            "unrelaxed_structure"
+        ]
     except:
-        nav.insert_data(collection = functional+'.interface_data',
-                        data = {'name': interface_name,
-                                'pressure': pressure,
-                                'comp_parameters': comp_parameters,
-                                'unrelaxed_structure': interface.as_dict(),
-                                'top_aligned': interface.film.as_dict(),
-                                'bottom_aligned': interface.substrate.as_dict()})
+        nav.insert_data(
+            collection=functional + ".interface_data",
+            data={
+                "name": interface_name,
+                "pressure": pressure,
+                "comp_parameters": comp_parameters,
+                "unrelaxed_structure": interface.as_dict(),
+                "top_aligned": interface.film.as_dict(),
+                "bottom_aligned": interface.substrate.as_dict(),
+            },
+        )
 
-    FW_1 = run_pes_calc_fw(interface = interface,
-                           interface_name=interface_name,
-                           functional=functional,
-                           comp_parameters=comp_parameters,
-                           tag=tag,
-                           FW_name='Start PES calcs for ' + interface_name)
+    FW_1 = run_pes_calc_fw(
+        interface=interface,
+        interface_name=interface_name,
+        functional=functional,
+        comp_parameters=comp_parameters,
+        tag=tag,
+        FW_name="Start PES calcs for " + interface_name,
+    )
 
-    FW_2 = make_pes_fw(interface_name=interface_name,
-                       functional=functional,
-                       external_pressure=pressure,
-                       tag=tag,
-                       file_output=file_output,
-                       output_dir=output_dir,
-                       remote_copy=remote_copy,
-                       server=server,
-                       user=user,
-                       port=port,
-                       FW_name='Parse PES calcs for ' + interface_name)
+    FW_2 = make_pes_fw(
+        interface_name=interface_name,
+        functional=functional,
+        external_pressure=pressure,
+        tag=tag,
+        file_output=file_output,
+        output_dir=output_dir,
+        remote_copy=remote_copy,
+        server=server,
+        user=user,
+        port=port,
+        FW_name="Parse PES calcs for " + interface_name,
+    )
 
-    SWF = Workflow([FW_1, FW_2], {FW_1: [FW_2]},
-                   name='Calc PES for ' + interface_name + ' SWF')
+    SWF = Workflow(
+        [FW_1, FW_2],
+        {FW_1: [FW_2]},
+        name="Calc PES for " + interface_name + " SWF",
+    )
     return SWF
 
 
-def calc_ppes_swf(interface_name, functional, distance_list=[-0.5, -0.25, 0.0,
-                                                             0.25, 0.5, 2.5, 3.0, 4.0, 5.0, 7.5],
-                  out_name='PPES@minimum', structure_name='minimum_relaxed',
-                  spec={}):
+def calc_ppes_swf(
+    interface_name,
+    functional,
+    distance_list=[-0.5, -0.25, 0.0, 0.25, 0.5, 2.5, 3.0, 4.0, 5.0, 7.5],
+    out_name="PPES@minimum",
+    structure_name="minimum_relaxed",
+    spec={},
+):
     """
     Generate a subworkflow that calculates a PPES using static calculations.
-    
+
     For a given interface in the high-level database this subworkflow performs
     static calculations for different distances of the two slabs modeling
     brittle cleavage under mode 1 loading using the rigid separation model.
@@ -551,45 +672,60 @@ def calc_ppes_swf(interface_name, functional, distance_list=[-0.5, -0.25, 0.0,
         Subworkflow to calculate the PPES for a certain interface.
 
     """
-    tag = interface_name + '_' + str(uuid4())
+    tag = interface_name + "_" + str(uuid4())
 
-    FW_1 = Firework(FT_DoPPESCalcs(interface_name=interface_name,
-                                   functional=functional,
-                                   distance_list=distance_list,
-                                   tag=tag,
-                                   structure_name=structure_name),
-                    spec=spec, name='PPES Calculations for ' + interface_name)
+    FW_1 = Firework(
+        FT_DoPPESCalcs(
+            interface_name=interface_name,
+            functional=functional,
+            distance_list=distance_list,
+            tag=tag,
+            structure_name=structure_name,
+        ),
+        spec=spec,
+        name="PPES Calculations for " + interface_name,
+    )
 
-    FW_2 = Firework(FT_FitPPES(interface_name=interface_name,
-                               functional=functional,
-                               distance_list=distance_list,
-                               out_name=out_name,
-                               tag=tag),
-                    spec=spec, name='PPES Fitting for ' + interface_name)
+    FW_2 = Firework(
+        FT_FitPPES(
+            interface_name=interface_name,
+            functional=functional,
+            distance_list=distance_list,
+            out_name=out_name,
+            tag=tag,
+        ),
+        spec=spec,
+        name="PPES Fitting for " + interface_name,
+    )
 
-    SWF = Workflow([FW_1, FW_2], {FW_1: [FW_2]},
-                   name='Calc PPES for ' + interface_name + ' SWF')
+    SWF = Workflow(
+        [FW_1, FW_2],
+        {FW_1: [FW_2]},
+        name="Calc PPES for " + interface_name + " SWF",
+    )
     return SWF
 
 
-def make_and_relax_slab_swf(bulk_structure,
-                            miller_index,
-                            flag,
-                            comp_parameters={},
-                            functional='PBE',
-                            min_thickness=10.0,
-                            min_vacuum=15.0,
-                            relax_type='slab_pos_relax',
-                            slab_struct_name='unrelaxed_slab',
-                            out_struct_name='relaxed_slab',
-                            spec={},
-                            file_output=False,
-                            output_dir=None,
-                            remote_copy=False,
-                            server=None,
-                            user=None,
-                            port=None,
-                            print_help=True):
+def make_and_relax_slab_swf(
+    bulk_structure,
+    miller_index,
+    flag,
+    comp_parameters={},
+    functional="PBE",
+    min_thickness=10.0,
+    min_vacuum=15.0,
+    relax_type="slab_pos_relax",
+    slab_struct_name="unrelaxed_slab",
+    out_struct_name="relaxed_slab",
+    spec={},
+    file_output=False,
+    output_dir=None,
+    remote_copy=False,
+    server=None,
+    user=None,
+    port=None,
+    print_help=True,
+):
     """
     Make and relax a slab.
 
@@ -653,113 +789,140 @@ def make_and_relax_slab_swf(bulk_structure,
         miller = [int(k) for k in list(miller_index)]
     else:
         miller = miller_index
-        miller_str = ''.join(str(s) for s in miller_index)
+        miller_str = "".join(str(s) for s in miller_index)
 
     formula = bulk_structure.composition.reduced_formula
 
-    if flag.startswith('mp-') and flag[3:].isdigit():
+    if flag.startswith("mp-") and flag[3:].isdigit():
         nav_mp = NavigatorMP()
         formula_from_flag = nav_mp.get_property_from_mp(
-            mp_id=flag,
-            properties=['pretty_formula'])
-        formula_from_flag = formula_from_flag['pretty_formula']
+            mp_id=flag, properties=["pretty_formula"]
+        )
+        formula_from_flag = formula_from_flag["pretty_formula"]
         if not formula_from_flag == formula:
-            raise SystemExit('The chemical formula of your structure ({}) '
-                             'does not match the chemical formula of the flag '
-                             '(mp-id) you have chosen which corresponds '
-                             'to {}.\n'.format(
-                formula, formula_from_flag))
+            raise SystemExit(
+                "The chemical formula of your structure ({}) "
+                "does not match the chemical formula of the flag "
+                "(mp-id) you have chosen which corresponds "
+                "to {}.\n".format(formula, formula_from_flag)
+            )
 
     if comp_parameters == {}:
-        print('\nNo computational parameters have been defined!\n'
-              'Workflow will run with:\n'
-              '   ISPIN = 1\n'
-              '   ISMEAR = 0\n'
-              '   ENCUT = 520\n'
-              '   kpoint density kappa = 5000\n'
-              'We recommend to pass a comp_parameters dictionary'
-              ' of the form:\n'
-              '   {"use_vdw": <True/False>,\n'
-              '    "use_spin": <True/False>,\n'
-              '    "is_metal": <True/False>,\n'
-              '    "encut": <int>,\n'
-              '    "k_dens": <int>}\n')
+        print(
+            "\nNo computational parameters have been defined!\n"
+            "Workflow will run with:\n"
+            "   ISPIN = 1\n"
+            "   ISMEAR = 0\n"
+            "   ENCUT = 520\n"
+            "   kpoint density kappa = 5000\n"
+            "We recommend to pass a comp_parameters dictionary"
+            " of the form:\n"
+            '   {"use_vdw": <True/False>,\n'
+            '    "use_spin": <True/False>,\n'
+            '    "is_metal": <True/False>,\n'
+            '    "encut": <int>,\n'
+            '    "k_dens": <int>}\n'
+        )
 
     if print_help:
         nav = Navigator()
         db_file = nav.path
-        print('Once you workflow has finished you can access the '
-              'results from the database using this code:\n\n'
-              'import pprint\n'
-              'from triboflow.utils.database import GetSlabFromDB\n'
-              'results = GetBulkFromDB("{}", "{}", "{}", "{}")\n'
-              'pprint.pprint(results)\n'.format(flag, db_file, miller, functional))
+        print(
+            "Once you workflow has finished you can access the "
+            "results from the database using this code:\n\n"
+            "import pprint\n"
+            "from triboflow.utils.database import GetSlabFromDB\n"
+            'results = GetBulkFromDB("{}", "{}", "{}", "{}")\n'
+            "pprint.pprint(results)\n".format(
+                flag, db_file, miller, functional
+            )
+        )
 
-    tag = formula + miller_str + '_' + str(uuid4())
+    tag = formula + miller_str + "_" + str(uuid4())
 
     FTs = []
 
-    FTs.append(FT_MakeSlabInDB(bulk_structure=bulk_structure,
-                               miller=miller,
-                               flag=flag,
-                               functional=functional,
-                               min_thickness=min_thickness,
-                               min_vacuum=min_vacuum))
+    FTs.append(
+        FT_MakeSlabInDB(
+            bulk_structure=bulk_structure,
+            miller=miller,
+            flag=flag,
+            functional=functional,
+            min_thickness=min_thickness,
+            min_vacuum=min_vacuum,
+        )
+    )
 
-    FTs.append(FT_StartSlabRelax(flag=flag, miller=miller,
-                                 functional=functional, tag=tag,
-                                 comp_parameters=comp_parameters,
-                                 slab_struct_name=slab_struct_name,
-                                 relax_type=relax_type))
+    FTs.append(
+        FT_StartSlabRelax(
+            flag=flag,
+            miller=miller,
+            functional=functional,
+            tag=tag,
+            comp_parameters=comp_parameters,
+            slab_struct_name=slab_struct_name,
+            relax_type=relax_type,
+        )
+    )
 
-    FW = Firework(FTs, spec=spec,
-                  name='Make and relax ' + formula + miller_str + ' slab')
+    FW = Firework(
+        FTs, spec=spec, name="Make and relax " + formula + miller_str + " slab"
+    )
 
-    FW2 = Firework(FT_GetRelaxedSlab(flag=flag,
-                                     miller=miller,
-                                     functional=functional,
-                                     tag=tag,
-                                     struct_out_name=out_struct_name,
-                                     file_output=file_output,
-                                     output_dir=output_dir,
-                                     remote_copy=remote_copy,
-                                     server=server,
-                                     user=user,
-                                     port=port),
-                   spec=spec,
-                   name='Put relaxed ' + formula + miller_str + ' slab in DB')
+    FW2 = Firework(
+        FT_GetRelaxedSlab(
+            flag=flag,
+            miller=miller,
+            functional=functional,
+            tag=tag,
+            struct_out_name=out_struct_name,
+            file_output=file_output,
+            output_dir=output_dir,
+            remote_copy=remote_copy,
+            server=server,
+            user=user,
+            port=port,
+        ),
+        spec=spec,
+        name="Put relaxed " + formula + miller_str + " slab in DB",
+    )
 
-    SWF = Workflow([FW, FW2], {FW: [FW2]},
-                   name='Make and relax ' + formula + miller_str + ' SWF')
+    SWF = Workflow(
+        [FW, FW2],
+        {FW: [FW2]},
+        name="Make and relax " + formula + miller_str + " SWF",
+    )
     return SWF
 
 
-def converge_swf(structure,
-                 conv_type,
-                 flag,
-                 comp_parameters={},
-                 spec={},
-                 functional='PBE',
-                 deformations=None,
-                 encut_start=None,
-                 encut_incr=25,
-                 k_dens_start=1.0,
-                 k_dens_incr=0.1,
-                 k_dens_default=12.5,
-                 n_converge=3,
-                 db_file=None,
-                 file_output=False,
-                 output_dir=None,
-                 remote_copy=False,
-                 server=None,
-                 user=None,
-                 port=None,
-                 print_help=True):
+def converge_swf(
+    structure,
+    conv_type,
+    flag,
+    comp_parameters={},
+    spec={},
+    functional="PBE",
+    deformations=None,
+    encut_start=None,
+    encut_incr=25,
+    k_dens_start=1.0,
+    k_dens_incr=0.1,
+    k_dens_default=12.5,
+    n_converge=3,
+    db_file=None,
+    file_output=False,
+    output_dir=None,
+    remote_copy=False,
+    server=None,
+    user=None,
+    port=None,
+    print_help=True,
+):
     """Subworkflows that converges Encut or kpoints denstiy using fits to an EOS.
-    
+
     Takes a given structure, computational parameters, and a optional list
     of deformations and uses these deformations to compute an
-    Birch-Murnaghan equation of state for higher and higher energy cutoffs or 
+    Birch-Murnaghan equation of state for higher and higher energy cutoffs or
     kpoints density.
     Once bulk modulus and equilibrium volume do not change any longer,
     convergence is reached. Output is printed to the screen and saved in the
@@ -835,160 +998,209 @@ def converge_swf(structure,
         structure.
 
     """
-    if conv_type not in ['kpoints', 'encut']:
-        raise ValueError('"type" input must be either "kpoints" or'
-                         '"encut".\nYou have passed {}'.format(conv_type))
-    if conv_type == 'encut':
-        name = 'Encut Convergence SWF of ' + structure.composition.reduced_formula
+    if conv_type not in ["kpoints", "encut"]:
+        raise ValueError(
+            '"type" input must be either "kpoints" or'
+            '"encut".\nYou have passed {}'.format(conv_type)
+        )
+    if conv_type == "encut":
+        name = (
+            "Encut Convergence SWF of " + structure.composition.reduced_formula
+        )
         if not encut_start:
             # Get the largest EMIN value of the potcar and round up to the
             # next whole 25.
-            vis = get_custom_vasp_static_settings(structure, comp_parameters,
-                                                  'bulk_from_scratch')
+            vis = get_custom_vasp_static_settings(
+                structure, comp_parameters, "bulk_from_scratch"
+            )
             encut_dict = get_emin_and_emax(vis.potcar)
-            enmax = encut_dict['ENMAX']
+            enmax = encut_dict["ENMAX"]
             encut_start = int(25 * np.ceil(enmax / 25))
-    elif conv_type == 'kpoints':
-        name = 'Kpoint Convergence SWF of ' + structure.composition.reduced_formula
+    elif conv_type == "kpoints":
+        name = (
+            "Kpoint Convergence SWF of "
+            + structure.composition.reduced_formula
+        )
 
     tag = "BM group: {}".format(str(uuid4()))
 
-    if flag.startswith('mp-') and flag[3:].isdigit():
+    if flag.startswith("mp-") and flag[3:].isdigit():
         formula_from_struct = structure.composition.reduced_formula
         nav_mp = NavigatorMP()
         formula_from_flag = nav_mp.get_property_from_mp(
-            mp_id=flag,
-            properties=['pretty_formula'])
-        formula_from_flag = formula_from_flag['pretty_formula']
+            mp_id=flag, properties=["pretty_formula"]
+        )
+        formula_from_flag = formula_from_flag["pretty_formula"]
 
         if not formula_from_flag == formula_from_struct:
-            raise SystemExit('The chemical formula of your structure ({}) '
-                             'does not match the chemical formula of the flag '
-                             '(mp-id) you have chosen which corresponds '
-                             'to {}.\n'.format(
-                formula_from_struct, formula_from_flag))
+            raise SystemExit(
+                "The chemical formula of your structure ({}) "
+                "does not match the chemical formula of the flag "
+                "(mp-id) you have chosen which corresponds "
+                "to {}.\n".format(formula_from_struct, formula_from_flag)
+            )
 
     if comp_parameters == {}:
-        if conv_type == 'encut':
-            print('\nNo computational parameters have been defined!\n'
-                  'Workflow will run with:\n'
-                  '   ISPIN = 1\n'
-                  '   ISMEAR = 0\n'
-                  '   kpoint density kappa = 12.5\n'
-                  'We recommend to pass a comp_parameters dictionary'
-                  ' of the form:\n'
-                  '   {"use_vdw": <True/False>,\n'
-                  '    "use_spin": <True/False>,\n'
-                  '    "is_metal": <True/False>,\n'
-                  '    "k_dens": <int>}\n')
+        if conv_type == "encut":
+            print(
+                "\nNo computational parameters have been defined!\n"
+                "Workflow will run with:\n"
+                "   ISPIN = 1\n"
+                "   ISMEAR = 0\n"
+                "   kpoint density kappa = 12.5\n"
+                "We recommend to pass a comp_parameters dictionary"
+                " of the form:\n"
+                '   {"use_vdw": <True/False>,\n'
+                '    "use_spin": <True/False>,\n'
+                '    "is_metal": <True/False>,\n'
+                '    "k_dens": <int>}\n'
+            )
         else:
-            print('\nNo computational parameters have been defined!\n'
-                  'Workflow will run with:\n'
-                  '   ISPIN = 1\n'
-                  '   ISMEAR = 0\n'
-                  '   ENCUT = 650\n'
-                  'We recommend to pass a comp_parameters dictionary'
-                  ' of the form:\n'
-                  '   {"use_vdw": <True/False>,\n'
-                  '    "use_spin": <True/False>,\n'
-                  '    "is_metal": <True/False>,\n'
-                  '    "encut": <int>}\n')
+            print(
+                "\nNo computational parameters have been defined!\n"
+                "Workflow will run with:\n"
+                "   ISPIN = 1\n"
+                "   ISMEAR = 0\n"
+                "   ENCUT = 650\n"
+                "We recommend to pass a comp_parameters dictionary"
+                " of the form:\n"
+                '   {"use_vdw": <True/False>,\n'
+                '    "use_spin": <True/False>,\n'
+                '    "is_metal": <True/False>,\n'
+                '    "encut": <int>}\n'
+            )
 
     if print_help:
         nav = Navigator()
         db_file = nav.path
-        print('Once you workflow has finished you can access the '
-              'results from the database using this code:\n\n'
-              'import pprint\n'
-              'from triboflow.utils.database import GetBulkFromDB\n'
-              'results = GetBulkFromDB("{}", "{}", "{}")\n'
-              'pprint.pprint(results)\n'.format(flag, db_file, functional))
+        print(
+            "Once you workflow has finished you can access the "
+            "results from the database using this code:\n\n"
+            "import pprint\n"
+            "from triboflow.utils.database import GetBulkFromDB\n"
+            'results = GetBulkFromDB("{}", "{}", "{}")\n'
+            "pprint.pprint(results)\n".format(flag, db_file, functional)
+        )
 
-    if not comp_parameters.get('functional'):
-        comp_parameters['functional'] = functional
+    if not comp_parameters.get("functional"):
+        comp_parameters["functional"] = functional
     else:
-        if not comp_parameters.get('functional') == functional:
-            print('The functional set in your computational parameters ({}) '
-                  'does not match the one given in the input ({})!\n'
-                  'The functional in the computational parameter has been '
-                  'overwritten to {}!\n'.format(comp_parameters.get('functional'),
-                                                functional, functional))
-            comp_parameters['functional'] = functional
+        if not comp_parameters.get("functional") == functional:
+            print(
+                "The functional set in your computational parameters ({}) "
+                "does not match the one given in the input ({})!\n"
+                "The functional in the computational parameter has been "
+                "overwritten to {}!\n".format(
+                    comp_parameters.get("functional"), functional, functional
+                )
+            )
+            comp_parameters["functional"] = functional
 
-    FT_EncutConvo = FT_Convo(structure=structure,
-                             conv_type=conv_type,
-                             comp_params=comp_parameters,
-                             tag=tag,
-                             flag=flag,
-                             functional=functional,
-                             deformations=deformations,
-                             db_file=db_file,
-                             encut_incr=encut_incr,
-                             encut_start=encut_start,
-                             k_dens_start=k_dens_start,
-                             k_dens_incr=k_dens_incr,
-                             k_dens_default=k_dens_default,
-                             n_converge=n_converge,
-                             file_output=file_output,
-                             output_dir=output_dir,
-                             remote_copy=remote_copy,
-                             server=server,
-                             user=user,
-                             port=port)
+    FT_EncutConvo = FT_Convo(
+        structure=structure,
+        conv_type=conv_type,
+        comp_params=comp_parameters,
+        tag=tag,
+        flag=flag,
+        functional=functional,
+        deformations=deformations,
+        db_file=db_file,
+        encut_incr=encut_incr,
+        encut_start=encut_start,
+        k_dens_start=k_dens_start,
+        k_dens_incr=k_dens_incr,
+        k_dens_default=k_dens_default,
+        n_converge=n_converge,
+        file_output=file_output,
+        output_dir=output_dir,
+        remote_copy=remote_copy,
+        server=server,
+        user=user,
+        port=port,
+    )
 
-    FW_C = Firework(FT_EncutConvo, spec=spec,
-                    name=name)
+    FW_C = Firework(FT_EncutConvo, spec=spec, name=name)
     WF = Workflow([FW_C], name=name)
 
     return WF
 
 
-def surface_energy_swf(mpid,
-                       functional,
-                       sg_params,
-                       sg_filter,
-                       db_file='auto',
-                       high_level=True,
-                       comp_params_user={},
-                       custom_id=None):
+def surface_energy_swf(
+    mpid,
+    functional,
+    sg_params,
+    sg_filter,
+    db_file="auto",
+    high_level=True,
+    comp_params_user={},
+    custom_id=None,
+):
     nav_high = Navigator(db_file, high_level=high_level)
 
-    comp_params = nav_high.find_data(f'{functional}.bulk_data', {'mpid': mpid})['comp_parameters']
+    comp_params = nav_high.find_data(
+        f"{functional}.bulk_data", {"mpid": mpid}
+    )["comp_parameters"]
     comp_params.update(comp_params_user)
 
-    inputs_list = get_surfen_inputs_from_mpid(mpid,
-                                              functional,
-                                              sg_params,
-                                              sg_filter,
-                                              comp_params,
-                                              custom_id,
-                                              db_file,
-                                              high_level)
-    coll = f'{functional}.slab_data.LEO'
-    fltr = {'mpid': mpid}
+    inputs_list = get_surfen_inputs_from_mpid(
+        mpid,
+        functional,
+        sg_params,
+        sg_filter,
+        comp_params,
+        custom_id,
+        db_file,
+        high_level,
+    )
+    coll = f"{functional}.slab_data.LEO"
+    fltr = {"mpid": mpid}
 
     wf_list = []
     for input in inputs_list:
         input_list = [input]
-        hkl = input['slab_params']['hkl']
-        uid_short = input['slab_params']['uid'][:4]
+        hkl = input["slab_params"]["hkl"]
+        uid_short = input["slab_params"]["uid"][:4]
         FW1 = Firework(
-            FT_WriteSurfenInputsToDB(inputs_list=input_list, sg_params=sg_params, comp_params=comp_params,
-                                     fltr=fltr, coll=coll, db_file=db_file, high_level=high_level),
-            name=f"Generate surface energy inputs for {mpid}-{hkl}-{uid_short} with {functional} and put in DB")
+            FT_WriteSurfenInputsToDB(
+                inputs_list=input_list,
+                sg_params=sg_params,
+                comp_params=comp_params,
+                fltr=fltr,
+                coll=coll,
+                db_file=db_file,
+                high_level=high_level,
+            ),
+            name=f"Generate surface energy inputs for {mpid}-{hkl}-{uid_short} with {functional} and put in DB",
+        )
 
         FW2 = Firework(
-            FT_RelaxSurfaceEnergyInputs(inputs_list=input_list, fltr=fltr, coll=coll, comp_params=comp_params,
-                                        db_file=db_file, high_level=high_level),
-            name=f"Generate and relax surface energy inputs for {mpid}-{hkl}-{uid_short} with {functional}")
+            FT_RelaxSurfaceEnergyInputs(
+                inputs_list=input_list,
+                fltr=fltr,
+                coll=coll,
+                comp_params=comp_params,
+                db_file=db_file,
+                high_level=high_level,
+            ),
+            name=f"Generate and relax surface energy inputs for {mpid}-{hkl}-{uid_short} with {functional}",
+        )
 
         FW3 = Firework(
-            FT_WriteSurfaceEnergiesToDB(inputs_list=input_list, fltr=fltr, coll=coll, db_file=db_file,
-                                        high_level=high_level),
-            name=f"Calculate the surface energies for {mpid}-{hkl}-{uid_short} with {functional} and put into DB")
+            FT_WriteSurfaceEnergiesToDB(
+                inputs_list=input_list,
+                fltr=fltr,
+                coll=coll,
+                db_file=db_file,
+                high_level=high_level,
+            ),
+            name=f"Calculate the surface energies for {mpid}-{hkl}-{uid_short} with {functional} and put into DB",
+        )
 
-        WF = Workflow(fireworks=[FW1, FW2, FW3], links_dict={FW1: [FW2], FW2: [FW3]},
-                      name=f"Surface energy SWF for {mpid}-{hkl}-{uid_short} with {functional}.")
+        WF = Workflow(
+            fireworks=[FW1, FW2, FW3],
+            links_dict={FW1: [FW2], FW2: [FW3]},
+            name=f"Surface energy SWF for {mpid}-{hkl}-{uid_short} with {functional}.",
+        )
 
         wf_list.append(WF)
 

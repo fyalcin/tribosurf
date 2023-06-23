@@ -268,7 +268,11 @@ def get_generalized_kmesh(structure, k_dist, RemoveSymm=False, Vasp6=True):
 
 
 def get_custom_vasp_static_settings(
-    structure, comp_parameters, static_type, k_dens_default=8.5, ups={"W": "W_sv"}
+    structure,
+    comp_parameters,
+    static_type,
+    k_dens_default=8.5,
+    ups={"W": "W_sv"},
 ):
     """Make custom vasp settings for static calculations.
 
@@ -452,16 +456,23 @@ def get_custom_vasp_static_settings(
         uis["KGAMMA"] = True
         kpoints = None
     elif "k_dens" in comp_parameters:
-        if static_type.startswith("slab_") or static_type.startswith("interface_"):
+        if static_type.startswith("slab_") or static_type.startswith(
+            "interface_"
+        ):
             is_slab = True
         else:
             is_slab = False
         KPTS = MeshFromDensity(
-            structure, comp_parameters["k_dens"], is_slab=is_slab, force_gamma=True
+            structure,
+            comp_parameters["k_dens"],
+            is_slab=is_slab,
+            force_gamma=True,
         )
         kpoints = KPTS.get_kpoints()
     else:
-        if static_type.startswith("slab_") or static_type.startswith("interface_"):
+        if static_type.startswith("slab_") or static_type.startswith(
+            "interface_"
+        ):
             is_slab = True
         else:
             is_slab = False
@@ -721,16 +732,23 @@ def get_custom_vasp_relax_settings(
         uis["KGAMMA"] = True
         kpoints = None
     elif "k_dens" in comp_parameters:
-        if relax_type.startswith("slab_") or relax_type.startswith("interface_"):
+        if relax_type.startswith("slab_") or relax_type.startswith(
+            "interface_"
+        ):
             is_slab = True
         else:
             is_slab = False
         KPTS = MeshFromDensity(
-            structure, comp_parameters["k_dens"], is_slab=is_slab, force_gamma=True
+            structure,
+            comp_parameters["k_dens"],
+            is_slab=is_slab,
+            force_gamma=True,
         )
         kpoints = KPTS.get_kpoints()
     else:
-        if relax_type.startswith("slab_") or relax_type.startswith("interface_"):
+        if relax_type.startswith("slab_") or relax_type.startswith(
+            "interface_"
+        ):
             is_slab = True
         else:
             is_slab = False
@@ -745,9 +763,8 @@ def get_custom_vasp_relax_settings(
     else:
         upf = "PBE_54"
 
-    if (
-        apply_pressure and (relax_type.startswith("slab_") or
-                            relax_type.startswith("interface_"))
+    if apply_pressure and (
+        relax_type.startswith("slab_") or relax_type.startswith("interface_")
     ):
         forces = ext_pressure_to_force_array(structure, apply_pressure)
         force_str = force_array_to_string(forces)

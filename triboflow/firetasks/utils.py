@@ -19,12 +19,12 @@ from triboflow.utils.surfen_tools import move_result
 class FT_CopyHomogeneousSlabs(FiretaskBase):
     """
     Firetask to copy aligned slabs from unrelaxed to realxed.
-    
+
     Since for homogeneous interfaces there cannot be any strain on the already
     relaxed slabs (from convergence), they do not have to be relaxed again.
     We just use this Firetask to copy them over in the interface_data
     collections.
-    
+
     Parameters
     ----------
     mpid : str
@@ -43,44 +43,50 @@ class FT_CopyHomogeneousSlabs(FiretaskBase):
         name of the high_level_db. The default is True.
 
     """
-    _fw_name = 'Copy slabs for homogeneous interfaces'
-    required_params = ['mp_id', 'functional', 'miller', 'external_pressure']
-    optional_params = ['db_file', 'high_level_db']
-    def run_task(self, fw_spec):
 
-        mpid = self.get('mp_id')
-        functional = self.get('functional')
-        miller = self.get('miller')
-        pressure = self.get('external_pressure')
-        db_file = self.get('db_file')
+    _fw_name = "Copy slabs for homogeneous interfaces"
+    required_params = ["mp_id", "functional", "miller", "external_pressure"]
+    optional_params = ["db_file", "high_level_db"]
+
+    def run_task(self, fw_spec):
+        mpid = self.get("mp_id")
+        functional = self.get("functional")
+        miller = self.get("miller")
+        pressure = self.get("external_pressure")
+        db_file = self.get("db_file")
         if not db_file:
-            db_file = env_chk('>>db_file<<', fw_spec)
-        hl_db = self.get('high_level_db', True)
-        
+            db_file = env_chk(">>db_file<<", fw_spec)
+        hl_db = self.get("high_level_db", True)
+
         nav = Navigator(db_file, high_level=hl_db)
-        
-        inter_name = interface_name(mp_id_1=mpid,
-                                    miller_1=miller,
-                                    mp_id_2=mpid,
-                                    miller_2=miller)
-        interface_data = nav.find_data(collection=functional+'.interface_data',
-                      fltr={'name': inter_name,
-                            'pressure': pressure})
-        top_slab = interface_data['top_aligned']
-        bot_slab = interface_data['bottom_aligned']
-        
+
+        inter_name = interface_name(
+            mp_id_1=mpid, miller_1=miller, mp_id_2=mpid, miller_2=miller
+        )
+        interface_data = nav.find_data(
+            collection=functional + ".interface_data",
+            fltr={"name": inter_name, "pressure": pressure},
+        )
+        top_slab = interface_data["top_aligned"]
+        bot_slab = interface_data["bottom_aligned"]
+
         nav.update_data(
-            collection=functional+'.interface_data',
-            fltr={'name': inter_name,
-                  'pressure': pressure},
-            new_values={'$set': {'top_aligned_relaxed': top_slab,
-                                 'bottom_aligned_relaxed': bot_slab}})
+            collection=functional + ".interface_data",
+            fltr={"name": inter_name, "pressure": pressure},
+            new_values={
+                "$set": {
+                    "top_aligned_relaxed": top_slab,
+                    "bottom_aligned_relaxed": bot_slab,
+                }
+            },
+        )
+
 
 @explicit_serialize
 class FT_UpdateCompParams(FiretaskBase):
     """
     Firetask to update computational parameters for bulk and/or slabs
-    
+
     Parameters
     ----------
     mpid : str
@@ -104,39 +110,50 @@ class FT_UpdateCompParams(FiretaskBase):
         name of the high_level_db. The default is True.
 
     """
-    _fw_name = 'Update computational parameters'
-    required_params = ['mpid', 'functional', 'new_params']
-    optional_params = ['db_file', 'update_bulk', 'update_slabs',
-                       'high_level_db']
-    def run_task(self, fw_spec):
 
-        mpid = self.get('mpid')
-        functional = self.get('functional')
-        new_params = self.get('new_params')
-        update_bulk = self.get('update_bulk', True)
-        update_slabs = self.get('update_slabs', False)
-        db_file = self.get('db_file', 'auto')
-        hl_db = self.get('high_level_db', True)
-        
-        nav_high = StructureNavigator(db_file=db_file, 
-                                           high_level=hl_db)
-        #get values from spec:
-        new_data = {'$set': {}}
+    _fw_name = "Update computational parameters"
+    required_params = ["mpid", "functional", "new_params"]
+    optional_params = [
+        "db_file",
+        "update_bulk",
+        "update_slabs",
+        "high_level_db",
+    ]
+
+    def run_task(self, fw_spec):
+        mpid = self.get("mpid")
+        functional = self.get("functional")
+        new_params = self.get("new_params")
+        update_bulk = self.get("update_bulk", True)
+        update_slabs = self.get("update_slabs", False)
+        db_file = self.get("db_file", "auto")
+        hl_db = self.get("high_level_db", True)
+
+        nav_high = StructureNavigator(db_file=db_file, high_level=hl_db)
+        # get values from spec:
+        new_data = {"$set": {}}
         for param in new_params:
-            new_data['$set'][f'comp_parameters.{param}'] = fw_spec.get(param, None)
-            
+            new_data["$set"][f"comp_parameters.{param}"] = fw_spec.get(
+                param, None
+            )
+
         if update_bulk:
-            nav_high.update_data(collection=functional+'.bulk_data',
-                                 fltr={'mpid': mpid},
-                                 new_values=new_data,
-                                 upsert=False)
-           
+            nav_high.update_data(
+                collection=functional + ".bulk_data",
+                fltr={"mpid": mpid},
+                new_values=new_data,
+                upsert=False,
+            )
+
         if update_slabs:
-            nav_high.update_many_data(collection=functional+'.slab_data',
-                                      fltr={'mpid': mpid},
-                                      new_values=new_data,
-                                      upsert=False)
+            nav_high.update_many_data(
+                collection=functional + ".slab_data",
+                fltr={"mpid": mpid},
+                new_values=new_data,
+                upsert=False,
+            )
         return
+
 
 @explicit_serialize
 class FT_MoveResults(FiretaskBase):
@@ -165,19 +182,20 @@ class FT_MoveResults(FiretaskBase):
     FWAction that just updates the spec.
 
     """
+
     _fw_name = "Move the results from the tag to the entry found by flag."
-    required_params = ['tag', 'fltr', 'coll', 'loc']
-    optional_params = ['custom_dict', 'db_file', 'high_level']
+    required_params = ["tag", "fltr", "coll", "loc"]
+    optional_params = ["custom_dict", "db_file", "high_level"]
 
     def run_task(self, fw_spec):
-        tag = self.get('tag')
-        fltr = self.get('fltr')
-        coll = self.get('coll')
-        loc = self.get('loc')
+        tag = self.get("tag")
+        fltr = self.get("fltr")
+        coll = self.get("coll")
+        loc = self.get("loc")
 
-        custom_dict = self.get('custom_dict', {})
-        db_file = self.get('db_file', 'auto')
-        high_level = self.get('high_level', True)
+        custom_dict = self.get("custom_dict", {})
+        db_file = self.get("db_file", "auto")
+        high_level = self.get("high_level", True)
 
         move_result(tag, fltr, coll, loc, custom_dict, db_file, high_level)
 
@@ -186,51 +204,50 @@ class FT_MoveResults(FiretaskBase):
 
 @explicit_serialize
 class FT_PrintFromBulkDB(FiretaskBase):
-    _fw_name = 'Print bulk data from DB'
-    required_params = ['mp_id', 'functional']
-    optional_params = ['db_file', 'high_level_db']
+    _fw_name = "Print bulk data from DB"
+    required_params = ["mp_id", "functional"]
+    optional_params = ["db_file", "high_level_db"]
 
     def run_task(self, fw_spec):
-        db_file = self.get('db_file', env_chk('>>db_file<<', fw_spec))
-        mp_id = self['mp_id']
-        functional = self['functional']
+        db_file = self.get("db_file", env_chk(">>db_file<<", fw_spec))
+        mp_id = self["mp_id"]
+        functional = self["functional"]
 
-        hl_db = self.get('high_level_db', True)
+        hl_db = self.get("high_level_db", True)
 
-        nav_structure = StructureNavigator(
-            db_file=db_file,
-            high_level=hl_db)
+        nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
         bulk_dict = nav_structure.get_bulk_from_db(
-            mp_id=mp_id,
-            functional=functional)
-        print('')
+            mp_id=mp_id, functional=functional
+        )
+        print("")
         pprint(bulk_dict)
-        print('')
+        print("")
 
 
 @explicit_serialize
 class FT_PassSpec(FiretaskBase):
     """Update only certain keys in the first level of the spec.
-    
+
     If the key_list contatins only '_all', update the whole spec!
     """
 
-    _fw_name = 'Pass Spec'
-    required_params = ['key_list']
+    _fw_name = "Pass Spec"
+    required_params = ["key_list"]
 
     def run_task(self, fw_spec):
-
         update = {}
-        if self['key_list'] == ['_all']:
+        if self["key_list"] == ["_all"]:
             spec = fw_spec
             return FWAction(update_spec=spec)
         else:
-            for k in self['key_list']:
+            for k in self["key_list"]:
                 if fw_spec.get(k) is None:
-                    raise ValueError('{} can not be passed on to the next'
-                                     'FT/FW because it is not in the spec.\n'
-                                     'Currently the spec has the keys:\n'
-                                     '{}'.format(k, fw_spec.keys()))
+                    raise ValueError(
+                        "{} can not be passed on to the next"
+                        "FT/FW because it is not in the spec.\n"
+                        "Currently the spec has the keys:\n"
+                        "{}".format(k, fw_spec.keys())
+                    )
                 update[k] = fw_spec.get(k)
             return FWAction(update_spec=update)
 
@@ -238,12 +255,12 @@ class FT_PassSpec(FiretaskBase):
 @explicit_serialize
 class FT_PrintSpec(FiretaskBase):
     """Prints the spec of the current Workflow to the screen.
-    
+
     Not only prints the current spec in a pretty way, but also returns a
     FWAction that updates the spec of future to include the current spec.
     """
 
-    _fw_name = 'Print Spec'
+    _fw_name = "Print Spec"
 
     def run_task(self, fw_spec):
         import pprint

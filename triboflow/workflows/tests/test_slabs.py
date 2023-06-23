@@ -10,10 +10,10 @@ Test the worflow to calculate the optimal slab thickness by surface energy.
 
 """
 
-__author__ = 'Gabriele Losi'
-__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
-__contact__ = 'clelia.righi@unibo.it'
-__date__ = 'April 6th, 2021'
+__author__ = "Gabriele Losi"
+__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
+__contact__ = "clelia.righi@unibo.it"
+__date__ = "April 6th, 2021"
 
 
 from pymatgen.core.structure import Structure
@@ -29,14 +29,14 @@ from triboflow.firetasks.run_slabs_wfs import FT_SlabOptThick
 lpad = LaunchPad.auto_load()
 
 # Get the bulk from the online Database: Materials Project
-formula = 'Mg'
-functional = 'PBE'
-miller=[0, 0, 1]
-mid = 'mp-110'
+formula = "Mg"
+functional = "PBE"
+miller = [0, 0, 1]
+mid = "mp-110"
 nav_mp = NavigatorMP()
 structure, mid = nav_mp.get_low_energy_structure(
-   chem_formula='formula',
-   mp_id=mid)
+    chem_formula="formula", mp_id=mid
+)
 
 # Get the bulk from a local simple Poscar
 # structure = Structure.from_file('POSCAR')
@@ -45,9 +45,9 @@ structure, mid = nav_mp.get_low_energy_structure(
 
 # FIRST TEST, RUN THE SLAB OPT THICKNESS AS A SUBWORKFLOW
 # ft = FT_SlabOptThick(mp_id=mid,
-#                      miller=miller, 
+#                      miller=miller,
 #                      functional=functional,
-#                      thick_min=3, 
+#                      thick_min=3,
 #                      thick_max=6,
 #                      thick_incr=1,
 #                      db_file=None,
@@ -67,22 +67,24 @@ structure, mid = nav_mp.get_low_energy_structure(
 
 
 # SECOND TEST, RUN THE OPTIMIZATION WORKFLOWS ALONE
-wf_2 = SlabWF.conv_slabthick_surfene(structure=structure,
-                                     mp_id=mid,
-                                     miller=miller,
-                                     thick_min=2,
-                                     thick_max=5,
-                                     thick_incr=1,
-                                     db_file=None,
-                                     low_level=None,
-                                     high_level='triboflow',
-                                     vacuum=10,
-                                     in_unit_planes=True,
-                                     ext_index=0,
-                                     conv_thr=0.025,
-                                     parallelization=None,
-                                     recursion=0,
-                                     cluster_params={},
-                                     override=False)
+wf_2 = SlabWF.conv_slabthick_surfene(
+    structure=structure,
+    mp_id=mid,
+    miller=miller,
+    thick_min=2,
+    thick_max=5,
+    thick_incr=1,
+    db_file=None,
+    low_level=None,
+    high_level="triboflow",
+    vacuum=10,
+    in_unit_planes=True,
+    ext_index=0,
+    conv_thr=0.025,
+    parallelization=None,
+    recursion=0,
+    cluster_params={},
+    override=False,
+)
 lpad.add_wf(wf_2)
 rapidfire(lpad)

@@ -7,11 +7,11 @@ Python class to interpolate and plot the Potential Energy Surface (PES) of an in
 
 """
 
-__author__ = 'Michael Wolloch'
-__copyright__ = 'Copyright 2022, Michael Wolloch, HIT, University of Vienna'
-__credits__ = 'Code partly inspired by a previous version of M. Wolloch and Gabriele Losi'
-__contact__ = 'michael.wolloch@univie.ac.at'
-__date__ = 'April 14th, 2022'
+__author__ = "Michael Wolloch"
+__copyright__ = "Copyright 2022, Michael Wolloch, HIT, University of Vienna"
+__credits__ = "Code partly inspired by a previous version of M. Wolloch and Gabriele Losi"
+__contact__ = "michael.wolloch@univie.ac.at"
+__date__ = "April 14th, 2022"
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,13 +19,22 @@ from pymatgen.core import PeriodicSite
 from pymatgen.core.interface import Interface
 from pymatgen.core.structure import Structure
 from scipy.interpolate import RBFInterpolator
-from triboflow.phys.minimum_energy_path import (get_initial_strings,
-    reparametrize_string_with_equal_spacing, evolve_mep)
+from triboflow.phys.minimum_energy_path import (
+    get_initial_strings,
+    reparametrize_string_with_equal_spacing,
+    evolve_mep,
+)
 from triboflow.utils.database import convert_image_to_bytes, StructureNavigator
 
 
-def get_PESGenerator_from_db(interface_name, pressure, db_file='auto', high_level=True,
-                             functional='PBE', pes_generator_kwargs={}):
+def get_PESGenerator_from_db(
+    interface_name,
+    pressure,
+    db_file="auto",
+    high_level=True,
+    functional="PBE",
+    pes_generator_kwargs={},
+):
     """
     Return a PESGenerator object using input arguments from the high_level db.
 
@@ -60,68 +69,96 @@ def get_PESGenerator_from_db(interface_name, pressure, db_file='auto', high_leve
     """
 
     nav = StructureNavigator(db_file=db_file, high_level=high_level)
-    inter_dict = nav.get_interface_from_db(interface_name, pressure, functional)
+    inter_dict = nav.get_interface_from_db(
+        interface_name, pressure, functional
+    )
 
-    possible_kwargs = ['points_per_angstrom', 'interpolation_kernel',
-                       'plot_hs_points', 'plot_unit_cell', 'plotting_ratio',
-                       'normalize_minimum', 'nr_of_contours', 'fig_title',
-                       'fig_type', 'plot_path', 'plot_minimum_energy_paths',
-                       'mep_method', 'neb_forcetol', 'plot_pes_unit_cell',
-                       'string_point_density', 'add_noise_to_string',
-                       'string_max_iterations', 'custom_cell_to_plot',
-                       'calculate_mep']
+    possible_kwargs = [
+        "points_per_angstrom",
+        "interpolation_kernel",
+        "plot_hs_points",
+        "plot_unit_cell",
+        "plotting_ratio",
+        "normalize_minimum",
+        "nr_of_contours",
+        "fig_title",
+        "fig_type",
+        "plot_path",
+        "plot_minimum_energy_paths",
+        "mep_method",
+        "neb_forcetol",
+        "plot_pes_unit_cell",
+        "string_point_density",
+        "add_noise_to_string",
+        "string_max_iterations",
+        "custom_cell_to_plot",
+        "calculate_mep",
+    ]
     PG_kwargs = pes_generator_kwargs.copy()
     for k in pes_generator_kwargs.keys():
         if k not in possible_kwargs:
             PG_kwargs.pop(k)
-            print(f'<{k}> is not a valid keyword argument for PESGenerator '
-                  'and will be ignored.\n'
-                  f'Please use only the following arguments: \n{possible_kwargs}')
+            print(
+                f"<{k}> is not a valid keyword argument for PESGenerator "
+                "and will be ignored.\n"
+                f"Please use only the following arguments: \n{possible_kwargs}"
+            )
 
     PG = PESGenerator(**PG_kwargs)
 
     try:
-        interface = Interface.from_dict(inter_dict['unrelaxed_structure'])
-        all_shifts = inter_dict['PES']['high_symmetry_points']['all_shifts']
-        unique_shifts = inter_dict['PES']['high_symmetry_points']['unique_shifts']
-        energy_dict = inter_dict['PES']['high_symmetry_points']['energies_dict']
-        group_assignments = inter_dict['PES']['high_symmetry_points']['group_assignments']
+        interface = Interface.from_dict(inter_dict["unrelaxed_structure"])
+        all_shifts = inter_dict["PES"]["high_symmetry_points"]["all_shifts"]
+        unique_shifts = inter_dict["PES"]["high_symmetry_points"][
+            "unique_shifts"
+        ]
+        energy_dict = inter_dict["PES"]["high_symmetry_points"][
+            "energies_dict"
+        ]
+        group_assignments = inter_dict["PES"]["high_symmetry_points"][
+            "group_assignments"
+        ]
     except KeyError:
-        print('Apparently not all necessary data for PES generation for the '
-              f'{interface_name} interface is available in the database yet.\n'
-              'Check your workflow!')
+        print(
+            "Apparently not all necessary data for PES generation for the "
+            f"{interface_name} interface is available in the database yet.\n"
+            "Check your workflow!"
+        )
         return None
 
-    PG(interface=interface,
-       energies_dict=energy_dict,
-       all_shifts_dict=all_shifts,
-       unique_shifts_dict=unique_shifts,
-       group_names_dict=group_assignments)
+    PG(
+        interface=interface,
+        energies_dict=energy_dict,
+        all_shifts_dict=all_shifts,
+        unique_shifts_dict=unique_shifts,
+        group_names_dict=group_assignments,
+    )
 
     return PG
 
 
-class PESGenerator():
-    def __init__(self,
-                 points_per_angstrom=50,
-                 interpolation_kernel='cubic',
-                 calculate_mep=True,
-                 plot_hs_points=False,
-                 plot_unit_cell=True,
-                 plot_pes_unit_cell=True,
-                 plot_minimum_energy_paths=True,
-                 plotting_ratio=1.0,
-                 normalize_minimum=True,
-                 nr_of_contours=30,
-                 fig_title='PES',
-                 fig_type='png',
-                 plot_path='./',
-                 mep_method='neb',
-                 neb_forcetol=1e-3,
-                 string_point_density=20,
-                 add_noise_to_string=0.005,
-                 string_max_iterations=10000,
-                 ):
+class PESGenerator:
+    def __init__(
+        self,
+        points_per_angstrom=50,
+        interpolation_kernel="cubic",
+        calculate_mep=True,
+        plot_hs_points=False,
+        plot_unit_cell=True,
+        plot_pes_unit_cell=True,
+        plot_minimum_energy_paths=True,
+        plotting_ratio=1.0,
+        normalize_minimum=True,
+        nr_of_contours=30,
+        fig_title="PES",
+        fig_type="png",
+        plot_path="./",
+        mep_method="neb",
+        neb_forcetol=1e-3,
+        string_point_density=20,
+        add_noise_to_string=0.005,
+        string_max_iterations=10000,
+    ):
         """
         Class for generating PES interpolation and plots for interfaces.
 
@@ -227,16 +264,18 @@ class PESGenerator():
         self.noise = add_noise_to_string
         self.max_iter = string_max_iterations
         self.plot_mep = plot_minimum_energy_paths
-        
+
         if not self.calc_mep:
             self.plot_mep = False
 
-    def __call__(self,
-                 interface,
-                 energies_dict,
-                 all_shifts_dict,
-                 unique_shifts_dict,
-                 group_names_dict=None):
+    def __call__(
+        self,
+        interface,
+        energies_dict,
+        all_shifts_dict,
+        unique_shifts_dict,
+        group_names_dict=None,
+    ):
         """
         Interpolate a PES for a given interface and prepare a plot of it.
 
@@ -277,11 +316,9 @@ class PESGenerator():
         self.__plot_grid(X, Y, Z)
         self.PES_as_bytes = self.__get_pes_as_bytes()
         self.corrugation = self.__get_corrugation(Z)
-        self.PES_on_meshgrid = {'X': X, 'Y': Y, 'Z': Z}
-        
-        
+        self.PES_on_meshgrid = {"X": X, "Y": Y, "Z": Z}
 
-    def __get_mep_limits(self, puc_mult = 2, delta = 0.1):
+    def __get_mep_limits(self, puc_mult=2, delta=0.1):
         """
         Get reasonable limits for the initial MEP string lengths
 
@@ -304,35 +341,47 @@ class PESGenerator():
 
         """
         puc = self.pes_unit_cell
-        a, b = puc.matrix[0: 2]
+        a, b = puc.matrix[0:2]
         x = [0, a[0], a[0] + b[0], b[0]]
         y = [0, a[1], a[1] + b[1], b[1]]
         x_d = max(x) - min(x)
         y_d = max(y) - min(y)
 
-        max_x = self.xlim if self.xlim < (puc_mult * x_d + delta) else puc_mult * x_d + delta
-        max_y = self.ylim if self.ylim < (puc_mult * y_d + delta) else puc_mult * y_d + delta
-        
-        #the following is a simple but rather crude way to add the start position
-        #of the string to the mep limits.
-        
+        max_x = (
+            self.xlim
+            if self.xlim < (puc_mult * x_d + delta)
+            else puc_mult * x_d + delta
+        )
+        max_y = (
+            self.ylim
+            if self.ylim < (puc_mult * y_d + delta)
+            else puc_mult * y_d + delta
+        )
+
+        # the following is a simple but rather crude way to add the start position
+        # of the string to the mep limits.
+
         try:
-            string, _, _ = get_initial_strings(extended_energy_list=self.extended_energies,
-                                               xlim=max_x,
-                                               ylim=max_y,
-                                               point_density=self.string_density,
-                                               add_noise=self.noise,
-                                               border_padding=delta)
+            string, _, _ = get_initial_strings(
+                extended_energy_list=self.extended_energies,
+                xlim=max_x,
+                ylim=max_y,
+                point_density=self.string_density,
+                add_noise=self.noise,
+                border_padding=delta,
+            )
             shift_x, shift_y = string[0]
         except:
-            string, _, _ = get_initial_strings(extended_energy_list=self.extended_energies,
-                                               xlim=max_x,
-                                               ylim=max_y,
-                                               point_density=self.string_density,
-                                               add_noise=self.noise,
-                                               border_padding=0.0)
+            string, _, _ = get_initial_strings(
+                extended_energy_list=self.extended_energies,
+                xlim=max_x,
+                ylim=max_y,
+                point_density=self.string_density,
+                add_noise=self.noise,
+                border_padding=0.0,
+            )
             shift_x, shift_y = string[0]
-            
+
         max_x = self.xlim if self.xlim < max_x + shift_x else max_x + shift_x
         max_y = self.ylim if self.ylim < max_y + shift_y else max_y + shift_y
 
@@ -341,7 +390,7 @@ class PESGenerator():
     def __get_initial_strings(self):
         """
         Find initial placements for the strings that then get evoved with NEB or ZTS.
-        
+
         Initially we try to make the strings short, using small multiples
         of the PES unit cell (puc). If that does not lead to viable strings,
         we use the plotting limits instead.
@@ -352,23 +401,29 @@ class PESGenerator():
 
         """
         string_d = string_x = string_y = []
-        puc_mult=1
+        puc_mult = 1
         while len(string_d) < 10 and len(string_x) < 10 and len(string_y) < 10:
             try:
-                max_x, max_y = self.__get_mep_limits(puc_mult=puc_mult, delta=0.0)
-                string_d, string_x, string_y = get_initial_strings(extended_energy_list=self.extended_energies,
-                                                                   xlim=max_x,
-                                                                   ylim=max_y,
-                                                                   point_density=self.string_density,
-                                                                   add_noise=self.noise,
-                                                                   border_padding=0.1)
+                max_x, max_y = self.__get_mep_limits(
+                    puc_mult=puc_mult, delta=0.0
+                )
+                string_d, string_x, string_y = get_initial_strings(
+                    extended_energy_list=self.extended_energies,
+                    xlim=max_x,
+                    ylim=max_y,
+                    point_density=self.string_density,
+                    add_noise=self.noise,
+                    border_padding=0.1,
+                )
             except:
-                string_d, string_x, string_y = get_initial_strings(extended_energy_list=self.extended_energies,
-                                                               xlim=self.xlim,
-                                                               ylim=self.ylim,
-                                                               point_density=self.string_density,
-                                                               add_noise=self.noise,
-                                                               border_padding=0.0)
+                string_d, string_x, string_y = get_initial_strings(
+                    extended_energy_list=self.extended_energies,
+                    xlim=self.xlim,
+                    ylim=self.ylim,
+                    point_density=self.string_density,
+                    add_noise=self.noise,
+                    border_padding=0.0,
+                )
             if puc_mult > 5:
                 break
             puc_mult += 1
@@ -376,11 +431,11 @@ class PESGenerator():
         self.initial_string_d = self.string_d = string_d
         self.initial_string_x = self.string_x = string_x
         self.initial_string_y = self.string_y = string_y
-        
+
     def __get_mep(self):
         """
         Compute minimum energy paths for three initial directions.
-        
+
         Either use the nudged elastiv band ('neb', default) or zero temperature
         string method ('zts') to find the MEPs. All three directions are
         optimized in parallel, but depending on the PES, this might still take
@@ -392,19 +447,22 @@ class PESGenerator():
 
         """
         self.__get_initial_strings()
-        
-        self.mep = evolve_mep(method=self.mep_method,
-                              rbf=self.rbf,
-                              string_dict={'mep_d': self.string_d,
-                                           'mep_x': self.string_x,
-                                           'mep_y': self.string_y},
-                              neb_forcetol=self.neb_forcetol)
 
+        self.mep = evolve_mep(
+            method=self.mep_method,
+            rbf=self.rbf,
+            string_dict={
+                "mep_d": self.string_d,
+                "mep_x": self.string_x,
+                "mep_y": self.string_y,
+            },
+            neb_forcetol=self.neb_forcetol,
+        )
 
     def __get_shear_strength(self):
         """
         Compute the derivative of the potential energy surface along the MEPs.
-        
+
         The three MEPs gets refined by a factor of 20 and evaluated again on
         the RBF function. The derivative is computed with numpy.gradient and
         plotted along the potential. The shear strength is the maximum of this
@@ -417,46 +475,54 @@ class PESGenerator():
         """
         self.shear_strength = {}
         for k, v in self.mep.items():
-            mep = v['mep']
-            fine_mep = reparametrize_string_with_equal_spacing(mep, len(mep) * 20)
+            mep = v["mep"]
+            fine_mep = reparametrize_string_with_equal_spacing(
+                mep, len(mep) * 20
+            )
             dx = np.ediff1d(fine_mep[:, 0], to_begin=0)
             dy = np.ediff1d(fine_mep[:, 1], to_begin=0)
-            spacing = np.cumsum(np.sqrt(dx ** 2 + dy ** 2))
+            spacing = np.cumsum(np.sqrt(dx**2 + dy**2))
             potential = self.rbf(fine_mep)
             potential -= min(potential)
-            shrstrgth = np.gradient(potential, spacing) * 10 #convert to GPa
+            shrstrgth = np.gradient(potential, spacing) * 10  # convert to GPa
             max_ss = max(shrstrgth)
 
             fig, ax1 = plt.subplots()
             ax2 = ax1.twinx()
-            ax1.plot(spacing, potential, 'k:', label=k)
-            ax2.plot(spacing, shrstrgth, 'k-', label='shearstrength')
-            ax1.set_xlabel(r'path length l [$\rm\AA$]')
-            ax1.set_ylabel(r'$\Delta\gamma$ along MEP (dotted line) $[\rm J/ \rm m^2]$')
-            ax2.set_ylabel(r'$\rm d \gamma / \rm d \rm l$ (solid line) [GPa]')
+            ax1.plot(spacing, potential, "k:", label=k)
+            ax2.plot(spacing, shrstrgth, "k-", label="shearstrength")
+            ax1.set_xlabel(r"path length l [$\rm\AA$]")
+            ax1.set_ylabel(
+                r"$\Delta\gamma$ along MEP (dotted line) $[\rm J/ \rm m^2]$"
+            )
+            ax2.set_ylabel(r"$\rm d \gamma / \rm d \rm l$ (solid line) [GPa]")
             # ax1.title(k)
-            fig.savefig(self.plot_path + '/' + k + '.' + self.fig_type,
-                        dpi=300,
-                        bbox_inches='tight')
+            fig.savefig(
+                self.plot_path + "/" + k + "." + self.fig_type,
+                dpi=300,
+                bbox_inches="tight",
+            )
             fig.clear()
-            bytes_image = convert_image_to_bytes(self.plot_path +
-                                                 '/' + k +
-                                                 '.' + self.fig_type)
+            bytes_image = convert_image_to_bytes(
+                self.plot_path + "/" + k + "." + self.fig_type
+            )
             self.shear_strength[k] = {}
-            self.shear_strength[k]['max'] = max_ss
-            self.shear_strength[k]['figure_as_bytes'] = bytes_image
-            self.shear_strength[k]['path'] = spacing
-            self.shear_strength[k]['potential'] = potential
-            self.shear_strength[k]['derivative'] = shrstrgth
-            self.shear_strength[k]['units'] = {'potential': 'J/m2',
-                                               'derivative': 'GPa'}
+            self.shear_strength[k]["max"] = max_ss
+            self.shear_strength[k]["figure_as_bytes"] = bytes_image
+            self.shear_strength[k]["path"] = spacing
+            self.shear_strength[k]["potential"] = potential
+            self.shear_strength[k]["derivative"] = shrstrgth
+            self.shear_strength[k]["units"] = {
+                "potential": "J/m2",
+                "derivative": "GPa",
+            }
 
     def __get_min_and_max_hsps(self):
         """
         Find the group or stacking of the minimum and maximum PES positions.
         """
-        min_group = ['', 100000]
-        max_group = ['', -100000]
+        min_group = ["", 100000]
+        max_group = ["", -100000]
         for k, v in self.energies_dict.items():
             if v < min_group[1]:
                 min_group = [k, v]
@@ -557,11 +623,12 @@ class PESGenerator():
         for x in xrange:
             for y in yrange:
                 for entry in self.unit_cell_energies:
-                    extended_energy_list.append([entry[0] + x,
-                                                 entry[1] + y,
-                                                 entry[2]])
+                    extended_energy_list.append(
+                        [entry[0] + x, entry[1] + y, entry[2]]
+                    )
         self.extended_energies = self.__from_frac_to_cart(
-            np.asarray(extended_energy_list))
+            np.asarray(extended_energy_list)
+        )
 
     def __get_rbf(self):
         """
@@ -569,9 +636,11 @@ class PESGenerator():
         """
         self.__make_energies_list()
         self.__extend_energies_list()
-        self.rbf = RBFInterpolator(self.extended_energies[:, :2],
-                                   self.extended_energies[:, 2],
-                                   kernel=self.interpolation_kernel)
+        self.rbf = RBFInterpolator(
+            self.extended_energies[:, :2],
+            self.extended_energies[:, 2],
+            kernel=self.interpolation_kernel,
+        )
 
     def __from_frac_to_cart(self, array):
         """
@@ -592,7 +661,9 @@ class PESGenerator():
         if np.asarray(array).ndim == 1:
             array = [array]
         if len(array[0]) == 3:
-            m = np.vstack((np.hstack((m, np.zeros((2, 1)))), np.asarray([0, 0, 1])))
+            m = np.vstack(
+                (np.hstack((m, np.zeros((2, 1)))), np.asarray([0, 0, 1]))
+            )
         return np.dot(array, m)
 
     def __get_plotting_rectangle(self):
@@ -634,46 +705,61 @@ class PESGenerator():
         zt1 = plt.contourf(X, Y, Z, levels, cmap=plt.cm.RdYlBu_r)
         ticks = self.__colorbar_ticks(Z)
 
-        cbar = plt.colorbar(zt1, ax=ax, orientation='vertical',
-                            ticks=ticks,
-                            format='%.3f', shrink=0.7)
+        cbar = plt.colorbar(
+            zt1,
+            ax=ax,
+            orientation="vertical",
+            ticks=ticks,
+            format="%.3f",
+            shrink=0.7,
+        )
         cbar.ax.tick_params(labelsize=16)
-        cbar.set_label(r'$\rm{E_{adh}} [\rm J/ \rm m^2]$', rotation=270, labelpad=25,
-                       fontsize=18, family='sans-serif')
+        cbar.set_label(
+            r"$\rm{E_{adh}} [\rm J/ \rm m^2]$",
+            rotation=270,
+            labelpad=25,
+            fontsize=18,
+            family="sans-serif",
+        )
         if self.plot_unit_cell:
             self.__plot_unit_cell(ax)
 
         if self.plot_mep:
-            if not getattr(self, 'mep', None):
+            if not getattr(self, "mep", None):
                 self.__get_mep()
             for k, v in self.mep.items():
-                if k == 'mep_d':
-                    l = 'g:'
-                elif k == 'mep_x':
-                    l = 'r:'
+                if k == "mep_d":
+                    l = "g:"
+                elif k == "mep_x":
+                    l = "r:"
                 else:
-                    l = 'b:'
-                mep = v['mep']
+                    l = "b:"
+                mep = v["mep"]
                 plt.plot(mep[:, 0], mep[:, 1], l)
 
-        plt.xlabel(r"x [$\rm\AA$]", fontsize=20, family='sans-serif')
-        plt.ylabel(r"y [$\rm\AA$]", fontsize=20, family='sans-serif')
+        plt.xlabel(r"x [$\rm\AA$]", fontsize=20, family="sans-serif")
+        plt.ylabel(r"y [$\rm\AA$]", fontsize=20, family="sans-serif")
         plt.xticks(fontsize=20)
         plt.yticks(fontsize=20)
-        plt.xlim = ((0, self.xlim))
-        plt.ylim = ((0, self.ylim))
-        ax.set_title(self.fig_name, fontsize=24, family='sans-serif', pad=10)
-        if self.plot_hs_points == 'unique':
-            self.__plot_hs_points(self.unique_shifts, fig, self.group_names_dict)
-        elif self.plot_hs_points == 'all':
+        plt.xlim = (0, self.xlim)
+        plt.ylim = (0, self.ylim)
+        ax.set_title(self.fig_name, fontsize=24, family="sans-serif", pad=10)
+        if self.plot_hs_points == "unique":
+            self.__plot_hs_points(
+                self.unique_shifts, fig, self.group_names_dict
+            )
+        elif self.plot_hs_points == "all":
             self.__plot_hs_points(self.all_shifts, fig, self.group_names_dict)
 
         fig.set_tight_layout(True)
         plt.tight_layout()
         self.PES_fig = fig
 
-        plt.savefig(self.plot_path + self.fig_name + '.' + self.fig_type,
-                    dpi=300, bbox_inches='tight')
+        plt.savefig(
+            self.plot_path + self.fig_name + "." + self.fig_type,
+            dpi=300,
+            bbox_inches="tight",
+        )
 
     def __evaluate_on_grid(self, X, Y):
         """
@@ -693,7 +779,7 @@ class PESGenerator():
         """
         xy = np.vstack([X.ravel(), Y.ravel()]).T
         z = self.rbf(xy)
-        Z = np.reshape(z, X.shape, order='C')
+        Z = np.reshape(z, X.shape, order="C")
         if self.normalize:
             Z = Z - min(Z.ravel())
         return Z
@@ -770,15 +856,18 @@ class PESGenerator():
             for group_name, shifts in hsp_all.items():
                 for shift in shifts:
                     coord = shift + [0]
-                    site = PeriodicSite(species=specie,
-                                        coords=coord,
-                                        lattice=lattice,
-                                        to_unit_cell=True,
-                                        properties={'group_name': group_name})
+                    site = PeriodicSite(
+                        species=specie,
+                        coords=coord,
+                        lattice=lattice,
+                        to_unit_cell=True,
+                        properties={"group_name": group_name},
+                    )
                     sites.append(site)
             pbc_struct = Structure.from_sites(sites)
-            pbc_struct_prim = pbc_struct.get_primitive_structure(tolerance=0.01,
-                                                                 use_site_props=True)
+            pbc_struct_prim = pbc_struct.get_primitive_structure(
+                tolerance=0.01, use_site_props=True
+            )
             pes_unit_cell = pbc_struct_prim.lattice
             self.pes_unit_cell = pes_unit_cell
 
@@ -793,18 +882,19 @@ class PESGenerator():
         ax : matplotlib.axes._subplots.AxesSubplot
             Subplot axes
         """
-        a, b = self.interface.lattice.matrix[0: 2]
+        a, b = self.interface.lattice.matrix[0:2]
         import matplotlib.patches as patches
+
         x = [0, a[0], a[0] + b[0], b[0]]
         x_shifted = [i + self.shift_x for i in x]
         y = [0, a[1], a[1] + b[1], b[1]]
-        ax.add_patch(patches.Polygon(xy=list(zip(x_shifted, y)),
-                                     fill=False, lw=2))
+        ax.add_patch(
+            patches.Polygon(xy=list(zip(x_shifted, y)), fill=False, lw=2)
+        )
 
         if self.plot_pes_unit_cell:
-        
             try:
-                a, b = self.pes_unit_cell.matrix[0: 2]
+                a, b = self.pes_unit_cell.matrix[0:2]
             except:
                 pass
             else:
@@ -824,8 +914,11 @@ class PESGenerator():
                     self.__get_initial_strings()
                     start = self.initial_string_d[0] - vertices[min_vx]
                     vertices = vertices + start
-                    ax.add_patch(patches.Polygon(xy=vertices,
-                                                 fill=False, lw=2, color='blue'))
+                    ax.add_patch(
+                        patches.Polygon(
+                            xy=vertices, fill=False, lw=2, color="blue"
+                        )
+                    )
 
     def __get_fig_and_ax(self):
         """
@@ -844,14 +937,19 @@ class PESGenerator():
         """
         add_height = self.ylim * 0.20 if self.plot_hs_points else 0.0
         if self.plotting_ratio:
-            fig = plt.figure(figsize=(self.xlim,
-                                      self.xlim / self.plotting_ratio + add_height),
-                             dpi=300)
+            fig = plt.figure(
+                figsize=(
+                    self.xlim,
+                    self.xlim / self.plotting_ratio + add_height,
+                ),
+                dpi=300,
+            )
         else:
-            fig = plt.figure(figsize=(self.xlim, self.ylim + add_height),
-                             dpi=300)
+            fig = plt.figure(
+                figsize=(self.xlim, self.ylim + add_height), dpi=300
+            )
         ax = fig.add_subplot(111)
-        ax.set_aspect('equal')
+        ax.set_aspect("equal")
         return fig, ax
 
     def __plot_hs_points(self, hs_points_dict, fig, group_names_dict=None):
@@ -879,24 +977,28 @@ class PESGenerator():
             else:
                 label = key
             shifts = self.__from_frac_to_cart(shifts)
-            plt.plot(shifts[:, 0] + self.shift_x,
-                     shifts[:, 1],
-                     label=label,
-                     marker='o',
-                     linestyle='',
-                     markeredgecolor='k',
-                     markersize=8,
-                     markeredgewidth=0.5,
-                     zorder=1000.0)
-            fig.legend(ncol=3,
-                       loc='upper left',
-                       framealpha=1.0,
-                       handletextpad=0.01,
-                       columnspacing=1.0,
-                       labelspacing=0.3,
-                       bbox_to_anchor=(0.0, 1.0),
-                       # ncol=math.ceil(len(hs_points_dict)/2),
-                       fontsize=12)
+            plt.plot(
+                shifts[:, 0] + self.shift_x,
+                shifts[:, 1],
+                label=label,
+                marker="o",
+                linestyle="",
+                markeredgecolor="k",
+                markersize=8,
+                markeredgewidth=0.5,
+                zorder=1000.0,
+            )
+            fig.legend(
+                ncol=3,
+                loc="upper left",
+                framealpha=1.0,
+                handletextpad=0.01,
+                columnspacing=1.0,
+                labelspacing=0.3,
+                bbox_to_anchor=(0.0, 1.0),
+                # ncol=math.ceil(len(hs_points_dict)/2),
+                fontsize=12,
+            )
 
     def __get_pes_as_bytes(self):
         """
@@ -908,7 +1010,9 @@ class PESGenerator():
             Figure in bytes
 
         """
-        return convert_image_to_bytes(self.plot_path + self.fig_name + '.' + self.fig_type)
+        return convert_image_to_bytes(
+            self.plot_path + self.fig_name + "." + self.fig_type
+        )
         # buf = BytesIO()
         # self.PES_fig.savefig(buf)
         # buf.seek(0)

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__author__ = 'Michael Wolloch'
-__copyright__ = 'Copyright 2022, M. Wolloch, HIT, FWF, University of Vienna'
-__credits__ = 'Code readapted from our past work by Gabriele Losi and Mauro Ferrario, MIT license, https://github.com/mcrighi/interface-workflow,'
-__contact__ = 'michael.wolloch@univie.ac.at'
-__date__ = 'September 16th, 2022'
+__author__ = "Michael Wolloch"
+__copyright__ = "Copyright 2022, M. Wolloch, HIT, FWF, University of Vienna"
+__credits__ = "Code readapted from our past work by Gabriele Losi and Mauro Ferrario, MIT license, https://github.com/mcrighi/interface-workflow,"
+__contact__ = "michael.wolloch@univie.ac.at"
+__date__ = "September 16th, 2022"
 
 import numpy as np
 import math as m
@@ -16,15 +16,17 @@ from mep.path import Image, Path
 from scipy.interpolate import interp1d
 
 
-
 # =============================================================================
 # EVALUATION OF THE MEP
 # =============================================================================
 
-def evolve_mep(string_dict, rbf, method='neb', max_iter=99999, neb_forcetol=1e-3):
+
+def evolve_mep(
+    string_dict, rbf, method="neb", max_iter=99999, neb_forcetol=1e-3
+):
     """
     Compute minimum energy paths for all strings in the sting_dictionary.
-    
+
     Either use the nudged elastiv band ('neb', default) or zero temperature
     string method ('zts') to find the MEPs. All three directions are
     optimized in parallel, but depending on the PES, this might still take
@@ -35,8 +37,8 @@ def evolve_mep(string_dict, rbf, method='neb', max_iter=99999, neb_forcetol=1e-3
     None.
 
     """
-    
-    if method == 'zts':
+
+    if method == "zts":
         # evolve the stings parallel by using a Pool
         pool_inputs = []
         mep_list = []
@@ -50,23 +52,27 @@ def evolve_mep(string_dict, rbf, method='neb', max_iter=99999, neb_forcetol=1e-3
                 evolve_pool = multiprocessing.Pool(len(pool_inputs))
                 meps = evolve_pool.starmap(new_evolve_string, pool_inputs)
             except:
-                print('Parallel ZTS method failed and crashed. Swiching to sequential.')
-                #try running sequentially because pool might be running into
-                #a recursion limit on some systems
+                print(
+                    "Parallel ZTS method failed and crashed. Swiching to sequential."
+                )
+                # try running sequentially because pool might be running into
+                # a recursion limit on some systems
                 meps = []
                 for inputs in pool_inputs:
-                    mep = new_evolve_string(string=pool_inputs[0],
-                                            rbf=pool_inputs[1],
-                                            nstepmax=pool_inputs[2])
+                    mep = new_evolve_string(
+                        string=pool_inputs[0],
+                        rbf=pool_inputs[1],
+                        nstepmax=pool_inputs[2],
+                    )
                     meps.append(mep)
         else:
             meps = None
-        
-    elif method == 'neb':
+
+    elif method == "neb":
         pool_inputs = []
         mep_list = []
         nsteps = max_iter
-    
+
         model = RBFModel(rbf)
         for name, s in string_dict.items():
             if len(s) > 10:
@@ -77,31 +83,38 @@ def evolve_mep(string_dict, rbf, method='neb', max_iter=99999, neb_forcetol=1e-3
                 evolve_pool = multiprocessing.Pool(len(pool_inputs))
                 meps = evolve_pool.starmap(run_neb, pool_inputs)
             except:
-                print('Parallel NEB method failed and crashed. Swiching to sequential.')
-                #try running sequentially because pool might be running into
-                #a recursion limit on some systems
+                print(
+                    "Parallel NEB method failed and crashed. Swiching to sequential."
+                )
+                # try running sequentially because pool might be running into
+                # a recursion limit on some systems
                 meps = []
                 for inputs in pool_inputs:
-                    mep = run_neb(model=inputs[0],
-                                  path=inputs[1],
-                                  nsteps=inputs[2],
-                                  tol=inputs[3])
+                    mep = run_neb(
+                        model=inputs[0],
+                        path=inputs[1],
+                        nsteps=inputs[2],
+                        tol=inputs[3],
+                    )
                     meps.append(mep)
         else:
             meps = None
     else:
-        print(f'WARNING: method "{method}" is not supported. Choose either "neb" or "zts".')
+        print(
+            f'WARNING: method "{method}" is not supported. Choose either "neb" or "zts".'
+        )
         return None
-    
+
     mep = {}
     for i, name in enumerate(mep_list):
         mep[name] = meps[i]
-    
+
     return mep
+
 
 def find_minima(extended_energy_list, xlim, ylim, border_padding):
     """
-    Return global minimas in an energy list.    
+    Return global minimas in an energy list.
 
     Parameters
     ----------
@@ -125,23 +138,35 @@ def find_minima(extended_energy_list, xlim, ylim, border_padding):
     energies = extended_energy_list.copy()
     energies[:, 2] = energies[:, 2] - min(energies[:, 2])
 
-    minima = [x[:2] for x in energies if (x[2] == 0.0 and
-                                          x[0] >= border_padding and
-                                          x[0] < xlim - border_padding and
-                                          x[1] >= border_padding and
-                                          x[1] < ylim - border_padding)]
+    minima = [
+        x[:2]
+        for x in energies
+        if (
+            x[2] == 0.0
+            and x[0] >= border_padding
+            and x[0] < xlim - border_padding
+            and x[1] >= border_padding
+            and x[1] < ylim - border_padding
+        )
+    ]
     return minima
-    
 
-def get_initial_strings(extended_energy_list, xlim, ylim, point_density=20,
-                        add_noise=0.01, border_padding=0.1):
+
+def get_initial_strings(
+    extended_energy_list,
+    xlim,
+    ylim,
+    point_density=20,
+    add_noise=0.01,
+    border_padding=0.1,
+):
     """
     Make 3 straigth strings that connect minima of the PES.
-    
+
     One string each is set up be parallel to the cartesian x and y directions,
     while the third one is roughly diagonal. The number of points is controlled
     by the density parameter, and noise can be added to the strings to ensure
-    that some forces are present even if the string is located alongside a 
+    that some forces are present even if the string is located alongside a
     path were no normal forces are found for symmetry reasons.
 
     Parameters
@@ -171,7 +196,7 @@ def get_initial_strings(extended_energy_list, xlim, ylim, point_density=20,
         String in y direction
 
     """
-    
+
     minima = find_minima(extended_energy_list, xlim, ylim, border_padding)
 
     start = [xlim, ylim]
@@ -194,10 +219,16 @@ def get_initial_strings(extended_energy_list, xlim, ylim, point_density=20,
     for p in minima:
         if p[1] > end_y[1] and np.isclose(p[0], start[0], atol=0.01):
             end_y = p
-        
-    npts_x = m.ceil((np.linalg.norm(end_x) - np.linalg.norm(start)) * point_density)
-    npts_y = m.ceil((np.linalg.norm(end_y) - np.linalg.norm(start)) * point_density)
-    npts_d = m.ceil((np.linalg.norm(end) - np.linalg.norm(start)) * point_density)
+
+    npts_x = m.ceil(
+        (np.linalg.norm(end_x) - np.linalg.norm(start)) * point_density
+    )
+    npts_y = m.ceil(
+        (np.linalg.norm(end_y) - np.linalg.norm(start)) * point_density
+    )
+    npts_d = m.ceil(
+        (np.linalg.norm(end) - np.linalg.norm(start)) * point_density
+    )
 
     string_d = np.linspace(start, end, npts_d)
     string_x = np.linspace(start, end_x, npts_x)
@@ -273,22 +304,28 @@ def reparametrize_string_with_equal_spacing(string, nr_of_points):
     y = string[:, 1]
     dx = np.ediff1d(x, to_begin=0)
     dy = np.ediff1d(y, to_begin=0)
-    lxy = np.cumsum(np.sqrt(dx ** 2 + dy ** 2))  # lxy[n-1] = sum(lxy[:n])
+    lxy = np.cumsum(np.sqrt(dx**2 + dy**2))  # lxy[n-1] = sum(lxy[:n])
     lxy /= lxy[-1]  # rescale distance between points to [0,1] interval
-    xf = interp1d(lxy, x, kind='cubic')  # interpolate x=f(lxy)
-    x = xf(g)  # since g is evenly spaced, now the new points are evenly distributed
-    yf = interp1d(lxy, y, kind='cubic')  # interpolate y=f(lxy)
-    y = yf(g)  # since g is evenly spaced, now the new points are evenly distributed
+    xf = interp1d(lxy, x, kind="cubic")  # interpolate x=f(lxy)
+    x = xf(
+        g
+    )  # since g is evenly spaced, now the new points are evenly distributed
+    yf = interp1d(lxy, y, kind="cubic")  # interpolate y=f(lxy)
+    y = yf(
+        g
+    )  # since g is evenly spaced, now the new points are evenly distributed
     return np.stack((x, y), axis=1)
 
 
-def new_evolve_string(string, rbf, nstepmax=9999, mintol=1e-7, delta=0.005, h=0.005):
+def new_evolve_string(
+    string, rbf, nstepmax=9999, mintol=1e-7, delta=0.005, h=0.005
+):
     """
     Find a minumum energy path from an initial string.
-    
+
     Simplified zero temperature string method as described by Weinan E et al.
     J. Chem. Phys. 126, 164103 (2007)
-    
+
 
     Parameters
     ----------
@@ -316,7 +353,6 @@ def new_evolve_string(string, rbf, nstepmax=9999, mintol=1e-7, delta=0.005, h=0.
     is_converged = False
 
     for nstep in range(int(nstepmax)):
-
         gradient = numgrad(string, rbf, delta)
 
         string_old = string.copy()
@@ -332,7 +368,7 @@ def new_evolve_string(string, rbf, nstepmax=9999, mintol=1e-7, delta=0.005, h=0.
             is_converged = True
             break
 
-    return {'mep': string, 'convergence': is_converged}
+    return {"mep": string, "convergence": is_converged}
 
 
 def run_neb(model, path, nsteps, tol):
@@ -342,8 +378,7 @@ def run_neb(model, path, nsteps, tol):
     neb = NEB(model, path)
     history = neb.run(n_steps=nsteps, force_tol=tol, verbose=False)
     mep = np.array([n.data.tolist()[0] for n in neb.path])
-    return {'mep': mep,
-            'convergence': neb.stop}
+    return {"mep": mep, "convergence": neb.stop}
 
 
 class RBFModel(Model):

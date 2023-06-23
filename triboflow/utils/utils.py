@@ -35,10 +35,10 @@ The module contains the following functions:
 
 """
 
-__author__ = 'Gabriele Losi'
-__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
-__contact__ = 'clelia.righi@unibo.it'
-__date__ = 'February 22nd, 2021'
+__author__ = "Gabriele Losi"
+__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
+__contact__ = "clelia.righi@unibo.it"
+__date__ = "February 22nd, 2021"
 
 import hashlib
 import os
@@ -78,7 +78,7 @@ def dict_to_hash(my_dict):
 
     """
     sorted_items = sorted(my_dict.items())
-    str_repr = repr(sorted_items).encode('utf-8')
+    str_repr = repr(sorted_items).encode("utf-8")
     hash_object = hashlib.sha1(str_repr)
     hash_str = hash_object.hexdigest()
     return hash_str
@@ -87,26 +87,31 @@ def dict_to_hash(my_dict):
 def read_json(jsonfile):
     """
     Shortcut to easily read a json file.
-        
+
     """
 
-    with open(jsonfile, 'r') as f:
+    with open(jsonfile, "r") as f:
         data = json.load(f)
     return data
 
 
-def load_defaults(file_location=project_folder + '/../',
-                  filename='defaults.json'):
+def load_defaults(
+    file_location=project_folder + "/../", filename="defaults.json"
+):
     data = read_json(file_location + filename)
     return data
 
-def load_homoatomic_materials(file_location=project_folder+'/../',
-                  filename='homoatomic_materials.json'):
+
+def load_homoatomic_materials(
+    file_location=project_folder + "/../", filename="homoatomic_materials.json"
+):
     data = read_json(file_location + filename)
     return data
 
-def read_runtask_params(obj, fw_spec, required_params, optional_params,
-                        default_file, default_key):
+
+def read_runtask_params(
+    obj, fw_spec, required_params, optional_params, default_file, default_key
+):
     """
     Read the input arguments passed by the user when initializing a Firetask
     instance. It returns a dictionary containing all the required and optional
@@ -152,14 +157,14 @@ def read_runtask_params(obj, fw_spec, required_params, optional_params,
         params[key] = obj.get(key, defaults[default_key][key])
 
     # Clean db_file entry
-    if 'db_file' in params.keys():
-        if params['db_file'] is None:
-            params['db_file'] = env_chk('>>db_file<<', fw_spec)
+    if "db_file" in params.keys():
+        if params["db_file"] is None:
+            params["db_file"] = env_chk(">>db_file<<", fw_spec)
 
     # Clean miller index entry
-    if 'miller' in params.keys():
-        if isinstance(params['miller'], str):
-            params['miller'] = [int(k) for k in list(params['miller'])]
+    if "miller" in params.keys():
+        if isinstance(params["miller"], str):
+            params["miller"] = [int(k) for k in list(params["miller"])]
 
     return params
 
@@ -203,9 +208,12 @@ def read_default_params(default_file, default_key, dict_params):
 
     # Check if there are some unknown parameters
     if not set(dict_params.keys()).issubset(set(defaults.keys())):
-        raise ReadParamsError("The values passed as dictionary params are not "
-                              "known. Allowed values for {}, read in {}: {}"
-                              .format(default_key, default_file, defaults.keys()))
+        raise ReadParamsError(
+            "The values passed as dictionary params are not "
+            "known. Allowed values for {}, read in {}: {}".format(
+                default_key, default_file, defaults.keys()
+            )
+        )
 
     # Set the parameters, missing parameters are substituted with defaults
     for key, value in defaults.items():
@@ -217,6 +225,7 @@ def read_default_params(default_file, default_key, dict_params):
 # ============================================================================
 # Manipulate dictionary to retrieve data or create ones to be stored in DB
 # ============================================================================
+
 
 def get_one_info_from_dict(input_dict, entry):
     """
@@ -231,7 +240,7 @@ def get_one_info_from_dict(input_dict, entry):
     entry : str or list
         Contains the key(s) that should be read in sequence from the dictionary.
         The keys should be nested within the dictionary or an error raises.
-        
+
         Example:
             1.  entry = 'key'
                 function returns input_dict[key]
@@ -257,7 +266,7 @@ def get_one_info_from_dict(input_dict, entry):
             info = info[n]  # Read one key after the other
 
     else:
-        ReadParamsError('Error in reading input_dict, entry is wrong.')
+        ReadParamsError("Error in reading input_dict, entry is wrong.")
 
     return info
 
@@ -276,7 +285,7 @@ def get_multiple_info_from_dict(input_dict, entry):
         Contains the key(s) that should be read in sequence from the dictionary.
         The keys should be "innested" within the dictionary or an error raises.
         If a list of lists is passed the dictionary is read multiple times.
-        
+
         Example:
             1.  entry = 'key' or ['key1', 'key2']
                 function returns:
@@ -284,7 +293,7 @@ def get_multiple_info_from_dict(input_dict, entry):
 
             2.  entry = [['key1', 'key2'], ['key3']]
                 function returns:
-                    [ 
+                    [
                         input_dict['key1']['key2'],
                         input_dict['key3']
                     ]
@@ -295,7 +304,7 @@ def get_multiple_info_from_dict(input_dict, entry):
         Subdictionary containing the desired information.
     """
 
-    # Extract many info at the same time 
+    # Extract many info at the same time
     if isinstance(entry, list):
         if all([isinstance(x, list) for x in entry]):
             info = []
@@ -320,7 +329,7 @@ def convert_dict_to_mongodb(input_dict):
     Parameters
     ----------
     input_dict : dict
-        Dictionary to be converted to the MongoDB style to update 
+        Dictionary to be converted to the MongoDB style to update
 
     Returns
     -------
@@ -328,18 +337,18 @@ def convert_dict_to_mongodb(input_dict):
         Output dictionary which is now compliant to MongoDB. In this way you
         can update entries containing dictionaries or nested dictionaries
         without overwriting them.
-    
+
     Examples
     --------
     Normally when you update nested dictionaries you substitute the first one
     with the second, without having a "proper" updating, as you might intend.
-    
+
     >>> dict1 = {'key': {'data_1': 5 }}
     >>> dict2 = {'key': {'data_2': 2 }}
     >>> dict2.update(dict1)
     >>> dict2
     {'key': {'data_1': 5}}
-    
+
     If your intention was to have {'key': {'data_1': 5, 'data_2': 2}} the
     operation failed. The same thing occur when updating a MongoDB entry.
     To really update an existing (nested) dictionary and not overriding it run:
@@ -352,13 +361,12 @@ def convert_dict_to_mongodb(input_dict):
     output_dict = {}
 
     for key, val in input_dict.items():
-
         if not isinstance(val, dict):
             output_dict[key] = val
             continue
 
         for sub_key, sub_val in val.items():
-            new_key = '{}.{}'.format(key, sub_key)
+            new_key = "{}.{}".format(key, sub_key)
             output_dict[new_key] = sub_val
             if not isinstance(sub_val, dict):
                 continue
@@ -372,7 +380,7 @@ def convert_dict_to_mongodb(input_dict):
 
 def write_one_dict(data, entry, to_mongodb=True):
     """
-    Prepare an object by creating a dictionary with nested keys as provided by 
+    Prepare an object by creating a dictionary with nested keys as provided by
     entry. Useful to create a dictionary to update a Database fields.
 
     Parameters
@@ -402,7 +410,7 @@ def write_one_dict(data, entry, to_mongodb=True):
 
     to_mongodb : bool, optional
         Decide whether to return a dictionary which is conformal to the queries
-        of MongoDB ($set), in order to really update the fields and not 
+        of MongoDB ($set), in order to really update the fields and not
         overwrite dictionaries.
 
     Returns
@@ -423,7 +431,7 @@ def write_one_dict(data, entry, to_mongodb=True):
             d = {key: d}
 
     else:
-        WriteParamsError('Error in writing data, entry is wrong.')
+        WriteParamsError("Error in writing data, entry is wrong.")
 
     # Convert the dictionary to suit MongoDB query
     if to_mongodb:
@@ -457,7 +465,7 @@ def write_multiple_dict(data, entry, to_mongodb=True):
                 function returns:
                 [
                     { 'key1':
-                        { 
+                        {
                             'key2': data[0]
                         }
                     },
@@ -466,10 +474,10 @@ def write_multiple_dict(data, entry, to_mongodb=True):
                         'key3': data[1]
                     }
                 ]
-    
+
     to_mongodb : bool, optional
         Decide whether to return a dictionary which is conformal to the queries
-        of MongoDB ($set), in order to really update the fields and not 
+        of MongoDB ($set), in order to really update the fields and not
         overwrite dictionaries.
 
     Returns
@@ -479,9 +487,8 @@ def write_multiple_dict(data, entry, to_mongodb=True):
 
     """
 
-    # Extract many info at the same time 
+    # Extract many info at the same time
     if isinstance(entry, list):
-
         bool_1 = all([isinstance(n, list) for n in entry])  # All n are lists
         bool_2 = isinstance(data, (list, np.ndarray))  # Data is list-like
         bool_3 = len(data) == len(entry)  # Same length
@@ -506,8 +513,17 @@ def write_multiple_dict(data, entry, to_mongodb=True):
 # Retrieve structure and VASP output from DB
 # ============================================================================
 
-def retrieve_from_db(mp_id, collection, db_file='auto', high_level_db=True,
-                     miller=None, entry=None, is_slab=False, pymatgen_obj=False):
+
+def retrieve_from_db(
+    mp_id,
+    collection,
+    db_file="auto",
+    high_level_db=True,
+    miller=None,
+    entry=None,
+    is_slab=False,
+    pymatgen_obj=False,
+):
     """
     Retrieve data from a selected database and collection. By specifing an entry
     you can extract specific data, even from nested data in the field dictionary.
@@ -530,12 +546,12 @@ def retrieve_from_db(mp_id, collection, db_file='auto', high_level_db=True,
         Database toquery. The default is True, which will read from db.json
 
     miller : list, optional
-        Miller index identifying the orientation of the slab. If it is not 
+        Miller index identifying the orientation of the slab. If it is not
         None, it can be used as an option as filter (fltr) together with `mp_id`.
         The default is None.
 
     entry : str or list or None, optional
-        Key or list of keys to be used to extract a piece of information from 
+        Key or list of keys to be used to extract a piece of information from
         the `vasp_calc` dictionary. The default is None.
 
     is_slab : bool, optional
@@ -544,7 +560,7 @@ def retrieve_from_db(mp_id, collection, db_file='auto', high_level_db=True,
         method. Meaningful only when `pymatgen_obj=True`. The default is False.
 
     pymatgen_obj : bool, optional
-        Decide to return a pymatgen object or a dictionary. The default is 
+        Decide to return a pymatgen object or a dictionary. The default is
         True.
 
     Returns
@@ -559,9 +575,9 @@ def retrieve_from_db(mp_id, collection, db_file='auto', high_level_db=True,
     nav = Navigator(db_file=db_file, high_level=high_level_db)
 
     # Define the filter (fltr) to be used
-    fltr = {'mpid': mp_id}
+    fltr = {"mpid": mp_id}
     if miller is not None:
-        fltr.update({'miller': miller})
+        fltr.update({"miller": miller})
 
     # Extract data from the database
     field = nav.find_data(collection=collection, fltr=fltr)
@@ -580,11 +596,17 @@ def retrieve_from_db(mp_id, collection, db_file='auto', high_level_db=True,
     return field, structure
 
 
-def retrieve_from_tag(collection, tag, tag_key='task_label', entry=None,
-                      db_file='auto', high_level_db=False):
+def retrieve_from_tag(
+    collection,
+    tag,
+    tag_key="task_label",
+    entry=None,
+    db_file="auto",
+    high_level_db=False,
+):
     """
     Retrieve a dictionary field out of the database based on the combination
-    {tag_key : tag} as filter (fltr). Useful to retrieve quickly the results of a 
+    {tag_key : tag} as filter (fltr). Useful to retrieve quickly the results of a
     VASP simulation run with Atomate and typically stored in the low level DB.
 
     Parameters
@@ -594,13 +616,13 @@ def retrieve_from_tag(collection, tag, tag_key='task_label', entry=None,
 
     tag : any python object
         Object to be found within the database to identify the correct field.
-    
+
     tag_key : str, optional
-        Dict key to filter the fields of the dictionary retrieved from the 
+        Dict key to filter the fields of the dictionary retrieved from the
         database. The default is 'task_label'.
-        
+
     entry : str or list or list of lists or None, optional
-        Key or list of keys to be used to extract a piece of information or 
+        Key or list of keys to be used to extract a piece of information or
         multiple values from the `vasp_calc` dictionary. The default is None.
 
     db_file : str or True, or False
@@ -614,7 +636,7 @@ def retrieve_from_tag(collection, tag, tag_key='task_label', entry=None,
     -------
     vasp_calc : dict
         Dictionary field retrieved from `database` in `db_file`.
-    
+
     info : any python object
         Content of the `vasp_calc` dictionary, read using entry as a key or
         a list of nested keys. If `entry=None` it returns None.
@@ -637,6 +659,7 @@ def retrieve_from_tag(collection, tag, tag_key='task_label', entry=None,
 # Secondary tools to work with input parameters and functions
 # ============================================================================
 
+
 def create_tags(prefix):
     """
     Generate a tag out of a prefix.
@@ -645,10 +668,10 @@ def create_tags(prefix):
 
     # Create a list of tags
     if isinstance(prefix, list):
-        tag = [n + '_' + str(uuid4()) for n in prefix]
+        tag = [n + "_" + str(uuid4()) for n in prefix]
 
     else:
-        tag = prefix + '_' + str(uuid4())
+        tag = prefix + "_" + str(uuid4())
 
     return tag
 
@@ -658,29 +681,39 @@ def get_miller_str(miller):
     Convert a miller index from list to string.
 
     """
-    return ''.join(str(s) for s in miller)
+    return "".join(str(s) for s in miller)
 
 
 def select_struct_func(struct_kind):
     """
     Select a function to work on pymatgen structure, depending on the value
-    of `struct_kind` it returns either `pymatgen.core.surface.Structure` or 
+    of `struct_kind` it returns either `pymatgen.core.surface.Structure` or
     `pymatgen.core.surface.Slab`.
 
     """
 
-    if struct_kind == 'bulk':
+    if struct_kind == "bulk":
         func = Structure
-    elif struct_kind == 'slab':
+    elif struct_kind == "slab":
         func = Slab
     else:
-        ValueError("Wrong argument: struct_kind. Allowed values: "
-                   "'bulk', 'slab'. Given value: {}".format(struct_kind))
+        ValueError(
+            "Wrong argument: struct_kind. Allowed values: "
+            "'bulk', 'slab'. Given value: {}".format(struct_kind)
+        )
     return func
 
 
-def save_calctags(tag, collection, formula=None, mpid=None, miller=None,
-                  name=None, db_file=None, database='triboflow'):
+def save_calctags(
+    tag,
+    collection,
+    formula=None,
+    mpid=None,
+    miller=None,
+    name=None,
+    db_file=None,
+    database="triboflow",
+):
     """
     Store in a csv file the tags of a calculation which was succesfully done by
     vasp. Useful to retrieve later the tags in order to have a complete access
@@ -690,7 +723,7 @@ def save_calctags(tag, collection, formula=None, mpid=None, miller=None,
 
     # Check the folder containing calculation tags, if not present create it
     folder_object = PurePosixPath(project_folder)
-    folder = str(folder_object.parent.parent.parent) + '/results/'
+    folder = str(folder_object.parent.parent.parent) + "/results/"
     path = Path(folder)
     if not path.is_dir():
         print("WARNING: There is no folder for calculation tags.")
@@ -699,17 +732,27 @@ def save_calctags(tag, collection, formula=None, mpid=None, miller=None,
         os.mkdir(folder)
         path = Path(folder)
         if not path.is_dir():
-            raise RuntimeError('The creation of struct path has failed!')
+            raise RuntimeError("The creation of struct path has failed!")
 
     # Create the path to the csv file
     path = str(path)
-    csv_file = path + '/calc_tags.csv'
-    columns = ['tag', 'formula', 'mpid', 'miller', 'name',
-               'db_file', 'database', 'collection']
+    csv_file = path + "/calc_tags.csv"
+    columns = [
+        "tag",
+        "formula",
+        "mpid",
+        "miller",
+        "name",
+        "db_file",
+        "database",
+        "collection",
+    ]
 
-    # Create the new row for the Dataframe 
-    df_new = pd.DataFrame([[tag, formula, mpid, miller, name, db_file,
-                            database, collection]], columns=columns)
+    # Create the new row for the Dataframe
+    df_new = pd.DataFrame(
+        [[tag, formula, mpid, miller, name, db_file, database, collection]],
+        columns=columns,
+    )
 
     # Check if the csv table does exist, if not create it, else append df_new
     if not os.path.exists(csv_file):
@@ -743,10 +786,10 @@ def is_list_converged(input_list, tol, n=3):
     if len(input_list) <= n:
         return False
     else:
-        check_list = [False]*n
+        check_list = [False] * n
         l = input_list.copy()
         l.reverse()
         for i, b in enumerate(check_list):
-            if abs(l[0]-l[i+1]) < tol:
+            if abs(l[0] - l[i + 1]) < tol:
                 check_list[i] = True
         return all(check_list)

@@ -17,33 +17,44 @@ from triboflow.fireworks.common import check_inputs_fw
 from triboflow.utils.database import NavigatorMP, StructureNavigator
 from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
 
-db_file='/home/mwo/FireWorks/config/db.json'
+db_file = "/home/mwo/FireWorks/config/db.json"
 
-nav_structure = StructureNavigator(db_file=db_file, high_level='triboflow')
-data = nav_structure.get_bulk_from_db(mp_id='mp-81', functional='PBE')
+nav_structure = StructureNavigator(db_file=db_file, high_level="triboflow")
+data = nav_structure.get_bulk_from_db(mp_id="mp-81", functional="PBE")
 miller = [1, 1, 1]
 min_thickness = 10
 min_vacuum = 20
 
-comp_params = data['comp_parameters']
-comp_params['k_dens'] = 1000
+comp_params = data["comp_parameters"]
+comp_params["k_dens"] = 1000
 
-prim_bulk = Structure.from_dict(data['structure_equiVol'])
+prim_bulk = Structure.from_dict(data["structure_equiVol"])
 conv_bulk = SpacegroupAnalyzer(prim_bulk).get_conventional_standard_structure()
-        
-SG = SlabGenerator(initial_structure=conv_bulk,
-                   miller_index=miller,
-                   min_slab_size=min_thickness,
-                   min_vacuum_size=min_vacuum)
-slab = SG.get_slabs(bonds=None, ftol=0.1, tol=0.1, max_broken_bonds=0,
-                    symmetrize=False, repair=False)[0]
 
-vis = get_custom_vasp_relax_settings(slab, comp_params, 'slab_pos_relax')
+SG = SlabGenerator(
+    initial_structure=conv_bulk,
+    miller_index=miller,
+    min_slab_size=min_thickness,
+    min_vacuum_size=min_vacuum,
+)
+slab = SG.get_slabs(
+    bonds=None,
+    ftol=0.1,
+    tol=0.1,
+    max_broken_bonds=0,
+    symmetrize=False,
+    repair=False,
+)[0]
 
-Optimize_FW = OptimizeFW(slab, name='Test_relaxation',
-                         vasp_input_set=vis,
-                         half_kpts_first_relax = True)
-WF = Workflow([Optimize_FW], name='OptimizeFW WF')
+vis = get_custom_vasp_relax_settings(slab, comp_params, "slab_pos_relax")
+
+Optimize_FW = OptimizeFW(
+    slab,
+    name="Test_relaxation",
+    vasp_input_set=vis,
+    half_kpts_first_relax=True,
+)
+WF = Workflow([Optimize_FW], name="OptimizeFW WF")
 
 lpad = LaunchPad.auto_load()
 lpad.add_wf(WF)

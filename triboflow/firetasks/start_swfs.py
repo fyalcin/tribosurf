@@ -8,13 +8,16 @@ from pymatgen.core.interface import Interface
 
 from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.structure_manipulation import interface_name
-from triboflow.workflows.subworkflows import (adhesion_energy_swf,
-                                              surface_energy_swf,
-                                              calc_pes_swf, calc_ppes_swf,
-                                              converge_swf,
-                                              dielectric_constant_swf,
-                                              make_and_relax_slab_swf,
-                                              charge_analysis_swf)
+from triboflow.workflows.subworkflows import (
+    adhesion_energy_swf,
+    surface_energy_swf,
+    calc_pes_swf,
+    calc_ppes_swf,
+    converge_swf,
+    dielectric_constant_swf,
+    make_and_relax_slab_swf,
+    charge_analysis_swf,
+)
 
 
 @explicit_serialize
@@ -48,48 +51,61 @@ class FT_StartChargeAnalysisSWF(FiretaskBase):
         Label that the relaxed interface has in the high-level database. Can
         be either structure@min (default), or structure@max at the moment.
     """
-    required_params = ['mp_id_1', 'mp_id_2', 'miller_1', 'miller_2',
-                       'functional', 'external_pressure']
-    optional_params = ['db_file', 'high_level_db', 'interface_label']
+
+    required_params = [
+        "mp_id_1",
+        "mp_id_2",
+        "miller_1",
+        "miller_2",
+        "functional",
+        "external_pressure",
+    ]
+    optional_params = ["db_file", "high_level_db", "interface_label"]
 
     def run_task(self, fw_spec):
-        mp_id_1 = self.get('mp_id_1')
-        mp_id_2 = self.get('mp_id_2')
-        miller_1 = self.get('miller_1')
-        miller_2 = self.get('miller_2')
-        functional = self.get('functional')
-        pressure = self.get('external_pressure')
-        db_file = self.get('db_file')
+        mp_id_1 = self.get("mp_id_1")
+        mp_id_2 = self.get("mp_id_2")
+        miller_1 = self.get("miller_1")
+        miller_2 = self.get("miller_2")
+        functional = self.get("functional")
+        pressure = self.get("external_pressure")
+        db_file = self.get("db_file")
         if not db_file:
-            db_file = env_chk('>>db_file<<', fw_spec)
-        hl_db = self.get('high_level_db', True)
-        interface_label = self.get('interface_label', 'relaxed_structure@min')
+            db_file = env_chk(">>db_file<<", fw_spec)
+        hl_db = self.get("high_level_db", True)
+        interface_label = self.get("interface_label", "relaxed_structure@min")
 
         nav = Navigator(db_file, high_level=hl_db)
 
         name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
 
-        interface_dict = nav.find_data(collection=functional + '.interface_data',
-                                       fltr={'name': name,
-                                             'pressure': pressure})
+        interface_dict = nav.find_data(
+            collection=functional + ".interface_data",
+            fltr={"name": name, "pressure": pressure},
+        )
 
-        redistribution_was_calculated = interface_dict.get('charge_density_redist')
-        comp_params = interface_dict.get('comp_parameters', {})
+        redistribution_was_calculated = interface_dict.get(
+            "charge_density_redist"
+        )
+        comp_params = interface_dict.get("comp_parameters", {})
 
         if not redistribution_was_calculated:
             interface = Interface.from_dict(interface_dict[interface_label])
 
-            SWF = charge_analysis_swf(interface = interface,
-                                      interface_name = name,
-                                      functional = functional,
-                                      external_pressure = pressure,
-                                      db_file = db_file,
-                                      high_level_db = hl_db,
-                                      comp_parameters = comp_params)
+            SWF = charge_analysis_swf(
+                interface=interface,
+                interface_name=name,
+                functional=functional,
+                external_pressure=pressure,
+                db_file=db_file,
+                high_level_db=hl_db,
+                comp_parameters=comp_params,
+            )
 
             return FWAction(detours=SWF)
         else:
             return FWAction(update_spec=fw_spec)
+
 
 @explicit_serialize
 class FT_StartAdhesionSWF(FiretaskBase):
@@ -123,46 +139,60 @@ class FT_StartAdhesionSWF(FiretaskBase):
         Name of the high_level database to use. Defaults to 'True', in which
         case it is read from the db.json file.
     """
-    required_params = ['mp_id_1', 'mp_id_2', 'miller_1', 'miller_2',
-                       'functional', 'external_pressure']
-    optional_params = ['db_file', 'adhesion_handle', 'high_level_db']
+
+    required_params = [
+        "mp_id_1",
+        "mp_id_2",
+        "miller_1",
+        "miller_2",
+        "functional",
+        "external_pressure",
+    ]
+    optional_params = ["db_file", "adhesion_handle", "high_level_db"]
 
     def run_task(self, fw_spec):
-        mp_id_1 = self.get('mp_id_1')
-        mp_id_2 = self.get('mp_id_2')
-        miller_1 = self.get('miller_1')
-        miller_2 = self.get('miller_2')
-        functional = self.get('functional')
-        pressure = self.get('external_pressure')
-        db_file = self.get('db_file')
+        mp_id_1 = self.get("mp_id_1")
+        mp_id_2 = self.get("mp_id_2")
+        miller_1 = self.get("miller_1")
+        miller_2 = self.get("miller_2")
+        functional = self.get("functional")
+        pressure = self.get("external_pressure")
+        db_file = self.get("db_file")
         if not db_file:
-            db_file = env_chk('>>db_file<<', fw_spec)
-        adhesion_handle = self.get('adhesion_handle', 'adhesion_energy@min')
-        hl_db = self.get('high_level_db', True)
+            db_file = env_chk(">>db_file<<", fw_spec)
+        adhesion_handle = self.get("adhesion_handle", "adhesion_energy@min")
+        hl_db = self.get("high_level_db", True)
 
         nav = Navigator(db_file, high_level=hl_db)
 
         name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
 
-        interface_dict = nav.find_data(collection=functional + '.interface_data',
-                                       fltr={'name': name,
-                                             'pressure': pressure})
+        interface_dict = nav.find_data(
+            collection=functional + ".interface_data",
+            fltr={"name": name, "pressure": pressure},
+        )
 
         adhesion_was_calculated = interface_dict.get(adhesion_handle)
-        comp_params = interface_dict.get('comp_parameters', {})
+        comp_params = interface_dict.get("comp_parameters", {})
 
         if not adhesion_was_calculated:
-            top_slab = Slab.from_dict(interface_dict['top_aligned_relaxed'])
-            bottom_slab = Slab.from_dict(interface_dict['bottom_aligned_relaxed'])
-            interface = Structure.from_dict(interface_dict['relaxed_structure@min'])
+            top_slab = Slab.from_dict(interface_dict["top_aligned_relaxed"])
+            bottom_slab = Slab.from_dict(
+                interface_dict["bottom_aligned_relaxed"]
+            )
+            interface = Structure.from_dict(
+                interface_dict["relaxed_structure@min"]
+            )
 
-            SWF = adhesion_energy_swf(top_slab,
-                                      bottom_slab,
-                                      interface,
-                                      interface_name=name,
-                                      external_pressure=pressure,
-                                      functional=functional,
-                                      comp_parameters=comp_params)
+            SWF = adhesion_energy_swf(
+                top_slab,
+                bottom_slab,
+                interface,
+                interface_name=name,
+                external_pressure=pressure,
+                functional=functional,
+                comp_parameters=comp_params,
+            )
 
             return FWAction(detours=SWF)
         else:
@@ -171,7 +201,7 @@ class FT_StartAdhesionSWF(FiretaskBase):
 
 @explicit_serialize
 class FT_StartBulkConvoSWF(FiretaskBase):
-    """ Starts a convergence subworkflow.
+    """Starts a convergence subworkflow.
 
     Starts either an energy cutoff or kpoint density convergence of a material
     with a given MPID and functional through a subworkflow.
@@ -206,64 +236,74 @@ class FT_StartBulkConvoSWF(FiretaskBase):
         case it is read from the db.json file.
     """
 
-    _fw_name = 'Start Encut or Kdensity Convergence'
-    required_params = ['conv_type', 'mp_id', 'functional']
-    optional_params = ['db_file', 'encut_start', 'encut_incr', 'k_dens_start',
-                       'k_dens_incr', 'n_converge', 'high_level_db']
+    _fw_name = "Start Encut or Kdensity Convergence"
+    required_params = ["conv_type", "mp_id", "functional"]
+    optional_params = [
+        "db_file",
+        "encut_start",
+        "encut_incr",
+        "k_dens_start",
+        "k_dens_incr",
+        "n_converge",
+        "high_level_db",
+    ]
 
     def run_task(self, fw_spec):
-
-        conv_type = self.get('conv_type')
-        mp_id = self.get('mp_id')
-        functional = self.get('functional')
-        db_file = self.get('db_file')
-        n_converge = self.get('n_converge', 3)
-        encut_start = self.get('encut_start', None)
-        encut_incr = self.get('encut_incr', 25)
-        k_dens_start = self.get('k_dens_start', 2.0)
-        k_dens_incr = self.get('k_dens_incr', 0.1)
+        conv_type = self.get("conv_type")
+        mp_id = self.get("mp_id")
+        functional = self.get("functional")
+        db_file = self.get("db_file")
+        n_converge = self.get("n_converge", 3)
+        encut_start = self.get("encut_start", None)
+        encut_incr = self.get("encut_incr", 25)
+        k_dens_start = self.get("k_dens_start", 2.0)
+        k_dens_incr = self.get("k_dens_incr", 0.1)
         if not db_file:
-            db_file = env_chk('>>db_file<<', fw_spec)
-        hl_db = self.get('high_level_db', True)
+            db_file = env_chk(">>db_file<<", fw_spec)
+        hl_db = self.get("high_level_db", True)
 
-        if conv_type not in ['kpoints', 'encut']:
-            raise ValueError('"type" input must be either "kpoints" or'
-                             '"encut".\nYou have passed {}'.format(conv_type))
+        if conv_type not in ["kpoints", "encut"]:
+            raise ValueError(
+                '"type" input must be either "kpoints" or'
+                '"encut".\nYou have passed {}'.format(conv_type)
+            )
 
-        nav_structure = StructureNavigator(
-            db_file=db_file,
-            high_level=hl_db)
+        nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
         data = nav_structure.get_bulk_from_db(
-            mp_id=mp_id,
-            functional=functional)
+            mp_id=mp_id, functional=functional
+        )
 
-        if conv_type == 'encut':
-            stop_convergence = data.get('encut_info')
-        elif conv_type == 'kpoints':
-            stop_convergence = data.get('k_dense_info')
+        if conv_type == "encut":
+            stop_convergence = data.get("encut_info")
+        elif conv_type == "kpoints":
+            stop_convergence = data.get("k_dense_info")
 
         if not stop_convergence:
-            structure_dict = data.get('structure_equiVol')
+            structure_dict = data.get("structure_equiVol")
             if not structure_dict:
-                structure_dict = data.get('primitive_structure')
+                structure_dict = data.get("primitive_structure")
                 if not structure_dict:
-                    structure_dict = data.get('structure_fromMP')
+                    structure_dict = data.get("structure_fromMP")
                     if not structure_dict:
-                        raise LookupError('No structure found that can be used '
-                                          'as input for the convergence swf.')
+                        raise LookupError(
+                            "No structure found that can be used "
+                            "as input for the convergence swf."
+                        )
             structure = Structure.from_dict(structure_dict)
-            comp_params = data.get('comp_parameters', {})
-            SWF = converge_swf(structure=structure,
-                               conv_type=conv_type,
-                               flag=mp_id,
-                               comp_parameters=comp_params,
-                               functional=functional,
-                               encut_start=encut_start,
-                               encut_incr=encut_incr,
-                               k_dens_start=k_dens_start,
-                               k_dens_incr=k_dens_incr,
-                               n_converge=n_converge,
-                               print_help=False)
+            comp_params = data.get("comp_parameters", {})
+            SWF = converge_swf(
+                structure=structure,
+                conv_type=conv_type,
+                flag=mp_id,
+                comp_parameters=comp_params,
+                functional=functional,
+                encut_start=encut_start,
+                encut_incr=encut_incr,
+                k_dens_start=k_dens_start,
+                k_dens_incr=k_dens_incr,
+                n_converge=n_converge,
+                print_help=False,
+            )
             return FWAction(detours=SWF, update_spec=fw_spec)
         else:
             return FWAction(update_spec=fw_spec)
@@ -271,36 +311,45 @@ class FT_StartBulkConvoSWF(FiretaskBase):
 
 @explicit_serialize
 class FT_StartSurfaceEnergySWF(FiretaskBase):
-    _fw_name = 'Starts a subworkflow that calculates surface energies as detour'
-    required_params = ['mpid', 'functional', 'sg_params', 'sg_filter']
-    optional_params = ['db_file', 'high_level', 'comp_params_user', 'custom_id']
+    _fw_name = (
+        "Starts a subworkflow that calculates surface energies as detour"
+    )
+    required_params = ["mpid", "functional", "sg_params", "sg_filter"]
+    optional_params = [
+        "db_file",
+        "high_level",
+        "comp_params_user",
+        "custom_id",
+    ]
 
     def run_task(self, fw_spec):
-        mpid = self.get('mpid')
-        functional = self.get('functional')
-        sg_params = self.get('sg_params')
-        sg_filter = self.get('sg_filter')
+        mpid = self.get("mpid")
+        functional = self.get("functional")
+        sg_params = self.get("sg_params")
+        sg_filter = self.get("sg_filter")
 
-        db_file = self.get('db_file', 'auto')
-        high_level = self.get('high_level', True)
-        comp_params_user = self.get('comp_params_user', {})
-        custom_id = self.get('custom_id', None)
+        db_file = self.get("db_file", "auto")
+        high_level = self.get("high_level", True)
+        comp_params_user = self.get("comp_params_user", {})
+        custom_id = self.get("custom_id", None)
 
-        WF = surface_energy_swf(mpid=mpid,
-                                functional=functional,
-                                sg_params=sg_params,
-                                sg_filter=sg_filter,
-                                db_file=db_file,
-                                high_level=high_level,
-                                comp_params_user=comp_params_user,
-                                custom_id=custom_id)
+        WF = surface_energy_swf(
+            mpid=mpid,
+            functional=functional,
+            sg_params=sg_params,
+            sg_filter=sg_filter,
+            db_file=db_file,
+            high_level=high_level,
+            comp_params_user=comp_params_user,
+            custom_id=custom_id,
+        )
 
         return FWAction(detours=WF, update_spec=fw_spec)
 
 
 @explicit_serialize
 class FT_StartDielectricSWF(FiretaskBase):
-    """ Starts a dielectric subworkflow.
+    """Starts a dielectric subworkflow.
 
     Starts a subworkflow that calculates and updates the dielectric constant
     for a given bulk material. Will also by default update all slabs with the
@@ -326,54 +375,60 @@ class FT_StartDielectricSWF(FiretaskBase):
         indices. The default is False.
     """
 
-    _fw_name = 'Start Encut or Kdensity Convergence'
-    required_params = ['mp_id', 'functional']
-    optional_params = ['db_file', 'high_level_db', 'update_bulk', 'update_slabs']
+    _fw_name = "Start Encut or Kdensity Convergence"
+    required_params = ["mp_id", "functional"]
+    optional_params = [
+        "db_file",
+        "high_level_db",
+        "update_bulk",
+        "update_slabs",
+    ]
 
     def run_task(self, fw_spec):
-
-        mp_id = self.get('mp_id')
-        functional = self.get('functional')
-        db_file = self.get('db_file')
-        update_bulk = self.get('update_bulk', True)
-        update_slabs = self.get('update_slabs', True)
+        mp_id = self.get("mp_id")
+        functional = self.get("functional")
+        db_file = self.get("db_file")
+        update_bulk = self.get("update_bulk", True)
+        update_slabs = self.get("update_slabs", True)
         if not db_file:
-            db_file = env_chk('>>db_file<<', fw_spec)
-        hl_db = self.get('high_level_db', True)
+            db_file = env_chk(">>db_file<<", fw_spec)
+        hl_db = self.get("high_level_db", True)
 
-        nav_structure = StructureNavigator(
-            db_file=db_file,
-            high_level=hl_db)
+        nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
         data = nav_structure.get_bulk_from_db(
-            mp_id=mp_id,
-            functional=functional)
+            mp_id=mp_id, functional=functional
+        )
 
-        structure_dict = data.get('structure_equiVol')
+        structure_dict = data.get("structure_equiVol")
         if not structure_dict:
-            structure_dict = data.get('primitive_structure')
+            structure_dict = data.get("primitive_structure")
             if not structure_dict:
-                structure_dict = data.get('structure_fromMP')
+                structure_dict = data.get("structure_fromMP")
                 if not structure_dict:
-                    raise LookupError('No structure found that can be used '
-                                      'as input for the convergence swf.')
+                    raise LookupError(
+                        "No structure found that can be used "
+                        "as input for the convergence swf."
+                    )
         structure = Structure.from_dict(structure_dict)
-        comp_params = data.get('comp_parameters', {})
-        flag = 'test_dielectric_WF_' + str(uuid4())
-        SWF = dielectric_constant_swf(structure=structure,
-                                      mpid=mp_id,
-                                      flag=flag,
-                                      comp_parameters=comp_params,
-                                      functional='PBE',
-                                      db_file=db_file,
-                                      hl_db=hl_db,
-                                      update_bulk=update_bulk,
-                                      update_slabs=update_slabs)
+        comp_params = data.get("comp_parameters", {})
+        flag = "test_dielectric_WF_" + str(uuid4())
+        SWF = dielectric_constant_swf(
+            structure=structure,
+            mpid=mp_id,
+            flag=flag,
+            comp_parameters=comp_params,
+            functional="PBE",
+            db_file=db_file,
+            hl_db=hl_db,
+            update_bulk=update_bulk,
+            update_slabs=update_slabs,
+        )
         return FWAction(detours=SWF, update_spec=fw_spec)
 
 
 @explicit_serialize
 class FT_StartPESCalcSWF(FiretaskBase):
-    """ Start a PES subworkflow.
+    """Start a PES subworkflow.
 
     Starts a PES subworkflow using data from the high-level database.
     This is intended to be used to start a PES subworkflow from a main
@@ -401,44 +456,48 @@ class FT_StartPESCalcSWF(FiretaskBase):
     -------
     FWAction that produces a detour PES subworkflow.
     """
-    required_params = ['mp_id_1', 'mp_id_2', 'miller_1', 'miller_2',
-                       'functional', 'external_pressure']
-    optional_params = ['db_file', 'high_level_db']
+
+    required_params = [
+        "mp_id_1",
+        "mp_id_2",
+        "miller_1",
+        "miller_2",
+        "functional",
+        "external_pressure",
+    ]
+    optional_params = ["db_file", "high_level_db"]
 
     def run_task(self, fw_spec):
-
-        mp_id_1 = self.get('mp_id_1')
-        mp_id_2 = self.get('mp_id_2')
-        miller_1 = self.get('miller_1')
-        miller_2 = self.get('miller_2')
-        functional = self.get('functional')
-        pressure = self.get('external_pressure')
-        db_file = self.get('db_file')
+        mp_id_1 = self.get("mp_id_1")
+        mp_id_2 = self.get("mp_id_2")
+        miller_1 = self.get("miller_1")
+        miller_2 = self.get("miller_2")
+        functional = self.get("functional")
+        pressure = self.get("external_pressure")
+        db_file = self.get("db_file")
         if not db_file:
-            db_file = env_chk('>>db_file<<', fw_spec)
-        hl_db = self.get('high_level_db', True)
+            db_file = env_chk(">>db_file<<", fw_spec)
+        hl_db = self.get("high_level_db", True)
 
         name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
 
-        nav_structure = StructureNavigator(
-            db_file=db_file,
-            high_level=hl_db)
+        nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
         interface_dict = nav_structure.get_interface_from_db(
-            name=name,
-            pressure=pressure,
-            functional=functional
+            name=name, pressure=pressure, functional=functional
         )
-        comp_params = interface_dict['comp_parameters']
-        interface = Interface.from_dict(interface_dict['unrelaxed_structure'])
-        already_done = interface_dict.get('relaxed_structure@min')
+        comp_params = interface_dict["comp_parameters"]
+        interface = Interface.from_dict(interface_dict["unrelaxed_structure"])
+        already_done = interface_dict.get("relaxed_structure@min")
 
         if not already_done:
-            SWF = calc_pes_swf(interface=interface,
-                               interface_name=name,
-                               functional=functional,
-                               pressure=pressure,
-                               comp_parameters=comp_params,
-                               output_dir=None)
+            SWF = calc_pes_swf(
+                interface=interface,
+                interface_name=name,
+                functional=functional,
+                pressure=pressure,
+                comp_parameters=comp_params,
+                output_dir=None,
+            )
 
             return FWAction(detours=SWF, update_spec=fw_spec)
 
@@ -481,47 +540,57 @@ class FT_StartPPESWF(FiretaskBase):
 
     """
 
-    required_params = ['interface_name', 'functional', 'distance_list']
-    optional_params = ['db_file', 'structure_name', 'out_name', 'high_level_db']
+    required_params = ["interface_name", "functional", "distance_list"]
+    optional_params = [
+        "db_file",
+        "structure_name",
+        "out_name",
+        "high_level_db",
+    ]
 
     def run_task(self, fw_spec):
+        name = self.get("interface_name")
+        functional = self.get("functional")
+        tag = self.get("tag")
 
-        name = self.get('interface_name')
-        functional = self.get('functional')
-        tag = self.get('tag')
-
-        db_file = self.get('db_file')
+        db_file = self.get("db_file")
         if not db_file:
-            db_file = env_chk('>>db_file<<', fw_spec)
+            db_file = env_chk(">>db_file<<", fw_spec)
 
-        structure_name = self.get('structure_name', 'minimum_relaxed')
-        out_name = self.get('out_name', 'PPES@minimum')
+        structure_name = self.get("structure_name", "minimum_relaxed")
+        out_name = self.get("out_name", "PPES@minimum")
 
-        d_list = self.get('distance_list')
-        hl_db = self.get('high_level_db', True)
+        d_list = self.get("distance_list")
+        hl_db = self.get("high_level_db", True)
 
-        nav_structure = StructureNavigator(
-            db_file=db_file,
-            high_level=hl_db)
+        nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
         interface_dict = nav_structure.get_interface_from_db(
-            name=name,
-            functional=functional)
+            name=name, functional=functional
+        )
 
         calc_PPES = True
-        if interface_dict.get('PPES') is not None:
-            if interface_dict['PPES'].get(out_name) is not None:
-                print('\n A PPES-object with out_name: ' + out_name +
-                      '\n has already been created in the interface entry: ' +
-                      name + '\n for the ' + functional + ' functional.')
+        if interface_dict.get("PPES") is not None:
+            if interface_dict["PPES"].get(out_name) is not None:
+                print(
+                    "\n A PPES-object with out_name: "
+                    + out_name
+                    + "\n has already been created in the interface entry: "
+                    + name
+                    + "\n for the "
+                    + functional
+                    + " functional."
+                )
                 calc_PPES = False
 
         if calc_PPES:
-            SWF = calc_ppes_swf(interface_name=name,
-                                functional=functional,
-                                distance_list=d_list,
-                                out_name=out_name,
-                                structure_name=structure_name,
-                                spec=fw_spec)
+            SWF = calc_ppes_swf(
+                interface_name=name,
+                functional=functional,
+                distance_list=d_list,
+                out_name=out_name,
+                structure_name=structure_name,
+                spec=fw_spec,
+            )
 
             return FWAction(additions=SWF, update_spec=fw_spec)
         else:
@@ -562,57 +631,61 @@ class FT_StartSlabRelaxSWF(FiretaskBase):
         Starts a new subworkflow as a detour to the current workflow.
     """
 
-    required_params = ['mp_id', 'miller', 'functional']
-    optional_params = ['db_file', 'slab_struct_name', 'relax_type',
-                       'bulk_struct_name', 'slab_out_name', 'high_level_db']
+    required_params = ["mp_id", "miller", "functional"]
+    optional_params = [
+        "db_file",
+        "slab_struct_name",
+        "relax_type",
+        "bulk_struct_name",
+        "slab_out_name",
+        "high_level_db",
+    ]
 
     def run_task(self, fw_spec):
-
-        mp_id = self.get('mp_id')
-        if type(self['miller']) == str:
-            miller = [int(k) for k in list(self['miller'])]
+        mp_id = self.get("mp_id")
+        if type(self["miller"]) == str:
+            miller = [int(k) for k in list(self["miller"])]
         else:
-            miller = self['miller']
+            miller = self["miller"]
 
-        functional = self.get('functional')
+        functional = self.get("functional")
 
-        db_file = self.get('db_file')
+        db_file = self.get("db_file")
         if not db_file:
-            db_file = env_chk('>>db_file<<', fw_spec)
+            db_file = env_chk(">>db_file<<", fw_spec)
 
-        slab_name = self.get('slab_struct_name', 'unrelaxed_slab')
-        relax_type = self.get('relax_type', 'slab_pos_relax')
-        bulk_name = self.get('bulk_struct_name', 'structure_equiVol')
-        slab_out_name = self.get('slab_out_name', 'relaxed_slab')
-        hl_db = self.get('high_level_db', True)
+        slab_name = self.get("slab_struct_name", "unrelaxed_slab")
+        relax_type = self.get("relax_type", "slab_pos_relax")
+        bulk_name = self.get("bulk_struct_name", "structure_equiVol")
+        slab_out_name = self.get("slab_out_name", "relaxed_slab")
+        hl_db = self.get("high_level_db", True)
 
-        nav_structure = StructureNavigator(
-            db_file=db_file,
-            high_level=hl_db)
+        nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
 
         data = nav_structure.get_bulk_from_db(
-            mp_id=mp_id,
-            functional=functional)
+            mp_id=mp_id, functional=functional
+        )
         bulk_struct = Structure.from_dict(data[bulk_name])
 
         slab_data = nav_structure.get_slab_from_db(
-            mp_id=mp_id,
-            functional=functional,
-            miller=miller)
-        comp_params = slab_data.get('comp_parameters')
-        min_thickness = slab_data.get('min_thickness', 10)
-        min_vacuum = slab_data.get('min_vacuum', 25)
+            mp_id=mp_id, functional=functional, miller=miller
+        )
+        comp_params = slab_data.get("comp_parameters")
+        min_thickness = slab_data.get("min_thickness", 10)
+        min_vacuum = slab_data.get("min_vacuum", 25)
 
-        WF = make_and_relax_slab_swf(bulk_structure=bulk_struct,
-                                     miller_index=miller,
-                                     flag=mp_id,
-                                     comp_parameters=comp_params,
-                                     functional=functional,
-                                     min_thickness=min_thickness,
-                                     min_vacuum=min_vacuum,
-                                     relax_type=relax_type,
-                                     slab_struct_name=slab_name,
-                                     out_struct_name=slab_out_name,
-                                     print_help=False)
+        WF = make_and_relax_slab_swf(
+            bulk_structure=bulk_struct,
+            miller_index=miller,
+            flag=mp_id,
+            comp_parameters=comp_params,
+            functional=functional,
+            min_thickness=min_thickness,
+            min_vacuum=min_vacuum,
+            relax_type=relax_type,
+            slab_struct_name=slab_name,
+            out_struct_name=slab_out_name,
+            print_help=False,
+        )
 
         return FWAction(detours=WF)

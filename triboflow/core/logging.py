@@ -25,10 +25,10 @@ Simple logger. This modules contains the class:
 
 """
 
-__author__ = 'Omar Chehaimi'
-__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
-__contact__ = 'clelia.righi@unibo.it'
-__date__ = 'February 2nd, 2021'
+__author__ = "Omar Chehaimi"
+__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
+__contact__ = "clelia.righi@unibo.it"
+__date__ = "February 2nd, 2021"
 
 
 import logging
@@ -37,11 +37,16 @@ import json
 from pathlib import Path, PurePosixPath
 
 
-# Global variables 
-levels_int = {'DEBUG': 10, 'INFO': 20, 'WARNING': 30, 
-              'ERROR': 40, 'CRITICAL': 50}
-levels_str = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
-log_format = '%(process)d - %(asctime)s - %(levelname)s - %(message)s'
+# Global variables
+levels_int = {
+    "DEBUG": 10,
+    "INFO": 20,
+    "WARNING": 30,
+    "ERROR": 40,
+    "CRITICAL": 50,
+}
+levels_str = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+log_format = "%(process)d - %(asctime)s - %(levelname)s - %(message)s"
 
 
 class LoggingBase:
@@ -66,7 +71,7 @@ class LoggingBase:
         Logfile debug level.
     log_format : str
         Format fot the debug messages.
-    
+
     Methods
     -------
     __check_debug_level(level)
@@ -79,11 +84,11 @@ class LoggingBase:
         Initializes a logger handler for the file.
 
     __get_config
-        Private method that gets the project configurations from a json file 
+        Private method that gets the project configurations from a json file
         saved in /core/config.json.
 
     initialize_logfolder()
-        Initializes folder in which save logfiles. In case it already exists it 
+        Initializes folder in which save logfiles. In case it already exists it
         does not create anything. The log folder is one level out the main
         folder of the project (../log).
 
@@ -102,13 +107,19 @@ class LoggingBase:
         settings.
 
     logging_path()
-        Static method that gets the path where to save the log files. In case 
-        the path was not previously generated the function creates a new one. 
-    
+        Static method that gets the path where to save the log files. In case
+        the path was not previously generated the function creates a new one.
+
     """
 
-    def __init__(self, name, console_level=30, path=None, 
-                 file_level=30, log_format=log_format):
+    def __init__(
+        self,
+        name,
+        console_level=30,
+        path=None,
+        file_level=30,
+        log_format=log_format,
+    ):
         """
         Parameters
         ----------
@@ -121,7 +132,7 @@ class LoggingBase:
         file_level : int or str, optional
             Logfile debug level. The default is 30.
         log_format : str, optional
-            Format fot the debug messages. The default is log_format (gloabl 
+            Format fot the debug messages. The default is log_format (gloabl
             variable).
 
         """
@@ -138,54 +149,63 @@ class LoggingBase:
         # Set the root level to DEBUG (the default value is WARNING)
         logging.root.setLevel(logging.DEBUG)
 
-        # Initialize console logger        
+        # Initialize console logger
         self.__initialize_console_logger_handler(
             name=self.name,
             console_level=self.console_level,
-            log_format=log_format)
+            log_format=log_format,
+        )
         # Create console logger
-        self.console_logger = logging.getLogger(self.name+'_console_logger')
-        
+        self.console_logger = logging.getLogger(self.name + "_console_logger")
+
         if path:
             # Initialize file logger
             self.__initialize_file_logger_handler(
                 name=self.name,
                 file_level=file_level,
                 path=path,
-                log_format=log_format)
+                log_format=log_format,
+            )
             # Create file logger
-            self.file_logger = logging.getLogger(self.name+'_file_logger')
+            self.file_logger = logging.getLogger(self.name + "_file_logger")
 
     def __check_debug_level(self, level):
         """
         Checks if the debug level is a valid one.
-        
+
         Parameters
         ----------
         level : int or str
             Debug level.
 
         """
-        if isinstance(level, int): 
+        if isinstance(level, int):
             if level not in levels_int.values():
-                raise ValueError("'{}' level is not a valid level."
-                                " Valid levels are: DEBUG: 10, INFO: 20, "
-                                "WARNING: 30, ERROR: 40, "
-                                "CRITICAL: 50.".format(level))
+                raise ValueError(
+                    "'{}' level is not a valid level."
+                    " Valid levels are: DEBUG: 10, INFO: 20, "
+                    "WARNING: 30, ERROR: 40, "
+                    "CRITICAL: 50.".format(level)
+                )
         elif isinstance(level, str):
             if level not in levels_str:
-                raise ValueError("'{}' level is not a valid level."
-                                " Valid levels are: DEBUG: 10, INFO: 20, "
-                                "WARNING: 30, ERROR: 40, "
-                                "CRITICAL: 50.".format(level))
+                raise ValueError(
+                    "'{}' level is not a valid level."
+                    " Valid levels are: DEBUG: 10, INFO: 20, "
+                    "WARNING: 30, ERROR: 40, "
+                    "CRITICAL: 50.".format(level)
+                )
         else:
-            raise ValueError("'{}' value for the debug level is not a string"
-                             " nor an integer. Valid debug levels are:"
-                             " DEBUG: 10, INFO: 20, WARNING: 30, "
-                             "ERROR: 40, CRITICAL: 50.".format(level))
+            raise ValueError(
+                "'{}' value for the debug level is not a string"
+                " nor an integer. Valid debug levels are:"
+                " DEBUG: 10, INFO: 20, WARNING: 30, "
+                "ERROR: 40, CRITICAL: 50.".format(level)
+            )
 
-    def __initialize_console_logger_handler(self, name, console_level, 
-                                            log_format):
+    def __initialize_console_logger_handler(
+        self, name, console_level, log_format
+    ):
         """
         Initializes a logger handler for the console.
 
@@ -200,7 +220,7 @@ class LoggingBase:
 
         """
 
-        console_logger = logging.getLogger(name + '_console_logger')
+        console_logger = logging.getLogger(name + "_console_logger")
 
         console_handler = logging.StreamHandler()
         console_handler.setLevel(console_level)
@@ -211,8 +231,9 @@ class LoggingBase:
         if not console_logger.hasHandlers():
             console_logger.addHandler(console_handler)
 
-    def __initialize_file_logger_handler(self, name, file_level, path, 
-                                         log_format):
+    def __initialize_file_logger_handler(
+        self, name, file_level, path, log_format
+    ):
         """
         Initializes a logger handler for the file.
 
@@ -229,8 +250,8 @@ class LoggingBase:
 
         """
 
-        file_logger = logging.getLogger(name+'_file_logger')
-        
+        file_logger = logging.getLogger(name + "_file_logger")
+
         file_handler = logging.FileHandler(path)
         file_handler.setLevel(file_level)
 
@@ -239,12 +260,11 @@ class LoggingBase:
 
         if not file_logger.hasHandlers():
             file_logger.addHandler(file_handler)
-            
-    
+
     def debug(self, message):
-        """ 
+        """
         Prints the debug level message.
-        
+
         Parameters
         ----------
         message : str
@@ -252,8 +272,8 @@ class LoggingBase:
 
         """
 
-        CGREEN = '\33[32m'
-        CEND = '\033[0m'
+        CGREEN = "\33[32m"
+        CEND = "\033[0m"
         console_message = CGREEN + message + CEND
         self.console_logger.debug(console_message)
 
@@ -261,9 +281,9 @@ class LoggingBase:
             self.file_logger.debug(message)
 
     def info(self, message):
-        """ 
+        """
         Prints the info level message.
-        
+
         Parameters
         ----------
         message : str
@@ -277,9 +297,9 @@ class LoggingBase:
             self.file_logger.info(message)
 
     def warning(self, message):
-        """ 
+        """
         Prints the warning level message.
-        
+
         Parameters
         ----------
         message : str
@@ -287,8 +307,8 @@ class LoggingBase:
 
         """
 
-        CYELLOW = '\33[33m'
-        CEND = '\033[0m'
+        CYELLOW = "\33[33m"
+        CEND = "\033[0m"
         console_message = CYELLOW + message + CEND
         self.console_logger.warning(console_message)
 
@@ -296,9 +316,9 @@ class LoggingBase:
             self.file_logger.warning(message)
 
     def error(self, message):
-        """ 
+        """
         Prints the error level message.
-        
+
         Parameters
         ----------
         message : str
@@ -306,8 +326,8 @@ class LoggingBase:
 
         """
 
-        CRED = '\33[31m'
-        CEND = '\033[0m'
+        CRED = "\33[31m"
+        CEND = "\033[0m"
         console_message = CRED + message + CEND
         self.console_logger.error(console_message)
 
@@ -315,9 +335,9 @@ class LoggingBase:
             self.file_logger.error(message)
 
     def critical(self, message):
-        """ 
+        """
         Prints the critical level message.
-        
+
         Parameters
         ----------
         message : str
@@ -325,19 +345,19 @@ class LoggingBase:
 
         """
 
-        CBOLD = '\033[1m'
-        CRED = '\33[31m'
-        CEND = '\033[0m'
+        CBOLD = "\033[1m"
+        CRED = "\33[31m"
+        CEND = "\033[0m"
         console_message = CBOLD + CRED + message + CEND
         self.console_logger.critical(console_message)
 
         if self.path:
             self.file_logger.critical(message)
-    
+
     @staticmethod
     def get_config():
         """
-        Static method that gets the project configurations from a json file 
+        Static method that gets the project configurations from a json file
         saved in /core/config.json.
 
         Return
@@ -347,18 +367,18 @@ class LoggingBase:
         """
 
         project_folder = os.path.dirname(__file__)
-        config_path = project_folder + '/config.json' 
-        with open(config_path, 'r') as config:
+        config_path = project_folder + "/config.json"
+        with open(config_path, "r") as config:
             config = json.load(config)
-        
+
         return config
 
     @staticmethod
     def logging_path():
         """
         Static method that gets the path where to save the logs file.
-        The path is one level up the triboflow folder (triboflow../log) and it 
-        should be named log. In case this folder does not exist a new one 
+        The path is one level up the triboflow folder (triboflow../log) and it
+        should be named log. In case this folder does not exist a new one
         is generated.
 
         Return
@@ -366,11 +386,11 @@ class LoggingBase:
         log_path : str
             The path to log folder.
         """
-        
+
         project_folder = os.path.dirname(__file__)
         # PurePosixPath gets the first level parten directory
         log_folder_object = PurePosixPath(project_folder)
-        log_folder = str(log_folder_object.parent.parent.parent) + '/log/'
+        log_folder = str(log_folder_object.parent.parent.parent) + "/log/"
         log_path = Path(log_folder)
 
         if not log_path.is_dir():
@@ -379,6 +399,6 @@ class LoggingBase:
             os.mkdir(log_folder)
             log_path = Path(log_folder)
             if not log_path.is_dir():
-                raise RuntimeError('The creation of log path has failed!')
+                raise RuntimeError("The creation of log path has failed!")
 
         return str(log_path)

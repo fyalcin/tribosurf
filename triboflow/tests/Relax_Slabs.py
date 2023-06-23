@@ -9,9 +9,9 @@ from fireworks import Workflow, LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
 from triboflow.workflows.subworkflows import make_and_relax_slab_swf
 
-db_file='/home/mwo/FireWorks/config/db.json'
-mp_id = 'mp-81'
-functional = 'PBE'
+db_file = "/home/mwo/FireWorks/config/db.json"
+mp_id = "mp-81"
+functional = "PBE"
 miller = [1, 1, 1]
 min_thickness = 10
 min_vacuum = 20
@@ -20,4 +20,4 @@ WF = make_and_relax_slab_swf(mp_id, miller, functional)
 
 lpad = LaunchPad.auto_load()
 lpad.add_wf(WF)
-#rapidfire(lpad)
+# rapidfire(lpad)

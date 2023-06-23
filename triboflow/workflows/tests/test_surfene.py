@@ -12,10 +12,10 @@ Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
 
 """
 
-__author__ = 'Omar Chehaimi'
-__copyright__ = 'Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna'
-__contact__ = 'clelia.righi@unibo.it'
-__date__ = 'March 4th, 2021'
+__author__ = "Omar Chehaimi"
+__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
+__contact__ = "clelia.righi@unibo.it"
+__date__ = "March 4th, 2021"
 
 
 from pymatgen.core.structure import Structure
@@ -28,15 +28,15 @@ from triboflow.workflows.surfene_wfs import SurfEneWF
 
 
 # Get the bulk from the online Database: Materials Project
-nav = StructureNavigator('auto', True)
-mpid = 'mp-134'
-mat_dict = nav.get_bulk_from_db(functional='PBE', mp_id=mpid)
-structure = Structure.from_dict(mat_dict['primitive_structure'])
+nav = StructureNavigator("auto", True)
+mpid = "mp-134"
+mat_dict = nav.get_bulk_from_db(functional="PBE", mp_id=mpid)
+structure = Structure.from_dict(mat_dict["primitive_structure"])
 # formula = 'Mg'
 # mid = 'mp-110'
 # nav_mp = NavigatorMP()
 # structure, mid = nav_mp.get_low_energy_structure(
-#    chem_formula=formula, 
+#    chem_formula=formula,
 #    mp_id=mid)
 
 # Get the bulk from a local simple Poscar
@@ -53,7 +53,10 @@ wf = SurfEneWF.conv_surface_energy(
     thick_incr=2,
     parallelization=None,
     add_static=True,
-    db_file='auto', low_level='FireWorks', high_level=True)
+    db_file="auto",
+    low_level="FireWorks",
+    high_level=True,
+)
 
 # Launch the calculation
 lpad = LaunchPad.auto_load()

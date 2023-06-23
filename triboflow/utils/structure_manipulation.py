@@ -6,7 +6,9 @@ from pymatgen.core.structure import Structure
 from pymatgen.core.surface import SlabGenerator, Slab
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.ext.matproj import MPRester
-from pymatgen.transformations.standard_transformations import DeformStructureTransformation
+from pymatgen.transformations.standard_transformations import (
+    DeformStructureTransformation,
+)
 
 from triboflow.phys.shaper import Shaper
 from triboflow.utils.database import NavigatorMP, Navigator
@@ -16,18 +18,31 @@ def get_interface_distance(structure):
     z_max_substrate = -10000
     z_min_film = 10000
     for s in structure.sites:
-        if s.properties['interface_label'] == 'substrate':
+        if s.properties["interface_label"] == "substrate":
             if s.coords[-1] > z_max_substrate:
                 z_max_substrate = s.coords[-1]
-        elif s.properties['interface_label'] == 'film':
+        elif s.properties["interface_label"] == "film":
             if s.coords[-1] < z_min_film:
                 z_min_film = s.coords[-1]
         else:
             return None
     return z_min_film - z_max_substrate
 
-def get_SG_from_mpid(mpid, functional, miller, db_file='auto', high_level=True, min_slab=15, min_vac=15,
-                     lll_reduce=True, center=True, in_unit_planes=True, prim=True, reorient_lattice=True):
+
+def get_SG_from_mpid(
+    mpid,
+    functional,
+    miller,
+    db_file="auto",
+    high_level=True,
+    min_slab=15,
+    min_vac=15,
+    lll_reduce=True,
+    center=True,
+    in_unit_planes=True,
+    prim=True,
+    reorient_lattice=True,
+):
     """
     Generates the SlabGenerator for the given material, miller index and other parameters.
 
@@ -78,15 +93,25 @@ def get_SG_from_mpid(mpid, functional, miller, db_file='auto', high_level=True, 
         Pymatgen SlabGenerator object with the given parameters.
 
     """
-    coll = f'{functional}.bulk_data'
+    coll = f"{functional}.bulk_data"
     bulk_conv = get_conv_bulk_from_mpid(mpid, coll, db_file, high_level)
     max_normal_search = max([abs(m) for m in miller])
-    SG = SlabGenerator(bulk_conv, miller, min_slab, min_vac, lll_reduce, center, in_unit_planes, prim,
-                       max_normal_search, reorient_lattice)
+    SG = SlabGenerator(
+        bulk_conv,
+        miller,
+        min_slab,
+        min_vac,
+        lll_reduce,
+        center,
+        in_unit_planes,
+        prim,
+        max_normal_search,
+        reorient_lattice,
+    )
     return SG
 
 
-def get_conv_bulk_from_mpid(mpid, coll, db_file='auto', high_level=True):
+def get_conv_bulk_from_mpid(mpid, coll, db_file="auto", high_level=True):
     """
     Generates the conventional standard bulk structure for a material given by
     its MaterialsProject ID.
@@ -119,27 +144,36 @@ def get_conv_bulk_from_mpid(mpid, coll, db_file='auto', high_level=True):
 
     """
     nav = Navigator(db_file, high_level)
-    bulk_dict = nav.find_data(coll, {'mpid': mpid})
+    bulk_dict = nav.find_data(coll, {"mpid": mpid})
     if bulk_dict is None:
         with MPRester() as mpr:
-            bulk_conv = mpr.get_structure_by_material_id(material_id=mpid,
-                                                         conventional_unit_cell=True)
+            bulk_conv = mpr.get_structure_by_material_id(
+                material_id=mpid, conventional_unit_cell=True
+            )
         return bulk_conv
         # raise ValueError(f'Bulk entry for {mpid} not found in {high_level}')
 
-    bulk_struct = bulk_dict.get('structure_equiVol')
+    bulk_struct = bulk_dict.get("structure_equiVol")
     if bulk_struct is None:
-        print(f'Optimized bulk structure not found for {mpid}, falling back to'
-              'MaterialsProject imported structure.')
-        bulk_struct = bulk_dict.get('structure_fromMP')
+        print(
+            f"Optimized bulk structure not found for {mpid}, falling back to"
+            "MaterialsProject imported structure."
+        )
+        bulk_struct = bulk_dict.get("structure_fromMP")
         if bulk_struct is None:
-            raise ValueError(f'Bulk structure not found in the bulk entry for {mpid}')
+            raise ValueError(
+                f"Bulk structure not found in the bulk entry for {mpid}"
+            )
     bulk_struct = Structure.from_dict(bulk_struct)
-    bulk_conv = SpacegroupAnalyzer(bulk_struct).get_conventional_standard_structure()
+    bulk_conv = SpacegroupAnalyzer(
+        bulk_struct
+    ).get_conventional_standard_structure()
     return bulk_conv
 
 
-def slab_from_file(filename, mpid, functional, miller, db_file='auto', high_level=True):
+def slab_from_file(
+    filename, mpid, functional, miller, db_file="auto", high_level=True
+):
     """
     Loads up a surface from a file (can be CIF, VASP, POSCAR ..) and turn it
     into a pymatgen Slab object.
@@ -177,22 +211,35 @@ def slab_from_file(filename, mpid, functional, miller, db_file='auto', high_leve
     tmp_slab = SG.get_slabs()[0]
     ouc = Shaper.get_matching_ouc(tmp_slab)
     if ouc:
-        scale_factor = struct.lattice.a/ouc.lattice.a
-        scale_array = [(scale_factor, 0, 0), (0, scale_factor, 0), (0, 0, scale_factor)]
+        scale_factor = struct.lattice.a / ouc.lattice.a
+        scale_array = [
+            (scale_factor, 0, 0),
+            (0, scale_factor, 0),
+            (0, 0, scale_factor),
+        ]
         deformer = DeformStructureTransformation(deformation=scale_array)
         ouc = deformer.apply_transformation(ouc)
     else:
-        print(f'Matching OUC could not be found for the structure loaded from file. A non-matching\n'
-              f'OUC will be used instead. Results are still useful.')
+        print(
+            f"Matching OUC could not be found for the structure loaded from file. A non-matching\n"
+            f"OUC will be used instead. Results are still useful."
+        )
         ouc = SG.oriented_unit_cell
-    slab = Slab(lattice=struct.lattice, species=struct.species, coords=struct.frac_coords, miller_index=miller,
-                oriented_unit_cell=ouc, shift=0, scale_factor=SG.slab_scale_factor)
+    slab = Slab(
+        lattice=struct.lattice,
+        species=struct.species,
+        coords=struct.frac_coords,
+        miller_index=miller,
+        oriented_unit_cell=ouc,
+        shift=0,
+        scale_factor=SG.slab_scale_factor,
+    )
     return slab, SG
 
 
 def transfer_average_magmoms(magnetic_struct, struct_without_magmoms):
     """Set magmom for a structure based on the average value of each species of a reference structure.
-    
+
     For unit cells of the same structure, it is not always trivial to transfer
     the site properties. This function attempts to transfer at least the magmom
     site property between two structures with the same species, but not
@@ -219,18 +266,22 @@ def transfer_average_magmoms(magnetic_struct, struct_without_magmoms):
     mag_struct = magnetic_struct.copy()
     new_struct = struct_without_magmoms.copy()
 
-    if not mag_struct.site_properties.get('magmom'):
-        print('No magnetic moments to transfer. Doing nothing...')
+    if not mag_struct.site_properties.get("magmom"):
+        print("No magnetic moments to transfer. Doing nothing...")
         return new_struct
 
-    if not sorted(mag_struct.types_of_species) == sorted(new_struct.types_of_species):
-        warnings.warn('\n##################################################\n'
-                      'You are trying to transfer magnetig moments between\n'
-                      'two structures which contain different species and\n'
-                      '                 THIS CANNOT WORK!\n'
-                      'The code will continue to run, without transfering\n'
-                      'any magnetic moments. Convergence might be slow...'
-                      '\n##################################################\n')
+    if not sorted(mag_struct.types_of_species) == sorted(
+        new_struct.types_of_species
+    ):
+        warnings.warn(
+            "\n##################################################\n"
+            "You are trying to transfer magnetig moments between\n"
+            "two structures which contain different species and\n"
+            "                 THIS CANNOT WORK!\n"
+            "The code will continue to run, without transfering\n"
+            "any magnetic moments. Convergence might be slow..."
+            "\n##################################################\n"
+        )
         return new_struct
 
     magmom_dict = {}
@@ -238,13 +289,15 @@ def transfer_average_magmoms(magnetic_struct, struct_without_magmoms):
         magmom_dict[s] = []
         for i, el in enumerate(mag_struct.species):
             if s == el:
-                magmom_dict[s].append(mag_struct.site_properties.get('magmom')[i])
+                magmom_dict[s].append(
+                    mag_struct.site_properties.get("magmom")[i]
+                )
         magmom_dict[s] = np.mean(magmom_dict[s])
 
     new_magmoms = []
     for s in new_struct.species:
         new_magmoms.append(magmom_dict[s])
-    new_struct.add_site_property('magmom', new_magmoms)
+    new_struct.add_site_property("magmom", new_magmoms)
 
     return new_struct
 
@@ -265,20 +318,22 @@ def slab_from_structure(miller, structure):
         The input structure converted to a Slab
 
     """
-    return Slab(lattice=structure.lattice,
-                species=structure.species_and_occu,
-                coords=structure.frac_coords,
-                miller_index=miller,
-                oriented_unit_cell=structure,
-                shift=0,
-                scale_factor=np.eye(3, dtype=np.int),
-                site_properties=structure.site_properties)
+    return Slab(
+        lattice=structure.lattice,
+        species=structure.species_and_occu,
+        coords=structure.frac_coords,
+        miller_index=miller,
+        oriented_unit_cell=structure,
+        shift=0,
+        scale_factor=np.eye(3, dtype=np.int),
+        site_properties=structure.site_properties,
+    )
 
 
 def clean_up_site_properties(structure):
     """
     Cleans up site_properties of structures that contain NoneTypes.
-    
+
     If an interface is created from two different structures, it is possible
     that some site properties like magmom are not set for both structures.
     This can lead later to problems since they are replaced by None.
@@ -299,14 +354,14 @@ def clean_up_site_properties(structure):
     """
     struct = structure.copy()
     for key in struct.site_properties.keys():
-        if key == 'magmom':
+        if key == "magmom":
             new_magmom = []
             for m in struct.site_properties[key]:
                 if m == None:
                     new_magmom.append(0.0)
                 else:
                     new_magmom.append(m)
-            struct.add_site_property('magmom', new_magmom)
+            struct.add_site_property("magmom", new_magmom)
         else:
             if any(struct.site_properties[key]) == None:
                 struct.remove_site_property(key)
@@ -316,7 +371,7 @@ def clean_up_site_properties(structure):
 def stack_aligned_slabs(bottom_slab, top_slab, top_shift=[0, 0, 0]):
     """
     Combine slabs that are centered around 0 into a single structure.
-    
+
     Optionally shift the top slab by a vector of cartesian coordinates.
 
     Parameters
@@ -340,16 +395,21 @@ def stack_aligned_slabs(bottom_slab, top_slab, top_shift=[0, 0, 0]):
     interface = bottom_slab.copy()
     t_copy = top_slab.copy()
 
-    t_copy.translate_sites(indices=range(len(t_copy.sites)),
-                           vector=top_shift,
-                           frac_coords=False, to_unit_cell=False)
+    t_copy.translate_sites(
+        indices=range(len(t_copy.sites)),
+        vector=top_shift,
+        frac_coords=False,
+        to_unit_cell=False,
+    )
 
     for s in t_copy.sites:
-        new_site = PeriodicSite(lattice=interface.lattice,
-                                coords=s.frac_coords,
-                                coords_are_cartesian=False,
-                                species=s.species,
-                                properties=s.properties)
+        new_site = PeriodicSite(
+            lattice=interface.lattice,
+            coords=s.frac_coords,
+            coords_are_cartesian=False,
+            species=s.species,
+            properties=s.properties,
+        )
         interface.sites.append(new_site)
 
     return interface
@@ -388,12 +448,18 @@ def recenter_aligned_slabs(top_slab, bottom_slab, d=2.5):
         bot_zs.append(s.coords[-1])
     bot_shift = -max(bot_zs) - d / 2
 
-    t_copy.translate_sites(indices=range(len(t_copy.sites)),
-                           vector=[0, 0, top_shift],
-                           frac_coords=False, to_unit_cell=False)
-    b_copy.translate_sites(indices=range(len(b_copy.sites)),
-                           vector=[0, 0, bot_shift],
-                           frac_coords=False, to_unit_cell=False)
+    t_copy.translate_sites(
+        indices=range(len(t_copy.sites)),
+        vector=[0, 0, top_shift],
+        frac_coords=False,
+        to_unit_cell=False,
+    )
+    b_copy.translate_sites(
+        indices=range(len(b_copy.sites)),
+        vector=[0, 0, bot_shift],
+        frac_coords=False,
+        to_unit_cell=False,
+    )
     return t_copy, b_copy
 
 
@@ -422,38 +488,41 @@ def interface_name(mp_id_1, miller_1, mp_id_2, miller_2):
 
     nav_mp = NavigatorMP()
     f1 = nav_mp.get_property_from_mp(
-        mp_id=mp_id_1,
-        properties=['pretty_formula'])
-    f1 = f1['pretty_formula']
+        mp_id=mp_id_1, properties=["pretty_formula"]
+    )
+    f1 = f1["pretty_formula"]
 
     f2 = nav_mp.get_property_from_mp(
-        mp_id=mp_id_2,
-        properties=['pretty_formula'])
-    f2 = f2['pretty_formula']
+        mp_id=mp_id_2, properties=["pretty_formula"]
+    )
+    f2 = f2["pretty_formula"]
 
     if type(miller_1) is list:
-        m1 = ''.join(str(s) for s in miller_1)
+        m1 = "".join(str(s) for s in miller_1)
     else:
         m1 = miller_1
     if type(miller_2) is list:
-        m2 = ''.join(str(s) for s in miller_2)
+        m2 = "".join(str(s) for s in miller_2)
     else:
         m2 = miller_2
 
     n1 = min(f1 + m1, f2 + m2)
     n2 = max(f1 + m1, f2 + m2)
-    ids = min(mp_id_1 + '_' + mp_id_2, mp_id_2 + '_' + mp_id_1)
-    name = '_'.join((n1, n2, ids))
+    ids = min(mp_id_1 + "_" + mp_id_2, mp_id_2 + "_" + mp_id_1)
+    name = "_".join((n1, n2, ids))
     return name
 
-def make_pymatgen_slab(bulk_struct: Structure,
-                       miller: list,
-                       min_thickness: int = 8,
-                       min_vacuum: float = 20) -> Slab:
+
+def make_pymatgen_slab(
+    bulk_struct: Structure,
+    miller: list,
+    min_thickness: int = 8,
+    min_vacuum: float = 20,
+) -> Slab:
     """
     Uses pmg slab generator to create 1 slab from a bulk struct and miller index.
-    
-    First a conventional unit cell is created using SpacegroupAnalyzer, then 
+
+    First a conventional unit cell is created using SpacegroupAnalyzer, then
     possible magnetic moments get transfered and the slab is created using
     pymatgen.core.surface.SlabGenerator. Only the first slab of the returned
     list is taken! Oxidation states are guessed, so polarity of the slab might
@@ -477,21 +546,30 @@ def make_pymatgen_slab(bulk_struct: Structure,
         pymatgen Slab object.
 
     """
-    
-    bulk_conv = SpacegroupAnalyzer(bulk_struct).get_conventional_standard_structure()
+
+    bulk_conv = SpacegroupAnalyzer(
+        bulk_struct
+    ).get_conventional_standard_structure()
     bulk_conv = transfer_average_magmoms(bulk_struct, bulk_conv)
 
-    SG = SlabGenerator(initial_structure=bulk_conv,
-                       miller_index=miller,
-                       center_slab=True,
-                       primitive=True,
-                       lll_reduce=True,
-                       max_normal_search=max([abs(l) for l in miller]),
-                       min_slab_size=min_thickness,
-                       min_vacuum_size=min_vacuum)
+    SG = SlabGenerator(
+        initial_structure=bulk_conv,
+        miller_index=miller,
+        center_slab=True,
+        primitive=True,
+        lll_reduce=True,
+        max_normal_search=max([abs(l) for l in miller]),
+        min_slab_size=min_thickness,
+        min_vacuum_size=min_vacuum,
+    )
 
-
-    slab = SG.get_slabs(bonds=None, ftol=0.1, tol=0.1, max_broken_bonds=0,
-                    symmetrize=False, repair=False)[0]
+    slab = SG.get_slabs(
+        bonds=None,
+        ftol=0.1,
+        tol=0.1,
+        max_broken_bonds=0,
+        symmetrize=False,
+        repair=False,
+    )[0]
     slab.add_oxidation_state_by_guess()
     return slab

@@ -1,9 +1,10 @@
 import os, glob
 from fireworks import ScriptTask, FileTransferTask
 
+
 def remove_matching_files(list_of_patterns):
     """Remove all files matching the patterns in the directory."""
-    remove_list=[]
+    remove_list = []
     for pattern in list_of_patterns:
         remove_list.extend(glob.glob(pattern))
     if remove_list is []:
@@ -12,6 +13,7 @@ def remove_matching_files(list_of_patterns):
         for file_to_remove in remove_list:
             os.remove(file_to_remove)
         return
+
 
 def write_file_from_dict(Dict, Filename):
     """
@@ -30,19 +32,21 @@ def write_file_from_dict(Dict, Filename):
     for key in Dict.keys():
         if type(Dict[key]) is list:
             str_list = [str(x) for x in Dict[key]]
-            value = ' '.join(str_list)
+            value = " ".join(str_list)
         else:
             value = str(Dict[key])
-        Out_file.append(str(key)+' = '+value)
-    with open(Filename, 'w') as out:
+        Out_file.append(str(key) + " = " + value)
+    with open(Filename, "w") as out:
         for line in Out_file:
-            out.write(line+'\n')
+            out.write(line + "\n")
     return
-    
-def copy_output_files(file_list, output_dir, remote_copy=False,
-                      server=None, user=None, port=None):
+
+
+def copy_output_files(
+    file_list, output_dir, remote_copy=False, server=None, user=None, port=None
+):
     """Return a Firetask that copys output files locally or to remote server.
-    
+
     Handles file copy from the work-folder to a chosen output directory which
     might be on a differnet machine. In that case scp will be used via
     a ScriptTaks, as the FileTransferTask was found to be unreliable sometimes
@@ -75,23 +79,26 @@ def copy_output_files(file_list, output_dir, remote_copy=False,
     """
     if remote_copy:
         if server and user:
-            to_copy = ' '.join(file_list)
-            scp_str = 'scp {} {}@{}:{}/.'.format(to_copy, user, server,
-                                                 output_dir)
+            to_copy = " ".join(file_list)
+            scp_str = "scp {} {}@{}:{}/.".format(
+                to_copy, user, server, output_dir
+            )
             if port:
-                scp_str = 'scp -P {} {} {}@{}:{}/.'.format(port, to_copy,
-                                                           user, server,
-                                                           output_dir)
+                scp_str = "scp -P {} {} {}@{}:{}/.".format(
+                    port, to_copy, user, server, output_dir
+                )
             FT = ScriptTask.from_str(scp_str)
         else:
-            out_str = ("You have requested remote_copy but "
-                       "did not specify a remote server "
-                       "and/or username!\n"
-                       "No copy will be performed!\n")
+            out_str = (
+                "You have requested remote_copy but "
+                "did not specify a remote server "
+                "and/or username!\n"
+                "No copy will be performed!\n"
+            )
             FT = ScriptTask.from_str('echo "{}"'.format(out_str))
-            
+
     else:
-        FT = FileTransferTask({'files': file_list,
-                               'dest': output_dir,
-                               'mode': 'copy'})
+        FT = FileTransferTask(
+            {"files": file_list, "dest": output_dir, "mode": "copy"}
+        )
     return FT

@@ -11,36 +11,44 @@ from fireworks.core.rocket_launcher import rapidfire
 from triboflow.fireworks.common import check_inputs_fw
 
 
-inputs = {'material_1': {'formula': 'C',
-                         'miller': '111',
-                         'mp_id': 'mp-66',
-                         'min_vacuum': 25,
-                         'min_thickness': 5
-                         },
-          'material_2': {'formula': 'Au',
-                         #'mp_id': 'mp-13',
-                         'miller': '001',
-                         'min_vacuum': 25,
-                         'min_thickness': 6
-                         },
-          'computational_params':{'functional': 'SCAN',
-                                  'energy_tolerance': 0.001,
-                                  'volume_tolerance': 0.001,
-                                  'BM_tolerance': 0.01,
-                                  'use_vdw': 'False'},
-          'interface_params':{'interface_distance': 2.5,
-                              'max_area': 500,
-                              'max_length_tol': 0.05
-                              }
-          }
+inputs = {
+    "material_1": {
+        "formula": "C",
+        "miller": "111",
+        "mp_id": "mp-66",
+        "min_vacuum": 25,
+        "min_thickness": 5,
+    },
+    "material_2": {
+        "formula": "Au",
+        #'mp_id': 'mp-13',
+        "miller": "001",
+        "min_vacuum": 25,
+        "min_thickness": 6,
+    },
+    "computational_params": {
+        "functional": "SCAN",
+        "energy_tolerance": 0.001,
+        "volume_tolerance": 0.001,
+        "BM_tolerance": 0.01,
+        "use_vdw": "False",
+    },
+    "interface_params": {
+        "interface_distance": 2.5,
+        "max_area": 500,
+        "max_length_tol": 0.05,
+    },
+}
 
-Start_WF_FW = check_inputs_fw(mat1_params=inputs['material_1'],
-                              mat2_params=inputs['material_2'],
-                              compparams=inputs['computational_params'],
-                              interface_params=inputs['interface_params'],
-                              FW_name='Check input parameters FW')
+Start_WF_FW = check_inputs_fw(
+    mat1_params=inputs["material_1"],
+    mat2_params=inputs["material_2"],
+    compparams=inputs["computational_params"],
+    interface_params=inputs["interface_params"],
+    FW_name="Check input parameters FW",
+)
 
-WF = Workflow.from_Firework(Start_WF_FW, name='Test Workflow')
+WF = Workflow.from_Firework(Start_WF_FW, name="Test Workflow")
 
 lpad = LaunchPad.auto_load()
 lpad.add_wf(WF)
