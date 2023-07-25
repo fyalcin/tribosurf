@@ -82,7 +82,7 @@ def homogeneous_wf(inputs):
         ),
         name=f'Start dielectric SWF for {mat["formula"]}',
     )
-    WF.append(CalcDielectric)
+    #WF.append(CalcDielectric)
 
     Final_Params = Firework(
         FT_UpdateInterfaceCompParams(
@@ -173,8 +173,9 @@ def homogeneous_wf(inputs):
         Initialize: [PreRelaxation],
         PreRelaxation: [ConvergeEncut],
         ConvergeEncut: [ConvergeKpoints],
-        ConvergeKpoints: [CalcDielectric],
-        CalcDielectric: [Final_Params],
+        #ConvergeKpoints: [CalcDielectric],
+        #CalcDielectric: [Final_Params],
+        ConvergeKpoints: [Final_Params],
         Final_Params: [MakeSlabs],
         MakeSlabs: [MakeInterface],
         MakeInterface: [CalcPESPoints, CopySlabs],
@@ -290,7 +291,7 @@ def heterogeneous_wf(inputs):
         ),
         name=f'Start dielectric SWF for {mat_1["formula"]}',
     )
-    WF.append(CalcDielectric_M1)
+    #WF.append(CalcDielectric_M1)
 
     CalcDielectric_M2 = Firework(
         FT_StartDielectricSWF(
@@ -301,7 +302,7 @@ def heterogeneous_wf(inputs):
         ),
         name=f'Start dielectric SWF for {mat_2["formula"]}',
     )
-    WF.append(CalcDielectric_M2)
+    #WF.append(CalcDielectric_M2)
 
     Final_Params = Firework(
         FT_UpdateInterfaceCompParams(
@@ -416,10 +417,12 @@ def heterogeneous_wf(inputs):
         PreRelaxation_M2: [ConvergeEncut_M2],
         ConvergeEncut_M1: [ConvergeKpoints_M1],
         ConvergeEncut_M2: [ConvergeKpoints_M2],
-        ConvergeKpoints_M1: [CalcDielectric_M1],
-        ConvergeKpoints_M2: [CalcDielectric_M2],
-        CalcDielectric_M1: [Final_Params],
-        CalcDielectric_M2: [Final_Params],
+        # ConvergeKpoints_M1: [CalcDielectric_M1],
+        # ConvergeKpoints_M2: [CalcDielectric_M2],
+        # CalcDielectric_M1: [Final_Params],
+        # CalcDielectric_M2: [Final_Params],
+        ConvergeKpoints_M1: [Final_Params],
+        ConvergeKpoints_M2: [Final_Params],
         Final_Params: [MakeSlabs_M1, MakeSlabs_M2],
         MakeSlabs_M1: [MakeInterface],
         MakeSlabs_M2: [MakeInterface],
