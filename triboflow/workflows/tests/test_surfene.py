@@ -23,7 +23,7 @@ from pymatgen.core.surface import Slab
 from fireworks import LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
 
-from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
+from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.workflows.surfene_wfs import SurfEneWF
 
 

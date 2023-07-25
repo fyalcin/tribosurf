@@ -8,7 +8,8 @@ from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 
-from triboflow.utils.database import Navigator, StructureNavigator, NavigatorMP
+from triboflow.utils.database import Navigator, StructureNavigator
+from triboflow.utils.mp_connection import MPConnection
 from triboflow.utils.structure_manipulation import (
     interface_name,
     transfer_average_magmoms,
@@ -244,11 +245,11 @@ class FT_MakeInterfaceInDB(FiretaskBase):
 
         functional = comp_data["functional"]
 
-        nav_mp = NavigatorMP()
-        struct1, mp_id_1 = nav_mp.get_low_energy_structure(
+        mp_connection = MPConnection()
+        struct1, mp_id_1 = mp_connection.get_low_energy_structure(
             chem_formula=data1["formula"], mp_id=data1["mp_id"]
         )
-        struct2, mp_id_2 = nav_mp.get_low_energy_structure(
+        struct2, mp_id_2 = mp_connection.get_low_energy_structure(
             chem_formula=data2["formula"], mp_id=data2["mp_id"]
         )
 
@@ -314,12 +315,12 @@ class FT_MakeSlabInDB(FiretaskBase):
 
         functional = comp_data["functional"]
 
-        nav_mp = NavigatorMP()
-        struct, mp_id = nav_mp.get_low_energy_structure(
+        mp_connection = MPConnection()
+        struct, mp_id = mp_connection.get_low_energy_structure(
             chem_formula=data["formula"], mp_id=data["mp_id"]
         )
 
-        bandgap = nav_mp.get_property_from_mp(
+        bandgap = mp_connection.get_property_from_mp(
             mp_id=mp_id, properties=["band_gap"]
         )
         bandgap = bandgap["band_gap"]
@@ -392,8 +393,8 @@ class FT_MakeBulkInDB(FiretaskBase):
 
         functional = comp_data["functional"]
 
-        nav_mp = NavigatorMP()
-        struct, mp_id = nav_mp.get_low_energy_structure(
+        mp_connection = MPConnection()
+        struct, mp_id = mp_connection.get_low_energy_structure(
             chem_formula=data["formula"], mp_id=data["mp_id"]
         )
         # Make a primitive standard structure to ensure high symmetry.
@@ -402,7 +403,7 @@ class FT_MakeBulkInDB(FiretaskBase):
         # site properties are not retained, so we have to add magmom again.
         prim_struct = transfer_average_magmoms(struct, prim_struct)
 
-        bandgap = nav_mp.get_property_from_mp(
+        bandgap = mp_connection.get_property_from_mp(
             mp_id=mp_id, properties=["band_gap"]
         )
         bandgap = bandgap["band_gap"]
@@ -791,8 +792,8 @@ class FT_CheckMaterialInputDict(FiretaskBase):
                 if key in input_dict:
                     out_dict["mp_id"] = str(input_dict[key])
                 else:
-                    nav_mp = NavigatorMP()
-                    struct, mp_id = nav_mp.get_low_energy_structure(
+                    mp_connection = MPConnection()
+                    struct, mp_id = mp_connection.get_low_energy_structure(
                         chem_formula=str(input_dict["formula"])
                     )
                     out_dict["mp_id"] = mp_id

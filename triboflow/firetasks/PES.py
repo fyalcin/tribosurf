@@ -387,7 +387,8 @@ class FT_StartPESCalcs(FiretaskBase):
     interface_name : str
         Name of the interface in the high-level database.
     comp_parameters : dict
-        Computational parameters to be passed to the vasp input file generation.
+        Computational parameters to be passed to the vasp input file
+        generation.
     tag : str
         Unique tag to identify the calculations.
     db_file : str, optional
@@ -399,7 +400,11 @@ class FT_StartPESCalcs(FiretaskBase):
     FWActions that produce a detour workflow with relaxations for the PES.
     """
 
-    required_params = ["interface", "interface_name", "comp_parameters", "tag"]
+    required_params = ["interface",
+                       "interface_name",
+                       "comp_parameters",
+                       "tag",
+                       "external_pressure"]
     optional_params = ["db_file"]
 
     def run_task(self, fw_spec):
@@ -407,6 +412,7 @@ class FT_StartPESCalcs(FiretaskBase):
         interface_name = self.get("interface_name")
         comp_params = self.get("comp_parameters")
         tag = self.get("tag")
+        pressure = self.get("external_pressure")
 
         db_file = self.get("db_file")
         if not db_file:
@@ -429,6 +435,7 @@ class FT_StartPESCalcs(FiretaskBase):
                 structure=clean_struct,
                 comp_parameters=comp_params,
                 relax_type="interface_z_relax",
+                apply_pressure=pressure,
             )
             inputs.append([clean_struct, vis, label])
 

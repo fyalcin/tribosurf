@@ -16,7 +16,7 @@ from atomate.vasp.powerups import add_modify_incar
 from atomate.vasp.fireworks.core import StaticFW
 
 from triboflow.utils.vasp_tools import get_custom_vasp_static_settings
-from triboflow.utils.database import NavigatorMP
+from triboflow.utils.mp_connection import MPConnection
 from triboflow.phys.interface_matcher import InterfaceMatcher
 from triboflow.phys.shaper import Shaper
 from triboflow.firetasks.charge_density_analysis import (
@@ -188,9 +188,9 @@ if __name__ == "__main__":
         "use_vdw": False,
         "functional": "PBE",
     }
-    nav_mp = NavigatorMP()
-    graphite, _ = nav_mp.get_low_energy_structure("C", mp_id="mp-48")
-    nickel, _ = nav_mp.get_low_energy_structure("Ni", mp_id="mp-23")
+    mp_conn = MPConnection()
+    graphite, _ = mp_conn.get_low_energy_structure("C", mp_id="mp-48")
+    nickel, _ = mp_conn.get_low_energy_structure("Ni", mp_id="mp-23")
 
     gr_conv = SpacegroupAnalyzer(
         graphite

@@ -21,7 +21,7 @@ from pathlib import Path, PurePosixPath
 from fireworks import LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
 from pymatgen.core.structure import Structure
-from triboflow.utils.database import NavigatorMP, StructureNavigator
+from triboflow.utils.database import StructureNavigator
 from triboflow.workflows.slabs_wfs import SlabWF
 
 # Get the bulk

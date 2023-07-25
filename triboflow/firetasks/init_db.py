@@ -37,7 +37,8 @@ __date__ = "January 20th, 2021"
 
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
-from triboflow.utils.database import Navigator, NavigatorMP
+from triboflow.utils.database import Navigator
+from triboflow.utils.mp_connection import MPConnection
 from triboflow.utils.structure_manipulation import transfer_average_magmoms
 
 from fireworks.utilities.fw_utilities import explicit_serialize
@@ -186,7 +187,7 @@ def put_bulk_in_db(data, comp_params, db_file):
 
     """
 
-    # Extract data from dictionaries and from MP using NavigatorMP
+    # Extract data from dictionaries and from MP using MPConnection
     struct, mp_id, functional, comp_params = material_data_for_db(
         data, comp_params, db_file, metal_thr=0.2
     )
@@ -233,7 +234,7 @@ def put_slab_in_db(data, comp_params, db_file):
 
     """
 
-    # Extract data from dictionaries and from MP using NavigatorMP
+    # Extract data from dictionaries and from MP using MPConnection
     _, mp_id, functional, comp_params = material_data_for_db(
         data, comp_params, db_file, metal_thr=0.5
     )
@@ -287,7 +288,7 @@ def put_inter_in_db(data_1, data_2, comp_params, inter_params, db_file):
 
     """
 
-    # Extract data from dictionaries and from MP using NavigatorMP
+    # Extract data from dictionaries and from MP using MPConnection
     functional = comp_params["functional"]
     struct_1, mp_id_1, _, _ = material_data_for_db(
         data_1, comp_params, db_file, metal_thr=None
@@ -370,11 +371,11 @@ def material_data_for_db(data, comp_params, db_file, metal_thr=None):
     functional = comp_params["functional"]
 
     # Check an online bandgap and understand if material is metal or not
-    nav_mp = NavigatorMP()
-    struct, mp_id = nav_mp.get_low_energy_structure(formula, mp_id)
+    mp_connection = MPConnection()
+    struct, mp_id = mp_connection.get_low_energy_structure(formula, mp_id)
 
     # TODO : Is it correct that you need to slice the returned value?
-    bandgap = nav_mp.get_property_from_mp(mp_id, properties=["band_gap"])[
+    bandgap = mp_connection.get_property_from_mp(mp_id, properties=["band_gap"])[
         "band_gap"
     ]
 
@@ -406,13 +407,13 @@ def interface_name(mp_id_1, miller_1, mp_id_2, miller_2):
         Unique name for the interface of two slabs.
     """
 
-    nav_mp = NavigatorMP()
-    f1 = nav_mp.get_property_from_mp(
-        mp_id=mp_id_1, properties=["pretty_formula"]
-    )["pretty_formula"]
-    f2 = nav_mp.get_property_from_mp(
-        mp_id=mp_id_2, properties=["pretty_formula"]
-    )["pretty_formula"]
+    mp_connection = MPConnection()
+    f1 = mp_connection.get_property_from_mp(
+        mp_id=mp_id_1, properties=["formula_pretty"]
+    )["formula_pretty"]
+    f2 = mp_connection.get_property_from_mp(
+        mp_id=mp_id_2, properties=["formula_pretty"]
+    )["formula_pretty"]
 
     # Assign the miller index as a string
     m1 = miller_1

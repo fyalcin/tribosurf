@@ -11,7 +11,7 @@ Test the slab generations.
 
 from pymatgen.core.structure import Structure
 
-from triboflow.utils.database import NavigatorMP
+from triboflow.utils.mp_connection import MPConnection
 from triboflow.phys.solid_state import generate_slabs
 
 
@@ -19,10 +19,10 @@ thickness = [0, 2, 3, 4, 5, 6, 7, 8]
 miller = [1, 1, 1]
 miller_str = str(miller[0]) + str(miller[1]) + str(miller[2])
 
-nav_mp = NavigatorMP()
-Mg, _ = nav_mp.get_low_energy_structure(chem_formula="Mg", mp_id="mp-110")
+mp_conn = MPConnection()
+Mg, _ = mp_conn.get_low_energy_structure(chem_formula="Mg", mp_id="mp-110")
 
-Cu, _ = nav_mp.get_low_energy_structure(chem_formula="Cu", mp_id="mp-30")
+Cu, _ = mp_conn.get_low_energy_structure(chem_formula="Cu", mp_id="mp-30")
 
 Cu_local = Structure.from_file("POSCAR")
 

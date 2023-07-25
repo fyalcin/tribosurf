@@ -31,7 +31,8 @@ from triboflow.firetasks.surfen_tools import (
 )
 from triboflow.firetasks.utils import FT_UpdateCompParams
 from triboflow.fireworks.common import run_pes_calc_fw, make_pes_fw
-from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
+from triboflow.utils.database import Navigator, StructureNavigator
+from triboflow.utils.mp_connection import MPConnection
 from triboflow.utils.surfen_tools import get_surfen_inputs_from_mpid
 from triboflow.utils.vasp_tools import (
     get_emin_and_emax,
@@ -601,6 +602,7 @@ def calc_pes_swf(
     FW_1 = run_pes_calc_fw(
         interface=interface,
         interface_name=interface_name,
+        external_pressure=pressure,
         functional=functional,
         comp_parameters=comp_parameters,
         tag=tag,
@@ -794,11 +796,11 @@ def make_and_relax_slab_swf(
     formula = bulk_structure.composition.reduced_formula
 
     if flag.startswith("mp-") and flag[3:].isdigit():
-        nav_mp = NavigatorMP()
-        formula_from_flag = nav_mp.get_property_from_mp(
-            mp_id=flag, properties=["pretty_formula"]
+        mp_conn = MPConnection()
+        formula_from_flag = mp_conn.get_property_from_mp(
+            mp_id=flag, properties=["formula_pretty"]
         )
-        formula_from_flag = formula_from_flag["pretty_formula"]
+        formula_from_flag = formula_from_flag["formula_pretty"]
         if not formula_from_flag == formula:
             raise SystemExit(
                 "The chemical formula of your structure ({}) "
@@ -1026,11 +1028,11 @@ def converge_swf(
 
     if flag.startswith("mp-") and flag[3:].isdigit():
         formula_from_struct = structure.composition.reduced_formula
-        nav_mp = NavigatorMP()
-        formula_from_flag = nav_mp.get_property_from_mp(
-            mp_id=flag, properties=["pretty_formula"]
+        mp_conn = MPConnection()
+        formula_from_flag = mp_conn.get_property_from_mp(
+            mp_id=flag, properties=["formula_pretty"]
         )
-        formula_from_flag = formula_from_flag["pretty_formula"]
+        formula_from_flag = formula_from_flag["formula_pretty"]
 
         if not formula_from_flag == formula_from_struct:
             raise SystemExit(

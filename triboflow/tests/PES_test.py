@@ -12,7 +12,8 @@ from fireworks import LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
 from triboflow.workflows.subworkflows import calc_pes_swf
 from triboflow.utils.structure_manipulation import slab_from_structure
-from triboflow.utils.database import Navigator, NavigatorMP, StructureNavigator
+from triboflow.utils.database import Navigator, StructureNavigator
+from triboflow.utils.mp_connection import MPConnection
 from triboflow.phys.interface_matcher import InterfaceMatcher
 
 # nav = Navigator()
@@ -49,8 +50,8 @@ functional = "PBE"
 # lpad = LaunchPad.auto_load()
 # lpad.add_wf(WF)
 # Test GrapheneGraphene interface
-nav_mp = NavigatorMP()
-struct, mpid = nav_mp.get_low_energy_structure(
+mp_connect = MPConnection()
+struct, mpid = mp_connect.get_low_energy_structure(
     chem_formula="C", mp_id="mp-1040425"
 )
 slab = slab_from_structure([0, 0, 1], struct)

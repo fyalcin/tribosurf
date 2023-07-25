@@ -14,7 +14,7 @@ from fireworks.core.rocket_launcher import rapidfire
 from atomate.vasp.fireworks.core import OptimizeFW
 
 from triboflow.fireworks.common import check_inputs_fw
-from triboflow.utils.database import NavigatorMP, StructureNavigator
+from triboflow.utils.database import StructureNavigator
 from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
 
 db_file = "/home/mwo/FireWorks/config/db.json"

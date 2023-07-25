@@ -549,6 +549,9 @@ def get_custom_vasp_relax_settings(
         element. The default is there to fix an issue with tungsten, where
         MP uses W_pv, which is depreciated by VASP and replaced with W_sv.
         The default is {'W': 'W_sv'}
+    apply_pressure : bool or float, optional
+        If not False, the float value is used as pressure in GPa. The default
+        is False.
 
     Raises
     ------

@@ -21,7 +21,7 @@ from fireworks import LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
 from fireworks import Workflow, Firework
 
-from triboflow.utils.database import NavigatorMP
+from triboflow.utils.mp_connection import MPConnection
 from triboflow.workflows.slabs_wfs import SlabWF
 from triboflow.firetasks.run_slabs_wfs import FT_SlabOptThick
 
@@ -33,8 +33,8 @@ formula = "Mg"
 functional = "PBE"
 miller = [0, 0, 1]
 mid = "mp-110"
-nav_mp = NavigatorMP()
-structure, mid = nav_mp.get_low_energy_structure(
+mp_conn = MPConnection()
+structure, mid = mp_conn.get_low_energy_structure(
     chem_formula="formula", mp_id=mid
 )
 

@@ -29,6 +29,9 @@ inputs = {
         "surfene_thr": 0.01,
         "vacuum": 20,
     },
+    "interface_params": {
+        "external_pressure": 1.0
+    },
 }
 
 WF = homogeneous_wf(inputs)

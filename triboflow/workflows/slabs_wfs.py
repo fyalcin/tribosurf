@@ -29,7 +29,7 @@ import os
 
 from fireworks import Workflow, Firework
 
-from triboflow.utils.database import NavigatorMP
+from triboflow.utils.mp_connection import MPConnection
 from triboflow.firetasks.run_slabs_wfs import (
     FT_StartThickConvo,
     FT_EndThickConvo,
@@ -207,12 +207,12 @@ class SlabWF:
 
         # Check if the chemical formula passed is the same on MP database
         if mp_id.startswith("mp-") and mp_id[3:].isdigit():
-            nav_mp = NavigatorMP()
+            mp_conn = MPConnection()
             formula_from_struct = structure.composition.reduced_formula
-            formula_from_flag = nav_mp.get_property_from_mp(
-                mp_id, ["pretty_formula"]
+            formula_from_flag = mp_conn.get_property_from_mp(
+                mp_id, ["formula_pretty"]
             )
-            if not formula_from_flag["pretty_formula"] == formula_from_struct:
+            if not formula_from_flag["formula_pretty"] == formula_from_struct:
                 raise SystemExit(
                     "The chemical formula of your structure ({}) "
                     "does not match the chemical formula of the flag "

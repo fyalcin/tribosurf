@@ -11,7 +11,9 @@ from pymatgen.transformations.standard_transformations import (
 )
 
 from triboflow.phys.shaper import Shaper
-from triboflow.utils.database import NavigatorMP, Navigator
+from triboflow.utils.database import  Navigator
+from triboflow.utils.mp_connection import MPConnection
+
 
 
 def get_interface_distance(structure):
@@ -486,16 +488,16 @@ def interface_name(mp_id_1, miller_1, mp_id_2, miller_2):
 
     """
 
-    nav_mp = NavigatorMP()
-    f1 = nav_mp.get_property_from_mp(
-        mp_id=mp_id_1, properties=["pretty_formula"]
+    mp_connection = MPConnection()
+    f1 = mp_connection.get_property_from_mp(
+        mp_id=mp_id_1, properties=["formula_pretty"]
     )
-    f1 = f1["pretty_formula"]
+    f1 = f1["formula_pretty"]
 
-    f2 = nav_mp.get_property_from_mp(
-        mp_id=mp_id_2, properties=["pretty_formula"]
+    f2 = mp_connection.get_property_from_mp(
+        mp_id=mp_id_2, properties=["formula_pretty"]
     )
-    f2 = f2["pretty_formula"]
+    f2 = f2["formula_pretty"]
 
     if type(miller_1) is list:
         m1 = "".join(str(s) for s in miller_1)

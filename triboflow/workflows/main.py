@@ -183,10 +183,10 @@ def homogeneous_wf(inputs):
     }
 
     WF_Name = (
-        "TriboFlow "
+        "TriboFlow_"
         + interface_name(mp_id, mat.get("miller"), mp_id, mat.get("miller"))
-        + " "
-        + functional
+        + "_"
+        + f"{functional}@{pressure}GPa"
     )
 
     WF = Workflow(WF, Dependencies, name=WF_Name)
@@ -430,12 +430,12 @@ def heterogeneous_wf(inputs):
     }
 
     WF_Name = (
-        "TriboFlow "
+        "TriboFlow_"
         + interface_name(
             mp_id_1, mat_1.get("miller"), mp_id_2, mat_2.get("miller")
         )
-        + " "
-        + functional
+        + "_"
+        + f"{functional}@{pressure}GPa"
     )
 
     WF = Workflow(WF, Dependencies, name=WF_Name)

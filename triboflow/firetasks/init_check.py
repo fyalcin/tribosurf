@@ -36,7 +36,7 @@ import os
 
 from fireworks import FWAction, FiretaskBase, explicit_serialize
 
-from triboflow.utils.database import NavigatorMP
+from triboflow.utils.mp_connection import MPConnection
 from triboflow.utils.utils import load_defaults
 
 
@@ -96,8 +96,8 @@ class FTCheckInput(FiretaskBase):
 
         # mpid of minimum energy structure is used as default for materials
         if "mpid" in out_dict.keys() and out_dict["mpid"] is None:
-            nav_mp = NavigatorMP()
-            out_dict["mpid"] = nav_mp.get_mpid_from_formula(
+            mp_connection = MPConnection()
+            out_dict["mpid"] = mp_connection.get_mpid_from_formula(
                 chem_formula=str(out_dict["formula"])
             )
 
@@ -234,9 +234,9 @@ def material_from_mp(material_dict):
     """
 
     # Collect the data from Material's Project API
-    nav_mp = NavigatorMP()
+    mp_connection = MPConnection()
 
-    struct, mpid = nav_mp.get_low_energy_structure(
+    struct, mpid = mp_connection.get_low_energy_structure(
         chem_formula=material_dict.get("formula"),
         mp_id=material_dict.get("mpid"),
     )

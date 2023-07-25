@@ -20,14 +20,15 @@ from fireworks.core.rocket_launcher import rapidfire
 
 from triboflow.firetasks.slabs import FT_GenerateSlabs
 from triboflow.firetasks.core import FT_RelaxStructure, FT_MoveTagResults
-from triboflow.utils.database import Navigator, NavigatorMP
+from triboflow.utils.database import Navigator
+from triboflow.utils.mp_connection import MPConnection
 
 # Retriving the bulk structure from MP database and save it in our test database
 chem_formula = "Al"
 mp_id = "mp-134"
 
-nav_mp = NavigatorMP()
-structure, mp_id = nav_mp.get_low_energy_structure(
+mp_conn = MPConnection
+structure, mp_id = mp_conn.get_low_energy_structure(
     chem_formula=chem_formula, mp_id=mp_id
 )
 
