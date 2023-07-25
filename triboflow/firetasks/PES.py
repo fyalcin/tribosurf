@@ -199,7 +199,7 @@ class FT_RetrievePESEnergies(FiretaskBase):
 
         nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
         interface_dict = nav_structure.get_interface_from_db(
-            name=name, functional=functional
+            name=name, functional=functional, pressure=pressure
         )
         lateral_shifts = interface_dict["PES"]["high_symmetry_points"][
             "unique_shifts"
