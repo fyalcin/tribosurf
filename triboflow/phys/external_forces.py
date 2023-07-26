@@ -25,7 +25,7 @@ def ext_pressure_to_force_array(
     - The force array is created, with all x and y components set to zero, and
         the z component set to the force on the top and bottom layers for the
         right sites, and zero for the rest.
-        
+
 
     Parameters:
     -----------
@@ -57,7 +57,7 @@ def ext_pressure_to_force_array(
     bot_layer = layers[min(layers)]
 
     # get the force on the top and bottom layers
-    # We start with GPa and want to end up with eV/Angstrom^3:
+    # We start with GPa (1e9Nm/m^3) and want to end up with eV/Angstrom:
     Nm_to_eV = 6.241509074461e18
     conversion_factor = Nm_to_eV * 1e9 / 1e30
     external_pressure *= conversion_factor
