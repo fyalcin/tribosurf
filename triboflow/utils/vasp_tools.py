@@ -383,7 +383,7 @@ def get_custom_vasp_static_settings(
         # set dipole corrections.
         try:
             is_polar = structure.is_polar()
-        except AssertionError:
+        except AttributeError:
             pass
         else:
             if is_polar:
