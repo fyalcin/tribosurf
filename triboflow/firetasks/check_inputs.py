@@ -94,12 +94,12 @@ class FT_UpdateInterfaceCompParams(FiretaskBase):
         metal_1 = bulk_1["comp_parameters"]["is_metal"]
         metal_2 = bulk_2["comp_parameters"]["is_metal"]
         metal_inter = any((metal_1, metal_2))
-        if not metal_inter:
-            epsilon_1 = bulk_1["comp_parameters"]["epsilon"]
-            epsilon_2 = bulk_2["comp_parameters"]["epsilon"]
-            epsilon_inter = min(epsilon_1, epsilon_2)
-        else:
-            epsilon_inter = 100000
+        # if not metal_inter:
+        #     epsilon_1 = bulk_1["comp_parameters"]["epsilon"]
+        #     epsilon_2 = bulk_2["comp_parameters"]["epsilon"]
+        #     epsilon_inter = min(epsilon_1, epsilon_2)
+        # else:
+        #     epsilon_inter = 100000
 
         nav_high = Navigator(db_file=db_file, high_level=True)
         nav_high.update_data(
@@ -132,7 +132,7 @@ class FT_UpdateInterfaceCompParams(FiretaskBase):
                     "comp_parameters.encut": encut_inter,
                     "comp_parameters.k_dens": k_dens_inter,
                     "comp_parameters.is_metal": metal_inter,
-                    "comp_parameters.epsilon": epsilon_inter,
+                    # "comp_parameters.epsilon": epsilon_inter,
                 }
             },
         )
