@@ -13,19 +13,33 @@ def ext_pressure_to_force_array(
     """
     This function takes a salb object and a pressure and returns a force array.
 
+    The force array is a list of floats, where each three consecutive floats
+    represent the force on a site in the slab. The force array can be used to
+    apply an external pressure to the slab in VASP.
+    We have to make sure to do the right unit conversions. The pressure is
+    given in GPa, and the force array is in eV/Angstrom. The force array is
+    calculated as follows:
+    - The area of the slab is calculated.
+    - The force on the top and bottom layers is calculated using the area and
+        the number of sites in the top and bottom layers.
+    - The force array is created, with all x and y components set to zero, and
+        the z component set to the force on the top and bottom layers for the
+        right sites, and zero for the rest.
+        
+
     Parameters:
     -----------
     slab: pymatgen.core.surface.Slab or pymatgen.core.interface.Interface
         The slab or interface object to which the force array will be applied.
     external_pressure: float
-        The pressure to be applied to the structure.
+        The pressure to be applied to the structure. In GPa.
     tol: float
         The tolerance used to determine the top and bottom layers of the slab.
 
     Returns:
     --------
     force_array: list
-        The force array to be applied to the structure.
+        The force array to be applied to the structure. In eV/Angstrom.
     """
 
     try:
@@ -42,7 +56,11 @@ def ext_pressure_to_force_array(
     top_layer = layers[max(layers)]
     bot_layer = layers[min(layers)]
 
-    # get the force on the top and bottom layers:
+    # get the force on the top and bottom layers
+    # We start with GPa and want to end up with eV/Angstrom^3:
+    Nm_to_eV = 6.241509074461e18
+    conversion_factor = Nm_to_eV * 1e9 / 1e30
+    external_pressure *= conversion_factor
     force_top = -external_pressure * area / len(top_layer)
     force_bot = external_pressure * area / len(bot_layer)
 
