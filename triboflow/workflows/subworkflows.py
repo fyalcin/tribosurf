@@ -909,7 +909,7 @@ def converge_swf(
     encut_incr=25,
     k_dens_start=1.0,
     k_dens_incr=0.1,
-    k_dens_default=12.5,
+    k_dens_default=8.0,
     n_converge=3,
     db_file=None,
     file_output=False,
@@ -964,7 +964,7 @@ def converge_swf(
         for each density. Defaults to 0.1.
     k_dens_default : float, optional
         Default (quite high) kpoints density for encut convergence studies if
-        no k_dens parameter is found in the comp_parameters. The default is 12.5
+        no k_dens parameter is found in the comp_parameters. The default is 8.0
     n_converge : int, optional
         Number of calculations that have to be inside the convergence
         threshold for convergence to be reached. Defaults to 3.
