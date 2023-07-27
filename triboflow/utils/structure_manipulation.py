@@ -327,7 +327,7 @@ def slab_from_structure(miller, structure):
         miller_index=miller,
         oriented_unit_cell=structure,
         shift=0,
-        scale_factor=np.eye(3, dtype=np.int),
+        scale_factor=np.eye(3, dtype=int),
         site_properties=structure.site_properties,
     )
 
