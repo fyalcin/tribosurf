@@ -340,9 +340,9 @@ def heterogeneous_wf(inputs):
             miller_1=mat_1.get("miller"),
             miller_2=mat_2.get("miller"),
             functional=functional,
+            external_pressure=pressure,
         ),
         name="Match the interface",
-        external_pressure=pressure,
     )
     WF.append(MakeInterface)
 
@@ -379,6 +379,7 @@ def heterogeneous_wf(inputs):
             miller_1=mat_1.get("miller"),
             miller_2=mat_2.get("miller"),
             functional=functional,
+            external_pressure=pressure,
         ),
         name="Compute PES high-symmetry points",
     )
