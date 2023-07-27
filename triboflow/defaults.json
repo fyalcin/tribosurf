@@ -6,7 +6,7 @@
       "use_spin":true,
       "volume_tolerance":0.001,
       "encut":520,
-      "k_dens":12.5,
+      "k_dens":9.0,
       "surfene_thr":0.01,
       "vacuum":15,
       "is_metal":null,
