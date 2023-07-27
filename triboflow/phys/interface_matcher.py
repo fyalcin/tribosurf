@@ -530,7 +530,7 @@ class InterfaceMatcher:
         """
         top_vec, bot_vec = self._find_lattice_match()
         # Handle the possibility that no match is found
-        if not top_vec and not bot_vec:
+        if not all((top_vec, bot_vec)):
             return None, None
         top_latt = self.__make_3d_lattice_from_2d_lattice(
             self.top_slab, top_vec
