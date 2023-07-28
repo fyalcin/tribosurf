@@ -529,15 +529,18 @@ class InterfaceMatcher:
 
         """
         top_vec, bot_vec = self._find_lattice_match()
-        # Handle the possibility that no match is found
-        if not all((top_vec, bot_vec)):
+        # Try to make 3D lattices out of the 2D lattices, but take care of
+        # the possibility that no match is found and both top_vec and bot_vec
+        # are None.
+        try:
+            top_latt = self.__make_3d_lattice_from_2d_lattice(
+                self.top_slab, top_vec
+            )
+            bot_latt = self.__make_3d_lattice_from_2d_lattice(
+                self.bot_slab, bot_vec
+            )
+        except TypeError:
             return None, None
-        top_latt = self.__make_3d_lattice_from_2d_lattice(
-            self.top_slab, top_vec
-        )
-        bot_latt = self.__make_3d_lattice_from_2d_lattice(
-            self.bot_slab, bot_vec
-        )
 
         self.unstrained_top_lattice = top_latt
         self.unstrained_bot_lattice = bot_latt
