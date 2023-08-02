@@ -1,0 +1,3 @@
+# MANIFEST.in
+
+include triboflow/core/config.json
