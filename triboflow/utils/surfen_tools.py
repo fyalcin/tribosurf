@@ -21,15 +21,15 @@ from pymatgen.core.surface import (
 )
 
 from triboflow.firetasks.fv import FT_fake_vasp
-from triboflow.phys.shaper import Shaper
+from hitmen_utils.shaper import Shaper
 from triboflow.utils.database import Navigator
 from triboflow.utils.structure_manipulation import get_conv_bulk_from_mpid
 from triboflow.utils.utils import dict_to_hash
-from triboflow.utils.vasp_tools import (
+from hitmen_utils.vasp_tools import  (
     get_custom_vasp_relax_settings,
     get_custom_vasp_static_settings,
 )
-from triboflow.workflows.base import dynamic_relax_swf
+from hitmen_utils.workflows import  dynamic_relax_swf
 
 
 def get_by_path(root, items):

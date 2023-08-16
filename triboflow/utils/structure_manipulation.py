@@ -10,7 +10,7 @@ from pymatgen.transformations.standard_transformations import (
     DeformStructureTransformation,
 )
 
-from triboflow.phys.shaper import Shaper
+from hitmen_utils.shaper import Shaper
 from triboflow.utils.database import  Navigator
 from triboflow.utils.mp_connection import MPConnection
 

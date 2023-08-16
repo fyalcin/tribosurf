@@ -34,7 +34,7 @@ from triboflow.fireworks.common import run_pes_calc_fw, make_pes_fw
 from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.mp_connection import MPConnection
 from triboflow.utils.surfen_tools import get_surfen_inputs_from_mpid
-from triboflow.utils.vasp_tools import (
+from hitmen_utils.vasp_tools import  (
     get_emin_and_emax,
     get_custom_vasp_static_settings,
 )

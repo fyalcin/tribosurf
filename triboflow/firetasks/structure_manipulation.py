@@ -24,8 +24,8 @@ from triboflow.utils.structure_manipulation import (
     interface_name,
     transfer_average_magmoms,
 )
-from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
-from triboflow.workflows.base import dynamic_relax_swf
+from hitmen_utils.vasp_tools import  get_custom_vasp_relax_settings
+from hitmen_utils.workflows import  dynamic_relax_swf
 
 
 @explicit_serialize

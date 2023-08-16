@@ -40,7 +40,7 @@ from fireworks import (
     FileWriteTask,
     explicit_serialize,
 )
-from triboflow.workflows.base import dynamic_relax_swf
+from hitmen_utils.workflows import  dynamic_relax_swf
 from triboflow.utils.database import Navigator
 from triboflow.utils.utils import (
     read_runtask_params,
@@ -52,7 +52,7 @@ from triboflow.utils.utils import (
     retrieve_from_db,
     retrieve_from_tag,
 )
-from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
+from hitmen_utils.vasp_tools import  get_custom_vasp_relax_settings
 from triboflow.utils.file_manipulation import copy_output_files
 from triboflow.utils.errors import RelaxStructureError, MoveTagResultsError
 

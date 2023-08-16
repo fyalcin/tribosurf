@@ -10,9 +10,9 @@ from pymatgen.core.structure import Structure
 from fireworks import LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
 
-from triboflow.workflows.base import dynamic_relax_swf
+from hitmen_utils.workflows import  dynamic_relax_swf
 from triboflow.utils.database import StructureNavigator
-from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
+from hitmen_utils.vasp_tools import  get_custom_vasp_relax_settings
 
 db_file = "/home/mwo/FireWorks/config/db.json"
 

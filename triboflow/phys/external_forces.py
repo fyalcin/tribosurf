@@ -4,7 +4,7 @@ from typing import Union
 from pymatgen.core.surface import Slab
 from pymatgen.core.interface import Interface
 
-from triboflow.phys.shaper import Shaper
+from hitmen_utils.shaper import Shaper
 
 
 def ext_pressure_to_force_array(

@@ -10,9 +10,9 @@ from fireworks import LaunchPad
 
 from pymatgen.core.surface import Slab
 from pymatgen.core.structure import Structure
-from triboflow.workflows.base import dynamic_relax_swf
+from hitmen_utils.workflows import  dynamic_relax_swf
 from triboflow.utils.database import StructureNavigator
-from triboflow.utils.vasp_tools import (
+from hitmen_utils.vasp_tools import  (
     get_custom_vasp_static_settings,
     get_custom_vasp_relax_settings,
 )
@@ -36,7 +36,7 @@ for mpid in mpids:
     )
 
 WF = dynamic_relax_swf(
-    inputs_list=input_list, wf_name="test_relax_wf", add_static=True
+    inputs_list=input_list, wf_name="test_relax_wf", add_static=True, prerelax_system=True
 )
 lpad = LaunchPad.auto_load()
 lpad.add_wf(WF)
