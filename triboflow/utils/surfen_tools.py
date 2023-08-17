@@ -21,7 +21,7 @@ from pymatgen.core.surface import (
 )
 
 from triboflow.firetasks.fv import FT_fake_vasp
-from triboflow.phys.shaper import Shaper
+from hitmen_utils.shaper import Shaper
 from triboflow.utils.database import Navigator
 from triboflow.utils.structure_manipulation import get_conv_bulk_from_mpid
 from triboflow.utils.utils import dict_to_hash

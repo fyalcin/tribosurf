@@ -55,7 +55,7 @@ from triboflow.utils.structure_manipulation import (
     recenter_aligned_slabs,
     clean_up_site_properties,
 )
-from triboflow.phys.shaper import Shaper
+from hitmen_utils.shaper import Shaper
 
 
 def get_average_lattice(latt1, latt2, weight1, weight2):

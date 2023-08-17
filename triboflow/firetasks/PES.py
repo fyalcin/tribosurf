@@ -20,7 +20,6 @@ from triboflow.phys.new_high_symm import InterfaceSymmetryAnalyzer
 from triboflow.phys.new_potential_energy_surface import (
     get_PESGenerator_from_db,
 )
-from triboflow.phys.shaper import Shaper
 from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.structure_manipulation import (
     clean_up_site_properties,

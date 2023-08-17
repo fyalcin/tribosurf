@@ -22,7 +22,7 @@ __date__ = "February 22nd, 2021"
 from pymatgen.core.surface import SlabGenerator
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
-from triboflow.phys.shaper import Shaper
+from hitmen_utils.shaper import Shaper
 from triboflow.utils.structure_manipulation import transfer_average_magmoms
 
 

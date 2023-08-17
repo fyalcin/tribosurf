@@ -51,7 +51,7 @@ from triboflow.utils.utils import (
 )
 from triboflow.utils.structure_manipulation import slab_from_structure
 from triboflow.utils.errors import SlabOptThickError
-from triboflow.phys.shaper import Shaper
+from hitmen_utils.shaper import Shaper
 from hitmen_utils.misc_tools import check_input
 
 currentdir = os.path.dirname(__file__)
