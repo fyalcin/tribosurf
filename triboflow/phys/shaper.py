@@ -21,12 +21,12 @@ from pymatgen.transformations.standard_transformations import (
 from scipy.cluster.hierarchy import linkage, fcluster
 from scipy.spatial.distance import squareform
 
-from surfen.utils.misc_tools import (
+from hitmen_utils.misc_tools import (
     attr_to_dict,
     get_subset_indices,
     get_pmg_sg_params,
 )
-from surfen.utils.misc_tools import check_input
+from hitmen_utils.misc_tools import check_input
 
 
 class Shaper:
