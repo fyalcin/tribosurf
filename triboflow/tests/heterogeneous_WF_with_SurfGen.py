@@ -11,26 +11,21 @@ from fireworks import LaunchPad
 from triboflow.workflows.main import heterogeneous_wf
 
 inputs = {
-    "material_1": {
-        "formula": "Al",
-        "mpid": "mp-134"
-    },
-    "material_2": {
-        "formula": "Cu",
-        "mpid": "mp-30"
-    },
+    "material_1": {"formula": "Al", "mpid": "mp-134"},
+    "material_2": {"formula": "Cu", "mpid": "mp-30"},
     "computational_params": {
         "functional": "PBE",
         "volume_tolerance": 0.01,
         "BM_tolerance": 0.01,
         "use_vdw": "dftd2",
-        "use_spin": True
+        "use_spin": True,
     },
     "sg_params": {
         "slab_thick": 8,
         "vac_thick": 30.0,
         "min_thick_A": 10.0,
     },
+    "sg_filter": {"method": "bvs_min_N", "bvs_param": 10},
     "interface_params": {
         "max_area": 100,
         "max_area_ratio_tol": 0.1,

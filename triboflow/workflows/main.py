@@ -282,27 +282,27 @@ def heterogeneous_wf(inputs):
     )
     WF.append(ConvergeKpoints_M2)
 
-    CalcDielectric_M1 = Firework(
-        FT_StartDielectricSWF(
-            mp_id=mp_id_1,
-            functional=functional,
-            update_bulk=True,
-            update_slabs=True,
-        ),
-        name=f'Start dielectric SWF for {mat_1["formula"]}',
-    )
-    #WF.append(CalcDielectric_M1)
+    # CalcDielectric_M1 = Firework(
+    #     FT_StartDielectricSWF(
+    #         mp_id=mp_id_1,
+    #         functional=functional,
+    #         update_bulk=True,
+    #         update_slabs=True,
+    #     ),
+    #     name=f'Start dielectric SWF for {mat_1["formula"]}',
+    # )
+    # WF.append(CalcDielectric_M1)
 
-    CalcDielectric_M2 = Firework(
-        FT_StartDielectricSWF(
-            mp_id=mp_id_2,
-            functional=functional,
-            update_bulk=True,
-            update_slabs=True,
-        ),
-        name=f'Start dielectric SWF for {mat_2["formula"]}',
-    )
-    #WF.append(CalcDielectric_M2)
+    # CalcDielectric_M2 = Firework(
+    #     FT_StartDielectricSWF(
+    #         mp_id=mp_id_2,
+    #         functional=functional,
+    #         update_bulk=True,
+    #         update_slabs=True,
+    #     ),
+    #     name=f'Start dielectric SWF for {mat_2["formula"]}',
+    # )
+    # WF.append(CalcDielectric_M2)
 
     Final_Params = Firework(
         FT_UpdateInterfaceCompParams(
