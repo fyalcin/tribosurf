@@ -208,12 +208,13 @@ def unbundle_input(
 def material_from_mp(material_dict):
     """
     It reads the dictionary containing the input parameters for a material.
-    It needs at least the key: `formula`, providing also an mp_id is helpful.
+    It needs at least the key: `formula`, providing an MPID is also helpful.
     The corresponding structure from the MP database or the local structure list
+    is returned along with the MPID.
 
     Parameters
     ----------
-    inputs : dict
+    material_dict : dict
         Dictionary containing the input parameters for running a tribological
         workflow, e.g. homogeneous and heterogeneous ones.
 
