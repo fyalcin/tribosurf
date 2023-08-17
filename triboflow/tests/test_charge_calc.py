@@ -15,7 +15,7 @@ from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from atomate.vasp.powerups import add_modify_incar
 from atomate.vasp.fireworks.core import StaticFW
 
-from triboflow.utils.vasp_tools import get_custom_vasp_static_settings
+from hitmen_utils.vasp_tools import get_custom_vasp_static_settings
 from triboflow.utils.mp_connection import MPConnection
 from triboflow.phys.interface_matcher import InterfaceMatcher
 from hitmen_utils.shaper import Shaper

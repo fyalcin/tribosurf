@@ -15,7 +15,7 @@ from atomate.vasp.powerups import add_modify_incar
 from atomate.vasp.workflows.base.bulk_modulus import get_wf_bulk_modulus
 
 from triboflow.utils.database import Navigator, StructureNavigator
-from triboflow.utils.vasp_tools import (
+from hitmen_utils.vasp_tools import (
     get_custom_vasp_static_settings,
     get_emin_and_emax,
     MeshFromDensity,

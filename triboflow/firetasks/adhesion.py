@@ -22,7 +22,7 @@ from triboflow.utils.structure_manipulation import (
     slab_from_structure,
 )
 from triboflow.workflows.base import dynamic_relax_swf
-from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
+from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
 
 
 @explicit_serialize

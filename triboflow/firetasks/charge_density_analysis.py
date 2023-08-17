@@ -17,7 +17,7 @@ from atomate.vasp.powerups import add_modify_incar
 from atomate.vasp.fireworks.core import StaticFW
 from atomate.utils.utils import env_chk
 
-from triboflow.utils.vasp_tools import get_custom_vasp_static_settings
+from hitmen_utils.vasp_tools import get_custom_vasp_static_settings
 from triboflow.utils.database import Navigator
 
 

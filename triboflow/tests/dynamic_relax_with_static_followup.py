@@ -12,7 +12,7 @@ from pymatgen.core.surface import Slab
 from pymatgen.core.structure import Structure
 from triboflow.workflows.base import dynamic_relax_swf
 from triboflow.utils.database import StructureNavigator
-from triboflow.utils.vasp_tools import (
+from hitmen_utils.vasp_tools import (
     get_custom_vasp_static_settings,
     get_custom_vasp_relax_settings,
 )

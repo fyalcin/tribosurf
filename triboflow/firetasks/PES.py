@@ -25,7 +25,7 @@ from triboflow.utils.structure_manipulation import (
     clean_up_site_properties,
     get_interface_distance,
 )
-from triboflow.utils.vasp_tools import get_custom_vasp_relax_settings
+from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
 from triboflow.workflows.base import dynamic_relax_swf
 
 

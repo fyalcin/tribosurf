@@ -3,14 +3,13 @@ from uuid import uuid4
 from atomate.utils.utils import env_chk
 from fireworks import explicit_serialize, FiretaskBase, FWAction
 from pymatgen.core import Structure
-from pymatgen.core.surface import Slab
 from pymatgen.core.interface import Interface
+from pymatgen.core.surface import Slab
 
 from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.structure_manipulation import interface_name
 from triboflow.workflows.subworkflows import (
     adhesion_energy_swf,
-    surface_energy_swf,
     calc_pes_swf,
     calc_ppes_swf,
     converge_swf,
@@ -84,9 +83,7 @@ class FT_StartChargeAnalysisSWF(FiretaskBase):
             fltr={"name": name, "pressure": pressure},
         )
 
-        redistribution_was_calculated = interface_dict.get(
-            "charge_density_redist"
-        )
+        redistribution_was_calculated = interface_dict.get("charge_density_redist")
         comp_params = interface_dict.get("comp_parameters", {})
 
         if not redistribution_was_calculated:
@@ -177,12 +174,8 @@ class FT_StartAdhesionSWF(FiretaskBase):
 
         if not adhesion_was_calculated:
             top_slab = Slab.from_dict(interface_dict["top_aligned_relaxed"])
-            bottom_slab = Slab.from_dict(
-                interface_dict["bottom_aligned_relaxed"]
-            )
-            interface = Structure.from_dict(
-                interface_dict["relaxed_structure@min"]
-            )
+            bottom_slab = Slab.from_dict(interface_dict["bottom_aligned_relaxed"])
+            interface = Structure.from_dict(interface_dict["relaxed_structure@min"])
 
             SWF = adhesion_energy_swf(
                 top_slab,
@@ -269,9 +262,7 @@ class FT_StartBulkConvoSWF(FiretaskBase):
             )
 
         nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
-        data = nav_structure.get_bulk_from_db(
-            mp_id=mp_id, functional=functional
-        )
+        data = nav_structure.get_bulk_from_db(mp_id=mp_id, functional=functional)
 
         if conv_type == "encut":
             stop_convergence = data.get("encut_info")
@@ -307,44 +298,6 @@ class FT_StartBulkConvoSWF(FiretaskBase):
             return FWAction(detours=SWF, update_spec=fw_spec)
         else:
             return FWAction(update_spec=fw_spec)
-
-
-@explicit_serialize
-class FT_StartSurfaceEnergySWF(FiretaskBase):
-    _fw_name = (
-        "Starts a subworkflow that calculates surface energies as detour"
-    )
-    required_params = ["mpid", "functional", "sg_params", "sg_filter"]
-    optional_params = [
-        "db_file",
-        "high_level",
-        "comp_params_user",
-        "custom_id",
-    ]
-
-    def run_task(self, fw_spec):
-        mpid = self.get("mpid")
-        functional = self.get("functional")
-        sg_params = self.get("sg_params")
-        sg_filter = self.get("sg_filter")
-
-        db_file = self.get("db_file", "auto")
-        high_level = self.get("high_level", True)
-        comp_params_user = self.get("comp_params_user", {})
-        custom_id = self.get("custom_id", None)
-
-        WF = surface_energy_swf(
-            mpid=mpid,
-            functional=functional,
-            sg_params=sg_params,
-            sg_filter=sg_filter,
-            db_file=db_file,
-            high_level=high_level,
-            comp_params_user=comp_params_user,
-            custom_id=custom_id,
-        )
-
-        return FWAction(detours=WF, update_spec=fw_spec)
 
 
 @explicit_serialize
@@ -395,9 +348,7 @@ class FT_StartDielectricSWF(FiretaskBase):
         hl_db = self.get("high_level_db", True)
 
         nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
-        data = nav_structure.get_bulk_from_db(
-            mp_id=mp_id, functional=functional
-        )
+        data = nav_structure.get_bulk_from_db(mp_id=mp_id, functional=functional)
 
         structure_dict = data.get("structure_equiVol")
         if not structure_dict:
@@ -662,9 +613,7 @@ class FT_StartSlabRelaxSWF(FiretaskBase):
 
         nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
 
-        data = nav_structure.get_bulk_from_db(
-            mp_id=mp_id, functional=functional
-        )
+        data = nav_structure.get_bulk_from_db(mp_id=mp_id, functional=functional)
         bulk_struct = Structure.from_dict(data[bulk_name])
 
         slab_data = nav_structure.get_slab_from_db(

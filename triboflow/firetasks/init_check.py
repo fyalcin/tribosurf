@@ -39,7 +39,6 @@ from fireworks import FWAction, FiretaskBase, explicit_serialize
 from triboflow.utils.mp_connection import MPConnection
 from triboflow.utils.utils import load_defaults
 
-
 currentdir = os.path.dirname(__file__)
 
 
@@ -276,9 +275,7 @@ def read_input_dict(input_dict, read_key):
     if read_key not in list(defaults.keys()):
         raise ValueError(
             "There exist no default values for the selected key\n"
-            "\t{}.\n Please choose from: {}".format(
-                read_key, list(defaults.keys())
-            )
+            "\t{}.\n Please choose from: {}".format(read_key, list(defaults.keys()))
         )
     # Extract the dictionary data
     out_dict = dict_consistency(input_dict, defaults[read_key])
