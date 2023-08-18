@@ -59,7 +59,7 @@ nav.insert_data(
     {"tag": 0, "chem_formula": "NaCl", "Energy": 10, "Energy per atom": 10},
     duplicates=True,
 )
-# Insert the same data twice for testing if does not save duplicates data
+# Insert the same data twice for testing if it does not save duplicates data
 nav.insert_many_data(
     "Collection_test",
     [

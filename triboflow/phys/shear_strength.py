@@ -120,7 +120,7 @@ def get_shear_strength_xy(lattice, rbf, params=None):
     delta = 0.01
     npoints = 300
 
-    if params != None and isinstance(params, dict):
+    if params is not None and isinstance(params, dict):
         for k in params:
             if k == "delta":
                 delta = params[k]
@@ -163,7 +163,7 @@ def take_derivative(rbf, coordx, coordy, m=None, delta=0.01):
 
     """
 
-    if m == None:  # Derive along y
+    if m is None:  # Derive along y
         coordx_1 = coordx
         coordx_2 = coordx
         coordy_1 = coordy - delta

@@ -3,7 +3,7 @@
 """
 Created on Wed Jan 20 11:35:43 2021
 
-This modules contains classes and functions useful to initialize different
+This module contains classes and functions useful to initialize different
 prebuilt and/or custom workflows.
 
 The module contains:
@@ -16,7 +16,7 @@ The module contains:
     
     Author: Gabriele Losi (glosi000)
     Credits: The code is partially based on the original work of Michael 
-    Wolloch, Triboflow package, Wien University
+    Wolloch, Triboflow package, University of Vienna
     Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
 
 """
@@ -79,7 +79,7 @@ class InitWF:
         Returns
         -------
         FW : fireworks.core.firework.Firework
-            Firework that checks all input parameters for an heterogeneous WF.
+            Firework that checks all input parameters for a heterogeneous WF.
 
         """
 
@@ -163,7 +163,7 @@ class InitWF:
         Returns
         -------
         fw : fireworks.core.firework.Firework
-            Firework that checks all input parameters for an heterogeneous WF.
+            Firework that checks all input parameters for a heterogeneous WF.
 
         """
 
@@ -225,7 +225,7 @@ class InitWF:
         Returns
         -------
         fw : fireworks.core.firework.Firework
-            Firework that checks all input parameters for an heterogeneous WF.
+            Firework that checks all input parameters for a heterogeneous WF.
 
         """
 
@@ -269,7 +269,7 @@ class InitWF:
         Returns
         -------
         fw : fireworks.core.firework.Firework
-            Firework that checks all input parameters for an slab convergence WF.
+            Firework that checks all input parameters for a slab convergence WF.
 
         """
 

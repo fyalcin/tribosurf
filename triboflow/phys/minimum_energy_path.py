@@ -277,7 +277,7 @@ def reparametrize_string_with_equal_spacing(string, nr_of_points):
     Parameters
     ----------
     string : np.array
-        String with non equal arc lengths.
+        String with non-equal arc lengths.
     nr_of_points : int
         New number of points for the string
 

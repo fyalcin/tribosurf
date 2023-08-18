@@ -258,7 +258,7 @@ def get_multiple_info_from_dict(input_dict, entry):
     input_dict : dict
         Input dictionary to be read.
 
-    entry : str or list or list of lists
+    entry : str, or list, or list of lists
         Contains the key(s) that should be read in sequence from the dictionary.
         The keys should be "innested" within the dictionary or an error raises.
         If a list of lists is passed the dictionary is read multiple times.
@@ -598,7 +598,7 @@ def retrieve_from_tag(
         Dict key to filter the fields of the dictionary retrieved from the
         database. The default is 'task_label'.
 
-    entry : str or list or list of lists or None, optional
+    entry : str, or list, or list of lists, or None, optional
         Key or list of keys to be used to extract a piece of information or
         multiple values from the `vasp_calc` dictionary. The default is None.
 
@@ -693,7 +693,7 @@ def save_calctags(
 ):
     """
     Store in a csv file the tags of a calculation which was succesfully done by
-    vasp. Useful to retrieve later the tags in order to have a complete access
+    vasp. Useful to retrieve later the tags in order to have complete access
     to the results data stored in the low level datababase.
 
     """
@@ -772,7 +772,7 @@ def is_list_converged(input_list, tol, n=3):
         return all(check_list)
 
 
-def move_result(tag, fltr, coll, loc, custom_dict={}, db_file="auto", high_level=True):
+def move_result(tag, fltr, coll, loc, custom_dict=None, db_file="auto", high_level=True):
     """
     Moves the result of a VASP calculation from the Fireworks database to the destination.
 
@@ -799,6 +799,8 @@ def move_result(tag, fltr, coll, loc, custom_dict={}, db_file="auto", high_level
 
     """
     # function to edit DB entries with the location set with loc
+    if custom_dict is None:
+        custom_dict = {}
     nav = Navigator(db_file)
     calc = nav.find_data("tasks", {"task_label": tag})
     # out is the whole output of the calculation including everything,

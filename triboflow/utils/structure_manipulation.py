@@ -164,7 +164,7 @@ def get_conv_bulk_from_mpid(mpid, coll, db_file="auto", high_level=True):
         if bulk_struct is None:
             raise ValueError(f"Bulk structure not found in the bulk entry for {mpid}")
     bulk_struct = Structure.from_dict(bulk_struct)
-    bulk_conv = SpacegroupAnalyzer(bulk_struct).get_conventional_standard_structure()
+    bulk_conv = SpacegroupAnalyzer(bulk_struct).get_conventional_standard_structure(keep_site_properties=True)
     return bulk_conv
 
 
@@ -348,18 +348,18 @@ def clean_up_site_properties(structure):
         if key == "magmom":
             new_magmom = []
             for m in struct.site_properties[key]:
-                if m == None:
+                if m is None:
                     new_magmom.append(0.0)
                 else:
                     new_magmom.append(m)
             struct.add_site_property("magmom", new_magmom)
         else:
-            if any(struct.site_properties[key]) == None:
+            if any(struct.site_properties[key]) is None:
                 struct.remove_site_property(key)
     return struct
 
 
-def stack_aligned_slabs(bottom_slab, top_slab, top_shift=[0, 0, 0]):
+def stack_aligned_slabs(bottom_slab, top_slab, top_shift=(0, 0, 0)):
     """
     Combine slabs that are centered around 0 into a single structure.
 
@@ -372,7 +372,7 @@ def stack_aligned_slabs(bottom_slab, top_slab, top_shift=[0, 0, 0]):
     top_slab : pymatgen.core.structure.Structure or pymatgen.core.surface.Slab
         Top slab.
     top_shift : list of 3 floats, optional
-        Vector of caresian coordinates with which to shift the top slab.
+        Vector of cartesian coordinates with which to shift the top slab.
         The default is [0,0,0].
 
     Returns
@@ -538,7 +538,7 @@ def make_pymatgen_slab(
 
     """
 
-    bulk_conv = SpacegroupAnalyzer(bulk_struct).get_conventional_standard_structure()
+    bulk_conv = SpacegroupAnalyzer(bulk_struct).get_conventional_standard_structure(keep_site_properties=True)
     bulk_conv = transfer_average_magmoms(bulk_struct, bulk_conv)
 
     SG = SlabGenerator(
@@ -547,7 +547,7 @@ def make_pymatgen_slab(
         center_slab=True,
         primitive=True,
         lll_reduce=True,
-        max_normal_search=max([abs(l) for l in miller]),
+        max_normal_search=max([abs(m) for m in miller]),
         min_slab_size=min_thickness,
         min_vacuum_size=min_vacuum,
     )

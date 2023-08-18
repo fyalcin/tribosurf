@@ -157,7 +157,7 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
     prerelax : bool, optional
         Whether to run a prerelaxation step before the actual relaxation.
         Defaults to True.
-    prerelax_algo : str, optional
+    prerelax_calculator : str, optional
         Network potential to use for the prerelaxation. Defaults to 'm3gnet'.
     prerelax_kwargs : dict, optional
         Keyword arguments to pass to the prerelaxation ASE optimizer.
@@ -179,7 +179,7 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
         "bottom_out_name",
         "high_level_db",
         "prerelax",
-        "prerelax_algo",
+        "prerelax_calculator",
         "prerelax_kwargs",
     ]
 
@@ -199,7 +199,7 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
         bot_out_name = self.get("bottom_out_name", "bottom_aligned_relaxed")
         hl_db = self.get("high_level_db", True)
         prerelax = self.get("prerelax", True)
-        prerelax_algo = self.get("prerelax_algo", "m3gnet")
+        prerelax_calculator = self.get("prerelax_calculator", "m3gnet")
         prerelax_kwargs = self.get("prerelax_kwargs", {})
 
         name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
@@ -240,7 +240,7 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
                 inputs_list=inputs,
                 wf_name="Relaxing the matched slabs",
                 prerelax_system=prerelax,
-                prerelax_algo=prerelax_algo,
+                prerelax_calculator=prerelax_calculator,
                 prerelax_kwargs=prerelax_kwargs,
             )
             return FWAction(detours=WF, update_spec={"relaxation_inputs": inputs})
@@ -329,7 +329,7 @@ class FT_CalcAdhesion(FiretaskBase):
 
         E_abs = (top_energy + bot_energy) - inter_energy
 
-        # Convert adhesion energz from eV/Angstrom^2 to J/m^2
+        # Convert adhesion energy from eV/Angstrom^2 to J/m^2
         E_Jm2 = 16.02176565 * E_abs / area
 
         nav_high = Navigator(db_file=db_file, high_level=hl_db)

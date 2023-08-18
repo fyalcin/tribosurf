@@ -126,7 +126,7 @@
       "add_static": false,
       "prerelax": true,
       "prerelax_algo": "m3gnet",
-      "prerelax_kwargs": {},
+      "prerelax_kwargs": {}
    },
    "MoveTagResults":{
       "db_file":null,

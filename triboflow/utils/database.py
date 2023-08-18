@@ -31,7 +31,7 @@ from atomate.vasp.database import VaspCalcDb
 from triboflow.core.logging import LoggingBase
 from triboflow.utils.errors import (
     NavigatorError,
-    StuctNavigatorError,
+    StructNavigatorError,
     NavigatorMPError,
 )
 
@@ -111,10 +111,10 @@ class Navigator:
        Get all the documents in the collection that match the filter (fltr).
 
     delete_data(collection, fltr)
-        Delate a single document that matches the filter (fltr).
+        Delete a single document that matches the filter (fltr).
 
     delete_many_data(collection, fltr)
-        Delate one or more documents that match the filter (fltr).
+        Delete one or more documents that match the filter (fltr).
 
     drop_data(Drop all the documents in the collection.)
         Drop all the documents in the collection.
@@ -132,7 +132,7 @@ class Navigator:
             variable FW_CONFIG_FILE.
 
         high_level : str or True, or False, optional
-            Decide whether to use an high level database or not, to store the
+            Decide whether to use a high level database or not, to store the
             data of the simulations. The name of that DB can be passed as a
             string to high_level. It is also possible to just pass true, in
             which case the default name is read from the db.json file.
@@ -539,7 +539,7 @@ class Navigator:
         Parameters
         ----------
         task_label : str
-            Task label in the tasks collection.
+            Task label in the 'tasks' collection.
 
         Returns
         -------
@@ -632,10 +632,10 @@ class StructureNavigator(Navigator):
         Get the data about slab from the triboflow high level database.
 
     get_interface_from_db(name, functional)
-        Get the data about intreface from the eos database.
+        Get the data about interface from the eos database.
 
     get_last_bmd_data_from_db(formula)
-        Get the last bulkmodule from the FireWorks database.
+        Get the last bulk modulus data from the FireWorks database.
 
     """
 
@@ -762,7 +762,7 @@ class StructureNavigator(Navigator):
                 log.warning(message)
                 return None
             else:
-                raise StuctNavigatorError(message)
+                raise StructNavigatorError(message)
 
     def get_slab_from_db(self, mp_id, functional, miller, warning=False):
         """
@@ -785,7 +785,7 @@ class StructureNavigator(Navigator):
 
         Raises
         ------
-        StuctNavigatorError
+        StructNavigatorError
             If there is no result from the query.
 
         Returns
@@ -813,7 +813,7 @@ class StructureNavigator(Navigator):
                 log.warning(message)
                 return None
             else:
-                raise StuctNavigatorError(message)
+                raise StructNavigatorError(message)
 
     def get_interface_from_db(self, name, pressure, functional, warning=False):
         """
@@ -837,7 +837,7 @@ class StructureNavigator(Navigator):
 
         Raises
         ------
-        StuctNavigatorError
+        StructNavigatorError
             If there is no result from the query.
 
         Returns
@@ -863,15 +863,15 @@ class StructureNavigator(Navigator):
                 log.warning(message)
                 return None
             else:
-                raise StuctNavigatorError(message)
+                raise StructNavigatorError(message)
 
     def get_last_bmd_data_from_db(self, formula):
         """
-        Get the last bulkmodule from the FireWorks database.
+        Get the last bulk modulus data from the FireWorks database.
 
         A query is made to the eos collection in the Fireworks database for a
         given chemical formula. The results are sorted ascending by creation
-        date and than the last one is returned as a dictionary.
+        date and then the last one is returned as a dictionary.
 
         Parameters
         ----------
@@ -908,7 +908,7 @@ class NavigatorMP:
     __get_low_energy_structure(chem_formula, mp_id, print_info)
         Get the low energy structure from the Materials Project database.
     get_low_energy_structure(chem_formula, mp_id, print_info)
-        Retrive the structure correspoding to the lowest energy.
+        Retrieve the structure corresponding to the lowest energy.
     __save_struct_object(structure, mp_id, path)
         Save the structure object in the specified path.
     __get_struct_object(struct_path):
@@ -930,7 +930,7 @@ class NavigatorMP:
         Parameters
         -----------
         chem_formula : str
-            Chemical formula of the of the structure.
+            Chemical formula of the structure.
             e.g.: NaCl, Fe2O3, SiO, FeCW.
 
         Returns
@@ -976,7 +976,7 @@ class NavigatorMP:
         Returns
         -------
         struct : pymatgen.core.structure.Structure
-            Tuple containing several information about the desired structure.
+            Tuple containing some information about the desired structure.
 
         mp_id : str
             Materials Project ID for the given chemical formula.
@@ -1007,7 +1007,7 @@ class NavigatorMP:
                 properties=["material_id"],
             )
 
-            if id_list == []:
+            if not id_list:
                 raise NavigatorMPError(
                     "{} has not been found in the MaterialsProject"
                     "database".format(chem_formula)
@@ -1020,9 +1020,9 @@ class NavigatorMP:
 
     def get_low_energy_structure(self, chem_formula, mp_id=None, print_info=False):
         """
-        Retrive the structure correspoding to the lowest energy. If the mp_id is
+        Retrieve the structure corresponding to the lowest energy. If the mp_id is
         provided, before request to the Materials Project server it firstly
-        check if the structure has been already saved in the
+        checks if the structure has been already saved in the
         /structures/mp_structures folder
         as a pymatgen.core.structure.Structure object.
 
@@ -1125,7 +1125,7 @@ class NavigatorMP:
         Parameters
         ----------
         struct_path : str
-            Location where to retrive the saved structure.
+            Location where to retrieve the saved structure.
 
         Returns
         -------
@@ -1189,7 +1189,7 @@ class NavigatorMP:
 
 
 # ============================================================================
-# Functions to convert images to bytes and viceversa
+# Functions to convert images to bytes and vice-versa
 # ============================================================================
 
 
@@ -1267,7 +1267,7 @@ def image_bytes_converter(data, to_image=True):
     return data_conv
 
 
-def get_low_and_high_db_names(parameters_dict={}):
+def get_low_and_high_db_names(parameters_dict=None):
     """Return the high_level and low_level database names.
 
     If no parameters_dict is passed, or the information therein does not specify
@@ -1296,6 +1296,8 @@ def get_low_and_high_db_names(parameters_dict={}):
         Name of the high level database.
 
     """
+    if parameters_dict is None:
+        parameters_dict = {}
     if "FW_CONFIG_FILE" in os.environ:
         conf_file = os.environ["FW_CONFIG_FILE"]
         conf_path = conf_file.rstrip("FW_config.yaml")

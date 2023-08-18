@@ -41,8 +41,8 @@ def run_pes_calc_fw(
     tag,
     FW_name,
     prerelax=True,
-    preralax_algo="m3gnet",
-    prerelax_kwargs={},
+    prerelax_calculator="m3gnet",
+    prerelax_kwargs=None,
 ):
     """Compute high-symmetry points for an interface and start PES calculations.
 
@@ -72,7 +72,7 @@ def run_pes_calc_fw(
     prerelax : bool, optional
         Whether to perform a prerelaxation using a network potential before starting
         a DFT relaxation. Defaults to True.
-    prerelax_algo : str, optional
+    prerelax_calculator : str, optional
         Which network potential to use for the prerelaxation. Defaults to 'm3gnet'.
     prerelax_kwargs : dict, optional
         Keyword arguments to be passed to the ASE calculator for the prerelaxation.
@@ -83,6 +83,8 @@ def run_pes_calc_fw(
         First Firework of a PES subworkflow.
 
     """
+    if prerelax_kwargs is None:
+        prerelax_kwargs = {}
     FT_1 = FT_FindHighSymmPoints(
         interface=interface,
         interface_name=interface_name,
@@ -97,7 +99,7 @@ def run_pes_calc_fw(
         tag=tag,
         external_pressure=external_pressure,
         prerelax=prerelax,
-        preralax_algo=preralax_algo,
+        prerelax_calculator=prerelax_calculator,
         prerelax_kwargs=prerelax_kwargs,
     )
 
@@ -121,10 +123,10 @@ def make_pes_fw(
 ):
     """Retrieve PES calculations from the database and compute the PES.
 
-    Retrive the computed energies of the unique high-symmetry points and match
+    Retrieve the computed energies of the unique high-symmetry points and match
     them to the replicate points. Duplicates the points, interpolates with
     radial basis functions and saves the results. Plots the results as well.
-    Optionally write file output and copy it to a output directory.
+    Optionally write file output and copy it to an output directory.
 
 
     Parameters
@@ -153,7 +155,7 @@ def make_pes_fw(
         Fully qualified domain name of the server the output should be copied
         to. The default is None.
     user : str, optional
-        The user name on the remote server.
+        The username on the remote server.
     port : int, optional
         On some machines ssh-key certification is only supported for certain
         ports. A port may be selected here. The default is None.

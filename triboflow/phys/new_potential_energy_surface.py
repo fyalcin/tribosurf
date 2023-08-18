@@ -620,7 +620,7 @@ class PESGenerator:
 
     def __get_rbf(self):
         """
-        Create a RBF function from the replicated input data.
+        Create an RBF function from the replicated input data.
         """
         self.__make_energies_list()
         self.__extend_energies_list()

@@ -111,7 +111,7 @@ def plot_slab_hs(hs, slab, to_fig=None, hs_type="all", leg_size=10, in_frac=Fals
                 data[0],
                 data[1],
                 marker="o",
-                markersize=12 * (ratio),
+                markersize=12 * ratio,
                 mew=0.5,
                 linestyle="",
                 zorder=10000,
@@ -124,7 +124,7 @@ def plot_slab_hs(hs, slab, to_fig=None, hs_type="all", leg_size=10, in_frac=Fals
                     data[:, 0],
                     data[:, 1],
                     marker="o",
-                    markersize=18 * (ratio),
+                    markersize=18 * ratio,
                     mew=0.5,
                     linestyle="",
                     zorder=10000,
@@ -161,7 +161,7 @@ def plot_slab_hs(hs, slab, to_fig=None, hs_type="all", leg_size=10, in_frac=Fals
         labelleft=False,
     )  # labels along the bottom edge are off
 
-    if to_fig != None:
+    if to_fig is not None:
         plt.savefig(to_fig + ".png", dpi=300, bbox_inches="tight")
 
     plt.show()
@@ -238,7 +238,7 @@ def plot_pes(data, lattice, to_fig=None, vmin=None, vmax=None, plot_hs=None):
         zt1.set_edgecolor("face")
         zt1.set_linewidth(0.000000000001)
 
-    if to_fig != None:
+    if to_fig is not None:
         plt.title("PES for " + str(to_fig), fontsize=15, family="serif")
         plt.savefig("PES_" + str(to_fig) + ".png", dpi=300)
 

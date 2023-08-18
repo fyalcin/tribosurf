@@ -6,7 +6,7 @@ Created on Mon Feb 22 10:22:14 2021
 Collection of very general Firetasks that can be used as constituting elements
 for any advanced Workflow.
 
-The modules contains the following Firetasks:
+The module contains the following Firetasks:
 
     - FT_RelaxStructure
     General Firetask to relax a given structure, either bulk, slab or interface.
@@ -99,7 +99,7 @@ class FT_RelaxStructure(FiretaskBase):
         to an entry, with key 'task_label', in the first layer of the db field
         containing the output of the VASP simulations. The results are stored in
         the Atomate database. Tag can be used to keep track of where the DFT
-        calculation results have been stored in the database. In principle it
+        calculation results have been stored in the database. In principle, it
         can be any python object.
 
     db_file : str or None, optional
@@ -129,7 +129,7 @@ class FT_RelaxStructure(FiretaskBase):
         identified by db_file, database, collection, entry. Once the data
         corresponding to entry is extracted, if data['check_key'] does
         exist then the DFT simulation is not done. If it is None, the simulation
-        will be always started. The default is None.
+        will always be started. The default is None.
 
     add_static : bool, optional
        Selects if a static calculation is done after the relaxation. This
@@ -148,7 +148,7 @@ class FT_RelaxStructure(FiretaskBase):
         "check_key",
         "add_static",
         "prerelax",
-        "prerelax_algo",
+        "prerelax_calculator",
         "prerelax_kwargs",
     ]
 
@@ -272,7 +272,7 @@ class FT_RelaxStructure(FiretaskBase):
             wf_name=wf_name,
             add_static=add_static,
             prerelax_system=p["prerelax"],
-            prerelax_algo=p["prerelax_algo"],
+            prerelax_calculator=p["prerelax_calculator"],
             prerelax_kwargs=p["prerelax_kwargs"],
         )
 
@@ -365,7 +365,7 @@ class FT_MoveTagResults(FiretaskBase):
 
     1. Check b-field to see if a key named 'check_key' is present. It is not, so
        the process will continue.
-    2. Identify univocally the a-field to be the correct source containing the 7
+    2. Identify unequivocally the a-field to be the correct source containing the 7
        data of interest. This is done matching tag_key and key with the entry
        of the field dictionary: 'transfer_test'.
     3. Extract both energy and energy2 values from the a-field.
@@ -501,7 +501,7 @@ class FT_MoveTagResults(FiretaskBase):
         info_dict = write_multiple_dict(info, p["entry_to"])
 
         if not isinstance(info_dict, list):
-            info_dict = [(info_dict)]
+            info_dict = [info_dict]
 
         # Prepare the database and options where to store data
         nav = Navigator(db_file=p["db_file"], high_level=p["database_to"])
@@ -535,7 +535,7 @@ class FT_MoveTagResults(FiretaskBase):
             pprint(structure.as_dict())
             print("")
 
-            # Define POSCAR and dictionary ouput names
+            # Define POSCAR and dictionary output names
             prefix = p["mp_id"] + p["struct_kind"]
             if p["miller"] is not None:
                 prefix = prefix + p["miller"]

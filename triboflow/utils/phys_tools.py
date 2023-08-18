@@ -137,7 +137,7 @@ def generate_uniform_grid(cell, density=1, pts_a=None, to_plot=False):
 
     Parameters
     ----------
-    lattice : numpy.ndarray
+    cell : numpy.ndarray
         Vectors of the lattice cell. A uniform grid of points is generated on
         the surface spanned by the first and second vector, i.e. a X b.
         lattice shape is (2, 3) or (3, 3); lattice is in Angstrom units.
@@ -176,7 +176,7 @@ def generate_uniform_grid(cell, density=1, pts_a=None, to_plot=False):
     ratio = b_mod / a_mod
 
     # Calculate the number of points for each lattice vector
-    if pts_a == None:
+    if pts_a is None:
         N_tot = round(density * a_mod * b_mod)
         n_a = int(round(np.sqrt(N_tot / ratio)))
         n_b = int(round(ratio * n_a))
@@ -250,7 +250,7 @@ def orthorombize(data, cell, return_3x3=True):
 
     orthorombic = []
     for i, row in enumerate(data):
-        if index[i] == True:
+        if index[i]:
             orthorombic.append(list(row))
 
     # orthorombic = np.column_stack(orthorombic)

@@ -21,7 +21,7 @@ from triboflow.firetasks.adhesion import (
 from triboflow.firetasks.start_swfs import (
     FT_StartAdhesionSWF,
     FT_StartBulkConvoSWF,
-    FT_StartDielectricSWF,
+    # FT_StartDielectricSWF,
     FT_StartPESCalcSWF,
     FT_StartChargeAnalysisSWF,
 )
@@ -69,15 +69,15 @@ def homogeneous_wf(inputs):
     )
     WF.append(ConvergeKpoints)
 
-    CalcDielectric = Firework(
-        FT_StartDielectricSWF(
-            mp_id=mp_id,
-            functional=functional,
-            update_bulk=True,
-            update_slabs=True,
-        ),
-        name=f'Start dielectric SWF for {mat["formula"]}',
-    )
+    # CalcDielectric = Firework(
+    #     FT_StartDielectricSWF(
+    #         mp_id=mp_id,
+    #         functional=functional,
+    #         update_bulk=True,
+    #         update_slabs=True,
+    #     ),
+    #     name=f'Start dielectric SWF for {mat["formula"]}',
+    # )
     # WF.append(CalcDielectric)
 
     Final_Params = Firework(

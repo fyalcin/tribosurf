@@ -31,7 +31,7 @@ class FT_UpdateBMLists(FiretaskBase):
     Used with FT_Convo to converge energy cutoffs or kpoints using the
     get_wf_bulk_modulus workflow of atomate. This Firetasks reads the
     neccessary information from the eos collection of the database. Since no
-    usefull tag is placed, the identification of the correct entry is done
+    useful tag is placed, the identification of the correct entry is done
     by the chemical formula and the timestamp. The shared data entry for the
     convergence is then identified via a tag and updated with the new
     equilibrium volume and the bulk modulus.
@@ -41,7 +41,7 @@ class FT_UpdateBMLists(FiretaskBase):
     formula : str
         Chemical formula on the material to be matched with the database.
     tag : str
-        String from a uuid4 to identify the shared data entry in the database.
+        String from an uuid4 to identify the shared data entry in the database.
     db_file : str, optional
         Full path to the db.json file detailing access to the database.
         Defaults to '>>db_file<<' to use with env_chk.
@@ -92,13 +92,13 @@ class FT_Convo(FiretaskBase):
     comp_parameters : dict
         Dictionary of computational parameters for the VASP calculations.
     tag : str
-        String from a uuid4 to identify the shared data entry in the database
+        String from an uuid4 to identify the shared data entry in the database
         and group the deformations calculations together.
     deformations: list of lists, optional
         List of deformation matrices for the fit to the EOS. Defaults to None,
         which results in 5 volumes from 90% to 110% of the initial volume.
     n_converge : int, optional
-        Number of iterations that have to be below the convergence treshold
+        Number of iterations that have to be below the convergence threshold
         for the system to be considered converged. Defaults to 3
     encut_start : float, optional
         Starting encut value for the first run in eV. Defaults to the largest
@@ -131,7 +131,7 @@ class FT_Convo(FiretaskBase):
         Fully qualified domain name of the server the output should be copied
         to. The default is None.
     user : str, optional
-        The user name on the remote server. The default is None.
+        The username on the remote server. The default is None.
     port : int, optional
         On some machines ssh-key certification is only supported for certain
         ports. A port may be selected here. The default is None.

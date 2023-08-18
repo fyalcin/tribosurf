@@ -14,7 +14,7 @@ materials = {
     "Cu": {"mpid": "mp-30"},
     "Fe": {"mpid": "mp-13"},
 }
-#'C': {'mpid': 'mp-66',
+# 'C': {'mpid': 'mp-66',
 #     'thick_min': 4,
 #     'thick_inc': 2}}
 
@@ -44,11 +44,11 @@ interface_params = {
 
 
 def create_triboflow_inputs(
-    materials,
-    miller_indices,
-    default_thickness_params,
-    computational_params,
-    interface_params,
+        materials,
+        miller_indices,
+        default_thickness_params,
+        computational_params,
+        interface_params,
 ):
     slabs = []
     for k, v in materials.items():

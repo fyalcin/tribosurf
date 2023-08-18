@@ -54,7 +54,7 @@ log_format = "%(process)d - %(asctime)s - %(levelname)s - %(message)s"
 class LoggingBase:
     """
     Base class which implements all the logging operations.
-    The logging messages are coloured based as follow:
+    The logging messages are coloured based as follows:
         DEBUG: green
         INFO: white on black screen and viceversa
         WARNING: yellow (default level of logging library)

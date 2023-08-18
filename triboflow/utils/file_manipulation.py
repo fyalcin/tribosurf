@@ -66,7 +66,7 @@ def copy_output_files(
         Fully qualified domain name of the server the output should be copied
         to. The default is None.
     user : str, optional
-        The user name on the remote server.
+        The username on the remote server.
     port : int, optional
         On some machines ssh-key certification is only supported for certain
         ports. A port may be selected here. The default is None.

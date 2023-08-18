@@ -18,7 +18,7 @@ from triboflow.utils.utils import move_result
 @explicit_serialize
 class FT_CopyHomogeneousSlabs(FiretaskBase):
     """
-    Firetask to copy aligned slabs from unrelaxed to realxed.
+    Firetask to copy aligned slabs from unrelaxed to relaxed.
 
     Since for homogeneous interfaces there cannot be any strain on the already
     relaxed slabs (from convergence), they do not have to be relaxed again.
@@ -103,7 +103,7 @@ class FT_UpdateCompParams(FiretaskBase):
         The default is True.
     update_slabs : bool, optional
         If the slab entries matching a given mpid should be updated (all miller
-        indices. The default is False.
+        indices). The default is False.
     high_level_db : str or bool, optional
         If a string is given, the high-level database will be chosen based on
         that string. If True, the db.json file will be used to determine the
@@ -224,7 +224,7 @@ class FT_PrintFromBulkDB(FiretaskBase):
 class FT_PassSpec(FiretaskBase):
     """Update only certain keys in the first level of the spec.
 
-    If the key_list contatins only '_all', update the whole spec!
+    If the key_list contains only '_all', update the whole spec!
     """
 
     _fw_name = "Pass Spec"

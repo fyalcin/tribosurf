@@ -21,7 +21,7 @@ from triboflow.workflows.subworkflows import (
 
 @explicit_serialize
 class FT_StartChargeAnalysisSWF(FiretaskBase):
-    """Start an charge redistribution analysis subworkflow.
+    """Start a charge redistribution analysis subworkflow.
 
     Take an interface from the high_level_db and compute
     the charge density redistribution through a subworkflow.
@@ -325,7 +325,7 @@ class FT_StartDielectricSWF(FiretaskBase):
         The default is True.
     update_slabs : bool, optional
         If the slab entries matching a given mpid should be updated (all miller
-        indices. The default is False.
+        indices). The default is False.
     """
 
     _fw_name = "Start Encut or Kdensity Convergence"
@@ -405,7 +405,7 @@ class FT_StartPESCalcSWF(FiretaskBase):
     prerelax : bool, optional
         Whether to perform a prerelaxation using a network potential before starting
         a DFT relaxation. Defaults to True.
-    prerelax_algo : str, optional
+    prerelax_calculator : str, optional
         Which network potential to use for the prerelaxation. Defaults to 'm3gnet'.
     prerelax_kwargs : dict, optional
         Keyword arguments to be passed to the ASE calculator for the prerelaxation.
@@ -427,7 +427,7 @@ class FT_StartPESCalcSWF(FiretaskBase):
         "db_file",
         "high_level_db",
         "prerelax",
-        "prerelax_algo",
+        "prerelax_calculator",
         "prerelax_kwargs",
     ]
 
@@ -443,7 +443,7 @@ class FT_StartPESCalcSWF(FiretaskBase):
             db_file = env_chk(">>db_file<<", fw_spec)
         hl_db = self.get("high_level_db", True)
         prerelax = self.get("prerelax", True)
-        prerelax_algo = self.get("prerelax_algo", "m3gnet")
+        prerelax_calculator = self.get("prerelax_calculator", "m3gnet")
         prerelax_kwargs = self.get("prerelax_kwargs", {})
 
         name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
@@ -465,7 +465,7 @@ class FT_StartPESCalcSWF(FiretaskBase):
                 comp_parameters=comp_params,
                 output_dir=None,
                 prerelax=prerelax,
-                prerelax_algo=prerelax_algo,
+                prerelax_calculator=prerelax_calculator,
                 prerelax_kwargs=prerelax_kwargs,
             )
 

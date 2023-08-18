@@ -64,7 +64,7 @@ def make_charge_differences(interface, chgcar_int, chgcar_bot, chgcar_top):
         [
             profile[i]
             for i in np.arange(chgcar_diff.dim[2])
-            if z[i] >= zmin and z[i] <= zmax
+            if zmin <= z[i] <= zmax
         ]
     )
 
@@ -73,7 +73,7 @@ def make_charge_differences(interface, chgcar_int, chgcar_bot, chgcar_top):
         [
             abs_profile[i]
             for i in np.arange(abs_chgcar_diff.dim[2])
-            if z[i] >= zmin and z[i] <= zmax
+            if zmin <= z[i] <= zmax
         ]
     )
 

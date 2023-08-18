@@ -9,7 +9,7 @@ The module contains:
 
 ** Firetasks **:
     - FT_PutMaterialInDB
-    Put a bulk and the required slab from MP into the high level DB..
+    Put a bulk and the required slab from MP into the high level DB.
     
     - FT_PutInterfaceInDB
     Put the information to make an interface between two materials into the 

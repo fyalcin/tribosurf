@@ -18,7 +18,7 @@ Fe_struct = MPRester().get_structure_by_material_id("mp-13")
 
 
 def make_magnetic_standard_structure(struct):
-    conv_struct = sga(struct).get_conventional_standard_structure()
+    conv_struct = sga(struct).get_conventional_standard_structure(keep_site_properties=True)
     my_lattice = struct.lattice
     conv_lattice = conv_struct.lattice
 

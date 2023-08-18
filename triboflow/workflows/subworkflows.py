@@ -11,6 +11,10 @@ from atomate.vasp.fireworks import StaticFW
 from atomate.vasp.powerups import add_modify_incar
 from fireworks import Workflow, Firework
 
+from hitmen_utils.vasp_tools import (
+    get_emin_and_emax,
+    get_custom_vasp_static_settings,
+)
 from triboflow.firetasks.PPES import FT_DoPPESCalcs, FT_FitPPES
 from triboflow.firetasks.adhesion import FT_CalcAdhesion
 from triboflow.firetasks.charge_density_analysis import (
@@ -27,18 +31,14 @@ from triboflow.firetasks.utils import FT_UpdateCompParams
 from triboflow.fireworks.common import run_pes_calc_fw, make_pes_fw
 from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.mp_connection import MPConnection
-from hitmen_utils.vasp_tools import (
-    get_emin_and_emax,
-    get_custom_vasp_static_settings,
-)
 
 
 def dielectric_constant_swf(
     structure,
     mpid,
     flag,
-    comp_parameters={},
-    spec={},
+    comp_parameters=None,
+    spec=None,
     functional="PBE",
     db_file="auto",
     hl_db=True,
@@ -51,12 +51,12 @@ def dielectric_constant_swf(
     Parameters
     ----------
     structure : pymatgen.core.structure.Structure
-        The structure for which the dielectric porperties are calculated.
+        The structure for which the dielectric properties are calculated.
     mpid : str
         Material Project's material identifier ID of the structure passed.
     flag : str
         Will be used to name the FW of the vasp calc and later to find it in the
-        tasks collection.
+        'tasks' collection.
     comp_parameters : dict, optional
         Dictionary of computational parameters. Used to set up the vasp input
         set. The default is {}.
@@ -77,7 +77,7 @@ def dielectric_constant_swf(
         The default is True.
     update_slabs : bool, optional
         If the slab entries matching a given mpid should be updated (all miller
-        indices. The default is False.
+        indices). The default is False.
 
     Returns
     -------
@@ -87,6 +87,10 @@ def dielectric_constant_swf(
     """
 
     # check if epsilon is already calculated for that material.
+    if spec is None:
+        spec = {}
+    if comp_parameters is None:
+        comp_parameters = {}
     try:
         nav_high = StructureNavigator(db_file=db_file, high_level=hl_db)
         bulk_data = nav_high.get_bulk_from_db(mpid, functional)
@@ -126,7 +130,9 @@ def dielectric_constant_swf(
         )
 
         WF = Workflow(
-            [Calc_Eps_FW, Update_FW], {Calc_Eps_FW: [Update_FW]}, name=wf_name
+            [Calc_Eps_FW, Update_FW],
+            {Calc_Eps_FW.fw_id: [Update_FW.fw_id]},
+            name=wf_name,
         )
     else:
         spec.update({"epsilon": epsilon})
@@ -153,7 +159,7 @@ def charge_analysis_swf(
     external_pressure=0,
     db_file=None,
     high_level_db="auto",
-    comp_parameters={},
+    comp_parameters=None,
 ):
     """Subworkflow to compute the charge redistribution of an interface.
 
@@ -190,10 +196,12 @@ def charge_analysis_swf(
     Returns
     -------
     SWF : fireworks.core.firework.Workflow
-        A subworkflow to compute the charge density differnece of a certain
+        A subworkflow to compute the charge density difference of a certain
         interface.
 
     """
+    if comp_parameters is None:
+        comp_parameters = {}
     top_slab = interface.film
     bot_slab = interface.substrate
     try:
@@ -290,9 +298,9 @@ def charge_analysis_swf(
     SWF = Workflow(
         fireworks=[FW_top, FW_bot, FW_interface, FW_charge_analysis],
         links_dict={
-            FW_top: [FW_charge_analysis],
-            FW_bot: [FW_charge_analysis],
-            FW_interface: [FW_charge_analysis],
+            FW_top.fw_id: [FW_charge_analysis.fw_id],
+            FW_bot.fw_id: [FW_charge_analysis.fw_id],
+            FW_interface.fw_id: [FW_charge_analysis.fw_id],
         },
         name="Calculate adhesion SWF for {}".format(interface_name),
     )
@@ -307,18 +315,18 @@ def adhesion_energy_swf(
     external_pressure=0,
     interface_name=None,
     functional="PBE",
-    comp_parameters={},
+    comp_parameters=None,
 ):
     """Create a subworkflow to compute the adhesion energy for an interface.
 
     This workflow takes two matched slabs (their cells must be identical) and
-    a relaxed interface structure of those slabs and computes the andhesion
+    a relaxed interface structure of those slabs and computes the adhesion
     energy. The two matched slabs must be relaxed as well to get correct
     results.
-    Output are saved in a high-level database, but may also be also written
+    Output are saved in a high-level database, but may also be written
     as files and copied to a chosen location. Note that this copy operation
     is generally dependent on which machine the calculations are executed,
-    and not on the machine where the workflow is submitted. Also ssh-keys need
+    and not on the machine where the workflow is submitted. Also, ssh-keys need
     to be set up for remote_copy to work!
 
     Parameters
@@ -335,9 +343,6 @@ def adhesion_energy_swf(
         Unique name to find the interface in the database with.
         The default is None, which will lead to an automatic interface_name
         generation which will be printed on screen.
-    bottom_mpid : str, optional
-        ID of the bulk material of the top slab in the MP database.
-        The default is None.
     functional : str, optional
         Which functional to use; has to be 'PBE' or 'SCAN'. The default is 'PBE'
     comp_parameters : dict, optional
@@ -350,6 +355,8 @@ def adhesion_energy_swf(
         A subworkflow intended to compute the adhesion of a certain interface.
 
     """
+    if comp_parameters is None:
+        comp_parameters = {}
     try:
         top_miller = list(top_slab.miller_index)
     except:
@@ -439,9 +446,9 @@ def adhesion_energy_swf(
     SWF = Workflow(
         fireworks=[FW_top, FW_bot, FW_interface, FW_results],
         links_dict={
-            FW_top: [FW_results],
-            FW_bot: [FW_results],
-            FW_interface: [FW_results],
+            FW_top.fw_id: [FW_results.fw_id],
+            FW_bot.fw_id: [FW_results.fw_id],
+            FW_interface.fw_id: [FW_results.fw_id],
         },
         name="Calculate adhesion SWF for {}".format(interface_name),
     )
@@ -454,7 +461,7 @@ def calc_pes_swf(
     interface_name=None,
     functional="PBE",
     pressure=0,
-    comp_parameters={},
+    comp_parameters=None,
     file_output=False,
     output_dir=None,
     remote_copy=False,
@@ -462,23 +469,23 @@ def calc_pes_swf(
     user=None,
     port=None,
     prerelax=True,
-    prerelax_algo="m3gnet",
-    prerelax_kwargs={},
+    prerelax_calculator="m3gnet",
+    prerelax_kwargs=None,
 ):
     """Create a subworkflow to compute the PES for an interface of two slabs.
 
     This workflow takes two matched slabs (their cells must be identical) as
     input and computes the potential energy surface (PES) for the interface.
-    Output are saved in a high-level database, but may also be also written
+    Output are saved in a high-level database, but may also be written
     as files and copied to a chosen location. Note that this copy operation
     is generally dependent on which machine the calculations are executed,
-    and not on the machine where the workflow is submitted. Also ssh-keys need
+    and not on the machine where the workflow is submitted. Also, ssh-keys need
     to be set up for remote_copy to work!
 
     Parameters
     ----------
     interface : pymatgen.core.interface.Interface
-        Interface, Slab or Structrue object containing the unrelaxed interface.
+        Interface, Slab or Structure object containing the unrelaxed interface.
     interface_name : str, optional
         Unique name to find the interface in the database with.
         The default is None, which will lead to an automatic interface_name
@@ -505,14 +512,14 @@ def calc_pes_swf(
         Fully qualified domain name of the server the output should be copied
         to. The default is None.
     user : str, optional
-        The user name on the remote server.
+        The username on the remote server.
     port : int, optional
         On some machines ssh-key certification is only supported for certain
         ports. A port may be selected here. The default is None.
     prerelax : bool, optional
         Whether to perform a prerelaxation using a network potential before starting
         a DFT relaxation. Defaults to True.
-    prerelax_algo : str, optional
+    prerelax_calculator : str, optional
         Which network potential to use for the prerelaxation. Defaults to 'm3gnet'.
     prerelax_kwargs : dict, optional
         Keyword arguments to be passed to the ASE calculator for the prerelaxation.
@@ -523,6 +530,10 @@ def calc_pes_swf(
         A subworkflow intended to compute the PES of a certain interface.
 
     """
+    if comp_parameters is None:
+        comp_parameters = {}
+    if prerelax_kwargs is None:
+        prerelax_kwargs = {}
     try:
         top_miller = interface.interface_properties["film_miller"]
         bot_miller = interface.interface_properties["substrate_miller"]
@@ -545,7 +556,7 @@ def calc_pes_swf(
             )
     except:
         if not interface_name:
-            mt = mb = "unkown_miller"
+            mt = mb = "unknown_miller"
             interface_name = (
                 interface.film.composition.reduced_formula
                 + "_"
@@ -607,8 +618,8 @@ def calc_pes_swf(
         tag=tag,
         FW_name="Start PES calcs for " + interface_name,
         prerelax=prerelax,
-        preralax_algo=prerelax_algo,
-        preralax_kwargs=prerelax_kwargs,
+        prerelax_calculator=prerelax_calculator,
+        prerelax_kwargs=prerelax_kwargs,
     )
 
     FW_2 = make_pes_fw(
@@ -627,7 +638,7 @@ def calc_pes_swf(
 
     SWF = Workflow(
         [FW_1, FW_2],
-        {FW_1: [FW_2]},
+        {FW_1.fw_id: [FW_2.fw_id]},
         name="Calc PES for " + interface_name + " SWF",
     )
     return SWF
@@ -636,10 +647,10 @@ def calc_pes_swf(
 def calc_ppes_swf(
     interface_name,
     functional,
-    distance_list=[-0.5, -0.25, 0.0, 0.25, 0.5, 2.5, 3.0, 4.0, 5.0, 7.5],
+    distance_list=(-0.5, -0.25, 0.0, 0.25, 0.5, 2.5, 3.0, 4.0, 5.0, 7.5),
     out_name="PPES@minimum",
     structure_name="minimum_relaxed",
-    spec={},
+    spec=None,
 ):
     """
     Generate a subworkflow that calculates a PPES using static calculations.
@@ -647,8 +658,8 @@ def calc_ppes_swf(
     For a given interface in the high-level database this subworkflow performs
     static calculations for different distances of the two slabs modeling
     brittle cleavage under mode 1 loading using the rigid separation model.
-    The results are saved in a energy vs distance array and saved i the high-
-    level database alongside a fit to a UBER curve.
+    The results are saved in an energy vs distance array and saved in the high-level
+    database alongside a fit to a UBER curve.
 
     Parameters
     ----------
@@ -676,6 +687,8 @@ def calc_ppes_swf(
         Subworkflow to calculate the PPES for a certain interface.
 
     """
+    if spec is None:
+        spec = {}
     tag = interface_name + "_" + str(uuid4())
 
     FW_1 = Firework(
@@ -704,7 +717,7 @@ def calc_ppes_swf(
 
     SWF = Workflow(
         [FW_1, FW_2],
-        {FW_1: [FW_2]},
+        {FW_1.fw_id: [FW_2.fw_id]},
         name="Calc PPES for " + interface_name + " SWF",
     )
     return SWF
@@ -714,14 +727,14 @@ def make_and_relax_slab_swf(
     bulk_structure,
     miller_index,
     flag,
-    comp_parameters={},
+    comp_parameters=None,
     functional="PBE",
     min_thickness=10.0,
     min_vacuum=15.0,
     relax_type="slab_pos_relax",
     slab_struct_name="unrelaxed_slab",
     out_struct_name="relaxed_slab",
-    spec={},
+    spec=None,
     file_output=False,
     output_dir=None,
     remote_copy=False,
@@ -742,7 +755,7 @@ def make_and_relax_slab_swf(
     flag : str
         An identifier to find the results in the database. It is strongly
         suggested to use the proper Materials-ID from the MaterialsProject
-        if it is known for the specific input structure. Otherwise use something
+        if it is known for the specific input structure. Otherwise, use something
         unique which you can find again.
     comp_parameters : dict, optional
         Computational parameters to be passed to the vasp input file generation.
@@ -777,7 +790,7 @@ def make_and_relax_slab_swf(
         Fully qualified domain name of the server the output should be copied
         to. The default is None.
     user : str, optional
-        The user name on the remote server.
+        The username on the remote server.
     port : int, optional
         On some machines ssh-key certification is only supported for certain
         ports. A port may be selected here. The default is None.
@@ -788,6 +801,10 @@ def make_and_relax_slab_swf(
         A subworkflow intended to make and relax a slab from a bulk structure.
 
     """
+    if spec is None:
+        spec = {}
+    if comp_parameters is None:
+        comp_parameters = {}
     if type(miller_index) == str:
         miller_str = miller_index
         miller = [int(k) for k in list(miller_index)]
@@ -891,7 +908,7 @@ def make_and_relax_slab_swf(
 
     SWF = Workflow(
         [FW, FW2],
-        {FW: [FW2]},
+        {FW.fw_id: [FW2.fw_id]},
         name="Make and relax " + formula + miller_str + " SWF",
     )
     return SWF
@@ -901,8 +918,8 @@ def converge_swf(
     structure,
     conv_type,
     flag,
-    comp_parameters={},
-    spec={},
+    comp_parameters=None,
+    spec=None,
     functional="PBE",
     deformations=None,
     encut_start=None,
@@ -920,7 +937,7 @@ def converge_swf(
     port=None,
     print_help=True,
 ):
-    """Subworkflows that converges Encut or kpoints denstiy using fits to an EOS.
+    """Subworkflows that converges Encut or kpoints density using fits to an EOS.
 
     Takes a given structure, computational parameters, and an optional list
     of deformations and uses these deformations to compute a series of
@@ -1000,6 +1017,10 @@ def converge_swf(
         structure.
 
     """
+    if spec is None:
+        spec = {}
+    if comp_parameters is None:
+        comp_parameters = {}
     if conv_type not in ["kpoints", "encut"]:
         raise ValueError(
             '"type" input must be either "kpoints" or'
@@ -1018,7 +1039,11 @@ def converge_swf(
             encut_start = int(25 * np.ceil(enmax / 25))
     elif conv_type == "kpoints":
         name = "Kpoint Convergence SWF of " + structure.composition.reduced_formula
-
+    else:
+        raise ValueError(
+            f'"type" input must be either "kpoints" or'
+            '"encut".\nYou have passed {conv_type}.'
+        )
     tag = "BM group: {}".format(str(uuid4()))
 
     if flag.startswith("mp-") and flag[3:].isdigit():

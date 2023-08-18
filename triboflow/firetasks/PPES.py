@@ -205,7 +205,7 @@ def UBER(x, G, l):
     G : float
         binding energy at UBER minimum.
     l : float
-        critcal length (location of inflection point).
+        critical length (location of inflection point).
 
     Returns
     -------
@@ -220,7 +220,7 @@ def PPES_UBER(distance_energy_array):
     """
     Fit PPES data to an UBER relation.
 
-    Takes a energy vs distance array and fits and UBER function to the data.
+    Takes an energy vs distance array and fits and UBER function to the data.
 
     Parameters
     ----------

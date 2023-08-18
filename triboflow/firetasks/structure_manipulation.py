@@ -25,7 +25,7 @@ from triboflow.utils.structure_manipulation import (
     transfer_average_magmoms,
 )
 from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
-from triboflow.workflows.base import dynamic_relax_swf
+from hitmen_utils.workflows import dynamic_relax_swf
 
 
 @explicit_serialize
@@ -138,9 +138,9 @@ class FT_UpdatePrimStruct(FiretaskBase):
     tag : str
         Unique identifier for the Optimize FW.
     flag : str
-        An identifyer to find the results in the database. It is strongly
+        An identifier to find the results in the database. It is strongly
         suggested to use the proper Materials-ID from the MaterialsProject
-        if it is known for the specific input structure. Otherwise use something
+        if it is known for the specific input structure. Otherwise, use something
         unique which you can find again.
     db_file : str, optional
         Full path to the db.json file which holds the location and access
@@ -191,9 +191,9 @@ class FT_GetRelaxedSlab(FiretaskBase):
     Parameters
     ----------
     flag : str
-        An identifyer to find the results in the database. It is strongly
+        An identifier to find the results in the database. It is strongly
         suggested to use the proper Materials-ID from the MaterialsProject
-        if it is known for the specific input structure. Otherwise use something
+        if it is known for the specific input structure. Otherwise, use something
         unique which you can find again.
     miller : list of int or str
         Miller indices for the slab generation. Either single str e.g. '111',
@@ -222,7 +222,7 @@ class FT_GetRelaxedSlab(FiretaskBase):
         Fully qualified domain name of the server the output should be copied
         to. The default is None.
     user : str, optional
-        The user name on the remote server.
+        The username on the remote server.
     port : int, optional
         On some machines ssh-key certification is only supported for certain
         ports. A port may be selected here. The default is None.
@@ -373,9 +373,9 @@ class FT_StartSlabRelax(FiretaskBase):
     Parameters
     ----------
     flag : str
-        An identifyer to find the results in the database. It is strongly
+        An identifier to find the results in the database. It is strongly
         suggested to use the proper Materials-ID from the MaterialsProject
-        if it is known for the specific input structure. Otherwise use something
+        if it is known for the specific input structure. Otherwise, use something
         unique which you can find again.
     miller : list of int or str
         Miller indices for the slab generation. Either single str e.g. '111',
@@ -462,9 +462,9 @@ class FT_MakeSlabInDB(FiretaskBase):
     miller : list of int or str
         Miller indices of the slab to make.
     flag : str
-        An identifyer to find the results in the database. It is strongly
+        An identifier to find the results in the database. It is strongly
         suggested to use the proper Materials-ID from the MaterialsProject
-        if it is known for the specific input structure. Otherwise use something
+        if it is known for the specific input structure. Otherwise, use something
         unique which you can find again.
     functional : str
         functional that is used for the calculation.
@@ -520,7 +520,7 @@ class FT_MakeSlabInDB(FiretaskBase):
         #     functional=functional,
         #     miller=miller)
 
-        bulk_conv = SpacegroupAnalyzer(bulk_prim).get_conventional_standard_structure()
+        bulk_conv = SpacegroupAnalyzer(bulk_prim).get_conventional_standard_structure(keep_site_properties=True)
         bulk_conv = transfer_average_magmoms(bulk_prim, bulk_conv)
 
         SG = SlabGenerator(

@@ -386,7 +386,7 @@ class FT_StartPESCalcs(FiretaskBase):
     prerelax : bool, optional
         Whether to perform a prerelaxation using a network potential before starting
         a DFT relaxation. Defaults to True.
-    prerelax_algo : str, optional
+    prerelax_calculator : str, optional
         Which network potential to use for the prerelaxation. Defaults to 'm3gnet'.
     prerelax_kwargs : dict, optional
         Keyword arguments to be passed to the ASE calculator for the prerelaxation.
@@ -408,7 +408,7 @@ class FT_StartPESCalcs(FiretaskBase):
     optional_params = [
         "db_file",
         "prerelax",
-        "prerelax_algo",
+        "prerelax_calculator",
         "prerelax_kwargs",
     ]
 
@@ -423,7 +423,7 @@ class FT_StartPESCalcs(FiretaskBase):
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
         prerelax = self.get("prerelax", True)
-        prerelax_algo = self.get("prerelax_algo", "m3gnet")
+        prerelax_calculator = self.get("prerelax_calculator", "m3gnet")
         prerelax_kwargs = self.get("prerelax_kwargs", {})
 
         lateral_shifts = fw_spec.get("lateral_shifts")
@@ -453,7 +453,7 @@ class FT_StartPESCalcs(FiretaskBase):
             wf_name=wf_name,
             add_static=True,
             prerelax_system=prerelax,
-            prerelax_algo=prerelax_algo,
+            prerelax_calculator=prerelax_calculator,
             prerelax_kwargs=prerelax_kwargs,
         )
 

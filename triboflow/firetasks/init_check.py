@@ -21,7 +21,7 @@ The module contains:
 
     Author: Gabriele Losi (glosi000)
     Credits: The code is partially based on the original work of Michael 
-    Wolloch, Triboflow package, Wien University
+    Wolloch, Triboflow package, University of Vienna
     Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
 
 """

@@ -88,7 +88,7 @@ import numpy as np
 #         It is normally easy to obtain the HS sites for a replicated defect-free
 #         unit cell, but this operation may become tricky for a slab that has
 #         been strained, rotated and cut to be matched with another one to form
-#         an hetero interface.
+#         a hetero interface.
 
 #     """
 

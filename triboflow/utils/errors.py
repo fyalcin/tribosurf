@@ -14,7 +14,7 @@ The module contains the following error classes:
     - SurfaceEnergyError
     - SubWFError
     - NavigatorError
-    - StuctNavigatorError
+    - StructNavigatorError
     - NavigatorMPError
     - ReadParamsError
     - WriteParamsError
@@ -230,7 +230,7 @@ class NavigatorError(Exception):
     pass
 
 
-class StuctNavigatorError(NavigatorError):
+class StructNavigatorError(NavigatorError):
     """Errors in queries for structures handling in low and high level DBs."""
 
     pass

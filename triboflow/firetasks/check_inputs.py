@@ -24,7 +24,7 @@ class FT_UpdateInterfaceCompParams(FiretaskBase):
     updates the interface computational parameters so that the correct encut
     and k-density values are used for the interface calculations. (The higher
     of both converged value is taken of course.) The 'is_metal' flag for the
-    interface is also set depending if one or both constituents of the interface
+    interface is also set depending on if one or both constituents of the interface
     are metallic.
 
     Parameters
@@ -666,7 +666,7 @@ class FT_CheckInterfaceParamDict(FiretaskBase):
         if not all(check_essential.values()):
             raise SystemExit(
                 'The essential input parameters "'
-                + missing_keys
+                + f"{missing_keys}"
                 + '" are missing. Check your input file!\n'
             )
 

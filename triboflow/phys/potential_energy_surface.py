@@ -51,7 +51,7 @@ def get_pes(hs_all, E, cell, to_fig=None, point_density=20):
     The points are replicated to span a 3x3 lattice cell and are interpolated
     by using Radial Basis Functions (cubic function).
     In the output data the energy is normalized so that the absolute minimum
-    is 0. Furthermore it is made sure that the lateral point are inside the
+    is 0. Furthermore, it is made sure that the lateral point are inside the
     unit cell before they are replicated.
 
     Parameters
@@ -194,7 +194,7 @@ def unfold_pes(hs_all, E_unique):
               [label_2, x_2, y_2, E_2],
               ...                      ]
 
-        Ex. label should corresponds to the keys in hs_all, associated to a
+        Ex. label should correspond to the keys in hs_all, associated to a
         certain shit between the lower and upper slab, e.g. 'ontop_1+bridge_1'.
 
     Returns
@@ -309,7 +309,7 @@ def plot_pes(data, lattice, to_fig=None):
         zt1.set_edgecolor("face")
         zt1.set_linewidth(0.000000000001)
 
-    if to_fig != None:
+    if to_fig is not None:
         plt.title("PES for " + str(to_fig), fontsize=18, family="serif")
         plt.savefig("PES_" + str(to_fig) + ".pdf", dpi=300)
 

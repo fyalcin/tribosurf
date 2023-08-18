@@ -757,7 +757,7 @@ class FT_EndThickConvo(FiretaskBase):
 
     def store_to_db(self, index, p):
         """
-        Store the surface energy or the latice parameter that have been
+        Store the surface energy or the lattice parameter that have been
         obtained in a more accessible point within the database field.
         If the same convergence calculation is called again, it will stop
         when it finds that the parameters is already converged.

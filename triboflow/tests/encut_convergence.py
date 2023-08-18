@@ -9,7 +9,7 @@ from pymatgen.core.structure import Structure
 from fireworks import LaunchPad
 
 # from fireworks.core.rocket_launcher import rapidfire
-from triboflow.workflows.subworkflows import converg_swf
+from triboflow.workflows.subworkflows import converge_swf
 from triboflow.utils.database import StructureNavigator
 
 

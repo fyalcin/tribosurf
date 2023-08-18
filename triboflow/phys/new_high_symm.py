@@ -314,7 +314,7 @@ class InterfaceSymmetryAnalyzer:
                 # over shifts and not the x and y coordinates in the single shift.
                 bottom_shifts = [vbot] if vbot.ndim == 1 else vbot
                 top_shifts = [vtop] if vtop.ndim == 1 else vtop
-                # shift_list holds all shifts associated with a HSP combination
+                # shift_list holds all shifts associated with an HSP combination
                 shift_list = []
                 for bs in bottom_shifts:
                     for ts in top_shifts:
@@ -353,7 +353,7 @@ class InterfaceSymmetryAnalyzer:
         )
         for name, shift_array in self.all_shifts.items():
             for shift in shift_array:
-                # make an interface with the current shift and set a n
+                # make an interface with the current shift and set a name
                 intrfc = self.interface.copy()
                 intrfc.in_plane_offset = shift
                 intrfc.name = name

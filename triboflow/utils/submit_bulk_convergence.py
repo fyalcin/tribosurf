@@ -97,8 +97,8 @@ def submit_multiple_wfs(workflow_list):
 
 if __name__ == "__main__":
     materials_dict = load_homoatomic_materials()
-    materials_list = []
 
+    # materials_list = []
     # for formula in ['Al', 'C', 'Si', 'Ge', 'Cu', 'Ag',
     #                 'Au', 'Ni', 'Fe', 'Ti', 'Co']:
     #     mpid = materials_dict[formula]['mpids'][materials_dict[formula]['default']]

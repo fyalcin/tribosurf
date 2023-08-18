@@ -108,9 +108,9 @@ def generate_slabs(
         vacuum *= n
     if len(miller) != n:
         miller *= n
-    # SlabGenerator expects conventional unit cell so we convert the structure accordingly.
+    # SlabGenerator expects conventional unit cell, so we convert the structure accordingly.
     # As a result, we require input structure to be the primitive standard structure.
-    conv_structure = SpacegroupAnalyzer(structure).get_conventional_standard_structure()
+    conv_structure = SpacegroupAnalyzer(structure).get_conventional_standard_structure(keep_site_properties=True)
     structure = transfer_average_magmoms(structure, conv_structure)
 
     slabs = []

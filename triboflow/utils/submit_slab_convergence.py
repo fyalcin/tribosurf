@@ -34,7 +34,7 @@ def get_slab_convergence_wf(material, comp_params):
     formula = material["formula"]
     functional = comp_params.get("functional", "PBE")
     miller = material.get("miller")
-    FT_CopyCompParamsToSlab
+
     WF = []
 
     Initialize = InitWF.checkinp_slab_convo(
