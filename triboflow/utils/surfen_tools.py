@@ -617,7 +617,14 @@ def get_vis(struct, comp_params, calc_type):
     return vis(struct, comp_params, f"{struct_type}_{calc_subtype}")
 
 
-def get_calc_wf(struct, vis, tag, fake=False):
+def get_calc_wf(struct,
+                vis,
+                tag,
+                add_static=True,
+                prerelax_system=True,
+                prerelax_algo="m3gnet",
+                prerelax_kwargs={},
+                fake=False):
     """
     Generates a Workflow for the given parameters.
 
@@ -629,6 +636,16 @@ def get_calc_wf(struct, vis, tag, fake=False):
         VaspInputSet object for the given structure.
     tag : str
         Unique ID for the calculation to later query for in the tasks.
+    add_static : bool, optional
+        Whether to add a static calculation after the relaxation. The default is True.
+    prerelax_system : bool, optional
+        Whether to perform a prerelaxation of the system before the main relaxation,
+        using an ASE calculator and a network potential. The default is True.
+    prerelax_algo : str, optional
+        Which network potential to use for the prerelaxation. The default is "m3gnet".
+    prerelax_kwargs : dict, optional
+        Dictionary of kwargs to pass to the ASE calculator. The default is {}.
+
 
     Returns
     -------
@@ -641,7 +658,13 @@ def get_calc_wf(struct, vis, tag, fake=False):
         WF = Workflow.from_Firework(Firework(FT_fake_vasp(tag=tag)))
         return WF
     if not hasattr(vis, "prev_kpoints"):
-        WF = dynamic_relax_swf([[struct, vis, tag]], add_static=True)
+        WF = dynamic_relax_swf(
+            inputs_list=[[struct, vis, tag]],
+            add_static=add_static,
+            prerelax_system=prerelax_system,
+            prerelax_algo=prerelax_algo,
+            prerelax_kwargs=prerelax_kwargs,
+            )
     else:
         FW = StaticFW(structure=struct, name=tag, vasp_input_set=vis)
         WF = Workflow.from_Firework(FW, name=tag)

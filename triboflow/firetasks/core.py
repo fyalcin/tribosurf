@@ -145,6 +145,9 @@ class FT_RelaxStructure(FiretaskBase):
         "struct_kind",
         "check_key",
         "add_static",
+        "prerelax",
+        "prerelax_algo",
+        "prerelax_kwargs",
     ]
 
     def run_task(self, fw_spec):
@@ -268,6 +271,9 @@ class FT_RelaxStructure(FiretaskBase):
             inputs_list=[[structure, vis, tag]],
             wf_name=wf_name,
             add_static=add_static,
+            prerelax_system=p["prerelax"],
+            prerelax_algo=p["prerelax_algo"],
+            prerelax_kwargs=p["prerelax_kwargs"],
         )
 
         return wf

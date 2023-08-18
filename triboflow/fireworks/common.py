@@ -40,6 +40,9 @@ def run_pes_calc_fw(
     comp_parameters,
     tag,
     FW_name,
+    prerelax=True,
+    preralax_algo="m3gnet",
+    prerelax_kwargs={},
 ):
     """Compute high-symmetry points for an interface and start PES calculations.
 
@@ -66,6 +69,13 @@ def run_pes_calc_fw(
         computations in the database.
     FW_name : str
         Name of the Firework.
+    prerelax : bool, optional
+        Whether to perform a prerelaxation using a network potential before starting
+        a DFT relaxation. Defaults to True.
+    prerelax_algo : str, optional
+        Which network potential to use for the prerelaxation. Defaults to 'm3gnet'.
+    prerelax_kwargs : dict, optional
+        Keyword arguments to be passed to the ASE calculator for the prerelaxation.
 
     Returns
     -------
@@ -86,6 +96,9 @@ def run_pes_calc_fw(
         comp_parameters=comp_parameters,
         tag=tag,
         external_pressure=external_pressure,
+        prerelax=prerelax,
+        preralax_algo=preralax_algo,
+        prerelax_kwargs=prerelax_kwargs,
     )
 
     FW = Firework([FT_1, FT_2], name=FW_name)

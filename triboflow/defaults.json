@@ -123,7 +123,10 @@
       "miller":null,
       "check_key":null,
       "struct_kind":"bulk",
-      "add_static": false
+      "add_static": false,
+      "prerelax": true,
+      "prerelax_algo": "m3gnet",
+      "prerelax_kwargs": {},
    },
    "MoveTagResults":{
       "db_file":null,

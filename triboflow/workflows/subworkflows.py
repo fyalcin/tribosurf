@@ -472,6 +472,9 @@ def calc_pes_swf(
     server=None,
     user=None,
     port=None,
+    prerelax=True,
+    prerelax_algo="m3gnet",
+    prerelax_kwargs={},
 ):
     """Create a subworkflow to compute the PES for an interface of two slabs.
 
@@ -517,6 +520,13 @@ def calc_pes_swf(
     port : int, optional
         On some machines ssh-key certification is only supported for certain
         ports. A port may be selected here. The default is None.
+    prerelax : bool, optional
+        Whether to perform a prerelaxation using a network potential before starting
+        a DFT relaxation. Defaults to True.
+    prerelax_algo : str, optional
+        Which network potential to use for the prerelaxation. Defaults to 'm3gnet'.
+    prerelax_kwargs : dict, optional
+        Keyword arguments to be passed to the ASE calculator for the prerelaxation.
 
     Returns
     -------
@@ -607,6 +617,9 @@ def calc_pes_swf(
         comp_parameters=comp_parameters,
         tag=tag,
         FW_name="Start PES calcs for " + interface_name,
+        prerelax=prerelax,
+        preralax_algo=prerelax_algo,
+        preralax_kwargs=prerelax_kwargs,
     )
 
     FW_2 = make_pes_fw(
@@ -1136,6 +1149,9 @@ def surface_energy_swf(
     high_level=True,
     comp_params_user={},
     custom_id=None,
+    prerelax_system=True,
+    prerelax_algo="m3gnet",
+    prerelax_kwargs={},
 ):
     nav_high = Navigator(db_file, high_level=high_level)
 
@@ -1183,6 +1199,9 @@ def surface_energy_swf(
                 comp_params=comp_params,
                 db_file=db_file,
                 high_level=high_level,
+                prerelax_system=prerelax_system,
+                prerelax_algo=prerelax_algo,
+                prerelax_kwargs=prerelax_kwargs,
             ),
             name=f"Generate and relax surface energy inputs for {mpid}-{hkl}-{uid_short} with {functional}",
         )

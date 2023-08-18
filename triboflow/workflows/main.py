@@ -137,6 +137,7 @@ def homogeneous_wf(inputs):
             miller_2=mat.get("miller"),
             functional=functional,
             external_pressure=pressure,
+            prerelax=True,
         ),
         name="Compute PES high-symmetry points",
     )
@@ -354,6 +355,7 @@ def heterogeneous_wf(inputs):
             miller_2=mat_2.get("miller"),
             functional=functional,
             external_pressure=pressure,
+            prerelax=True,
         ),
         name="Fully relax the matched slabs",
     )
@@ -380,6 +382,7 @@ def heterogeneous_wf(inputs):
             miller_2=mat_2.get("miller"),
             functional=functional,
             external_pressure=pressure,
+            prerelax=True,
         ),
         name="Compute PES high-symmetry points",
     )

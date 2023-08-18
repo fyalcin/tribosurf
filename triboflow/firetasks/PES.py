@@ -394,6 +394,15 @@ class FT_StartPESCalcs(FiretaskBase):
     db_file : str, optional
         Full path to the db.json file that should be used. Defaults to
         '>>db_file<<', to use env_chk.
+    prerelax : bool, optional
+        Whether to perform a prerelaxation using a network potential before starting
+        a DFT relaxation. Defaults to True.
+    prerelax_algo : str, optional
+        Which network potential to use for the prerelaxation. Defaults to 'm3gnet'.
+    prerelax_kwargs : dict, optional
+        Keyword arguments to be passed to the ASE calculator for the prerelaxation.
+
+
 
     Returns
     -------
@@ -405,7 +414,12 @@ class FT_StartPESCalcs(FiretaskBase):
                        "comp_parameters",
                        "tag",
                        "external_pressure"]
-    optional_params = ["db_file"]
+    optional_params = [
+        "db_file",
+        "prerelax",
+        "prerelax_algo",
+        "prerelax_kwargs",
+        ]
 
     def run_task(self, fw_spec):
         interface = self.get("interface")
@@ -417,6 +431,9 @@ class FT_StartPESCalcs(FiretaskBase):
         db_file = self.get("db_file")
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
+        prerelax = self.get("prerelax", True)
+        prerelax_algo = self.get("prerelax_algo", "m3gnet")
+        prerelax_kwargs = self.get("prerelax_kwargs", {})
 
         lateral_shifts = fw_spec.get("lateral_shifts")
         if not lateral_shifts:
@@ -441,7 +458,12 @@ class FT_StartPESCalcs(FiretaskBase):
 
         wf_name = "PES relaxations for: " + interface_name
         WF = dynamic_relax_swf(
-            inputs_list=inputs, wf_name=wf_name, add_static=True
-        )
+            inputs_list=inputs,
+            wf_name=wf_name,
+            add_static=True,
+            prerelax_system=prerelax,
+            prerelax_algo=prerelax_algo,
+            prerelax_kwargs=prerelax_kwargs,
+            )
 
         return FWAction(detours=WF)

@@ -451,6 +451,13 @@ class FT_StartPESCalcSWF(FiretaskBase):
     db_file : str, optional
         Full path to the db.json file that should be used. Defaults to
         '>>db_file<<', to use env_chk.
+    prerelax : bool, optional
+        Whether to perform a prerelaxation using a network potential before starting
+        a DFT relaxation. Defaults to True.
+    prerelax_algo : str, optional
+        Which network potential to use for the prerelaxation. Defaults to 'm3gnet'.
+    prerelax_kwargs : dict, optional
+        Keyword arguments to be passed to the ASE calculator for the prerelaxation.
 
     Returns
     -------
@@ -465,7 +472,13 @@ class FT_StartPESCalcSWF(FiretaskBase):
         "functional",
         "external_pressure",
     ]
-    optional_params = ["db_file", "high_level_db"]
+    optional_params = [
+        "db_file",
+        "high_level_db",
+        "prerelax",
+        "prerelax_algo",
+        "prerelax_kwargs",
+        ]
 
     def run_task(self, fw_spec):
         mp_id_1 = self.get("mp_id_1")
@@ -478,6 +491,9 @@ class FT_StartPESCalcSWF(FiretaskBase):
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
         hl_db = self.get("high_level_db", True)
+        prerelax = self.get("prerelax", True)
+        prerelax_algo = self.get("prerelax_algo", "m3gnet")
+        prerelax_kwargs = self.get("prerelax_kwargs", {})
 
         name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
 
@@ -497,6 +513,10 @@ class FT_StartPESCalcSWF(FiretaskBase):
                 pressure=pressure,
                 comp_parameters=comp_params,
                 output_dir=None,
+                prerelax=prerelax,
+                prerelax_algo=prerelax_algo,
+                prerelax_kwargs=prerelax_kwargs,
+
             )
 
             return FWAction(detours=SWF, update_spec=fw_spec)

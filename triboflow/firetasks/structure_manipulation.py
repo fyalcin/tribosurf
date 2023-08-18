@@ -46,7 +46,7 @@ class FT_StartBulkPreRelax(FiretaskBase):
     encut : float, optional
         Energy cutoff for the relaxation run. Defaults to 1000.
     k_dens : int, optional
-        kpoint density in 1/Angstrom. Defaults to a (quite high) 20.
+        kpoint density in 1/Angstrom. Defaults to a (quite high) 15.
     high_level_db : str, optional
         Name of the high level database the structure should be queried in
         and later the results written to. Defaults to 'triboflow'.
@@ -107,7 +107,9 @@ class FT_StartBulkPreRelax(FiretaskBase):
             vis = get_custom_vasp_relax_settings(
                 prim_struct, comp_params, "bulk_pos_shape_relax"
             )
-            RelaxWF = dynamic_relax_swf([[prim_struct, vis, tag]])
+            RelaxWF = dynamic_relax_swf(inputs_list=[[prim_struct, vis, tag]],
+                                        prerelax_system=True,
+                                        prerelax_kwargs={"relax_cell": True})
 
             MoveResultsFW = Firework(
                 [

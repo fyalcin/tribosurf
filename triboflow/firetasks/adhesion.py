@@ -158,6 +158,13 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
     high_level_db : str or True, optional
         Name of the high_level database to use. Defaults to 'True', in which
         case it is read from the db.json file.
+    prerelax : bool, optional
+        Whether to run a prerelaxation step before the actual relaxation.
+        Defaults to True.
+    prerelax_algo : str, optional
+        Network potential to use for the prerelaxation. Defaults to 'm3gnet'.
+    prerelax_kwargs : dict, optional
+        Keyword arguments to pass to the prerelaxation ASE optimizer.
     """
 
     required_params = [
@@ -175,6 +182,9 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
         "bottom_in_name",
         "bottom_out_name",
         "high_level_db",
+        "prerelax",
+        "prerelax_algo",
+        "prerelax_kwargs",
     ]
 
     def run_task(self, fw_spec):
@@ -192,6 +202,9 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
         bot_in_name = self.get("bottom_in_name", "bottom_aligned")
         bot_out_name = self.get("bottom_out_name", "bottom_aligned_relaxed")
         hl_db = self.get("high_level_db", True)
+        prerelax = self.get("prerelax", True)
+        prerelax_algo = self.get("prerelax_algo", "m3gnet")
+        prerelax_kwargs = self.get("prerelax_kwargs", {})
 
         name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
 
@@ -227,7 +240,12 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
             inputs.append([bot_slab, bot_vis, label])
 
         if inputs:
-            WF = dynamic_relax_swf(inputs, "Relaxing the matched slabs")
+            WF = dynamic_relax_swf(inputs_list=inputs,
+                                   wf_name="Relaxing the matched slabs",
+                                   prerelax_system=prerelax,
+                                   prerelax_algo=prerelax_algo,
+                                   prerelax_kwargs=prerelax_kwargs,
+                                   )
             return FWAction(
                 detours=WF, update_spec={"relaxation_inputs": inputs}
             )

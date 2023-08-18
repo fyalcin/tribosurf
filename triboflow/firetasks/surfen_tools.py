@@ -21,7 +21,15 @@ from triboflow.utils.surfen_tools import (
 class FT_StartSurfaceEnergyFromFile(FiretaskBase):
     _fw_name = "Calculates the surface energy of the slab loaded from a file."
     required_params = ["filename", "miller", "mpid", "functional"]
-    optional_params = ["db_file", "high_level", "custom_id", "comp_params"]
+    optional_params = [
+        "db_file",
+        "high_level",
+        "custom_id",
+        "comp_params",
+        "prerelax",
+        "prerelax_algo",
+        "prerelax_kwargs",
+        ]
 
     def run_task(self, fw_spec):
         filename = self.get("filename")
@@ -33,6 +41,9 @@ class FT_StartSurfaceEnergyFromFile(FiretaskBase):
         high_level = self.get("high_level", True)
         custom_id = self.get("custom_id")
         comp_params_user = self.get("comp_params")
+        prerelax = self.get("prerelax", True)
+        prerelax_algo = self.get("prerelax_algo", "m3gnet")
+        prerelax_kwargs = self.get("prerelax_kwargs", {})
 
         nav = Navigator(db_file, high_level)
         comp_params = nav.find_data("PBE.bulk_data", {"mpid": mpid}).get(
@@ -75,6 +86,9 @@ class FT_StartSurfaceEnergyFromFile(FiretaskBase):
                 comp_params=comp_params,
                 db_file=db_file,
                 high_level=high_level,
+                prerelax=prerelax,
+                prerelax_algo=prerelax_algo,
+                prerelax_kwargs=prerelax_kwargs,
             ),
             name=f"Generate and relax surface energy inputs for {mpid} with {functional}",
         )
@@ -118,6 +132,15 @@ class FT_RelaxSurfaceEnergyInputs(FiretaskBase):
         credentials to the database. The default is 'auto'.
     high_level : str, optional
         Whether to query the results from the high level database or not. The default is True.
+    prerelax : bool, optional
+        Whether to perform a relaxation of the input structures before performing the
+        the DFT relaxation in the dynamic_relax_SWF. The default is True.
+    prerelax_algo : str, optional
+        Network potential to use for the prerelaxation. The default is "m3gnet".
+    prerelax_kwargs : dict, optional
+        Dictionary containing the kwargs to be passed to the ASE calculator.
+        The default is {}.
+
     Returns
     -------
         FWAction that detours to a Workflow containing the Fireworks that will perform
@@ -126,7 +149,13 @@ class FT_RelaxSurfaceEnergyInputs(FiretaskBase):
 
     _fw_name = "Perform various VASP calculations on the structures in order to calculate surface energy."
     required_params = ["inputs_list", "fltr", "coll", "comp_params"]
-    optional_params = ["db_file", "high_level"]
+    optional_params = [
+        "db_file",
+        "high_level",
+        "prerelax",
+        "prerelax_algo",
+        "prerelax_kwargs",
+        ]
 
     def run_task(self, fw_spec):
         inputs_list = self.get("inputs_list")
@@ -136,6 +165,9 @@ class FT_RelaxSurfaceEnergyInputs(FiretaskBase):
 
         db_file = self.get("db_file", "auto")
         high_level = self.get("high_level", True)
+        prerelax = self.get("prerelax", True)
+        prerelax_algo = self.get("prerelax_algo", "m3gnet")
+        prerelax_kwargs = self.get("prerelax_kwargs", {})
 
         nav_high = Navigator(db_file, high_level=high_level)
         nav_low = Navigator(db_file, high_level=False)
@@ -183,7 +215,14 @@ class FT_RelaxSurfaceEnergyInputs(FiretaskBase):
                     WF_list.append(WF_move)
                 else:
                     vis = get_vis(struct, comp_params, calc_type)
-                    WF_calc = get_calc_wf(struct, vis, tag)
+                    WF_calc = get_calc_wf(
+                        struct=struct,
+                        vis=vis,
+                        tag=tag,
+                        prerelax_system=prerelax,
+                        prerelax_algo=prerelax_algo,
+                        prerelax_kwargs=prerelax_kwargs,
+                        )
                     WF_calc.append_wf(WF_move, WF_calc.leaf_fw_ids)
                     WF_list.append(WF_calc)
         return FWAction(detours=WF_list, update_spec=fw_spec)
@@ -240,6 +279,9 @@ class FT_StartSlabOptOrientation(FiretaskBase):
         "comp_params",
         "override",
         "fake",
+        "prerelax",
+        "prerelax_algo",
+        "prerelax_kwargs",
     ]
 
     def run_task(self, fw_spec):
@@ -259,6 +301,9 @@ class FT_StartSlabOptOrientation(FiretaskBase):
 
         override = self.get("override", False)
         fake = self.get("fake", False)
+        prerelax = self.get("prerelax", True)
+        prerelax_algo = self.get("prerelax_algo", "m3gnet")
+        prerelax_kwargs = self.get("prerelax_kwargs", {})
 
         nav_high = Navigator(db_file, high_level=True)
 
@@ -310,6 +355,9 @@ class FT_StartSlabOptOrientation(FiretaskBase):
                 comp_params=comp_params,
                 db_file=db_file,
                 high_level=high_level,
+                prerelax=prerelax,
+                prerelax_algo=prerelax_algo,
+                prerelax_kwargs=prerelax_kwargs,
             ),
             name=f"Generate and relax surface energy inputs for {mpid} with {functional}",
         )
