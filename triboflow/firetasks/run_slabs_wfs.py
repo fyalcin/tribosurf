@@ -33,7 +33,7 @@ __date__ = "February 22nd, 2021"
 
 import os
 from monty.json import jsanitize
-
+from hitmen_utils.db_tools import VaspDB
 import numpy as np
 from pymatgen.core.structure import Structure
 from fireworks import explicit_serialize, FiretaskBase, FWAction
@@ -52,6 +52,7 @@ from triboflow.utils.utils import (
 from triboflow.utils.structure_manipulation import slab_from_structure
 from triboflow.utils.errors import SlabOptThickError
 from hitmen_utils.shaper import Shaper
+from hitmen_utils.misc_tools import check_input
 
 currentdir = os.path.dirname(__file__)
 
@@ -899,3 +900,25 @@ class FT_EndThickConvo(FiretaskBase):
         )
 
         return wf
+
+
+@explicit_serialize
+class GetSurfaceEnergiesFromUids(FiretaskBase):
+    _fw_name = "Query the surface energies with the list of uids provided"
+    required_params = ["uids"]
+    optional_params = [
+        "db_file",
+        "high_level",
+        "fake_calc",
+        "surfen_coll"
+    ]
+
+    def run_task(self, fw_spec):
+        req_inp = {k: self.get(k) for k in self.required_params}
+        opt_inp = {k: self.get(k) for k in self.optional_params}
+        opt_inp = check_input(opt_inp, self.optional_params)
+        inp = {**req_inp, **opt_inp}
+        nav = VaspDB(db_file=inp["db_file"], high_level=inp["high_level"])
+        results = list(nav.find_many_data(inp["surfen_coll"], {"uid": {"$in": inp["uids"]}}))
+        uid_surfen_dict = {r["uid"]: r["surface_energy"] for r in results}
+        return FWAction(update_spec={"uid_surfen_dict": uid_surfen_dict})

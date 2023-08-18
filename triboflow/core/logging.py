@@ -3,7 +3,7 @@
 """
 Created on Mon Feb  2 10:31:19 2021
 
-Simple logger. This modules contains the class:
+Simple logger. This module contains the class:
 
     **LoggingBase**
     Base class which implements all the logging operations. It includes methods:

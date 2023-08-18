@@ -12,7 +12,7 @@ from atomate.utils.utils import env_chk
 
 from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.structure_manipulation import interface_name
-from triboflow.utils.surfen_tools import move_result
+from triboflow.utils.utils import move_result
 
 
 @explicit_serialize

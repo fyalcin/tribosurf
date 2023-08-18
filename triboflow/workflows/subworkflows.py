@@ -16,7 +16,6 @@ from triboflow.firetasks.adhesion import FT_CalcAdhesion
 from triboflow.firetasks.charge_density_analysis import (
     FT_MakeChargeDensityDiff,
 )
-
 from triboflow.firetasks.convergence import FT_Convo
 from triboflow.firetasks.dielectric import FT_GetEpsilon
 from triboflow.firetasks.structure_manipulation import (
@@ -24,17 +23,11 @@ from triboflow.firetasks.structure_manipulation import (
     FT_StartSlabRelax,
     FT_GetRelaxedSlab,
 )
-from triboflow.firetasks.surfen_tools import (
-    FT_WriteSurfenInputsToDB,
-    FT_RelaxSurfaceEnergyInputs,
-    FT_WriteSurfaceEnergiesToDB,
-)
 from triboflow.firetasks.utils import FT_UpdateCompParams
 from triboflow.fireworks.common import run_pes_calc_fw, make_pes_fw
 from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.mp_connection import MPConnection
-from triboflow.utils.surfen_tools import get_surfen_inputs_from_mpid
-from hitmen_utils.vasp_tools import  (
+from hitmen_utils.vasp_tools import (
     get_emin_and_emax,
     get_custom_vasp_static_settings,
 )
@@ -113,9 +106,7 @@ def dielectric_constant_swf(
         vis = get_custom_vasp_static_settings(
             structure, comp_parameters, "bulk_epsilon_from_scratch"
         )
-        Calc_Eps_FW = StaticFW(
-            structure=structure, name=flag, vasp_input_set=vis
-        )
+        Calc_Eps_FW = StaticFW(structure=structure, name=flag, vasp_input_set=vis)
 
         Get_Eps_FT = FT_GetEpsilon(label=flag, db_file=db_file)
 
@@ -424,9 +415,7 @@ def adhesion_energy_swf(
         interface, comp_parameters, "slab_from_scratch"
     )
 
-    FW_top = StaticFW(
-        structure=top_slab, vasp_input_set=vis_top, name=tag + "top"
-    )
+    FW_top = StaticFW(structure=top_slab, vasp_input_set=vis_top, name=tag + "top")
     FW_bot = StaticFW(
         structure=bottom_slab, vasp_input_set=vis_bot, name=tag + "bottom"
     )
@@ -766,7 +755,7 @@ def make_and_relax_slab_swf(
         Minimal thickness of the vacuum layer in Angstrom. The default is 25.0.
     relax_type : str, optional
         Which type of relaxation to run. See get_custom_vasp_relax_settings from
-        triboflow.utils.vasp_tools. The default is 'slab_pos_relax'.
+        hitmen_utils.vasp_tools. The default is 'slab_pos_relax'.
     slab_struct_name : str, optional
         Name of the unrelaxed slab in the high-level database.
         The default is 'unrelaxed_slab'.
@@ -848,9 +837,7 @@ def make_and_relax_slab_swf(
             "import pprint\n"
             "from triboflow.utils.database import GetSlabFromDB\n"
             'results = GetBulkFromDB("{}", "{}", "{}", "{}")\n'
-            "pprint.pprint(results)\n".format(
-                flag, db_file, miller, functional
-            )
+            "pprint.pprint(results)\n".format(flag, db_file, miller, functional)
         )
 
     tag = formula + miller_str + "_" + str(uuid4())
@@ -935,8 +922,8 @@ def converge_swf(
 ):
     """Subworkflows that converges Encut or kpoints denstiy using fits to an EOS.
 
-    Takes a given structure, computational parameters, and a optional list
-    of deformations and uses these deformations to compute an
+    Takes a given structure, computational parameters, and an optional list
+    of deformations and uses these deformations to compute a series of
     Birch-Murnaghan equation of state for higher and higher energy cutoffs or
     kpoints density.
     Once bulk modulus and equilibrium volume do not change any longer,
@@ -953,7 +940,7 @@ def converge_swf(
     flag : str
         An identifier to find the results in the database. It is strongly
         suggested to use the proper Materials-ID from the MaterialsProject
-        if it is known for the specific input structure. Otherwise use something
+        if it is known for the specific input structure. Otherwise, use something
         unique which you can find again.
     comp_parameters : dict, optional
         Dictionary of computational parameters for the VASP calculations. The
@@ -971,7 +958,7 @@ def converge_swf(
         Increment for the encut during the convergence. Defaults to 25.
     k_dens_start : float, optional
         Starting kpoint density in 1/Angstrom. Defaults to 1.0
-    k_dens_increment : float, optional
+    k_dens_incr : float, optional
         Increment for the kpoint convergence. Can be set quite small since
         there is a check in place to see if a new mesh is actually constructed
         for each density. Defaults to 0.1.
@@ -998,7 +985,7 @@ def converge_swf(
         Fully qualified domain name of the server the output should be copied
         to. The default is None.
     user : str, optional
-        The user name on the remote server.
+        The username on the remote server.
     port : int, optional
         On some machines ssh-key certification is only supported for certain
         ports. A port may be selected here. The default is None.
@@ -1019,9 +1006,7 @@ def converge_swf(
             '"encut".\nYou have passed {}'.format(conv_type)
         )
     if conv_type == "encut":
-        name = (
-            "Encut Convergence SWF of " + structure.composition.reduced_formula
-        )
+        name = "Encut Convergence SWF of " + structure.composition.reduced_formula
         if not encut_start:
             # Get the largest EMIN value of the potcar and round up to the
             # next whole 25.
@@ -1032,10 +1017,7 @@ def converge_swf(
             enmax = encut_dict["ENMAX"]
             encut_start = int(25 * np.ceil(enmax / 25))
     elif conv_type == "kpoints":
-        name = (
-            "Kpoint Convergence SWF of "
-            + structure.composition.reduced_formula
-        )
+        name = "Kpoint Convergence SWF of " + structure.composition.reduced_formula
 
     tag = "BM group: {}".format(str(uuid4()))
 
@@ -1138,6 +1120,7 @@ def converge_swf(
     WF = Workflow([FW_C], name=name)
 
     return WF
+<<<<<<< HEAD
 
 
 def surface_energy_swf(
@@ -1226,3 +1209,5 @@ def surface_energy_swf(
         wf_list.append(WF)
 
     return wf_list
+=======
+>>>>>>> 3a519929a287215684a1ca79fd03c83293a90e9b

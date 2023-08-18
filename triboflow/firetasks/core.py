@@ -52,7 +52,7 @@ from triboflow.utils.utils import (
     retrieve_from_db,
     retrieve_from_tag,
 )
-from hitmen_utils.vasp_tools import  get_custom_vasp_relax_settings
+from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
 from triboflow.utils.file_manipulation import copy_output_files
 from triboflow.utils.errors import RelaxStructureError, MoveTagResultsError
 

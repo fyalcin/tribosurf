@@ -39,7 +39,6 @@ from fireworks import FWAction, FiretaskBase, explicit_serialize
 from triboflow.utils.mp_connection import MPConnection
 from triboflow.utils.utils import load_defaults
 
-
 currentdir = os.path.dirname(__file__)
 
 
@@ -208,12 +207,13 @@ def unbundle_input(
 def material_from_mp(material_dict):
     """
     It reads the dictionary containing the input parameters for a material.
-    It needs at least the key: `formula`, providing also an mp_id is helpful.
+    It needs at least the key: `formula`, providing an MPID is also helpful.
     The corresponding structure from the MP database or the local structure list
+    is returned along with the MPID.
 
     Parameters
     ----------
-    inputs : dict
+    material_dict : dict
         Dictionary containing the input parameters for running a tribological
         workflow, e.g. homogeneous and heterogeneous ones.
 
@@ -275,9 +275,7 @@ def read_input_dict(input_dict, read_key):
     if read_key not in list(defaults.keys()):
         raise ValueError(
             "There exist no default values for the selected key\n"
-            "\t{}.\n Please choose from: {}".format(
-                read_key, list(defaults.keys())
-            )
+            "\t{}.\n Please choose from: {}".format(read_key, list(defaults.keys()))
         )
     # Extract the dictionary data
     out_dict = dict_consistency(input_dict, defaults[read_key])

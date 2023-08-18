@@ -14,6 +14,10 @@ from atomate.vasp.config import VASP_CMD, DB_FILE
 from atomate.vasp.powerups import add_modify_incar
 from atomate.vasp.workflows.base.bulk_modulus import get_wf_bulk_modulus
 
+<<<<<<< HEAD
+=======
+from triboflow.utils.database import Navigator, StructureNavigator
+>>>>>>> 3a519929a287215684a1ca79fd03c83293a90e9b
 from hitmen_utils.vasp_tools import (
     get_custom_vasp_static_settings,
     get_emin_and_emax,

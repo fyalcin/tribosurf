@@ -24,7 +24,7 @@ __date__ = "February 8th, 2021"
 
 import numpy as np
 from ase import Atoms
-from triboflow.phys.high_symmetry import hs_dict_converter
+# from triboflow.phys.high_symmetry import hs_dict_converter
 from triboflow.utils.plot_tools import plot_uniform_grid
 
 

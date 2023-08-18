@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "TriboFlow"
+version = "0.0.1-alpha"
+description = "A python package for the high-throughput study of solid-solid interfaces in tribology."
+readme = "README.md"
+authors = [{ name = "Michael Wolloch", email = "michael.wolloch@univie.ac.at" },
+    { name = "Firat Yalcin", email = "firat.yalcin@univie.ac.at" }]
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+keywords = ["tribology", "potential energy surface", "surface", "adhesion", "friction", "wear", "solid-solid interface", "high-throughput"]
+dependencies = [
+    "surfen@git+ssh://git@gitlab.com/hit_group/SurfGen.git",
+    "mep@git+https://github.com/fyalcin/mep.git"]
+requires-python = ">=3.9"
+
+[tool.distutils.bdist_wheel]
+universal = true
+
+[tool.bumpver]
+current_version = "0.0.1-alpha"
+version_pattern = "MAJOR.MINOR.PATCH[-TAG]"
+commit_message = "bump version {old_version} -> {new_version}"
+commit = true
+tag = true
+push = true
+
+[tool.bumpver.file_patterns]
+"pyproject.toml" = [
+    'current_version = "{version}"',
+]
+"setup.py" = [
+    "{version}",
+    "{pep440_version}",
+]
+"README.md" = [
+    "{version}",
+    "{pep440_version}",
+]

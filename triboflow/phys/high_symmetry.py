@@ -29,12 +29,12 @@
 # __contact__ = "clelia.righi@unibo.it"
 # __date__ = "February 8th, 2021"
 
-# import numpy as np
+import numpy as np
 
 # from ase import Atoms
 # from pymatgen.analysis.adsorption import AdsorbateSiteFinder
 # from pymatgen.analysis.structure_matcher import StructureMatcher
-
+#
 # from triboflow.utils.structure_manipulation import (
 #     stack_aligned_slabs,
 #     clean_up_site_properties,
@@ -135,56 +135,56 @@
 #     return hs, hs_all
 
 
-# def hs_dict_converter(hs, to_array=True):
-#     """
-#     Modify the type of the elements of the HS dictionary to list or np.ndarray.
+def hs_dict_converter(hs, to_array=True):
+    """
+    Modify the type of the elements of the HS dictionary to list or np.ndarray.
 
-#     Parameters
-#     ----------
-#     hs : dict
-#         Dictionary containing the High Symmetry points.
-#     to_array : bool, optional
-#         If set to True convert to array, otherwise convert to list.
-#         The default is True.
+    Parameters
+    ----------
+    hs : dict
+        Dictionary containing the High Symmetry points.
+    to_array : bool, optional
+        If set to True convert to array, otherwise convert to list.
+        The default is True.
 
-#     Raises
-#     ------
-#     ValueError
-#         Raised if the dictionary values are of different types.
-#         Print to stdout: "Your dictionary is weird, values have mixed types"
+    Raises
+    ------
+    ValueError
+        Raised if the dictionary values are of different types.
+        Print to stdout: "Your dictionary is weird, values have mixed types"
 
-#     Returns
-#     -------
-#     hs_new : dict
-#         New HS dictionary converted to the desired type.
+    Returns
+    -------
+    hs_new : dict
+        New HS dictionary converted to the desired type.
 
-#     """
+    """
 
-#     hs_new = {}
-#     dict_types = list(set(type(k) for k in hs.values()))
+    hs_new = {}
+    dict_types = list(set(type(k) for k in hs.values()))
 
-#     try:
-#         assert len(dict_types) == 1
+    try:
+        assert len(dict_types) == 1
 
-#         typ = dict_types[0]
-#         if to_array:
-#             if typ == list:
-#                 for k in hs.keys():
-#                     hs_new[k] = np.array(hs[k])
-#             else:
-#                 return hs
+        typ = dict_types[0]
+        if to_array:
+            if typ == list:
+                for k in hs.keys():
+                    hs_new[k] = np.array(hs[k])
+            else:
+                return hs
 
-#         else:
-#             if typ == np.ndarray:
-#                 for k in hs.keys():
-#                     hs_new[k] = hs[k].tolist()
-#             else:
-#                 return hs
+        else:
+            if typ == np.ndarray:
+                for k in hs.keys():
+                    hs_new[k] = hs[k].tolist()
+            else:
+                return hs
 
-#         return hs_new
+        return hs_new
 
-#     except:
-#         raise ValueError("Your dictionary is weird, values have mixed types")
+    except:
+        raise ValueError("Your dictionary is weird, values have mixed types")
 
 
 # # =============================================================================

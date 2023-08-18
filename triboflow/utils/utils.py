@@ -40,16 +40,15 @@ __copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, Universi
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "February 22nd, 2021"
 
-import hashlib
-import os
 import json
-from uuid import uuid4
+import os
 from pathlib import Path, PurePosixPath
+from uuid import uuid4
 
 import numpy as np
 import pandas as pd
-from pymatgen.core.surface import Structure, Slab
 from atomate.utils.utils import env_chk
+from pymatgen.core.surface import Structure, Slab
 
 from triboflow.utils.database import Navigator
 from triboflow.utils.errors import ReadParamsError, WriteParamsError
@@ -60,28 +59,6 @@ project_folder = os.path.dirname(__file__)
 # ============================================================================
 # Read input parameters from dictionaries and in Firetasks
 # ============================================================================
-
-
-def dict_to_hash(my_dict):
-    """
-    Creates a hash from the given dictionary to be used as a unique ID.
-
-    Parameters
-    ----------
-    my_dict : dict
-        Dictionary, should not be nested.
-
-    Returns
-    -------
-    hash_str : str
-        Hash value of the given dictionary in string format.
-
-    """
-    sorted_items = sorted(my_dict.items())
-    str_repr = repr(sorted_items).encode("utf-8")
-    hash_object = hashlib.sha1(str_repr)
-    hash_str = hash_object.hexdigest()
-    return hash_str
 
 
 def read_json(jsonfile):
@@ -95,9 +72,7 @@ def read_json(jsonfile):
     return data
 
 
-def load_defaults(
-    file_location=project_folder + "/../", filename="defaults.json"
-):
+def load_defaults(file_location=project_folder + "/../", filename="defaults.json"):
     data = read_json(file_location + filename)
     return data
 
@@ -343,17 +318,17 @@ def convert_dict_to_mongodb(input_dict):
     Normally when you update nested dictionaries you substitute the first one
     with the second, without having a "proper" updating, as you might intend.
 
-    >>> dict1 = {'key': {'data_1': 5 }}
-    >>> dict2 = {'key': {'data_2': 2 }}
-    >>> dict2.update(dict1)
-    >>> dict2
+    # >>> dict1 = {'key': {'data_1': 5 }}
+    # >>> dict2 = {'key': {'data_2': 2 }}
+    # >>> dict2.update(dict1)
+    # >>> dict2
     {'key': {'data_1': 5}}
 
     If your intention was to have {'key': {'data_1': 5, 'data_2': 2}} the
     operation failed. The same thing occur when updating a MongoDB entry.
     To really update an existing (nested) dictionary and not overriding it run:
 
-    >>> convert_dict_to_mongodb(dict1)
+    # >>> convert_dict_to_mongodb(dict1)
     {'key.data_1': 5}
 
     """
@@ -793,3 +768,50 @@ def is_list_converged(input_list, tol, n=3):
             if abs(l[0] - l[i + 1]) < tol:
                 check_list[i] = True
         return all(check_list)
+
+
+def move_result(tag, fltr, coll, loc, custom_dict={}, db_file="auto", high_level=True):
+    """
+    Moves the result of a VASP calculation from the Fireworks database to the destination.
+
+    Parameters
+    ----------
+    tag : str
+        Task label to query for in the tasks collection of the Fireworks database.
+    fltr : dict
+        Filter dictionary that is used to query for the destination in the database.
+    coll : str
+        Collection to move the results into in the destination database.
+    loc : str
+        Location in the collection the results should be written to.
+    custom_dict : dict, optional
+        Custom dictionary to write into the destination. The default is {}.
+    db_file : str, optional
+        Full path of the db.json. The default is 'auto'.
+    high_level : str, optional
+        Whether to query the results from the high level database or not. The default is True.
+
+    Returns
+    -------
+    None.
+
+    """
+    # function to edit DB entries with the location set with loc
+    nav = Navigator(db_file)
+    calc = nav.find_data("tasks", {"task_label": tag})
+    # out is the whole output of the calculation including everything,
+    fltr_out = ["input", "output", "orig_inputs", "custodian"]
+    out = {f: calc[f] for f in fltr_out}
+    if custom_dict:
+        out.update(custom_dict)
+
+    nav_high = Navigator(db_file="auto", high_level=high_level)
+
+    loc = ".".join(loc)
+
+    nav_high.update_data(
+        collection=coll,
+        fltr=fltr,
+        new_values={"$set": {loc + f".{k}": v for k, v in out.items()}},
+        upsert=True,
+    )
