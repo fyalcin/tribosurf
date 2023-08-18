@@ -82,9 +82,7 @@ def get_bulk_convergence_wf(material, comp_params):
         ConvergeKpoints: [CalcDielectric],
     }
 
-    WF_Name = (
-        "ConvergeBulk " + material["formula"] + " " + mp_id + " " + functional
-    )
+    WF_Name = "ConvergeBulk " + material["formula"] + " " + mp_id + " " + functional
 
     WF = Workflow(WF, Dependencies, name=WF_Name)
 
@@ -110,7 +108,5 @@ if __name__ == "__main__":
 
     workflow_list = []
     for mat in materials_list:
-        workflow_list.append(
-            get_bulk_convergence_wf(mat, computational_params)
-        )
+        workflow_list.append(get_bulk_convergence_wf(mat, computational_params))
     submit_multiple_wfs(workflow_list)

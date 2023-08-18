@@ -58,17 +58,13 @@ def homogeneous_wf(inputs):
     WF.append(PreRelaxation)
 
     ConvergeEncut = Firework(
-        FT_StartBulkConvoSWF(
-            conv_type="encut", mp_id=mp_id, functional=functional
-        ),
+        FT_StartBulkConvoSWF(conv_type="encut", mp_id=mp_id, functional=functional),
         name=f'Start encut convergence for {mat["formula"]}',
     )
     WF.append(ConvergeEncut)
 
     ConvergeKpoints = Firework(
-        FT_StartBulkConvoSWF(
-            conv_type="kpoints", mp_id=mp_id, functional=functional
-        ),
+        FT_StartBulkConvoSWF(conv_type="kpoints", mp_id=mp_id, functional=functional),
         name=f'Start kpoints convergence for {mat["formula"]}',
     )
     WF.append(ConvergeKpoints)
@@ -82,7 +78,7 @@ def homogeneous_wf(inputs):
         ),
         name=f'Start dielectric SWF for {mat["formula"]}',
     )
-    #WF.append(CalcDielectric)
+    # WF.append(CalcDielectric)
 
     Final_Params = Firework(
         FT_UpdateInterfaceCompParams(
@@ -98,9 +94,7 @@ def homogeneous_wf(inputs):
     WF.append(Final_Params)
 
     MakeSlabs = Firework(
-        FT_SlabOptThick(
-            mp_id=mp_id, miller=mat.get("miller"), functional=functional
-        ),
+        FT_SlabOptThick(mp_id=mp_id, miller=mat.get("miller"), functional=functional),
         name=f'Slab thickness optimization for {mat["formula"]}',
     )
     WF.append(MakeSlabs)
@@ -174,8 +168,8 @@ def homogeneous_wf(inputs):
         Initialize: [PreRelaxation],
         PreRelaxation: [ConvergeEncut],
         ConvergeEncut: [ConvergeKpoints],
-        #ConvergeKpoints: [CalcDielectric],
-        #CalcDielectric: [Final_Params],
+        # ConvergeKpoints: [CalcDielectric],
+        # CalcDielectric: [Final_Params],
         ConvergeKpoints: [Final_Params],
         Final_Params: [MakeSlabs],
         MakeSlabs: [MakeInterface],
@@ -438,9 +432,7 @@ def heterogeneous_wf(inputs):
 
     WF_Name = (
         "TriboFlow_"
-        + interface_name(
-            mp_id_1, mat_1.get("miller"), mp_id_2, mat_2.get("miller")
-        )
+        + interface_name(mp_id_1, mat_1.get("miller"), mp_id_2, mat_2.get("miller"))
         + "_"
         + f"{functional}@{pressure}GPa"
     )

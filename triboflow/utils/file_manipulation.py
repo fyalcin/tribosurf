@@ -80,9 +80,7 @@ def copy_output_files(
     if remote_copy:
         if server and user:
             to_copy = " ".join(file_list)
-            scp_str = "scp {} {}@{}:{}/.".format(
-                to_copy, user, server, output_dir
-            )
+            scp_str = "scp {} {}@{}:{}/.".format(to_copy, user, server, output_dir)
             if port:
                 scp_str = "scp -P {} {} {}@{}:{}/.".format(
                     port, to_copy, user, server, output_dir
@@ -98,7 +96,5 @@ def copy_output_files(
             FT = ScriptTask.from_str('echo "{}"'.format(out_str))
 
     else:
-        FT = FileTransferTask(
-            {"files": file_list, "dest": output_dir, "mode": "copy"}
-        )
+        FT = FileTransferTask({"files": file_list, "dest": output_dir, "mode": "copy"})
     return FT

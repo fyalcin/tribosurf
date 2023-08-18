@@ -14,7 +14,7 @@
 
 #     Author: Gabriele Losi (glosi000)
 #     Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
- 
+
 #     - fix_hs_dicts
 #     - assign_replicate_points
 #     - remove_equivalent_shifts

@@ -39,8 +39,7 @@ def match_the_interface(slab_1, slab_2, inter_params={}):
         return return_dict
     else:
         print(
-            "No match of the given slabs could be found with the "
-            "given parameters:"
+            "No match of the given slabs could be found with the " "given parameters:"
         )
         pprint.pprint(inter_params)
         print("")

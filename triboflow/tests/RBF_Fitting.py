@@ -84,9 +84,7 @@ name = "FeRh001_MgO001_mp-1265_mp-1918"
 
 
 nav_structure = StructureNavigator(db_file=db_file, high_level="triboflow")
-interface_dict = nav_structure.get_interface_from_db(
-    name=name, functional=functional
-)
+interface_dict = nav_structure.get_interface_from_db(name=name, functional=functional)
 c_u = interface_dict["PES"]["high_symmetry_points"]["combined_unique"]
 c_a = interface_dict["PES"]["high_symmetry_points"]["combined_all"]
 E_l = interface_dict["PES"]["high_symmetry_points"]["energy_list"]

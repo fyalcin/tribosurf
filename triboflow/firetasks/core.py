@@ -21,7 +21,9 @@ The modules contains the following Firetasks:
 """
 
 __author__ = "Gabriele Losi"
-__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
+__copyright__ = (
+    "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
+)
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "February 22nd, 2021"
 
@@ -40,7 +42,7 @@ from fireworks import (
     FileWriteTask,
     explicit_serialize,
 )
-from hitmen_utils.workflows import  dynamic_relax_swf
+from hitmen_utils.workflows import dynamic_relax_swf
 from triboflow.utils.database import Navigator
 from triboflow.utils.utils import (
     read_runtask_params,
@@ -260,9 +262,7 @@ class FT_RelaxStructure(FiretaskBase):
         add_static = p.get("add_static", False)
 
         # Set options for vasp
-        vis = get_custom_vasp_relax_settings(
-            structure, comp_params, p["relax_type"]
-        )
+        vis = get_custom_vasp_relax_settings(structure, comp_params, p["relax_type"])
 
         # Define the workflow name
         wf_name = p["mp_id"] + "_" + p["relax_type"]
@@ -531,9 +531,7 @@ class FT_MoveTagResults(FiretaskBase):
 
             # Output to screen
             print("")
-            print(
-                "Relaxed output structure as pymatgen.surface.Slab dictionary:"
-            )
+            print("Relaxed output structure as pymatgen.surface.Slab dictionary:")
             pprint(structure.as_dict())
             print("")
 

@@ -200,9 +200,7 @@ class FT_RetrievePESEnergies(FiretaskBase):
         interface_dict = nav_structure.get_interface_from_db(
             name=name, functional=functional, pressure=pressure
         )
-        lateral_shifts = interface_dict["PES"]["high_symmetry_points"][
-            "unique_shifts"
-        ]
+        lateral_shifts = interface_dict["PES"]["high_symmetry_points"]["unique_shifts"]
         group_assignments = interface_dict["PES"]["high_symmetry_points"][
             "group_assignments"
         ]
@@ -210,9 +208,7 @@ class FT_RetrievePESEnergies(FiretaskBase):
         nav = Navigator(db_file=db_file)
         ref_struct = Interface.from_dict(interface_dict["unrelaxed_structure"])
         area = np.linalg.norm(
-            np.cross(
-                ref_struct.lattice.matrix[0], ref_struct.lattice.matrix[1]
-            )
+            np.cross(ref_struct.lattice.matrix[0], ref_struct.lattice.matrix[1])
         )
 
         energy_list = []
@@ -220,9 +216,7 @@ class FT_RetrievePESEnergies(FiretaskBase):
         calc_output = {}
         for s in lateral_shifts.keys():
             label = tag + "_" + s
-            vasp_calc = nav.find_data(
-                collection="tasks", fltr={"task_label": label}
-            )
+            vasp_calc = nav.find_data(collection="tasks", fltr={"task_label": label})
             struct = vasp_calc["output"]["structure"]
             energy = vasp_calc["output"]["energy"]
             energy *= 16.02176565 / area
@@ -352,9 +346,7 @@ class FT_FindHighSymmPoints(FiretaskBase):
             new_values={
                 "$set": {
                     "PES.high_symmetry_points": {
-                        "bottom_unique": hsp_dict[
-                            "bottom_high_symm_points_unique"
-                        ],
+                        "bottom_unique": hsp_dict["bottom_high_symm_points_unique"],
                         "bottom_all": hsp_dict["bottom_high_symm_points_all"],
                         "top_unique": hsp_dict["top_high_symm_points_unique"],
                         "top_all": hsp_dict["top_high_symm_points_all"],
@@ -367,9 +359,7 @@ class FT_FindHighSymmPoints(FiretaskBase):
             upsert=True,
         )
 
-        return FWAction(
-            update_spec=({"lateral_shifts": hsp_dict["unique_shifts"]})
-        )
+        return FWAction(update_spec=({"lateral_shifts": hsp_dict["unique_shifts"]}))
 
 
 @explicit_serialize
@@ -408,17 +398,19 @@ class FT_StartPESCalcs(FiretaskBase):
     FWActions that produce a detour workflow with relaxations for the PES.
     """
 
-    required_params = ["interface",
-                       "interface_name",
-                       "comp_parameters",
-                       "tag",
-                       "external_pressure"]
+    required_params = [
+        "interface",
+        "interface_name",
+        "comp_parameters",
+        "tag",
+        "external_pressure",
+    ]
     optional_params = [
         "db_file",
         "prerelax",
         "prerelax_algo",
         "prerelax_kwargs",
-        ]
+    ]
 
     def run_task(self, fw_spec):
         interface = self.get("interface")
@@ -463,6 +455,6 @@ class FT_StartPESCalcs(FiretaskBase):
             prerelax_system=prerelax,
             prerelax_algo=prerelax_algo,
             prerelax_kwargs=prerelax_kwargs,
-            )
+        )
 
         return FWAction(detours=WF)

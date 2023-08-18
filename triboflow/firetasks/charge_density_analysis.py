@@ -12,7 +12,6 @@ from scipy.integrate import romb, simpson
 from fireworks import Workflow, FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
 
-
 from atomate.vasp.powerups import add_modify_incar
 from atomate.vasp.fireworks.core import StaticFW
 from atomate.utils.utils import env_chk
@@ -86,16 +85,10 @@ def make_charge_differences(interface, chgcar_int, chgcar_bot, chgcar_top):
         rho_total_abs = simpson(y=abs_profile, dx=dz) / (zmax - zmin)
 
     try:
-        rho_inter_region = romb(y=abs(profile_inter_region), dx=dz) / (
-            zmax - zmin
-        )
-        rho_inter_region_abs = romb(y=abs_profile_inter_region, dx=dz) / (
-            zmax - zmin
-        )
+        rho_inter_region = romb(y=abs(profile_inter_region), dx=dz) / (zmax - zmin)
+        rho_inter_region_abs = romb(y=abs_profile_inter_region, dx=dz) / (zmax - zmin)
     except:
-        rho_inter_region = simpson(y=abs(profile_inter_region), dx=dz) / (
-            zmax - zmin
-        )
+        rho_inter_region = simpson(y=abs(profile_inter_region), dx=dz) / (zmax - zmin)
         rho_inter_region_abs = simpson(y=abs_profile_inter_region, dx=dz) / (
             zmax - zmin
         )
@@ -118,9 +111,7 @@ class FT_MakeChargeCalc(FiretaskBase):
         comp_params = self.get("comp_params")
         label = self.get("calc_name")
 
-        vis = get_custom_vasp_static_settings(
-            struct, comp_params, "slab_from_scratch"
-        )
+        vis = get_custom_vasp_static_settings(struct, comp_params, "slab_from_scratch")
 
         FW = StaticFW(
             structure=struct,

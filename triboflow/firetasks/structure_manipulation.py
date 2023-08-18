@@ -69,9 +69,7 @@ class FT_StartBulkPreRelax(FiretaskBase):
 
         # Querying the structure from the high level database.
         nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
-        data = nav_structure.get_bulk_from_db(
-            mp_id=mp_id, functional=functional
-        )
+        data = nav_structure.get_bulk_from_db(mp_id=mp_id, functional=functional)
 
         prim_struct = data.get("primitive_structure")
         if not prim_struct:
@@ -82,9 +80,7 @@ class FT_StartBulkPreRelax(FiretaskBase):
                     "be used as input for cell shape relaxation."
                 )
             struct = Structure.from_dict(struct)
-            prim_struct = SpacegroupAnalyzer(
-                struct
-            ).get_primitive_standard_structure()
+            prim_struct = SpacegroupAnalyzer(struct).get_primitive_standard_structure()
             prim_struct = transfer_average_magmoms(struct, prim_struct)
         else:
             prim_struct = Structure.from_dict(prim_struct)
@@ -107,9 +103,11 @@ class FT_StartBulkPreRelax(FiretaskBase):
             vis = get_custom_vasp_relax_settings(
                 prim_struct, comp_params, "bulk_pos_shape_relax"
             )
-            RelaxWF = dynamic_relax_swf(inputs_list=[[prim_struct, vis, tag]],
-                                        prerelax_system=True,
-                                        prerelax_kwargs={"relax_cell": True})
+            RelaxWF = dynamic_relax_swf(
+                inputs_list=[[prim_struct, vis, tag]],
+                prerelax_system=True,
+                prerelax_kwargs={"relax_cell": True},
+            )
 
             MoveResultsFW = Firework(
                 [
@@ -120,9 +118,7 @@ class FT_StartBulkPreRelax(FiretaskBase):
                         high_level_db=hl_db,
                     )
                 ],
-                name="Move pre-relaxed structure for {}".format(
-                    prim_struct.formula
-                ),
+                name="Move pre-relaxed structure for {}".format(prim_struct.formula),
             )
             MoveResultsWF = Workflow([MoveResultsFW])
 
@@ -283,9 +279,7 @@ class FT_GetRelaxedSlab(FiretaskBase):
             vasp_calc = nav.find_data(
                 collection="tasks", fltr={"task_label": self["tag"]}
             )
-            relaxed_slab = Structure.from_dict(
-                vasp_calc["output"]["structure"]
-            )
+            relaxed_slab = Structure.from_dict(vasp_calc["output"]["structure"])
             slab = Slab(
                 relaxed_slab.lattice,
                 relaxed_slab.species_and_occu,
@@ -310,9 +304,7 @@ class FT_GetRelaxedSlab(FiretaskBase):
             )
 
             if vasp_calc:
-                relaxed_slab = Structure.from_dict(
-                    vasp_calc["output"]["structure"]
-                )
+                relaxed_slab = Structure.from_dict(vasp_calc["output"]["structure"])
                 slab = Slab(
                     relaxed_slab.lattice,
                     relaxed_slab.species_and_occu,
@@ -366,9 +358,7 @@ class FT_GetRelaxedSlab(FiretaskBase):
                 user=user,
                 port=port,
             )
-            FW = Firework(
-                [write_FT, copy_FT], name="Copy SlabRelax SWF results"
-            )
+            FW = Firework([write_FT, copy_FT], name="Copy SlabRelax SWF results")
             WF = Workflow.from_Firework(FW, name="Copy SlabRelax SWF results")
 
             return FWAction(update_spec=fw_spec, detours=WF)
@@ -451,9 +441,7 @@ class FT_StartSlabRelax(FiretaskBase):
 
         # Check if a relaxed slab is already in the DB entry
         if "relaxed_slab" not in slab_data:
-            vis = get_custom_vasp_relax_settings(
-                slab_to_relax, comp_params, relax_type
-            )
+            vis = get_custom_vasp_relax_settings(slab_to_relax, comp_params, relax_type)
             inputs = [[slab_to_relax, vis, tag]]
             wf_name = formula + miller_str + "_" + relax_type
             WF = dynamic_relax_swf(inputs_list=inputs, wf_name=wf_name)
@@ -532,9 +520,7 @@ class FT_MakeSlabInDB(FiretaskBase):
         #     functional=functional,
         #     miller=miller)
 
-        bulk_conv = SpacegroupAnalyzer(
-            bulk_prim
-        ).get_conventional_standard_structure()
+        bulk_conv = SpacegroupAnalyzer(bulk_prim).get_conventional_standard_structure()
         bulk_conv = transfer_average_magmoms(bulk_prim, bulk_conv)
 
         SG = SlabGenerator(
@@ -648,9 +634,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
         inter_params = inter_data["interface_parameters"]
 
         if not inter_data.get("unrelaxed_structure"):
-            nav_structure = StructureNavigator(
-                db_file=db_file, high_level=hl_db
-            )
+            nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
             slab_1_dict = nav_structure.get_slab_from_db(
                 mp_id=mp_id_1, functional=functional, miller=miller_1
             )

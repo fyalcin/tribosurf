@@ -11,9 +11,8 @@ from pymatgen.transformations.standard_transformations import (
 )
 
 from hitmen_utils.shaper import Shaper
-from triboflow.utils.database import  Navigator
+from triboflow.utils.database import Navigator
 from triboflow.utils.mp_connection import MPConnection
-
 
 
 def get_interface_distance(structure):
@@ -163,19 +162,13 @@ def get_conv_bulk_from_mpid(mpid, coll, db_file="auto", high_level=True):
         )
         bulk_struct = bulk_dict.get("structure_fromMP")
         if bulk_struct is None:
-            raise ValueError(
-                f"Bulk structure not found in the bulk entry for {mpid}"
-            )
+            raise ValueError(f"Bulk structure not found in the bulk entry for {mpid}")
     bulk_struct = Structure.from_dict(bulk_struct)
-    bulk_conv = SpacegroupAnalyzer(
-        bulk_struct
-    ).get_conventional_standard_structure()
+    bulk_conv = SpacegroupAnalyzer(bulk_struct).get_conventional_standard_structure()
     return bulk_conv
 
 
-def slab_from_file(
-    filename, mpid, functional, miller, db_file="auto", high_level=True
-):
+def slab_from_file(filename, mpid, functional, miller, db_file="auto", high_level=True):
     """
     Loads up a surface from a file (can be CIF, VASP, POSCAR ..) and turn it
     into a pymatgen Slab object.
@@ -272,9 +265,7 @@ def transfer_average_magmoms(magnetic_struct, struct_without_magmoms):
         print("No magnetic moments to transfer. Doing nothing...")
         return new_struct
 
-    if not sorted(mag_struct.types_of_species) == sorted(
-        new_struct.types_of_species
-    ):
+    if not sorted(mag_struct.types_of_species) == sorted(new_struct.types_of_species):
         warnings.warn(
             "\n##################################################\n"
             "You are trying to transfer magnetig moments between\n"
@@ -291,9 +282,7 @@ def transfer_average_magmoms(magnetic_struct, struct_without_magmoms):
         magmom_dict[s] = []
         for i, el in enumerate(mag_struct.species):
             if s == el:
-                magmom_dict[s].append(
-                    mag_struct.site_properties.get("magmom")[i]
-                )
+                magmom_dict[s].append(mag_struct.site_properties.get("magmom")[i])
         magmom_dict[s] = np.mean(magmom_dict[s])
 
     new_magmoms = []
@@ -549,9 +538,7 @@ def make_pymatgen_slab(
 
     """
 
-    bulk_conv = SpacegroupAnalyzer(
-        bulk_struct
-    ).get_conventional_standard_structure()
+    bulk_conv = SpacegroupAnalyzer(bulk_struct).get_conventional_standard_structure()
     bulk_conv = transfer_average_magmoms(bulk_struct, bulk_conv)
 
     SG = SlabGenerator(

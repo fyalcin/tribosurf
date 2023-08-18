@@ -429,7 +429,7 @@ class FT_StartPESCalcSWF(FiretaskBase):
         "prerelax",
         "prerelax_algo",
         "prerelax_kwargs",
-        ]
+    ]
 
     def run_task(self, fw_spec):
         mp_id_1 = self.get("mp_id_1")
@@ -467,7 +467,6 @@ class FT_StartPESCalcSWF(FiretaskBase):
                 prerelax=prerelax,
                 prerelax_algo=prerelax_algo,
                 prerelax_kwargs=prerelax_kwargs,
-
             )
 
             return FWAction(detours=SWF, update_spec=fw_spec)

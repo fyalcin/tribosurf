@@ -51,9 +51,7 @@ functional = "PBE"
 # lpad.add_wf(WF)
 # Test GrapheneGraphene interface
 mp_connect = MPConnection()
-struct, mpid = mp_connect.get_low_energy_structure(
-    chem_formula="C", mp_id="mp-1040425"
-)
+struct, mpid = mp_connect.get_low_energy_structure(chem_formula="C", mp_id="mp-1040425")
 slab = slab_from_structure([0, 0, 1], struct)
 
 IM = InterfaceMatcher(slab, slab, interface_distance=3.4)

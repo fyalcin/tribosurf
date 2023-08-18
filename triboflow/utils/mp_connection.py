@@ -94,9 +94,7 @@ class MPConnection:
                 )
         return doc[0].material_id
 
-    def get_property_from_mp(
-        self, mp_id: str, properties: list[str]
-    ) -> dict:
+    def get_property_from_mp(self, mp_id: str, properties: list[str]) -> dict:
         """
         Get a property of a material from the Materials Project database.
 
@@ -115,17 +113,15 @@ class MPConnection:
         with MPRester(api_key=self.mp_api_key) as mpr:
             available_properties = mpr.summary.available_fields
 
-            if not all(
-                [prop in available_properties for prop in properties]
-            ):
+            if not all([prop in available_properties for prop in properties]):
                 raise ValueError(
                     "One or more of the requested properties is not "
                     "available in the SummaryRester of the Materials "
                     "Project database."
                 )
-            output_dict = mpr.summary.search(
-                material_ids=[mp_id], fields=properties
-            )[0].dict()
+            output_dict = mpr.summary.search(material_ids=[mp_id], fields=properties)[
+                0
+            ].dict()
 
             output_dict.pop("fields_not_requested")
         return output_dict
@@ -136,10 +132,12 @@ class MPConnection:
         """
         with MPRester(api_key=self.mp_api_key) as mpr:
             for rester in mpr._all_resters:
-                print(f"{rester.suffix.replace('/', '_')}: "
-                      f"{rester.__class__.__name__}")
+                print(
+                    f"{rester.suffix.replace('/', '_')}: "
+                    f"{rester.__class__.__name__}"
+                )
 
-    def _print_all_properties(self, rester='summary'):
+    def _print_all_properties(self, rester="summary"):
         """
         Print all available properties of the Materials Project API.
         """
@@ -161,7 +159,7 @@ if __name__ == "__main__":
             "band_gap",
             "formula_pretty",
             "energy_above_hull",
-            "g_vrh"
+            "g_vrh",
         ],
     )
     print(prop_dict)
@@ -169,4 +167,4 @@ if __name__ == "__main__":
     struct = db.get_low_energy_structure(chem_formula="Fe2O3", mp_id=mpid)
     print(struct)
 
-    #db._print_all_properties("elasticity")
+    # db._print_all_properties("elasticity")

@@ -80,9 +80,7 @@ def get_slab_convergence_wf(material, comp_params):
     WF.append(CalcDielectric)
 
     TransferParams = Firework(
-        FT_CopyCompParamsToSlab(
-            mp_id=mp_id, miller=miller, functional=functional
-        ),
+        FT_CopyCompParamsToSlab(mp_id=mp_id, miller=miller, functional=functional),
         name="Copy converged params",
     )
     WF.append(TransferParams)
@@ -134,9 +132,7 @@ if __name__ == "__main__":
         "Co",
     ]:
         # for formula in ['Al', 'C']:
-        mpid = materials_dict[formula]["mpids"][
-            materials_dict[formula]["default"]
-        ]
+        mpid = materials_dict[formula]["mpids"][materials_dict[formula]["default"]]
         mat_dict = {"formula": formula, "mpid": mpid}
         for m in miller_list:
             mat_dict["miller"] = m
@@ -156,7 +152,5 @@ if __name__ == "__main__":
     #                    'thick_incr': 1,
     #                    'miller': '110'}]
     for mat in materials_list:
-        workflow_list.append(
-            get_slab_convergence_wf(mat, computational_params)
-        )
+        workflow_list.append(get_slab_convergence_wf(mat, computational_params))
     # submit_multiple_wfs(workflow_list)

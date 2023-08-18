@@ -89,12 +89,8 @@ for i, slab_combinations in enumerate(slab_comb_list):
         else:
             results["statistics"]["both_methods_matched_differently"] += 1
             results["matched_differently"].append(name)
-            interface_pmg.to(
-                "poscar", "./test_interfaces/" + name + "_pmg.vasp"
-            )
-            interface_mpi.to(
-                "poscar", "./test_interfaces/" + name + "_mpi.vasp"
-            )
+            interface_pmg.to("poscar", "./test_interfaces/" + name + "_pmg.vasp")
+            interface_mpi.to("poscar", "./test_interfaces/" + name + "_mpi.vasp")
         results[name] = {
             "pmg": {
                 "interface": interface_pmg,

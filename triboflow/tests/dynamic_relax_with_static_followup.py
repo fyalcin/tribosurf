@@ -28,9 +28,7 @@ for mpid in mpids:
     comp_params = mat_dict["comp_parameters"]
     comp_params["functional"] = "SCAN"
     # comp_params['use_vdw'] = True
-    vis = get_custom_vasp_relax_settings(
-        struct, comp_params, "bulk_full_relax"
-    )
+    vis = get_custom_vasp_relax_settings(struct, comp_params, "bulk_full_relax")
     input_list.append(
         [struct, vis, f"{struct.composition.reduced_formula}_test_relax_SCAN"]
     )

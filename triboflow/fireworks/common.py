@@ -195,9 +195,7 @@ def make_pes_fw(
     return FW
 
 
-def check_inputs_fw(
-    mat1_params, mat2_params, compparams, interface_params, FW_name
-):
+def check_inputs_fw(mat1_params, mat2_params, compparams, interface_params, FW_name):
     """Check the input parameters for completeness and add default values.
 
 

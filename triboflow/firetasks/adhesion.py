@@ -98,13 +98,9 @@ class FT_RetrieveMatchedSlabs(FiretaskBase):
             for i in input_list:
                 label = i[-1]
                 miller = i[0].miller_index
-                calc = nav.find_data(
-                    collection="tasks", fltr={"task_label": label}
-                )
+                calc = nav.find_data(collection="tasks", fltr={"task_label": label})
                 out_struct = calc["output"]["structure"]
-                slab = slab_from_structure(
-                    miller, Structure.from_dict(out_struct)
-                )
+                slab = slab_from_structure(miller, Structure.from_dict(out_struct))
                 if label.startswith("top"):
                     out_name = top_out_name
                 else:
@@ -240,15 +236,14 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
             inputs.append([bot_slab, bot_vis, label])
 
         if inputs:
-            WF = dynamic_relax_swf(inputs_list=inputs,
-                                   wf_name="Relaxing the matched slabs",
-                                   prerelax_system=prerelax,
-                                   prerelax_algo=prerelax_algo,
-                                   prerelax_kwargs=prerelax_kwargs,
-                                   )
-            return FWAction(
-                detours=WF, update_spec={"relaxation_inputs": inputs}
+            WF = dynamic_relax_swf(
+                inputs_list=inputs,
+                wf_name="Relaxing the matched slabs",
+                prerelax_system=prerelax,
+                prerelax_algo=prerelax_algo,
+                prerelax_kwargs=prerelax_kwargs,
             )
+            return FWAction(detours=WF, update_spec={"relaxation_inputs": inputs})
         else:
             return FWAction(update_spec={"relaxation_inputs": inputs})
 
@@ -318,19 +313,13 @@ class FT_CalcAdhesion(FiretaskBase):
 
         nav = Navigator(db_file=db_file)
 
-        top_calc = nav.find_data(
-            collection="tasks", fltr={"task_label": top_label}
-        )
+        top_calc = nav.find_data(collection="tasks", fltr={"task_label": top_label})
         top_energy = top_calc["output"]["energy"]
 
-        bot_calc = nav.find_data(
-            collection="tasks", fltr={"task_label": bot_label}
-        )
+        bot_calc = nav.find_data(collection="tasks", fltr={"task_label": bot_label})
         bot_energy = bot_calc["output"]["energy"]
 
-        inter_calc = nav.find_data(
-            collection="tasks", fltr={"task_label": inter_label}
-        )
+        inter_calc = nav.find_data(collection="tasks", fltr={"task_label": inter_label})
         inter_energy = inter_calc["output"]["energy"]
         struct = Structure.from_dict(inter_calc["output"]["structure"])
 
