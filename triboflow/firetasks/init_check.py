@@ -158,12 +158,14 @@ class FTCheckInput(FiretaskBase):
 
 def unbundle_input(
     inputs,
-    keys=[
-        "material_1",
-        "material_2",
-        "computational_params",
-        "interface_params",
-    ],
+    keys=(
+            "material_1",
+            "material_2",
+            "sg_params",
+            "sg_filter",
+            "computational_params",
+            "interface_params",
+    ),
 ):
     """
     Read the input parameters and return the needed dictionaries for an
@@ -176,7 +178,7 @@ def unbundle_input(
         expected to have three keys, for the material, the computational, and
         the interfacial parameters, respectively.
 
-    keys : list
+    keys : tuple
         List containing the keys to be used to extract
 
     Returns
@@ -196,7 +198,9 @@ def unbundle_input(
     """
 
     # Get dicts containing material, computational and interfacial parameters
-    if list(inputs.keys()) != keys:
+    # check if the set of keys in the inputs dictionary is a subset of the
+    # required keys
+    if not set(inputs.keys()).issubset(set(keys)):
         raise ValueError(
             "The inputs dictionary provided does not contain "
             "the correct keys:\n"
