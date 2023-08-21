@@ -939,18 +939,29 @@ class GetSlabSurfenListFromUids(FiretaskBase):
         slab_surfen_list = []
         for slab_dict in results:
             slab = Slab.from_dict(slab_dict["fully_relaxed_slab"])
+            shift = round(slab.shift, 2)
             surfen_dict = slab_dict["surface_energy"]
             slab_params = slab_dict["slab_params"]
+            hkl = slab_dict["hkl"]
+            terminations = slab_dict["terminations"]
             surfen_min = min(surfen_dict.values())
 
             if not slab_params.get("sym", False):
                 surfen_min_key = min(surfen_dict, key=surfen_dict.get)
                 if surfen_min_key == "bottom":
                     slab = flip_slab(slab)
+                    termination_min = terminations["bottom"]
+                else:
+                    termination_min = terminations["top"]
+            else:
+                termination_min = terminations["top"]
 
             slab_surfen_list.append(
                 {
-                    "structure": slab,
+                    "slab": slab,
+                    "hkl": hkl,
+                    "shift": shift,
+                    "termination": termination_min,
                     "surface_energy": surfen_min,
                     "slab_params": slab_params,
                 }

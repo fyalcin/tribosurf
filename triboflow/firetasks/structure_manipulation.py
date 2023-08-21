@@ -3,6 +3,7 @@
 Created on Wed Jun 17 15:59:59 2020
 @author: mwo
 """
+import itertools
 from pprint import pprint, pformat
 from uuid import uuid4
 
@@ -596,9 +597,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
     _fw_name = "Make Hetero Structure"
     required_params = [
         "mp_id_1",
-        "miller_1",
         "mp_id_2",
-        "miller_2",
         "functional",
         "external_pressure",
     ]
@@ -607,14 +606,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
     def run_task(self, fw_spec):
         mp_id_1 = self.get("mp_id_1")
         mp_id_2 = self.get("mp_id_2")
-        if type(self["miller_1"]) == str:
-            miller_1 = [int(k) for k in list(self["miller_1"])]
-        else:
-            miller_1 = self["miller_1"]
-        if type(self["miller_2"]) == str:
-            miller_2 = [int(k) for k in list(self["miller_2"])]
-        else:
-            miller_2 = self["miller_2"]
+
         functional = self.get("functional")
         pressure = self.get("external_pressure")
 
@@ -625,7 +617,24 @@ class FT_MakeHeteroStructure(FiretaskBase):
         hl_db = self.get("high_level_db", True)
 
         nav_high = Navigator(db_file=db_file, high_level=hl_db)
-        inter_name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
+
+        slab_surfen_list_1 = fw_spec[f"slab_surfen_list_1"]
+        slab_surfen_list_2 = fw_spec[f"slab_surfen_list_2"]
+
+        # get the surface energies of the slabs
+        pairs = list(itertools.product(slab_surfen_list_1, slab_surfen_list_2))
+        pairs.sort(key=lambda x: x[0]["surface_energy"] + x[1]["surface_energy"])
+
+        for pair in pairs:
+            slab_1_dict, slab_2_dict = pair
+            slab_1_hkl, slab_2_hkl = slab_1_dict["hkl"], slab_2_dict["hkl"]
+            slab_1_shift, slab_2_shift = slab_1_dict["shift"], slab_2_dict["shift"]
+
+            inter_name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
+
+
+
+
         inter_data = nav_high.find_data(
             collection=functional + ".interface_data",
             fltr={"name": inter_name, "pressure": pressure},

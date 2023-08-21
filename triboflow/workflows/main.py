@@ -6,18 +6,14 @@ Created on Wed Jun 17 15:47:39 2020
 
 from fireworks import Workflow, Firework
 
-from triboflow.fireworks.init_fws import InitWF
-from triboflow.firetasks.structure_manipulation import (
-    FT_MakeHeteroStructure,
-    FT_StartBulkPreRelax,
-)
-from triboflow.firetasks.init_check import unbundle_input, material_from_mp
-from triboflow.firetasks.utils import FT_CopyHomogeneousSlabs
-from triboflow.firetasks.check_inputs import FT_UpdateInterfaceCompParams
 from triboflow.firetasks.adhesion import (
     FT_RelaxMatchedSlabs,
     FT_RetrieveMatchedSlabs,
 )
+from triboflow.firetasks.check_inputs import FT_UpdateInterfaceCompParams
+from triboflow.firetasks.init_check import unbundle_input, material_from_mp
+from triboflow.firetasks.run_slabs_wfs import FT_SlabOptThick
+from triboflow.firetasks.run_slabs_wfs import RunSurfenSwfGetEnergies
 from triboflow.firetasks.start_swfs import (
     FT_StartAdhesionSWF,
     FT_StartBulkConvoSWF,
@@ -25,8 +21,13 @@ from triboflow.firetasks.start_swfs import (
     FT_StartPESCalcSWF,
     FT_StartChargeAnalysisSWF,
 )
+from triboflow.firetasks.structure_manipulation import (
+    FT_MakeHeteroStructure,
+    FT_StartBulkPreRelax,
+)
+from triboflow.firetasks.utils import FT_CopyHomogeneousSlabs
+from triboflow.fireworks.init_fws import InitWF
 from triboflow.utils.structure_manipulation import interface_name
-from triboflow.firetasks.run_slabs_wfs import FT_SlabOptThick
 
 
 def homogeneous_wf(inputs):
@@ -327,6 +328,287 @@ def heterogeneous_wf(inputs):
         name="Slab thickness optimization " "for {}".format(mat_2["formula"]),
     )
     WF.append(MakeSlabs_M2)
+
+    MakeInterface = Firework(
+        FT_MakeHeteroStructure(
+            mp_id_1=mp_id_1,
+            mp_id_2=mp_id_2,
+            miller_1=mat_1.get("miller"),
+            miller_2=mat_2.get("miller"),
+            functional=functional,
+            external_pressure=pressure,
+        ),
+        name="Match the interface",
+    )
+    WF.append(MakeInterface)
+
+    RelaxMatchedSlabs = Firework(
+        FT_RelaxMatchedSlabs(
+            mp_id_1=mp_id_1,
+            mp_id_2=mp_id_2,
+            miller_1=mat_1.get("miller"),
+            miller_2=mat_2.get("miller"),
+            functional=functional,
+            external_pressure=pressure,
+            prerelax=True,
+        ),
+        name="Fully relax the matched slabs",
+    )
+    WF.append(RelaxMatchedSlabs)
+
+    RetrieveMatchedSlabs = Firework(
+        FT_RetrieveMatchedSlabs(
+            mp_id_1=mp_id_1,
+            mp_id_2=mp_id_2,
+            miller_1=mat_1.get("miller"),
+            miller_2=mat_2.get("miller"),
+            functional=functional,
+            external_pressure=pressure,
+        ),
+        name="Retrieve relaxed matched slabs",
+    )
+    WF.append(RetrieveMatchedSlabs)
+
+    CalcPESPoints = Firework(
+        FT_StartPESCalcSWF(
+            mp_id_1=mp_id_1,
+            mp_id_2=mp_id_2,
+            miller_1=mat_1.get("miller"),
+            miller_2=mat_2.get("miller"),
+            functional=functional,
+            external_pressure=pressure,
+            prerelax=True,
+        ),
+        name="Compute PES high-symmetry points",
+    )
+    WF.append(CalcPESPoints)
+
+    ComputeAdhesion = Firework(
+        FT_StartAdhesionSWF(
+            mp_id_1=mp_id_1,
+            mp_id_2=mp_id_2,
+            miller_1=mat_1.get("miller"),
+            miller_2=mat_2.get("miller"),
+            functional=functional,
+            external_pressure=pressure,
+        ),
+        name="Calculate Adhesion",
+    )
+    WF.append(ComputeAdhesion)
+
+    ChargeAnalysis = Firework(
+        FT_StartChargeAnalysisSWF(
+            mp_id_1=mp_id_1,
+            mp_id_2=mp_id_2,
+            miller_1=mat_1.get("miller"),
+            miller_2=mat_2.get("miller"),
+            functional=functional,
+            external_pressure=pressure,
+        ),
+        name="Charge Analysis",
+    )
+    WF.append(ChargeAnalysis)
+
+    # Define dependencies:
+    Dependencies = {
+        Initialize: [PreRelaxation_M1, PreRelaxation_M2],
+        PreRelaxation_M1: [ConvergeEncut_M1],
+        PreRelaxation_M2: [ConvergeEncut_M2],
+        ConvergeEncut_M1: [ConvergeKpoints_M1],
+        ConvergeEncut_M2: [ConvergeKpoints_M2],
+        # ConvergeKpoints_M1: [CalcDielectric_M1],
+        # ConvergeKpoints_M2: [CalcDielectric_M2],
+        # CalcDielectric_M1: [Final_Params],
+        # CalcDielectric_M2: [Final_Params],
+        ConvergeKpoints_M1: [Final_Params],
+        ConvergeKpoints_M2: [Final_Params],
+        Final_Params: [MakeSlabs_M1, MakeSlabs_M2],
+        MakeSlabs_M1: [MakeInterface],
+        MakeSlabs_M2: [MakeInterface],
+        MakeInterface: [CalcPESPoints, RelaxMatchedSlabs],
+        RelaxMatchedSlabs: [RetrieveMatchedSlabs],
+        CalcPESPoints: [ComputeAdhesion, ChargeAnalysis],
+        RetrieveMatchedSlabs: [ComputeAdhesion],
+    }
+
+    WF_Name = (
+        "TriboFlow_"
+        + interface_name(mp_id_1, mat_1.get("miller"), mp_id_2, mat_2.get("miller"))
+        + "_"
+        + f"{functional}@{pressure}GPa"
+    )
+
+    WF = Workflow(WF, Dependencies, name=WF_Name)
+
+    return WF
+
+
+def heterogeneous_wf_with_surfgen(inputs):
+    """Return main workflow for heterogeneous interfaces within Triboflow.
+
+    Parameters
+    ----------
+    inputs : dict
+        Dictionary containing sub-dictionaries with material information and
+        parameters for the interface creation and computational settings.
+
+    Returns
+    -------
+    WF : FireWorks Workflow
+        Main Triboflow workflow for heterogeneous interfaces.
+
+    """
+    mat_1, mat_2, sg_params, sg_filter, comp_params, inter_params = unbundle_input(
+        inputs
+    )
+
+    struct_1, mp_id_1 = material_from_mp(mat_1)
+    struct_2, mp_id_2 = material_from_mp(mat_2)
+
+    functional = comp_params.get("functional", "PBE")
+
+    WF = []
+
+    # pressure might default to None, so we have to check for that
+    pressure = inter_params.get("external_pressure", 0.0) or 0.0
+
+    Initialize = InitWF.checkinp_hetero_interface(
+        material_1=mat_1,
+        material_2=mat_2,
+        computational=comp_params,
+        interface=inter_params,
+    )
+    WF.append(Initialize)
+
+    PreRelaxation_M1 = Firework(
+        FT_StartBulkPreRelax(mp_id=mp_id_1, functional=functional),
+        name="Start pre-relaxation for {}".format(mat_1["formula"]),
+    )
+    WF.append(PreRelaxation_M1)
+
+    PreRelaxation_M2 = Firework(
+        FT_StartBulkPreRelax(mp_id=mp_id_2, functional=functional),
+        name="Start pre-relaxation for {}".format(mat_2["formula"]),
+    )
+    WF.append(PreRelaxation_M2)
+
+    ConvergeEncut_M1 = Firework(
+        FT_StartBulkConvoSWF(
+            conv_type="encut",
+            mp_id=mp_id_1,
+            functional=functional,
+        ),
+        name="Start encut convergence for {}".format(mat_1["formula"]),
+    )
+    WF.append(ConvergeEncut_M1)
+
+    ConvergeEncut_M2 = Firework(
+        FT_StartBulkConvoSWF(
+            conv_type="encut",
+            mp_id=mp_id_2,
+            functional=functional,
+        ),
+        name="Start encut convergence for {}".format(mat_2["formula"]),
+    )
+    WF.append(ConvergeEncut_M2)
+
+    ConvergeKpoints_M1 = Firework(
+        FT_StartBulkConvoSWF(
+            conv_type="kpoints",
+            mp_id=mp_id_1,
+            functional=functional,
+        ),
+        name="Start kpoints convergence for {}".format(mat_1["formula"]),
+    )
+    WF.append(ConvergeKpoints_M1)
+
+    ConvergeKpoints_M2 = Firework(
+        FT_StartBulkConvoSWF(
+            conv_type="kpoints",
+            mp_id=mp_id_2,
+            functional=functional,
+        ),
+        name="Start kpoints convergence for {}".format(mat_2["formula"]),
+    )
+    WF.append(ConvergeKpoints_M2)
+
+    # CalcDielectric_M1 = Firework(
+    #     FT_StartDielectricSWF(
+    #         mp_id=mp_id_1,
+    #         functional=functional,
+    #         update_bulk=True,
+    #         update_slabs=True,
+    #     ),
+    #     name=f'Start dielectric SWF for {mat_1["formula"]}',
+    # )
+    # WF.append(CalcDielectric_M1)
+
+    # CalcDielectric_M2 = Firework(
+    #     FT_StartDielectricSWF(
+    #         mp_id=mp_id_2,
+    #         functional=functional,
+    #         update_bulk=True,
+    #         update_slabs=True,
+    #     ),
+    #     name=f'Start dielectric SWF for {mat_2["formula"]}',
+    # )
+    # WF.append(CalcDielectric_M2)
+
+    Final_Params = Firework(
+        FT_UpdateInterfaceCompParams(
+            mp_id_1=mp_id_1,
+            mp_id_2=mp_id_2,
+            miller_1=mat_1.get("miller"),
+            miller_2=mat_2.get("miller"),
+            functional=functional,
+            external_pressure=pressure,
+        ),
+        name="Consolidate computational parameters",
+    )
+    WF.append(Final_Params)
+
+    required_params = ["mpid"]
+    optional_params = [
+        "comp_params",
+        "comp_params_from_db",
+        "sg_params",
+        "sg_filter",
+        "db_file",
+        "high_level",
+        "custom_id",
+        "surfen_coll",
+        "bulk_coll",
+        "add_full_relax",
+        "material_index",
+    ]
+
+    GetSlabsM1 = Firework(
+        RunSurfenSwfGetEnergies(
+            mpid=mp_id_1,
+            comp_params_from_db=True,
+            sg_params=sg_params,
+            sg_filter=sg_filter,
+            bulk_coll=f"{functional}.bulk_data",
+            add_full_relax=True,
+            material_index=1,
+        ),
+        name="Get slabs M1",
+    )
+    WF.append(GetSlabsM1)
+
+    GetSlabsM2 = Firework(
+        RunSurfenSwfGetEnergies(
+            mpid=mp_id_2,
+            comp_params_from_db=True,
+            sg_params=sg_params,
+            sg_filter=sg_filter,
+            bulk_coll=f"{functional}.bulk_data",
+            add_full_relax=True,
+            material_index=2,
+        ),
+        name="Get slabs M2",
+    )
+    WF.append(GetSlabsM2)
 
     MakeInterface = Firework(
         FT_MakeHeteroStructure(
