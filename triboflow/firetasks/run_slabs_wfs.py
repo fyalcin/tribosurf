@@ -38,6 +38,7 @@ import numpy as np
 from fireworks import explicit_serialize, FiretaskBase, FWAction, Workflow, Firework
 from monty.json import jsanitize
 from pymatgen.core.structure import Structure
+from pymatgen.core.surface import Slab
 
 from hitmen_utils.db_tools import VaspDB
 from hitmen_utils.misc_tools import check_input
@@ -903,24 +904,30 @@ class GetSurfaceEnergiesFromUids(FiretaskBase):
         opt_inp = {k: self.get(k) for k in self.optional_params}
         opt_inp = check_input(opt_inp, self.optional_params)
         inp = {**req_inp, **opt_inp}
-        slab_info = fw_spec["slab_info"]
-        mpid = slab_info["mpid"]
-        uids = slab_info["uids"]
+        prev_swf_info = fw_spec["StartSurfaceEnergy_info"]
+        mpid, uids = prev_swf_info["mpid"], prev_swf_info["uids"]
         nav = VaspDB(db_file=inp["db_file"], high_level=inp["high_level"])
-        results = list(
-            nav.find_many_data(
-                inp["surfen_coll"],
-                {"uid": {"$in": uids}},
-                {"uid": 1, "surface_energy": 1, "structure": 1, "terminations": 1},
+        results_dict = {
+            result["uid"]: result
+            for result in list(
+                nav.find_many_data(
+                    inp["surfen_coll"],
+                    {"uid": {"$in": uids}},
+                    {"calcs": 0},
+                )
             )
-        )
-        for result in results:
+        }
+        for uid, result in results_dict.items():
+            slab = Slab.from_dict(result["structure"])
+            hkl = result["hkl"]
             uid = result["uid"]
             nav.update_data(
                 collection="test",
                 fltr={"mpid": mpid},
                 new_values={
                     "$set": {
+                        uid + ".hkl": hkl,
+                        uid + ".shift": slab.shift,
                         uid + ".surface_energy": result["surface_energy"],
                         uid + ".structure": result["structure"],
                         uid + ".terminations": result["terminations"],
@@ -928,6 +935,9 @@ class GetSurfaceEnergiesFromUids(FiretaskBase):
                 },
                 upsert=True,
             )
+
+        # Update the spec
+        fw_spec["GetSurfaceEnergiesFromUids_info"] = results_dict
 
         return FWAction(update_spec=fw_spec)
 
@@ -953,23 +963,38 @@ class RunSurfenSwfGetEnergies(FiretaskBase):
         opt_inp = {k: self.get(k) for k in self.optional_params}
         opt_inp = check_input(opt_inp, self.optional_params)
         inp = {**req_inp, **opt_inp}
-        ft1 = StartSurfaceEnergy(
-            mpid=inp["mpid"],
-            comp_params=inp["comp_params"],
-            sg_params=inp["sg_params"],
-            sg_filter=inp["sg_filter"],
-            db_file=inp["db_file"],
-            high_level=inp["high_level"],
-            custom_id=inp["custom_id"],
-            surfen_coll=inp["surfen_coll"],
-            bulk_coll=inp["bulk_coll"],
-            add_full_relax=inp["add_full_relax"],
+        fw1 = Firework(
+            [
+                StartSurfaceEnergy(
+                    mpid=inp["mpid"],
+                    comp_params=inp["comp_params"],
+                    sg_params=inp["sg_params"],
+                    sg_filter=inp["sg_filter"],
+                    db_file=inp["db_file"],
+                    high_level=inp["high_level"],
+                    custom_id=inp["custom_id"],
+                    surfen_coll=inp["surfen_coll"],
+                    bulk_coll=inp["bulk_coll"],
+                    add_full_relax=inp["add_full_relax"],
+                )
+            ],
+            name="StartSurfaceEnergy",
         )
-        ft2 = GetSurfaceEnergiesFromUids(
-            db_file=inp["db_file"],
-            high_level=inp["high_level"],
-            surfen_coll=inp["surfen_coll"],
+
+        fw2 = Firework(
+            [
+                GetSurfaceEnergiesFromUids(
+                    db_file=inp["db_file"],
+                    high_level=inp["high_level"],
+                    surfen_coll=inp["surfen_coll"],
+                )
+            ],
+            name="GetSurfaceEnergiesFromUids",
+            parents=fw1,
         )
-        fw = Firework([ft1, ft2], name="RunSurfenSwfGetEnergies")
-        wf = Workflow([fw], name="RunSurfenSwfGetEnergies")
-        return FWAction(additions=wf)
+
+        wf = Workflow(
+            [fw1, fw2],
+            name=f"Run Surface Energy Workflow and Get Surface Energies for {inp['mpid']}",
+        )
+        return FWAction(detours=wf)
