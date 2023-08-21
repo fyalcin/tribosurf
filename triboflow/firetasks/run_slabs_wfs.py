@@ -32,29 +32,30 @@ __copyright__ = (
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "February 22nd, 2021"
 
-
 import os
-from monty.json import jsanitize
-from hitmen_utils.db_tools import VaspDB
-import numpy as np
-from pymatgen.core.structure import Structure
-from fireworks import explicit_serialize, FiretaskBase, FWAction
 
+import numpy as np
+from fireworks import explicit_serialize, FiretaskBase, FWAction, Workflow, Firework
+from monty.json import jsanitize
+from pymatgen.core.structure import Structure
+
+from hitmen_utils.db_tools import VaspDB
+from hitmen_utils.misc_tools import check_input
+from hitmen_utils.shaper import Shaper
+from surfen.firetasks.start_swfs import StartSurfaceEnergy
 from triboflow.utils.database import (
     Navigator,
     StructureNavigator,
     get_low_and_high_db_names,
 )
+from triboflow.utils.errors import SlabOptThickError
+from triboflow.utils.structure_manipulation import slab_from_structure
 from triboflow.utils.utils import (
     read_runtask_params,
     read_default_params,
     get_one_info_from_dict,
     retrieve_from_db,
 )
-from triboflow.utils.structure_manipulation import slab_from_structure
-from triboflow.utils.errors import SlabOptThickError
-from hitmen_utils.shaper import Shaper
-from hitmen_utils.misc_tools import check_input
 
 currentdir = os.path.dirname(__file__)
 
@@ -894,7 +895,7 @@ class FT_EndThickConvo(FiretaskBase):
 @explicit_serialize
 class GetSurfaceEnergiesFromUids(FiretaskBase):
     _fw_name = "Query the surface energies with the list of uids provided"
-    required_params = ["uids"]
+    required_params = []
     optional_params = ["db_file", "high_level", "fake_calc", "surfen_coll"]
 
     def run_task(self, fw_spec):
@@ -902,9 +903,71 @@ class GetSurfaceEnergiesFromUids(FiretaskBase):
         opt_inp = {k: self.get(k) for k in self.optional_params}
         opt_inp = check_input(opt_inp, self.optional_params)
         inp = {**req_inp, **opt_inp}
+        uids, mpid = fw_spec["uids"]
         nav = VaspDB(db_file=inp["db_file"], high_level=inp["high_level"])
         results = list(
-            nav.find_many_data(inp["surfen_coll"], {"uid": {"$in": inp["uids"]}})
+            nav.find_many_data(
+                inp["surfen_coll"],
+                {"uid": {"$in": uids}},
+                {"uid": 1, "surface_energy": 1, "structure": 1, "terminations": 1},
+            )
         )
-        uid_surfen_dict = {r["uid"]: r["surface_energy"] for r in results}
-        return FWAction(update_spec={"uid_surfen_dict": uid_surfen_dict})
+        for result in results:
+            uid = result["uid"]
+            nav.update_data(
+                collection="test",
+                fltr={"mpid": mpid},
+                new_values={
+                    "$set": {
+                        uid + ".surface_energy": result["surface_energy"],
+                        uid + ".structure": result["structure"],
+                        uid + ".terminations": result["terminations"],
+                    }
+                },
+                upsert=True,
+            )
+
+        return FWAction(update_spec=fw_spec)
+
+
+@explicit_serialize
+class RunSurfenSwfGetEnergies(FiretaskBase):
+    _fw_name = "Run the surface energy workflow and get the energies"
+    required_params = ["mpid"]
+    optional_params = [
+        "comp_params",
+        "sg_params",
+        "sg_filter",
+        "db_file",
+        "high_level",
+        "custom_id",
+        "surfen_coll",
+        "bulk_coll",
+        "add_full_relax",
+    ]
+
+    def run_task(self, fw_spec):
+        req_inp = {k: self.get(k) for k in self.required_params}
+        opt_inp = {k: self.get(k) for k in self.optional_params}
+        opt_inp = check_input(opt_inp, self.optional_params)
+        inp = {**req_inp, **opt_inp}
+        ft1 = StartSurfaceEnergy(
+            mpid=inp["mpid"],
+            comp_params=inp["comp_params"],
+            sg_params=inp["sg_params"],
+            sg_filter=inp["sg_filter"],
+            db_file=inp["db_file"],
+            high_level=inp["high_level"],
+            custom_id=inp["custom_id"],
+            surfen_coll=inp["surfen_coll"],
+            bulk_coll=inp["bulk_coll"],
+            add_full_relax=inp["add_full_relax"],
+        )
+        ft2 = GetSurfaceEnergiesFromUids(
+            db_file=inp["db_file"],
+            high_level=inp["high_level"],
+            surfen_coll=inp["surfen_coll"],
+        )
+        fw = Firework([ft1, ft2], name="RunSurfenSwfGetEnergies")
+        wf = Workflow([fw], name="RunSurfenSwfGetEnergies")
+        return FWAction(additions=wf)
