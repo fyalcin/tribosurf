@@ -903,7 +903,9 @@ class GetSurfaceEnergiesFromUids(FiretaskBase):
         opt_inp = {k: self.get(k) for k in self.optional_params}
         opt_inp = check_input(opt_inp, self.optional_params)
         inp = {**req_inp, **opt_inp}
-        uids, mpid = fw_spec["uids"]
+        slab_info = fw_spec["slab_info"]
+        mpid = slab_info["mpid"]
+        uids = slab_info["uids"]
         nav = VaspDB(db_file=inp["db_file"], high_level=inp["high_level"])
         results = list(
             nav.find_many_data(
