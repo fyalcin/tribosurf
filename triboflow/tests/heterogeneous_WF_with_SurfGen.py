@@ -43,6 +43,6 @@ inputs = {
 
 WF = heterogeneous_wf_with_surfgen(inputs)
 
-# lpad = LaunchPad.auto_load()
-# lpad.add_wf(WF)
+lpad = LaunchPad.auto_load()
+lpad.add_wf(WF)
 # rapidfire(lpad)

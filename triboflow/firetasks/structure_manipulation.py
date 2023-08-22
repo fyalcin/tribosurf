@@ -575,14 +575,8 @@ class FT_MakeHeteroStructure(FiretaskBase):
     ----------
     mp_id_1 : str
         ID number from the MP to identify material 1.
-    miller_1 : list of int or str
-        Miller indices for identification of the slab of material 1. Either
-        single str e.g. '111', or a list of int e.g. [1, 1, 1].
     mp_id_2 : str
         ID number from the MP for material 2.
-    miller_2 : list of int or str
-        Miller indices for identification of the slab of material 2. Either
-        single str e.g. '111', or a list of int e.g. [1, 1, 1].
     functional : str
         functional that is used for the calculation.
     external_pressure : float

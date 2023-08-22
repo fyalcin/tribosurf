@@ -463,21 +463,11 @@ def heterogeneous_wf_with_surfgen(inputs):
         mat_2,
         sg_params_1,
         sg_params_2,
-        sg_filter,
+        sg_filter_1,
+        sg_filter_2,
         comp_params,
         inter_params,
-    ) = unbundle_input(
-        inputs=inputs,
-        keys=(
-            "mat_1",
-            "mat_2",
-            "sg_params_1",
-            "sg_params_2",
-            "sg_filter",
-            "comp_params",
-            "inter_params",
-        ),
-    )
+    ) = unbundle_input(inputs=inputs)
 
     struct_1, mp_id_1 = material_from_mp(mat_1)
     struct_2, mp_id_2 = material_from_mp(mat_2)
@@ -588,8 +578,8 @@ def heterogeneous_wf_with_surfgen(inputs):
         RunSurfenSwfGetEnergies(
             mpid=mp_id_1,
             comp_params_from_db=True,
-            sg_params=sg_params,
-            sg_filter=sg_filter,
+            sg_params=sg_params_1,
+            sg_filter=sg_filter_1,
             bulk_coll=f"{functional}.bulk_data",
             add_full_relax=True,
             material_index=1,
@@ -602,8 +592,8 @@ def heterogeneous_wf_with_surfgen(inputs):
         RunSurfenSwfGetEnergies(
             mpid=mp_id_2,
             comp_params_from_db=True,
-            sg_params=sg_params,
-            sg_filter=sg_filter,
+            sg_params=sg_params_2,
+            sg_filter=sg_filter_2,
             bulk_coll=f"{functional}.bulk_data",
             add_full_relax=True,
             material_index=2,
@@ -616,8 +606,6 @@ def heterogeneous_wf_with_surfgen(inputs):
         FT_MakeHeteroStructure(
             mp_id_1=mp_id_1,
             mp_id_2=mp_id_2,
-            miller_1=mat_1.get("miller"),
-            miller_2=mat_2.get("miller"),
             functional=functional,
             external_pressure=pressure,
         ),
@@ -716,7 +704,7 @@ def heterogeneous_wf_with_surfgen(inputs):
 
     WF_Name = (
         "TriboFlow_"
-        + interface_name(mp_id_1, mp_id_2, mat_1.get("miller"), mat_2.get("miller"))
+        + "-".join(sorted([f"{mat_1['formula']} ({mp_id_1})", f"{mat_2['formula']} ({mp_id_2})"]))
         + "_"
         + f"{functional}@{pressure}GPa"
     )
