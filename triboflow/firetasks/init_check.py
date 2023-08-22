@@ -280,11 +280,11 @@ def read_input_dict(input_dict, read_key):
     defaults = load_defaults()
 
     # Check if the read_key is known
-    if read_key not in list(defaults.keys()):
-        raise ValueError(
-            "There exist no default values for the selected key\n"
-            "\t{}.\n Please choose from: {}".format(read_key, list(defaults.keys()))
-        )
+    # if read_key not in list(defaults.keys()):
+    #     raise ValueError(
+    #         "There exist no default values for the selected key\n"
+    #         "\t{}.\n Please choose from: {}".format(read_key, list(defaults.keys()))
+    #     )
     # Extract the dictionary data
     out_dict = dict_consistency(input_dict, defaults[read_key])
 

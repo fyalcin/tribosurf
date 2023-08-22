@@ -123,7 +123,7 @@ class FT_PutMaterialInDB(FiretaskBase):
 
         # Put bulk and slab in high level DB
         put_bulk_in_db(data, comp_params, db_file)
-        put_slab_in_db(data, comp_params, db_file)
+        # put_slab_in_db(data, comp_params, db_file)
 
 
 @explicit_serialize

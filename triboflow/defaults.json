@@ -22,7 +22,6 @@
    },
    "material_params":{
       "formula":"NO_DEFAULT",
-      "miller":"NO_DEFAULT",
       "mpid":null,
       "thick_min":4,
       "thick_max":10,
