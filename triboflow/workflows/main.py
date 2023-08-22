@@ -599,6 +599,8 @@ def heterogeneous_wf_with_surfgen(inputs):
             miller_2=mat_2.get("miller"),
             functional=functional,
             external_pressure=pressure,
+            db_file=db_file,
+            high_level_db=high_level,
         ),
         name="Consolidate computational parameters",
         parents=final_params_parents,
