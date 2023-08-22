@@ -17,7 +17,7 @@ inputs = {
         "functional": "PBE",
         "volume_tolerance": 0.01,
         "BM_tolerance": 0.01,
-        "use_vdw": "dftd2",
+        "use_vdw": False,
         "use_spin": True,
     },
     "sg_params_1": {

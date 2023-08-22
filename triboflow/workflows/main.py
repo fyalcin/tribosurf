@@ -492,7 +492,7 @@ def heterogeneous_wf_with_surfgen(inputs):
             mpid=mp_id_1,
             functional=functional,
             db_file=db_file,
-            high_level_db=high_level,
+            high_level=high_level,
             custom_data={"comp_parameters": comp_params},
         ),
         name=f"Add {mat_1['formula']} ({mp_id_1}) to DB",
