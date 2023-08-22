@@ -3,25 +3,25 @@
 Created on Wed Jun 17 15:59:59 2020
 @author: mwo
 """
-import numpy as np
 from datetime import datetime
 from pprint import pprint, pformat
 
-from fireworks import FWAction, FiretaskBase, Firework, Workflow, FileWriteTask
-from fireworks.utilities.fw_utilities import explicit_serialize
+import numpy as np
 from atomate.utils.utils import env_chk
 from atomate.vasp.config import VASP_CMD, DB_FILE
 from atomate.vasp.powerups import add_modify_incar
 from atomate.vasp.workflows.base.bulk_modulus import get_wf_bulk_modulus
+from fireworks import FWAction, FiretaskBase, Firework, Workflow, FileWriteTask
+from fireworks.utilities.fw_utilities import explicit_serialize
 
+from hitmen_utils.kpoints import MeshFromDensity
 from hitmen_utils.vasp_tools import (
     get_custom_vasp_static_settings,
     get_emin_and_emax,
 )
-from hitmen_utils.kpoints import MeshFromDensity
 from triboflow.utils.database import Navigator, StructureNavigator
-from triboflow.utils.utils import is_list_converged
 from triboflow.utils.file_manipulation import copy_output_files
+from triboflow.utils.utils import is_list_converged
 
 
 @explicit_serialize
@@ -275,6 +275,7 @@ class FT_Convo(FiretaskBase):
                         server=server,
                         user=user,
                         port=port,
+                        high_level_db=hl_db,
                     ),
                 ],
                 name="Update BM Lists and Loop",

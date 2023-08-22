@@ -20,6 +20,7 @@ from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
 from hitmen_utils.workflows import dynamic_relax_swf
+from surfen.utils.structure_manipulation import add_bulk_to_db
 from triboflow.phys.interface_matcher import InterfaceMatcher
 from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.file_manipulation import copy_output_files
@@ -562,6 +563,28 @@ class FT_MakeSlabInDB(FiretaskBase):
         )
 
         return
+
+
+@explicit_serialize
+class FT_AddBulkToDB(FiretaskBase):
+    _fw_name = "Add bulk to DB"
+    required_params = ["mpid", "functional"]
+    optional_params = ["db_file", "high_level", "custom_data"]
+
+    def run_task(self, fw_spec):
+        mpid = self.get("mpid")
+        functional = self.get("functional")
+        db_file = self.get("db_file", "auto")
+        high_level = self.get("high_level", True)
+        custom_data = self.get("custom_data", None)
+
+        add_bulk_to_db(
+            mpid=mpid,
+            coll=f"{functional}.bulk_data",
+            db_file=db_file,
+            high_level=high_level,
+            custom_data=custom_data,
+        )
 
 
 @explicit_serialize

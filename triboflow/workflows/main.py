@@ -23,6 +23,7 @@ from triboflow.firetasks.start_swfs import (
     FT_StartChargeAnalysisSWF,
 )
 from triboflow.firetasks.structure_manipulation import (
+    FT_AddBulkToDB,
     FT_MakeHeteroStructure,
     FT_StartBulkPreRelax,
 )
@@ -461,7 +462,7 @@ def heterogeneous_wf_with_surfgen(inputs):
 
     Returns
     -------
-    WF : FireWorks Workflow
+    wf_list : FireWorks Workflow
         Main Triboflow workflow for heterogeneous interfaces.
 
     """
@@ -476,33 +477,29 @@ def heterogeneous_wf_with_surfgen(inputs):
     db_file = inputs["db_file"]
     high_level = inputs["high_level"]
 
-
     struct_1, mp_id_1 = material_from_mp(mat_1)
     struct_2, mp_id_2 = material_from_mp(mat_2)
 
     functional = comp_params.get("functional", "PBE")
 
-    WF = []
+    wf_list = []
 
     # pressure might default to None, so we have to check for that
     pressure = inter_params.get("external_pressure", 0.0) or 0.0
 
-    add_bulk_to_db(
-        mp_id_1,
-        f"{functional}.bulk_data",
-        db_file=db_file,
-        high_level=high_level,
-        custom_data={"comp_parameters": comp_params},
+    add_bulk_m1 = Firework(
+        FT_AddBulkToDB(
+            mpid=mp_id_1,
+            functional=functional,
+            db_file=db_file,
+            high_level_db=high_level,
+            custom_data={"comp_parameters": comp_params},
+        ),
+        name=f"Add {mat_1['formula']} ({mp_id_1}) to DB",
     )
-    add_bulk_to_db(
-        mp_id_2,
-        f"{functional}.bulk_data",
-        db_file=db_file,
-        high_level=high_level,
-        custom_data={"comp_parameters": comp_params},
-    )
+    wf_list.append(add_bulk_m1)
 
-    PreRelaxation_M1 = Firework(
+    pre_relaxation_m1 = Firework(
         FT_StartBulkPreRelax(
             mp_id=mp_id_1,
             functional=functional,
@@ -510,21 +507,11 @@ def heterogeneous_wf_with_surfgen(inputs):
             high_level_db=high_level,
         ),
         name="Start pre-relaxation for {}".format(mat_1["formula"]),
+        parents=[add_bulk_m1],
     )
-    WF.append(PreRelaxation_M1)
+    wf_list.append(pre_relaxation_m1)
 
-    PreRelaxation_M2 = Firework(
-        FT_StartBulkPreRelax(
-            mp_id=mp_id_2,
-            functional=functional,
-            db_file=db_file,
-            high_level_db=high_level,
-        ),
-        name="Start pre-relaxation for {}".format(mat_2["formula"]),
-    )
-    WF.append(PreRelaxation_M2)
-
-    ConvergeEncut_M1 = Firework(
+    converge_encut_m1 = Firework(
         FT_StartBulkConvoSWF(
             conv_type="encut",
             mp_id=mp_id_1,
@@ -533,22 +520,11 @@ def heterogeneous_wf_with_surfgen(inputs):
             high_level_db=high_level,
         ),
         name="Start encut convergence for {}".format(mat_1["formula"]),
+        parents=[pre_relaxation_m1],
     )
-    WF.append(ConvergeEncut_M1)
+    wf_list.append(converge_encut_m1)
 
-    ConvergeEncut_M2 = Firework(
-        FT_StartBulkConvoSWF(
-            conv_type="encut",
-            mp_id=mp_id_2,
-            functional=functional,
-            db_file=db_file,
-            high_level_db=high_level,
-        ),
-        name="Start encut convergence for {}".format(mat_2["formula"]),
-    )
-    WF.append(ConvergeEncut_M2)
-
-    ConvergeKpoints_M1 = Firework(
+    converge_kpoints_m1 = Firework(
         FT_StartBulkConvoSWF(
             conv_type="kpoints",
             mp_id=mp_id_1,
@@ -557,44 +533,65 @@ def heterogeneous_wf_with_surfgen(inputs):
             high_level_db=high_level,
         ),
         name="Start kpoints convergence for {}".format(mat_1["formula"]),
+        parents=[converge_encut_m1],
     )
-    WF.append(ConvergeKpoints_M1)
+    wf_list.append(converge_kpoints_m1)
 
-    ConvergeKpoints_M2 = Firework(
-        FT_StartBulkConvoSWF(
-            conv_type="kpoints",
-            mp_id=mp_id_2,
-            functional=functional,
-            db_file=db_file,
-            high_level_db=high_level,
-        ),
-        name="Start kpoints convergence for {}".format(mat_2["formula"]),
-    )
-    WF.append(ConvergeKpoints_M2)
+    final_params_parents = [converge_kpoints_m1]
 
-    # CalcDielectric_M1 = Firework(
-    #     FT_StartDielectricSWF(
-    #         mp_id=mp_id_1,
-    #         functional=functional,
-    #         update_bulk=True,
-    #         update_slabs=True,
-    #     ),
-    #     name=f'Start dielectric SWF for {mat_1["formula"]}',
-    # )
-    # WF.append(CalcDielectric_M1)
+    if mp_id_2 != mp_id_1:
+        add_bulk_m2 = Firework(
+            FT_AddBulkToDB(
+                mpid=mp_id_2,
+                functional=functional,
+                db_file=db_file,
+                high_level_db=high_level,
+                custom_data={"comp_parameters": comp_params},
+            ),
+            name=f"Add {mat_2['formula']} ({mp_id_2}) to DB",
+        )
 
-    # CalcDielectric_M2 = Firework(
-    #     FT_StartDielectricSWF(
-    #         mp_id=mp_id_2,
-    #         functional=functional,
-    #         update_bulk=True,
-    #         update_slabs=True,
-    #     ),
-    #     name=f'Start dielectric SWF for {mat_2["formula"]}',
-    # )
-    # WF.append(CalcDielectric_M2)
+        pre_relaxation_m2 = Firework(
+            FT_StartBulkPreRelax(
+                mp_id=mp_id_2,
+                functional=functional,
+                db_file=db_file,
+                high_level_db=high_level,
+            ),
+            name="Start pre-relaxation for {}".format(mat_2["formula"]),
+            parents=[add_bulk_m2],
+        )
+        wf_list.append(pre_relaxation_m2)
 
-    Final_Params = Firework(
+        converge_encut_m2 = Firework(
+            FT_StartBulkConvoSWF(
+                conv_type="encut",
+                mp_id=mp_id_2,
+                functional=functional,
+                db_file=db_file,
+                high_level_db=high_level,
+            ),
+            name="Start encut convergence for {}".format(mat_2["formula"]),
+            parents=[pre_relaxation_m2],
+        )
+        wf_list.append(converge_encut_m2)
+
+        converge_kpoints_m2 = Firework(
+            FT_StartBulkConvoSWF(
+                conv_type="kpoints",
+                mp_id=mp_id_2,
+                functional=functional,
+                db_file=db_file,
+                high_level_db=high_level,
+            ),
+            name="Start kpoints convergence for {}".format(mat_2["formula"]),
+            parents=[converge_encut_m2],
+        )
+        wf_list.append(converge_kpoints_m2)
+
+        final_params_parents.append(converge_kpoints_m2)
+
+    final_params = Firework(
         FT_UpdateInterfaceCompParams(
             mp_id_1=mp_id_1,
             mp_id_2=mp_id_2,
@@ -604,10 +601,11 @@ def heterogeneous_wf_with_surfgen(inputs):
             external_pressure=pressure,
         ),
         name="Consolidate computational parameters",
+        parents=final_params_parents,
     )
-    WF.append(Final_Params)
+    wf_list.append(final_params)
 
-    GetSlabsM1 = Firework(
+    get_slabs_m1 = Firework(
         RunSurfenSwfGetEnergies(
             mpid=mp_id_1,
             comp_params_from_db=True,
@@ -619,27 +617,37 @@ def heterogeneous_wf_with_surfgen(inputs):
             db_file=db_file,
             high_level=high_level,
         ),
-        name="Get slabs M1",
+        name="Get slabs for material 1",
+        parents=[final_params],
     )
-    WF.append(GetSlabsM1)
+    wf_list.append(get_slabs_m1)
 
-    GetSlabsM2 = Firework(
-        RunSurfenSwfGetEnergies(
-            mpid=mp_id_2,
-            comp_params_from_db=True,
-            sg_params=sg_params_2,
-            sg_filter=sg_filter_2,
-            bulk_coll=f"{functional}.bulk_data",
-            add_full_relax=True,
-            material_index=2,
-            db_file=db_file,
-            high_level=high_level,
-        ),
-        name="Get slabs M2",
-    )
-    WF.append(GetSlabsM2)
+    match_interface_parents = [get_slabs_m1]
 
-    MakeInterface = Firework(
+    if (
+        (mp_id_2 != mp_id_1)
+        or (sg_params_1 != sg_params_2)
+        or (sg_filter_1 != sg_filter_2)
+    ):
+        get_slabs_m2 = Firework(
+            RunSurfenSwfGetEnergies(
+                mpid=mp_id_2,
+                comp_params_from_db=True,
+                sg_params=sg_params_2,
+                sg_filter=sg_filter_2,
+                bulk_coll=f"{functional}.bulk_data",
+                add_full_relax=True,
+                material_index=2,
+                db_file=db_file,
+                high_level=high_level,
+            ),
+            name="Get slabs M2",
+            parents=[final_params],
+        )
+        wf_list.append(get_slabs_m2)
+        match_interface_parents.append(get_slabs_m2)
+
+    make_interface = Firework(
         FT_MakeHeteroStructure(
             mp_id_1=mp_id_1,
             mp_id_2=mp_id_2,
@@ -649,10 +657,11 @@ def heterogeneous_wf_with_surfgen(inputs):
             high_level_db=high_level,
         ),
         name="Match the interface",
+        parents=match_interface_parents,
     )
-    WF.append(MakeInterface)
+    wf_list.append(make_interface)
 
-    RelaxMatchedSlabs = Firework(
+    relax_matched_slabs = Firework(
         FT_RelaxMatchedSlabs(
             mp_id_1=mp_id_1,
             mp_id_2=mp_id_2,
@@ -665,25 +674,11 @@ def heterogeneous_wf_with_surfgen(inputs):
             high_level_db=high_level,
         ),
         name="Fully relax the matched slabs",
+        parents=[make_interface],
     )
-    WF.append(RelaxMatchedSlabs)
+    wf_list.append(relax_matched_slabs)
 
-    RetrieveMatchedSlabs = Firework(
-        FT_RetrieveMatchedSlabs(
-            mp_id_1=mp_id_1,
-            mp_id_2=mp_id_2,
-            miller_1=mat_1.get("miller"),
-            miller_2=mat_2.get("miller"),
-            functional=functional,
-            external_pressure=pressure,
-            db_file=db_file,
-            high_level_db=high_level,
-        ),
-        name="Retrieve relaxed matched slabs",
-    )
-    WF.append(RetrieveMatchedSlabs)
-
-    CalcPESPoints = Firework(
+    calc_pes_points = Firework(
         FT_StartPESCalcSWF(
             mp_id_1=mp_id_1,
             mp_id_2=mp_id_2,
@@ -696,10 +691,27 @@ def heterogeneous_wf_with_surfgen(inputs):
             high_level_db=high_level,
         ),
         name="Compute PES high-symmetry points",
+        parents=[make_interface],
     )
-    WF.append(CalcPESPoints)
+    wf_list.append(calc_pes_points)
 
-    ComputeAdhesion = Firework(
+    retrieve_matched_slabs = Firework(
+        FT_RetrieveMatchedSlabs(
+            mp_id_1=mp_id_1,
+            mp_id_2=mp_id_2,
+            miller_1=mat_1.get("miller"),
+            miller_2=mat_2.get("miller"),
+            functional=functional,
+            external_pressure=pressure,
+            db_file=db_file,
+            high_level_db=high_level,
+        ),
+        name="Retrieve relaxed matched slabs",
+        parents=[relax_matched_slabs],
+    )
+    wf_list.append(retrieve_matched_slabs)
+
+    compute_adhesion = Firework(
         FT_StartAdhesionSWF(
             mp_id_1=mp_id_1,
             mp_id_2=mp_id_2,
@@ -711,10 +723,11 @@ def heterogeneous_wf_with_surfgen(inputs):
             high_level_db=high_level,
         ),
         name="Calculate Adhesion",
+        parents=[calc_pes_points, retrieve_matched_slabs],
     )
-    WF.append(ComputeAdhesion)
+    wf_list.append(compute_adhesion)
 
-    ChargeAnalysis = Firework(
+    charge_analysis = Firework(
         FT_StartChargeAnalysisSWF(
             mp_id_1=mp_id_1,
             mp_id_2=mp_id_2,
@@ -726,31 +739,11 @@ def heterogeneous_wf_with_surfgen(inputs):
             high_level_db=high_level,
         ),
         name="Charge Analysis",
+        parents=[calc_pes_points],
     )
-    WF.append(ChargeAnalysis)
+    wf_list.append(charge_analysis)
 
-    # Define dependencies:
-    Dependencies = {
-        PreRelaxation_M1: [ConvergeEncut_M1],
-        PreRelaxation_M2: [ConvergeEncut_M2],
-        ConvergeEncut_M1: [ConvergeKpoints_M1],
-        ConvergeEncut_M2: [ConvergeKpoints_M2],
-        # ConvergeKpoints_M1: [CalcDielectric_M1],
-        # ConvergeKpoints_M2: [CalcDielectric_M2],
-        # CalcDielectric_M1: [Final_Params],
-        # CalcDielectric_M2: [Final_Params],
-        ConvergeKpoints_M1: [Final_Params],
-        ConvergeKpoints_M2: [Final_Params],
-        Final_Params: [GetSlabsM1, GetSlabsM2],
-        GetSlabsM1: [MakeInterface],
-        GetSlabsM2: [MakeInterface],
-        MakeInterface: [CalcPESPoints, RelaxMatchedSlabs],
-        RelaxMatchedSlabs: [RetrieveMatchedSlabs],
-        CalcPESPoints: [ComputeAdhesion, ChargeAnalysis],
-        RetrieveMatchedSlabs: [ComputeAdhesion],
-    }
-
-    WF_Name = (
+    wf_name = (
         "TriboFlow_"
         + "-".join(
             sorted(
@@ -761,6 +754,6 @@ def heterogeneous_wf_with_surfgen(inputs):
         + f"{functional}@{pressure}GPa"
     )
 
-    WF = Workflow(WF, Dependencies, name=WF_Name)
+    wf_list = Workflow(wf_list, name=wf_name)
 
-    return WF
+    return wf_list
