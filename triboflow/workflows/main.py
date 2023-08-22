@@ -458,8 +458,25 @@ def heterogeneous_wf_with_surfgen(inputs):
         Main Triboflow workflow for heterogeneous interfaces.
 
     """
-    mat_1, mat_2, sg_params, sg_filter, comp_params, inter_params = unbundle_input(
-        inputs
+    (
+        mat_1,
+        mat_2,
+        sg_params_1,
+        sg_params_2,
+        sg_filter,
+        comp_params,
+        inter_params,
+    ) = unbundle_input(
+        inputs=inputs,
+        keys=(
+            "mat_1",
+            "mat_2",
+            "sg_params_1",
+            "sg_params_2",
+            "sg_filter",
+            "comp_params",
+            "inter_params",
+        ),
     )
 
     struct_1, mp_id_1 = material_from_mp(mat_1)

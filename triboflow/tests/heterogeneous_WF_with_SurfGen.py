@@ -20,12 +20,20 @@ inputs = {
         "use_vdw": "dftd2",
         "use_spin": True,
     },
-    "sg_params": {
-        "slab_thick": 8,
-        "vac_thick": 30.0,
-        "min_thick_A": 10.0,
+    "sg_params_1": {
+        "slab_thick": 6,
+        "vac_thick": 20.0,
+        "min_thick_A": 4.0,
+        "miller": (1, 0, 0)
     },
-    "sg_filter": {"method": "bvs_min_N", "bvs_param": 3},
+    "sg_params_2": {
+        "slab_thick": 6,
+        "vac_thick": 20.0,
+        "min_thick_A": 4.0,
+        "miller": (1, 0, 0)
+    },
+    "sg_filter_1": {"method": "all"},
+    "sg_filter_2": {"method": "all"},
     "interface_params": {
         "max_area": 100,
         "max_area_ratio_tol": 0.1,

@@ -161,8 +161,10 @@ def unbundle_input(
     keys=(
             "material_1",
             "material_2",
-            "sg_params",
-            "sg_filter",
+            "sg_params_1",
+            "sg_params_2",
+            "sg_filter_1",
+            "sg_filter_2",
             "computational_params",
             "interface_params",
     ),
