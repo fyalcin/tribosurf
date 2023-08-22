@@ -37,15 +37,14 @@ __copyright__ = (
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "January 20th, 2021"
 
+from atomate.utils.utils import env_chk
+from fireworks import FiretaskBase
+from fireworks.utilities.fw_utilities import explicit_serialize
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 from triboflow.utils.database import Navigator
 from triboflow.utils.mp_connection import MPConnection
 from triboflow.utils.structure_manipulation import transfer_average_magmoms
-
-from fireworks.utilities.fw_utilities import explicit_serialize
-from fireworks import FiretaskBase
-from atomate.utils.utils import env_chk
 
 
 # ============================================================================
@@ -174,7 +173,7 @@ class FT_PutInterfaceInDB(FiretaskBase):
 # ============================================================================
 
 
-def put_bulk_in_db(data, comp_params, db_file):
+def put_bulk_in_db(data, comp_params, db_file, high_level=True):
     """
     Put bulk data in high level DB.
 
@@ -201,7 +200,7 @@ def put_bulk_in_db(data, comp_params, db_file):
     prim_struct = transfer_average_magmoms(struct, prim_struct)
 
     # Load the bulk structure into the high level DB if not present already
-    nav = Navigator(db_file, high_level=True)
+    nav = Navigator(db_file, high_level=high_level)
     prev_data = nav.find_data(functional + ".bulk_data", {"mpid": mp_id})
     if not prev_data:
         nav.insert_data(
@@ -221,7 +220,7 @@ def put_bulk_in_db(data, comp_params, db_file):
         )
 
 
-def put_slab_in_db(data, comp_params, db_file):
+def put_slab_in_db(data, comp_params, db_file, high_level=True):
     """
     Put slab data in high level DB.
 
@@ -242,7 +241,7 @@ def put_slab_in_db(data, comp_params, db_file):
     )
 
     # Load the slab structure into the high level DB if not already present
-    nav = Navigator(db_file, high_level=True)
+    nav = Navigator(db_file=db_file, high_level=high_level)
     prev_data = nav.find_data(
         functional + ".slab_data", {"mpid": mp_id, "miller": data["miller"]}
     )
@@ -269,7 +268,9 @@ def put_slab_in_db(data, comp_params, db_file):
         )
 
 
-def put_inter_in_db(data_1, data_2, comp_params, inter_params, db_file):
+def put_inter_in_db(
+    data_1, data_2, comp_params, inter_params, db_file, high_level=True
+):
     """
     Put interfacial data in high level DB.
 
@@ -306,7 +307,7 @@ def put_inter_in_db(data_1, data_2, comp_params, inter_params, db_file):
     pressure = inter_params.get("external_pressure") or 0.0
 
     # Load the interface structure into the high level DB
-    nav = Navigator(db_file, high_level=True)
+    nav = Navigator(db_file, high_level=high_level)
     prev_data = nav.find_data(
         functional + ".interface_data", {"name": name, "pressure": pressure}
     )
@@ -408,8 +409,12 @@ def interface_name(mp_id_1, miller_1, mp_id_2, miller_2):
     """
 
     mp_connection = MPConnection()
-    f1 = mp_connection.get_property_from_mp(mpid=mp_id_1, properties=["formula_pretty"])["formula_pretty"]
-    f2 = mp_connection.get_property_from_mp(mpid=mp_id_2, properties=["formula_pretty"])["formula_pretty"]
+    f1 = mp_connection.get_property_from_mp(
+        mpid=mp_id_1, properties=["formula_pretty"]
+    )["formula_pretty"]
+    f2 = mp_connection.get_property_from_mp(
+        mpid=mp_id_2, properties=["formula_pretty"]
+    )["formula_pretty"]
 
     # Assign the miller index as a string
     m1 = miller_1

@@ -471,6 +471,8 @@ def calc_pes_swf(
     prerelax=True,
     prerelax_calculator="m3gnet",
     prerelax_kwargs=None,
+    db_file="auto",
+    high_level=True,
 ):
     """Create a subworkflow to compute the PES for an interface of two slabs.
 
@@ -484,6 +486,8 @@ def calc_pes_swf(
 
     Parameters
     ----------
+    db_file
+    high_level
     interface : pymatgen.core.interface.Interface
         Interface, Slab or Structure object containing the unrelaxed interface.
     interface_name : str, optional
@@ -591,7 +595,7 @@ def calc_pes_swf(
 
     tag = interface_name + "_" + str(uuid4())
 
-    nav = StructureNavigator("auto", high_level=True)
+    nav = StructureNavigator(db_file=db_file, high_level=high_level)
     try:
         nav.get_interface_from_db(interface_name, pressure, functional)[
             "unrelaxed_structure"
@@ -816,7 +820,9 @@ def make_and_relax_slab_swf(
 
     if flag.startswith("mp-") and flag[3:].isdigit():
         mp_conn = MPConnection()
-        formula_from_flag = mp_conn.get_property_from_mp(mpid=flag, properties=["formula_pretty"])
+        formula_from_flag = mp_conn.get_property_from_mp(
+            mpid=flag, properties=["formula_pretty"]
+        )
         formula_from_flag = formula_from_flag["formula_pretty"]
         if not formula_from_flag == formula:
             raise SystemExit(
@@ -1047,7 +1053,9 @@ def converge_swf(
     if flag.startswith("mp-") and flag[3:].isdigit():
         formula_from_struct = structure.composition.reduced_formula
         mp_conn = MPConnection()
-        formula_from_flag = mp_conn.get_property_from_mp(mpid=flag, properties=["formula_pretty"])
+        formula_from_flag = mp_conn.get_property_from_mp(
+            mpid=flag, properties=["formula_pretty"]
+        )
         formula_from_flag = formula_from_flag["formula_pretty"]
 
         if not formula_from_flag == formula_from_struct:

@@ -79,7 +79,7 @@ class FT_UpdateInterfaceCompParams(FiretaskBase):
 
         high_level_db = self.get("high_level_db")
 
-        nav_structure = StructureNavigator(db_file=db_file, high_level=True)
+        nav_structure = StructureNavigator(db_file=db_file, high_level=high_level_db)
         bulk_1 = nav_structure.get_bulk_from_db(mp_id=mp_id_1, functional=functional)
         bulk_2 = nav_structure.get_bulk_from_db(mp_id=mp_id_2, functional=functional)
 
@@ -159,7 +159,7 @@ class FT_CopyCompParamsToSlab(FiretaskBase):
 
     _fw_name = "Update computational parameters in high level DB"
     required_params = ["mp_id", "miller", "functional"]
-    optional_params = ["db_file"]
+    optional_params = ["db_file", "high_level_db"]
 
     def run_task(self, fw_spec):
         mp_id = self.get("mp_id")
@@ -175,13 +175,15 @@ class FT_CopyCompParamsToSlab(FiretaskBase):
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
 
-        nav_structure = StructureNavigator(db_file=db_file, high_level=True)
+        high_level_db = self.get("high_level_db", True)
+
+        nav_structure = StructureNavigator(db_file=db_file, high_level=high_level_db)
         bulk = nav_structure.get_bulk_from_db(mp_id=mp_id, functional=functional)
 
         encut = bulk["comp_parameters"]["encut"]
         k_dens = bulk["comp_parameters"]["k_dens"]
 
-        nav_high = Navigator(db_file=db_file, high_level=True)
+        nav_high = Navigator(db_file=db_file, high_level=high_level_db)
         nav_high.update_data(
             collection=functional + ".slab_data",
             fltr={"mpid": mp_id, "miller": miller},
@@ -227,7 +229,7 @@ class FT_MakeInterfaceInDB(FiretaskBase):
         "comp_data_loc",
         "interface_data_loc",
     ]
-    optional_params = ["db_file"]
+    optional_params = ["db_file", "high_level_db"]
 
     def run_task(self, fw_spec):
         data1 = fw_spec[self["mat1_data_loc"]]
@@ -239,6 +241,8 @@ class FT_MakeInterfaceInDB(FiretaskBase):
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
 
+        high_level_db = self.get("high_level_db", True)
+
         functional = comp_data["functional"]
 
         mp_connection = MPConnection()
@@ -249,7 +253,7 @@ class FT_MakeInterfaceInDB(FiretaskBase):
             chem_formula=data2["formula"], mp_id=data2["mp_id"]
         )
 
-        nav_high = Navigator(db_file=db_file, high_level=True)
+        nav_high = Navigator(db_file=db_file, high_level=high_level_db)
 
         name = interface_name(mp_id_1, mp_id_2, data1["miller"], data2["miller"])
 
@@ -297,7 +301,7 @@ class FT_MakeSlabInDB(FiretaskBase):
 
     _fw_name = "Make bulk entry into high level DB"
     required_params = ["mat_data_loc", "comp_data_loc"]
-    optional_params = ["db_file"]
+    optional_params = ["db_file", "high_level_db"]
 
     def run_task(self, fw_spec):
         data = fw_spec[self["mat_data_loc"]]
@@ -306,6 +310,8 @@ class FT_MakeSlabInDB(FiretaskBase):
         db_file = self.get("db_file")
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
+
+        high_level_db = self.get("high_level_db", True)
 
         functional = comp_data["functional"]
 
@@ -322,7 +328,7 @@ class FT_MakeSlabInDB(FiretaskBase):
         else:
             comp_data["is_metal"] = True
 
-        nav_high = Navigator(db_file=db_file, high_level=True)
+        nav_high = Navigator(db_file=db_file, high_level=high_level_db)
 
         if nav_high.find_data(
             collection=functional + ".slab_data",
@@ -373,7 +379,7 @@ class FT_MakeBulkInDB(FiretaskBase):
 
     _fw_name = "Make bulk entry into high level DB"
     required_params = ["mat_data_loc", "comp_data_loc"]
-    optional_params = ["db_file"]
+    optional_params = ["db_file", "high_level_db"]
 
     def run_task(self, fw_spec):
         data = fw_spec[self["mat_data_loc"]]
@@ -382,6 +388,8 @@ class FT_MakeBulkInDB(FiretaskBase):
         db_file = self.get("db_file")
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
+
+        high_level_db = self.get("high_level_db", True)
 
         functional = comp_data["functional"]
 
@@ -403,7 +411,7 @@ class FT_MakeBulkInDB(FiretaskBase):
         else:
             comp_data["is_metal"] = True
 
-        nav_high = Navigator(db_file=db_file, high_level=True)
+        nav_high = Navigator(db_file=db_file, high_level=high_level_db)
 
         if nav_high.find_data(
             collection=functional + ".bulk_data", fltr={"mpid": mp_id}

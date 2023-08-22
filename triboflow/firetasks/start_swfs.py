@@ -457,17 +457,8 @@ class FT_StartPESCalcSWF(FiretaskBase):
         already_done = interface_dict.get("relaxed_structure@min")
 
         if not already_done:
-            SWF = calc_pes_swf(
-                interface=interface,
-                interface_name=name,
-                functional=functional,
-                pressure=pressure,
-                comp_parameters=comp_params,
-                output_dir=None,
-                prerelax=prerelax,
-                prerelax_calculator=prerelax_calculator,
-                prerelax_kwargs=prerelax_kwargs,
-            )
+            SWF = calc_pes_swf(interface=interface, interface_name=name, functional=functional, pressure=pressure, comp_parameters=comp_params,
+                               output_dir=None, prerelax=prerelax, prerelax_calculator=prerelax_calculator, prerelax_kwargs=prerelax_kwargs)
 
             return FWAction(detours=SWF, update_spec=fw_spec)
 
