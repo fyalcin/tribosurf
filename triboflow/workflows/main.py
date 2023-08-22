@@ -6,6 +6,7 @@ Created on Wed Jun 17 15:47:39 2020
 
 from fireworks import Workflow, Firework
 
+from surfen.utils.structure_manipulation import add_bulk_to_db
 from triboflow.firetasks.adhesion import (
     FT_RelaxMatchedSlabs,
     FT_RetrieveMatchedSlabs,
@@ -28,7 +29,7 @@ from triboflow.firetasks.structure_manipulation import (
 from triboflow.firetasks.utils import FT_CopyHomogeneousSlabs
 from triboflow.fireworks.init_fws import InitWF
 from triboflow.utils.structure_manipulation import interface_name
-from surfen.utils.structure_manipulation import add_bulk_to_db
+
 
 def homogeneous_wf(inputs):
     mat, comp_params, interface_params = unbundle_input(
@@ -481,13 +482,8 @@ def heterogeneous_wf_with_surfgen(inputs):
     # pressure might default to None, so we have to check for that
     pressure = inter_params.get("external_pressure", 0.0) or 0.0
 
-    Initialize = InitWF.checkinp_hetero_interface(
-        material_1=mat_1,
-        material_2=mat_2,
-        computational=comp_params,
-        interface=inter_params,
-    )
-    WF.append(Initialize)
+    add_bulk_to_db(mp_id_1, f"{functional}.bulk_data")
+    add_bulk_to_db(mp_id_2, f"{functional}.bulk_data")
 
     PreRelaxation_M1 = Firework(
         FT_StartBulkPreRelax(mp_id=mp_id_1, functional=functional),
@@ -684,7 +680,6 @@ def heterogeneous_wf_with_surfgen(inputs):
 
     # Define dependencies:
     Dependencies = {
-        Initialize: [PreRelaxation_M1, PreRelaxation_M2],
         PreRelaxation_M1: [ConvergeEncut_M1],
         PreRelaxation_M2: [ConvergeEncut_M2],
         ConvergeEncut_M1: [ConvergeKpoints_M1],
@@ -706,7 +701,11 @@ def heterogeneous_wf_with_surfgen(inputs):
 
     WF_Name = (
         "TriboFlow_"
-        + "-".join(sorted([f"{mat_1['formula']} ({mp_id_1})", f"{mat_2['formula']} ({mp_id_2})"]))
+        + "-".join(
+            sorted(
+                [f"{mat_1['formula']} ({mp_id_1})", f"{mat_2['formula']} ({mp_id_2})"]
+            )
+        )
         + "_"
         + f"{functional}@{pressure}GPa"
     )
