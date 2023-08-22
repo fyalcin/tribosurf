@@ -18,6 +18,8 @@ from pymatgen.core.surface import SlabGenerator
 from pymatgen.io.vasp.inputs import Poscar
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
+from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
+from hitmen_utils.workflows import dynamic_relax_swf
 from triboflow.phys.interface_matcher import InterfaceMatcher
 from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.file_manipulation import copy_output_files
@@ -25,8 +27,6 @@ from triboflow.utils.structure_manipulation import (
     interface_name,
     transfer_average_magmoms,
 )
-from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
-from hitmen_utils.workflows import dynamic_relax_swf
 
 
 @explicit_serialize
@@ -521,7 +521,9 @@ class FT_MakeSlabInDB(FiretaskBase):
         #     functional=functional,
         #     miller=miller)
 
-        bulk_conv = SpacegroupAnalyzer(bulk_prim).get_conventional_standard_structure(keep_site_properties=True)
+        bulk_conv = SpacegroupAnalyzer(bulk_prim).get_conventional_standard_structure(
+            keep_site_properties=True
+        )
         bulk_conv = transfer_average_magmoms(bulk_prim, bulk_conv)
 
         SG = SlabGenerator(
@@ -604,8 +606,8 @@ class FT_MakeHeteroStructure(FiretaskBase):
     optional_params = ["db_file", "high_level_db"]
 
     def run_task(self, fw_spec):
-        mp_id_1 = self.get("mp_id_1")
-        mp_id_2 = self.get("mp_id_2")
+        mpid1 = self.get("mp_id_1")
+        mpid2 = self.get("mp_id_2")
 
         functional = self.get("functional")
         pressure = self.get("external_pressure")
@@ -626,70 +628,64 @@ class FT_MakeHeteroStructure(FiretaskBase):
         pairs.sort(key=lambda x: x[0]["surface_energy"] + x[1]["surface_energy"])
 
         for pair in pairs:
-            slab_1_dict, slab_2_dict = pair
-            slab_1_hkl, slab_2_hkl = slab_1_dict["hkl"], slab_2_dict["hkl"]
-            slab_1_shift, slab_2_shift = slab_1_dict["shift"], slab_2_dict["shift"]
+            slab1_dict, slab2_dict = pair
+            hkl1, hkl2 = slab1_dict["hkl"], slab2_dict["hkl"]
+            shift1, shift2 = slab1_dict["shift"], slab2_dict["shift"]
 
-            inter_name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
+            inter_name = interface_name(mpid1, mpid2, hkl1, hkl2, shift1, shift2)
 
-
-
-
-        inter_data = nav_high.find_data(
-            collection=functional + ".interface_data",
-            fltr={"name": inter_name, "pressure": pressure},
-        )
-
-        inter_params = inter_data["interface_parameters"]
-
-        if not inter_data.get("unrelaxed_structure"):
-            nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
-            slab_1_dict = nav_structure.get_slab_from_db(
-                mp_id=mp_id_1, functional=functional, miller=miller_1
-            )
-            slab_2_dict = nav_structure.get_slab_from_db(
-                mp_id=mp_id_2, functional=functional, miller=miller_2
+            inter_data = nav_high.find_data(
+                collection=functional + ".interface_data",
+                fltr={"name": inter_name, "pressure": pressure},
             )
 
-            slab_1 = Slab.from_dict(slab_1_dict["relaxed_slab"])
-            slab_2 = Slab.from_dict(slab_2_dict["relaxed_slab"])
+            inter_params = inter_data["interface_parameters"]
 
-            bulk_dat_1 = nav_structure.get_bulk_from_db(mp_id_1, functional)
-            bulk_dat_2 = nav_structure.get_bulk_from_db(mp_id_2, functional)
+            if not inter_data.get("unrelaxed_structure"):
+                nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
 
-            bm_1 = bulk_dat_1["bulk_moduls"]
-            bm_2 = bulk_dat_2["bulk_moduls"]
+                slab1, slab2 = slab1_dict["slab"], slab2_dict["slab"]
 
-            MI = InterfaceMatcher(
-                slab_1=slab_1,
-                slab_2=slab_2,
-                strain_weight_1=bm_1,
-                strain_weight_2=bm_2,
-                **inter_params
-            )
-            top_aligned, bottom_aligned = MI.get_centered_slabs()
+                bulk_dat_1 = nav_structure.get_bulk_from_db(mpid1, functional)
+                bulk_dat_2 = nav_structure.get_bulk_from_db(mpid2, functional)
 
-            if top_aligned and bottom_aligned:
-                interface = MI.get_interface()
+                bm_1 = bulk_dat_1["bulk_moduls"]
+                bm_2 = bulk_dat_2["bulk_moduls"]
 
-                inter_dict = interface.as_dict()
-                bottom_dict = bottom_aligned.as_dict()
-                top_dict = top_aligned.as_dict()
-
-                nav_high.update_data(
-                    collection=functional + ".interface_data",
-                    fltr={"name": inter_name, "pressure": pressure},
-                    new_values={
-                        "$set": {
-                            "unrelaxed_structure": inter_dict,
-                            "bottom_aligned": bottom_dict,
-                            "top_aligned": top_dict,
-                        }
-                    },
+                IM = InterfaceMatcher(
+                    slab_1=slab1,
+                    slab_2=slab2,
+                    strain_weight_1=bm_1,
+                    strain_weight_2=bm_2,
+                    **inter_params,
                 )
-                return
-            else:
-                return FWAction(defuse_workflow=True)
+                top_aligned, bottom_aligned = IM.get_centered_slabs()
+
+                if top_aligned and bottom_aligned:
+                    interface = IM.get_interface()
+
+                    inter_dict = interface.as_dict()
+                    bottom_dict = bottom_aligned.as_dict()
+                    top_dict = top_aligned.as_dict()
+
+                    nav_high.update_data(
+                        collection=functional + ".interface_data",
+                        fltr={"name": inter_name, "pressure": pressure},
+                        new_values={
+                            "$set": {
+                                "unrelaxed_structure": inter_dict,
+                                "bottom_aligned": bottom_dict,
+                                "top_aligned": top_dict,
+                            }
+                        },
+                    )
+                    return
+                else:
+                    # check if we are at the last pair, meaning none of the pairs could be matched
+                    if pair == pairs[-1]:
+                        return FWAction(defuse_workflow=True)
+                    else:
+                        continue
 
 
 @explicit_serialize

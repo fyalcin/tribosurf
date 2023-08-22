@@ -4,8 +4,8 @@ import numpy as np
 from pymatgen.core.sites import PeriodicSite
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import SlabGenerator, Slab
-from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.ext.matproj import MPRester
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.transformations.standard_transformations import (
     DeformStructureTransformation,
 )
@@ -164,7 +164,9 @@ def get_conv_bulk_from_mpid(mpid, coll, db_file="auto", high_level=True):
         if bulk_struct is None:
             raise ValueError(f"Bulk structure not found in the bulk entry for {mpid}")
     bulk_struct = Structure.from_dict(bulk_struct)
-    bulk_conv = SpacegroupAnalyzer(bulk_struct).get_conventional_standard_structure(keep_site_properties=True)
+    bulk_conv = SpacegroupAnalyzer(bulk_struct).get_conventional_standard_structure(
+        keep_site_properties=True
+    )
     return bulk_conv
 
 
@@ -454,21 +456,27 @@ def recenter_aligned_slabs(top_slab, bottom_slab, d=2.5):
     return t_copy, b_copy
 
 
-def interface_name(mp_id_1, miller_1, mp_id_2, miller_2):
+def interface_name(
+    mpid1, mpid2, miller1, miller2, shift1: float = None, shift2: float = None
+):
     """Return a name for an interface based on MP-IDs and miller indices.
 
     Parameters
     ----------
-    mp_id_1 : str
+    mpid1 : str
         MP-ID of the first material.
-    miller_1 : list of int, or str
+    mpid2 : str
+        MP-ID of the second material.
+    miller1 : list of int, or str
         Miller indices of the first material given either as list or str with
         3 letters.
-    mp_id_2 : str
-        MP-ID of the second material.
-    miller_2 : list of int, or str
+    miller2 : list of int, or str
         Miller indices of the second material given either as list or str with
         3 letters.
+    shift1 : float, optional
+        Shift of the first slab that determines its terminations. The default is None.
+    shift2 : float, optional
+        Shift of the second slab that determines its terminations. The default is None.
 
     Returns
     -------
@@ -478,29 +486,32 @@ def interface_name(mp_id_1, miller_1, mp_id_2, miller_2):
     """
 
     mp_connection = MPConnection()
-    f1 = mp_connection.get_property_from_mp(
-        mp_id=mp_id_1, properties=["formula_pretty"]
-    )
+    f1 = mp_connection.get_property_from_mp(mpid=mpid1, properties=["formula_pretty"])
     f1 = f1["formula_pretty"]
 
-    f2 = mp_connection.get_property_from_mp(
-        mp_id=mp_id_2, properties=["formula_pretty"]
-    )
+    f2 = mp_connection.get_property_from_mp(mpid=mpid2, properties=["formula_pretty"])
     f2 = f2["formula_pretty"]
 
-    if type(miller_1) is list:
-        m1 = "".join(str(s) for s in miller_1)
+    if type(miller1) is list:
+        m1 = "".join(str(s) for s in miller1)
     else:
-        m1 = miller_1
-    if type(miller_2) is list:
-        m2 = "".join(str(s) for s in miller_2)
+        m1 = miller1
+    if type(miller2) is list:
+        m2 = "".join(str(s) for s in miller2)
     else:
-        m2 = miller_2
+        m2 = miller2
 
-    n1 = min(f1 + m1, f2 + m2)
-    n2 = max(f1 + m1, f2 + m2)
-    ids = min(mp_id_1 + "_" + mp_id_2, mp_id_2 + "_" + mp_id_1)
-    name = "_".join((n1, n2, ids))
+    if shift1 is None:
+        name1 = f"{f1 + m1}-({mpid1})"
+    else:
+        name1 = f"{f1 + m1}_{shift1}-({mpid1})"
+
+    if shift2 is None:
+        name2 = f"{f2 + m2}-({mpid2})"
+    else:
+        name2 = f"{f2 + m2}_{shift2}-({mpid2})"
+
+    name = "_".join(sorted([name1, name2]))
     return name
 
 
@@ -538,7 +549,9 @@ def make_pymatgen_slab(
 
     """
 
-    bulk_conv = SpacegroupAnalyzer(bulk_struct).get_conventional_standard_structure(keep_site_properties=True)
+    bulk_conv = SpacegroupAnalyzer(bulk_struct).get_conventional_standard_structure(
+        keep_site_properties=True
+    )
     bulk_conv = transfer_average_magmoms(bulk_struct, bulk_conv)
 
     SG = SlabGenerator(

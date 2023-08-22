@@ -94,13 +94,13 @@ class MPConnection:
                 )
         return doc[0].material_id
 
-    def get_property_from_mp(self, mp_id: str, properties: list[str]) -> dict:
+    def get_property_from_mp(self, mpid: str, properties: list[str]) -> dict:
         """
         Get a property of a material from the Materials Project database.
 
         Parameters
         ----------
-        mp_id : str
+        mpid : str
             Materials Project ID of the material.
         properties : list[str]
             Properties to get from the database.
@@ -119,7 +119,7 @@ class MPConnection:
                     "available in the SummaryRester of the Materials "
                     "Project database."
                 )
-            output_dict = mpr.summary.search(material_ids=[mp_id], fields=properties)[
+            output_dict = mpr.summary.search(material_ids=[mpid], fields=properties)[
                 0
             ].dict()
 
@@ -151,17 +151,14 @@ if __name__ == "__main__":
     db = MPConnection()
     mpid = db.get_mpid_from_formula("Fe2O3")
 
-    prop_dict = db.get_property_from_mp(
-        mpid,
-        [
-            "energy_per_atom",
-            "formation_energy_per_atom",
-            "band_gap",
-            "formula_pretty",
-            "energy_above_hull",
-            "g_vrh",
-        ],
-    )
+    prop_dict = db.get_property_from_mp(mpid, [
+        "energy_per_atom",
+        "formation_energy_per_atom",
+        "band_gap",
+        "formula_pretty",
+        "energy_above_hull",
+        "g_vrh",
+    ])
     print(prop_dict)
 
     struct = db.get_low_energy_structure(chem_formula="Fe2O3", mp_id=mpid)

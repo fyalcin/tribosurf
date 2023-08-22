@@ -181,7 +181,7 @@ def homogeneous_wf(inputs):
 
     WF_Name = (
         "TriboFlow_"
-        + interface_name(mp_id, mat.get("miller"), mp_id, mat.get("miller"))
+        + interface_name(mp_id, mp_id, mat.get("miller"), mat.get("miller"))
         + "_"
         + f"{functional}@{pressure}GPa"
     )
@@ -433,7 +433,7 @@ def heterogeneous_wf(inputs):
 
     WF_Name = (
         "TriboFlow_"
-        + interface_name(mp_id_1, mat_1.get("miller"), mp_id_2, mat_2.get("miller"))
+        + interface_name(mp_id_1, mp_id_2, mat_1.get("miller"), mat_2.get("miller"))
         + "_"
         + f"{functional}@{pressure}GPa"
     )
@@ -567,21 +567,6 @@ def heterogeneous_wf_with_surfgen(inputs):
     )
     WF.append(Final_Params)
 
-    required_params = ["mpid"]
-    optional_params = [
-        "comp_params",
-        "comp_params_from_db",
-        "sg_params",
-        "sg_filter",
-        "db_file",
-        "high_level",
-        "custom_id",
-        "surfen_coll",
-        "bulk_coll",
-        "add_full_relax",
-        "material_index",
-    ]
-
     GetSlabsM1 = Firework(
         RunSurfenSwfGetEnergies(
             mpid=mp_id_1,
@@ -703,9 +688,9 @@ def heterogeneous_wf_with_surfgen(inputs):
         # CalcDielectric_M2: [Final_Params],
         ConvergeKpoints_M1: [Final_Params],
         ConvergeKpoints_M2: [Final_Params],
-        Final_Params: [MakeSlabs_M1, MakeSlabs_M2],
-        MakeSlabs_M1: [MakeInterface],
-        MakeSlabs_M2: [MakeInterface],
+        Final_Params: [GetSlabsM1, GetSlabsM2],
+        GetSlabsM1: [MakeInterface],
+        GetSlabsM2: [MakeInterface],
         MakeInterface: [CalcPESPoints, RelaxMatchedSlabs],
         RelaxMatchedSlabs: [RetrieveMatchedSlabs],
         CalcPESPoints: [ComputeAdhesion, ChargeAnalysis],
@@ -714,7 +699,7 @@ def heterogeneous_wf_with_surfgen(inputs):
 
     WF_Name = (
         "TriboFlow_"
-        + interface_name(mp_id_1, mat_1.get("miller"), mp_id_2, mat_2.get("miller"))
+        + interface_name(mp_id_1, mp_id_2, mat_1.get("miller"), mat_2.get("miller"))
         + "_"
         + f"{functional}@{pressure}GPa"
     )

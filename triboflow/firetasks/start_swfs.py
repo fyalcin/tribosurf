@@ -76,7 +76,7 @@ class FT_StartChargeAnalysisSWF(FiretaskBase):
 
         nav = Navigator(db_file, high_level=hl_db)
 
-        name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
+        name = interface_name(mp_id_1, mp_id_2, miller_1, miller_2)
 
         interface_dict = nav.find_data(
             collection=functional + ".interface_data",
@@ -162,7 +162,7 @@ class FT_StartAdhesionSWF(FiretaskBase):
 
         nav = Navigator(db_file, high_level=hl_db)
 
-        name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
+        name = interface_name(mp_id_1, mp_id_2, miller_1, miller_2)
 
         interface_dict = nav.find_data(
             collection=functional + ".interface_data",
@@ -446,7 +446,7 @@ class FT_StartPESCalcSWF(FiretaskBase):
         prerelax_calculator = self.get("prerelax_calculator", "m3gnet")
         prerelax_kwargs = self.get("prerelax_kwargs", {})
 
-        name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
+        name = interface_name(mp_id_1, mp_id_2, miller_1, miller_2)
 
         nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
         interface_dict = nav_structure.get_interface_from_db(

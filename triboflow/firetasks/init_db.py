@@ -408,12 +408,8 @@ def interface_name(mp_id_1, miller_1, mp_id_2, miller_2):
     """
 
     mp_connection = MPConnection()
-    f1 = mp_connection.get_property_from_mp(
-        mp_id=mp_id_1, properties=["formula_pretty"]
-    )["formula_pretty"]
-    f2 = mp_connection.get_property_from_mp(
-        mp_id=mp_id_2, properties=["formula_pretty"]
-    )["formula_pretty"]
+    f1 = mp_connection.get_property_from_mp(mpid=mp_id_1, properties=["formula_pretty"])["formula_pretty"]
+    f2 = mp_connection.get_property_from_mp(mpid=mp_id_2, properties=["formula_pretty"])["formula_pretty"]
 
     # Assign the miller index as a string
     m1 = miller_1

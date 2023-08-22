@@ -119,7 +119,7 @@ class FT_UpdateInterfaceCompParams(FiretaskBase):
             },
         )
 
-        inter_name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
+        inter_name = interface_name(mp_id_1, mp_id_2, miller_1, miller_2)
         nav_high.update_data(
             collection=functional + ".interface_data",
             fltr={"name": inter_name, "pressure": pressure},
@@ -249,7 +249,7 @@ class FT_MakeInterfaceInDB(FiretaskBase):
 
         nav_high = Navigator(db_file=db_file, high_level=True)
 
-        name = interface_name(mp_id_1, data1["miller"], mp_id_2, data2["miller"])
+        name = interface_name(mp_id_1, mp_id_2, data1["miller"], data2["miller"])
 
         if nav_high.find_data(
             collection=functional + ".interface_data", fltr={"name": name}
@@ -312,9 +312,7 @@ class FT_MakeSlabInDB(FiretaskBase):
             chem_formula=data["formula"], mp_id=data["mp_id"]
         )
 
-        bandgap = mp_connection.get_property_from_mp(
-            mp_id=mp_id, properties=["band_gap"]
-        )
+        bandgap = mp_connection.get_property_from_mp(mpid=mp_id, properties=["band_gap"])
         bandgap = bandgap["band_gap"]
 
         if bandgap > 0.3:
@@ -395,9 +393,7 @@ class FT_MakeBulkInDB(FiretaskBase):
         # site properties are not retained, so we have to add magmom again.
         prim_struct = transfer_average_magmoms(struct, prim_struct)
 
-        bandgap = mp_connection.get_property_from_mp(
-            mp_id=mp_id, properties=["band_gap"]
-        )
+        bandgap = mp_connection.get_property_from_mp(mpid=mp_id, properties=["band_gap"])
         bandgap = bandgap["band_gap"]
 
         if bandgap > 0.3:

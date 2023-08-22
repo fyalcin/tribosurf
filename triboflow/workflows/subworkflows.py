@@ -816,9 +816,7 @@ def make_and_relax_slab_swf(
 
     if flag.startswith("mp-") and flag[3:].isdigit():
         mp_conn = MPConnection()
-        formula_from_flag = mp_conn.get_property_from_mp(
-            mp_id=flag, properties=["formula_pretty"]
-        )
+        formula_from_flag = mp_conn.get_property_from_mp(mpid=flag, properties=["formula_pretty"])
         formula_from_flag = formula_from_flag["formula_pretty"]
         if not formula_from_flag == formula:
             raise SystemExit(
@@ -1049,9 +1047,7 @@ def converge_swf(
     if flag.startswith("mp-") and flag[3:].isdigit():
         formula_from_struct = structure.composition.reduced_formula
         mp_conn = MPConnection()
-        formula_from_flag = mp_conn.get_property_from_mp(
-            mp_id=flag, properties=["formula_pretty"]
-        )
+        formula_from_flag = mp_conn.get_property_from_mp(mpid=flag, properties=["formula_pretty"])
         formula_from_flag = formula_from_flag["formula_pretty"]
 
         if not formula_from_flag == formula_from_struct:

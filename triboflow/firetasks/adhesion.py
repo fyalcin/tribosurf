@@ -89,7 +89,7 @@ class FT_RetrieveMatchedSlabs(FiretaskBase):
         bot_out_name = self.get("bottom_out_name", "bottom_aligned_relaxed")
         hl_db = self.get("high_level_db", True)
 
-        name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
+        name = interface_name(mp_id_1, mp_id_2, miller_1, miller_2)
 
         input_list = fw_spec.get("relaxation_inputs")
 
@@ -202,7 +202,7 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
         prerelax_calculator = self.get("prerelax_calculator", "m3gnet")
         prerelax_kwargs = self.get("prerelax_kwargs", {})
 
-        name = interface_name(mp_id_1, miller_1, mp_id_2, miller_2)
+        name = interface_name(mp_id_1, mp_id_2, miller_1, miller_2)
 
         nav = Navigator(db_file, high_level=hl_db)
 
