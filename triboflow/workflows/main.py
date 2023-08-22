@@ -227,8 +227,12 @@ def heterogeneous_wf(inputs):
     # )
     # WF.append(Initialize)
 
-    add_bulk_to_db(mp_id_1, f"{functional}.bulk_data")
-    add_bulk_to_db(mp_id_2, f"{functional}.bulk_data")
+    add_bulk_to_db(
+        mp_id_1, f"{functional}.bulk_data", custom_data={"comp_parameters": comp_params}
+    )
+    add_bulk_to_db(
+        mp_id_2, f"{functional}.bulk_data", custom_data={"comp_parameters": comp_params}
+    )
 
     PreRelaxation_M1 = Firework(
         FT_StartBulkPreRelax(mp_id=mp_id_1, functional=functional),
@@ -461,16 +465,17 @@ def heterogeneous_wf_with_surfgen(inputs):
         Main Triboflow workflow for heterogeneous interfaces.
 
     """
-    (
-        mat_1,
-        mat_2,
-        sg_params_1,
-        sg_params_2,
-        sg_filter_1,
-        sg_filter_2,
-        comp_params,
-        inter_params,
-    ) = unbundle_input(inputs=inputs)
+    mat_1 = inputs["material_1"]
+    mat_2 = inputs["material_2"]
+    comp_params = inputs["computational_params"]
+    inter_params = inputs["interface_params"]
+    sg_params_1 = inputs["sg_params_1"]
+    sg_params_2 = inputs["sg_params_2"]
+    sg_filter_1 = inputs["sg_filter_1"]
+    sg_filter_2 = inputs["sg_filter_2"]
+    db_file = inputs["db_file"]
+    high_level = inputs["high_level"]
+
 
     struct_1, mp_id_1 = material_from_mp(mat_1)
     struct_2, mp_id_2 = material_from_mp(mat_2)
@@ -482,17 +487,39 @@ def heterogeneous_wf_with_surfgen(inputs):
     # pressure might default to None, so we have to check for that
     pressure = inter_params.get("external_pressure", 0.0) or 0.0
 
-    add_bulk_to_db(mp_id_1, f"{functional}.bulk_data")
-    add_bulk_to_db(mp_id_2, f"{functional}.bulk_data")
+    add_bulk_to_db(
+        mp_id_1,
+        f"{functional}.bulk_data",
+        db_file=db_file,
+        high_level=high_level,
+        custom_data={"comp_parameters": comp_params},
+    )
+    add_bulk_to_db(
+        mp_id_2,
+        f"{functional}.bulk_data",
+        db_file=db_file,
+        high_level=high_level,
+        custom_data={"comp_parameters": comp_params},
+    )
 
     PreRelaxation_M1 = Firework(
-        FT_StartBulkPreRelax(mp_id=mp_id_1, functional=functional),
+        FT_StartBulkPreRelax(
+            mp_id=mp_id_1,
+            functional=functional,
+            db_file=db_file,
+            high_level_db=high_level,
+        ),
         name="Start pre-relaxation for {}".format(mat_1["formula"]),
     )
     WF.append(PreRelaxation_M1)
 
     PreRelaxation_M2 = Firework(
-        FT_StartBulkPreRelax(mp_id=mp_id_2, functional=functional),
+        FT_StartBulkPreRelax(
+            mp_id=mp_id_2,
+            functional=functional,
+            db_file=db_file,
+            high_level_db=high_level,
+        ),
         name="Start pre-relaxation for {}".format(mat_2["formula"]),
     )
     WF.append(PreRelaxation_M2)
@@ -502,6 +529,8 @@ def heterogeneous_wf_with_surfgen(inputs):
             conv_type="encut",
             mp_id=mp_id_1,
             functional=functional,
+            db_file=db_file,
+            high_level_db=high_level,
         ),
         name="Start encut convergence for {}".format(mat_1["formula"]),
     )
@@ -512,6 +541,8 @@ def heterogeneous_wf_with_surfgen(inputs):
             conv_type="encut",
             mp_id=mp_id_2,
             functional=functional,
+            db_file=db_file,
+            high_level_db=high_level,
         ),
         name="Start encut convergence for {}".format(mat_2["formula"]),
     )
@@ -522,6 +553,8 @@ def heterogeneous_wf_with_surfgen(inputs):
             conv_type="kpoints",
             mp_id=mp_id_1,
             functional=functional,
+            db_file=db_file,
+            high_level_db=high_level,
         ),
         name="Start kpoints convergence for {}".format(mat_1["formula"]),
     )
@@ -532,6 +565,8 @@ def heterogeneous_wf_with_surfgen(inputs):
             conv_type="kpoints",
             mp_id=mp_id_2,
             functional=functional,
+            db_file=db_file,
+            high_level_db=high_level,
         ),
         name="Start kpoints convergence for {}".format(mat_2["formula"]),
     )
@@ -581,6 +616,8 @@ def heterogeneous_wf_with_surfgen(inputs):
             bulk_coll=f"{functional}.bulk_data",
             add_full_relax=True,
             material_index=1,
+            db_file=db_file,
+            high_level=high_level,
         ),
         name="Get slabs M1",
     )
@@ -595,6 +632,8 @@ def heterogeneous_wf_with_surfgen(inputs):
             bulk_coll=f"{functional}.bulk_data",
             add_full_relax=True,
             material_index=2,
+            db_file=db_file,
+            high_level=high_level,
         ),
         name="Get slabs M2",
     )
@@ -606,6 +645,8 @@ def heterogeneous_wf_with_surfgen(inputs):
             mp_id_2=mp_id_2,
             functional=functional,
             external_pressure=pressure,
+            db_file=db_file,
+            high_level_db=high_level,
         ),
         name="Match the interface",
     )
@@ -620,6 +661,8 @@ def heterogeneous_wf_with_surfgen(inputs):
             functional=functional,
             external_pressure=pressure,
             prerelax=True,
+            db_file=db_file,
+            high_level_db=high_level,
         ),
         name="Fully relax the matched slabs",
     )
@@ -633,6 +676,8 @@ def heterogeneous_wf_with_surfgen(inputs):
             miller_2=mat_2.get("miller"),
             functional=functional,
             external_pressure=pressure,
+            db_file=db_file,
+            high_level_db=high_level,
         ),
         name="Retrieve relaxed matched slabs",
     )
@@ -647,6 +692,8 @@ def heterogeneous_wf_with_surfgen(inputs):
             functional=functional,
             external_pressure=pressure,
             prerelax=True,
+            db_file=db_file,
+            high_level_db=high_level,
         ),
         name="Compute PES high-symmetry points",
     )
@@ -660,6 +707,8 @@ def heterogeneous_wf_with_surfgen(inputs):
             miller_2=mat_2.get("miller"),
             functional=functional,
             external_pressure=pressure,
+            db_file=db_file,
+            high_level_db=high_level,
         ),
         name="Calculate Adhesion",
     )
@@ -673,6 +722,8 @@ def heterogeneous_wf_with_surfgen(inputs):
             miller_2=mat_2.get("miller"),
             functional=functional,
             external_pressure=pressure,
+            db_file=db_file,
+            high_level_db=high_level,
         ),
         name="Charge Analysis",
     )

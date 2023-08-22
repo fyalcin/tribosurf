@@ -56,7 +56,7 @@ class FT_UpdateInterfaceCompParams(FiretaskBase):
         "functional",
         "external_pressure",
     ]
-    optional_params = ["db_file"]
+    optional_params = ["db_file", "high_level_db"]
 
     def run_task(self, fw_spec):
         mp_id_1 = self.get("mp_id_1")
@@ -76,6 +76,8 @@ class FT_UpdateInterfaceCompParams(FiretaskBase):
         db_file = self.get("db_file")
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
+
+        high_level_db = self.get("high_level_db")
 
         nav_structure = StructureNavigator(db_file=db_file, high_level=True)
         bulk_1 = nav_structure.get_bulk_from_db(mp_id=mp_id_1, functional=functional)
@@ -97,7 +99,7 @@ class FT_UpdateInterfaceCompParams(FiretaskBase):
         # else:
         #     epsilon_inter = 100000
 
-        nav_high = Navigator(db_file=db_file, high_level=True)
+        nav_high = Navigator(db_file=db_file, high_level=high_level_db)
         nav_high.update_data(
             collection=functional + ".slab_data",
             fltr={"mpid": mp_id_1, "miller": miller_1},

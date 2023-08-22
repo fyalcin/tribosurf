@@ -39,6 +39,8 @@ inputs = {
         "max_area_ratio_tol": 0.1,
         "max_length_tol": 0.05,
     },
+    "db_file": "auto",
+    "high_level": "surfflow_test",
 }
 
 WF = heterogeneous_wf_with_surfgen(inputs)
