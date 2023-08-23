@@ -83,11 +83,11 @@ class FT_UpdateInterfaceCompParams(FiretaskBase):
         bulk_1 = nav_structure.get_bulk_from_db(mp_id=mp_id_1, functional=functional)
         bulk_2 = nav_structure.get_bulk_from_db(mp_id=mp_id_2, functional=functional)
 
-        encut_1 = bulk_1["encut_info"]["final_encut"]
-        encut_2 = bulk_2["encut_info"]["final_encut"]
+        encut_1 = bulk_1["comp_parameters"]["encut"]
+        encut_2 = bulk_2["comp_parameters"]["encut"]
         encut_inter = max(encut_1, encut_2)
-        k_dens_1 = bulk_1["k_dense_info"]["final_k_dens"]
-        k_dens_2 = bulk_2["k_dense_info"]["final_k_dens"]
+        k_dens_1 = bulk_1["comp_parameters"]["k_dens"]
+        k_dens_2 = bulk_2["comp_parameters"]["k_dens"]
         k_dens_inter = max(k_dens_1, k_dens_2)
         metal_1 = bulk_1["comp_parameters"]["is_metal"]
         metal_2 = bulk_2["comp_parameters"]["is_metal"]
