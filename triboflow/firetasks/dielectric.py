@@ -49,6 +49,7 @@ class FT_GetEpsilon(FiretaskBase):
         if bandgap < 0.05:
             eps_average = 1000000
 
+        fw_spec.update({"epsilon_tensor": eps_tensor, "epsilon": eps_average})
         return FWAction(
-            update_spec={"epsilon_tensor": eps_tensor, "epsilon": eps_average}
+            update_spec=fw_spec
         )

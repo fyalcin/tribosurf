@@ -37,16 +37,16 @@ class FT_CopyHomogeneousSlabs(FiretaskBase):
         External pressure in GPa.
     db_file : str, optional
         Full path of the db.json. The default is 'auto'.
-    high_level_db : str or bool, optional
+    high_level : str or bool, optional
         If a string is given, the high-level database will be chosen based on
         that string. If True, the db.json file will be used to determine the
-        name of the high_level_db. The default is True.
+        name of the high_level database. The default is True.
 
     """
 
     _fw_name = "Copy slabs for homogeneous interfaces"
     required_params = ["mp_id", "functional", "miller", "external_pressure"]
-    optional_params = ["db_file", "high_level_db"]
+    optional_params = ["db_file", "high_level"]
 
     def run_task(self, fw_spec):
         mpid = self.get("mp_id")
@@ -56,7 +56,7 @@ class FT_CopyHomogeneousSlabs(FiretaskBase):
         db_file = self.get("db_file")
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
-        hl_db = self.get("high_level_db", True)
+        hl_db = self.get("high_level", True)
 
         nav = Navigator(db_file, high_level=hl_db)
 
@@ -102,10 +102,10 @@ class FT_UpdateCompParams(FiretaskBase):
     update_slabs : bool, optional
         If the slab entries matching a given mpid should be updated (all miller
         indices). The default is False.
-    high_level_db : str or bool, optional
+    high_level : str or bool, optional
         If a string is given, the high-level database will be chosen based on
         that string. If True, the db.json file will be used to determine the
-        name of the high_level_db. The default is True.
+        name of the high_level database. The default is True.
 
     """
 
@@ -115,7 +115,7 @@ class FT_UpdateCompParams(FiretaskBase):
         "db_file",
         "update_bulk",
         "update_slabs",
-        "high_level_db",
+        "high_level",
     ]
 
     def run_task(self, fw_spec):
@@ -125,7 +125,7 @@ class FT_UpdateCompParams(FiretaskBase):
         update_bulk = self.get("update_bulk", True)
         update_slabs = self.get("update_slabs", False)
         db_file = self.get("db_file", "auto")
-        hl_db = self.get("high_level_db", True)
+        hl_db = self.get("high_level", True)
 
         nav_high = StructureNavigator(db_file=db_file, high_level=hl_db)
         # get values from spec:
@@ -202,14 +202,14 @@ class FT_MoveResults(FiretaskBase):
 class FT_PrintFromBulkDB(FiretaskBase):
     _fw_name = "Print bulk data from DB"
     required_params = ["mp_id", "functional"]
-    optional_params = ["db_file", "high_level_db"]
+    optional_params = ["db_file", "high_level"]
 
     def run_task(self, fw_spec):
         db_file = self.get("db_file", env_chk(">>db_file<<", fw_spec))
         mp_id = self["mp_id"]
         functional = self["functional"]
 
-        hl_db = self.get("high_level_db", True)
+        hl_db = self.get("high_level", True)
 
         nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
         bulk_dict = nav_structure.get_bulk_from_db(mp_id=mp_id, functional=functional)

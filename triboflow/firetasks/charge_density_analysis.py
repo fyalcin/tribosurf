@@ -104,7 +104,7 @@ def make_charge_differences(interface, chgcar_int, chgcar_bot, chgcar_top):
 @explicit_serialize
 class FT_MakeChargeCalc(FiretaskBase):
     required_params = ["structure", "comp_params", "calc_name"]
-    optional_params = ["db_file", "high_level_db"]
+    optional_params = ["db_file", "high_level"]
 
     def run_task(self, fw_spec):
         struct = self.get("structure")
@@ -149,7 +149,7 @@ class FT_MakeChargeDensityDiff(FiretaskBase):
         "functional",
         "external_pressure",
     ]
-    optional_params = ["db_file", "high_level_db"]
+    optional_params = ["db_file", "high_level"]
 
     def run_task(self, fw_spec):
         interface = self.get("interface")
@@ -160,7 +160,7 @@ class FT_MakeChargeDensityDiff(FiretaskBase):
         functional = self.get("functional")
         pressure = self.get("external_pressure")
         db_file = self.get("db_file")
-        hl_db = self.get("high_level_db", "auto")
+        hl_db = self.get("high_level", "auto")
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
         nav = Navigator(db_file=db_file)

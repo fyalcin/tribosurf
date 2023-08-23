@@ -43,6 +43,8 @@ def run_pes_calc_fw(
     prerelax=True,
     prerelax_calculator="m3gnet",
     prerelax_kwargs=None,
+    db_file="auto",
+    high_level=True,
 ):
     """Compute high-symmetry points for an interface and start PES calculations.
 
@@ -53,6 +55,8 @@ def run_pes_calc_fw(
 
     Parameters
     ----------
+    db_file
+    high_level
     interface : pymatgen.core.interface.Interface
         Interface object for which the PES is to be constructed
     interface_name : str
@@ -90,6 +94,8 @@ def run_pes_calc_fw(
         interface_name=interface_name,
         functional=functional,
         external_pressure=external_pressure,
+        db_file=db_file,
+        high_level=high_level,
     )
 
     FT_2 = FT_StartPESCalcs(
@@ -120,6 +126,8 @@ def make_pes_fw(
     server=None,
     user=None,
     port=None,
+    db_file="auto",
+    high_level=True,
 ):
     """Retrieve PES calculations from the database and compute the PES.
 
@@ -131,6 +139,8 @@ def make_pes_fw(
 
     Parameters
     ----------
+    db_file
+    high_level
     interface_name : str
         Unique name for the interface that is used in the output and the
         database.
@@ -171,12 +181,16 @@ def make_pes_fw(
         functional=functional,
         tag=tag,
         external_pressure=external_pressure,
+        db_file=db_file,
+        high_level=high_level,
     )
     FT_2 = FT_ComputePES(
         interface_name=interface_name,
         functional=functional,
         external_pressure=external_pressure,
         file_output=file_output,
+        db_file=db_file,
+        high_level=high_level,
     )
 
     if file_output:

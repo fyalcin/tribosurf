@@ -51,11 +51,30 @@ from pymatgen.core.lattice import Lattice
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import center_slab, Slab
 
+from hitmen_utils.db_tools import VaspDB
 from hitmen_utils.shaper import Shaper
 from triboflow.utils.structure_manipulation import (
     recenter_aligned_slabs,
     clean_up_site_properties,
 )
+
+
+def get_consolidated_comp_params(mpid1, mpid2, bulk_coll, db_file, high_level):
+    nav = VaspDB(db_file=db_file, high_level=high_level)
+    bulk_1 = nav.find_data(collection=bulk_coll, fltr={"mpid": mpid1})
+    bulk_2 = nav.find_data(collection=bulk_coll, fltr={"mpid": mpid2})
+
+    encut_1 = bulk_1["comp_parameters"]["encut"]
+    encut_2 = bulk_2["comp_parameters"]["encut"]
+    encut_inter = max(encut_1, encut_2)
+    k_dens_1 = bulk_1["comp_parameters"]["k_dens"]
+    k_dens_2 = bulk_2["comp_parameters"]["k_dens"]
+    k_dens_inter = max(k_dens_1, k_dens_2)
+    metal_1 = bulk_1["comp_parameters"]["is_metal"]
+    metal_2 = bulk_2["comp_parameters"]["is_metal"]
+    metal_inter = any((metal_1, metal_2))
+
+    return {"encut": encut_inter, "k_dens": k_dens_inter, "is_metal": metal_inter}
 
 
 def get_average_lattice(latt1, latt2, weight1, weight2):
@@ -253,6 +272,7 @@ class InterfaceMatcher:
 
         """
         # handle inconsistent input
+        self.interface = None
         (
             weight_1,
             weight_2,

@@ -21,16 +21,16 @@ inputs = {
         "use_spin": True,
     },
     "sg_params_1": {
-        "slab_thick": 6,
+        "slab_thick": 4,
         "vac_thick": 20.0,
-        "min_thick_A": 4.0,
-        "miller": (1, 0, 0)
+        "min_thick_A": 2.0,
+        "miller": (1, 0, 0),
     },
     "sg_params_2": {
-        "slab_thick": 6,
+        "slab_thick": 4,
         "vac_thick": 20.0,
-        "min_thick_A": 4.0,
-        "miller": (1, 0, 0)
+        "min_thick_A": 2.0,
+        "miller": (1, 0, 0),
     },
     "sg_filter_1": {"method": "all"},
     "sg_filter_2": {"method": "all"},
@@ -39,12 +39,12 @@ inputs = {
         "max_area_ratio_tol": 0.1,
         "max_length_tol": 0.05,
     },
-    "db_file": "auto",
+    "db_file": "/home/yalcin/config_local/db.json",
     "high_level": "surfflow_test",
 }
 
 WF = heterogeneous_wf_with_surfgen(inputs)
 
-lpad = LaunchPad.auto_load()
+lpad = LaunchPad.from_file("/home/yalcin/config_local/my_launchpad.yaml")
 lpad.add_wf(WF)
 # rapidfire(lpad)

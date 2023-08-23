@@ -495,7 +495,7 @@ def retrieve_from_db(
     mp_id,
     collection,
     db_file="auto",
-    high_level_db=True,
+    high_level=True,
     miller=None,
     entry=None,
     is_slab=False,
@@ -519,7 +519,7 @@ def retrieve_from_db(
         Location of the database. If it is None, it will be searched for a
         'localhost' on the hosting machine. The default is None.
 
-    high_level_db : str or True, optional
+    high_level : str or True, optional
         Database toquery. The default is True, which will read from db.json
 
     miller : list, optional
@@ -549,7 +549,7 @@ def retrieve_from_db(
     """
 
     # Call the navigator for retrieving structure
-    nav = Navigator(db_file=db_file, high_level=high_level_db)
+    nav = Navigator(db_file=db_file, high_level=high_level)
 
     # Define the filter (fltr) to be used
     fltr = {"mpid": mp_id}
@@ -574,12 +574,7 @@ def retrieve_from_db(
 
 
 def retrieve_from_tag(
-    collection,
-    tag,
-    tag_key="task_label",
-    entry=None,
-    db_file="auto",
-    high_level_db=False,
+    collection, tag, tag_key="task_label", entry=None, db_file="auto", high_level=False
 ):
     """
     Retrieve a dictionary field out of the database based on the combination
@@ -606,7 +601,7 @@ def retrieve_from_tag(
         Location of the database. If it is None, it will be searched for a
         'localhost' on the hosting machine. The default is False.
 
-    high_level_db : str or None, optional
+    high_level : str or None, optional
         Database to query. The default is None.
 
     Returns
@@ -621,7 +616,7 @@ def retrieve_from_tag(
     """
 
     # Call the navigator and retrieve the simulation data from tag
-    nav = Navigator(db_file=db_file, high_level=high_level_db)
+    nav = Navigator(db_file=db_file, high_level=high_level)
     vasp_calc = nav.find_data(collection, {tag_key: tag})
 
     # Retrieve the correct dictionary and obtain the structure
@@ -772,7 +767,9 @@ def is_list_converged(input_list, tol, n=3):
         return all(check_list)
 
 
-def move_result(tag, fltr, coll, loc, custom_dict=None, db_file="auto", high_level=True):
+def move_result(
+    tag, fltr, coll, loc, custom_dict=None, db_file="auto", high_level=True
+):
     """
     Moves the result of a VASP calculation from the Fireworks database to the destination.
 

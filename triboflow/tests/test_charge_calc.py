@@ -7,21 +7,19 @@ Created on Thu Oct 28 16:23:42 2021
 """
 from uuid import uuid4
 
+from atomate.vasp.fireworks.core import StaticFW
+from atomate.vasp.powerups import add_modify_incar
 from fireworks import LaunchPad
 from fireworks import Workflow, Firework
-
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
-from atomate.vasp.powerups import add_modify_incar
-from atomate.vasp.fireworks.core import StaticFW
-
-from hitmen_utils.vasp_tools import get_custom_vasp_static_settings
-from triboflow.utils.mp_connection import MPConnection
-from triboflow.phys.interface_matcher import InterfaceMatcher
 from hitmen_utils.shaper import Shaper
+from hitmen_utils.vasp_tools import get_custom_vasp_static_settings
 from triboflow.firetasks.charge_density_analysis import (
     FT_MakeChargeDensityDiff,
 )
+from triboflow.phys.interface_matcher import InterfaceMatcher
+from triboflow.utils.mp_connection import MPConnection
 
 
 def charge_analysis_swf(
@@ -30,7 +28,7 @@ def charge_analysis_swf(
     functional="PBE",
     external_pressure=0,
     db_file=None,
-    high_level_db="auto",
+    high_level="auto",
     comp_parameters={},
 ):
     """Subworkflow to compute the charge redistribution of an interface.
@@ -160,7 +158,7 @@ def charge_analysis_swf(
             functional=functional,
             external_pressure=external_pressure,
             db_file=db_file,
-            high_level_db=high_level_db,
+            high_level=high_level,
         ),
         name=f"Calculate charge density redistribution for {interface_name}",
     )
@@ -168,9 +166,9 @@ def charge_analysis_swf(
     SWF = Workflow(
         fireworks=[FW_top, FW_bot, FW_interface, FW_charge_analysis],
         links_dict={
-            FW_top: [FW_charge_analysis],
-            FW_bot: [FW_charge_analysis],
-            FW_interface: [FW_charge_analysis],
+            FW_top.fw_id: [FW_charge_analysis.fw_id],
+            FW_bot.fw_id: [FW_charge_analysis.fw_id],
+            FW_interface.fw_id: [FW_charge_analysis.fw_id],
         },
         name="Calculate adhesion SWF for {}".format(interface_name),
     )
@@ -192,8 +190,12 @@ if __name__ == "__main__":
     graphite, _ = mp_conn.get_low_energy_structure("C", mp_id="mp-48")
     nickel, _ = mp_conn.get_low_energy_structure("Ni", mp_id="mp-23")
 
-    gr_conv = SpacegroupAnalyzer(graphite).get_conventional_standard_structure(keep_site_properties=True)
-    ni_conv = SpacegroupAnalyzer(nickel).get_conventional_standard_structure(keep_site_properties=True)
+    gr_conv = SpacegroupAnalyzer(graphite).get_conventional_standard_structure(
+        keep_site_properties=True
+    )
+    ni_conv = SpacegroupAnalyzer(nickel).get_conventional_standard_structure(
+        keep_site_properties=True
+    )
 
     sg_params_ni = {
         "miller": [1, 1, 1],
@@ -226,10 +228,10 @@ if __name__ == "__main__":
 
     WF = charge_analysis_swf(
         interface=interface,
-        comp_parameters=comp_params,
-        high_level_db="test",
         functional="PBE",
         external_pressure=pressure,
+        high_level="test",
+        comp_parameters=comp_params,
     )
     lpad = LaunchPad.auto_load()
     lpad.add_wf(WF)

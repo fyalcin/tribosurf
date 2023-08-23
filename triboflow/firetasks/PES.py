@@ -60,7 +60,7 @@ class FT_ComputePES(FiretaskBase):
         "file_output",
         "external_pressure",
     ]
-    optional_params = ["db_file", "high_level_db"]
+    optional_params = ["db_file", "high_level"]
 
     def run_task(self, fw_spec):
         name = self.get("interface_name")
@@ -71,7 +71,7 @@ class FT_ComputePES(FiretaskBase):
         db_file = self.get("db_file")
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
-        hl_db = self.get("high_level_db", True)
+        hl_db = self.get("high_level", True)
 
         PG = get_PESGenerator_from_db(
             interface_name=name,
@@ -183,7 +183,7 @@ class FT_RetrievePESEnergies(FiretaskBase):
         "tag",
         "external_pressure",
     ]
-    optional_params = ["db_file", "high_level_db"]
+    optional_params = ["db_file", "high_level"]
 
     def run_task(self, fw_spec):
         name = self.get("interface_name")
@@ -194,7 +194,7 @@ class FT_RetrievePESEnergies(FiretaskBase):
         db_file = self.get("db_file")
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
-        hl_db = self.get("high_level_db", True)
+        hl_db = self.get("high_level", True)
 
         nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
         interface_dict = nav_structure.get_interface_from_db(
@@ -323,7 +323,7 @@ class FT_FindHighSymmPoints(FiretaskBase):
         "interface_name",
         "external_pressure",
     ]
-    optional_params = ["db_file" "high_level_db"]
+    optional_params = ["db_file" "high_level"]
 
     def run_task(self, fw_spec):
         interface = self.get("interface")
@@ -334,7 +334,7 @@ class FT_FindHighSymmPoints(FiretaskBase):
         db_file = self.get("db_file")
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
-        hl_db = self.get("high_level_db", True)
+        hl_db = self.get("high_level", True)
 
         ISA = InterfaceSymmetryAnalyzer()
         hsp_dict = ISA(interface)
@@ -358,8 +358,9 @@ class FT_FindHighSymmPoints(FiretaskBase):
             },
             upsert=True,
         )
+        fw_spec["lateral_shifts"] = hsp_dict["unique_shifts"]
 
-        return FWAction(update_spec=({"lateral_shifts": hsp_dict["unique_shifts"]}))
+        return FWAction(update_spec=fw_spec)
 
 
 @explicit_serialize
@@ -406,7 +407,6 @@ class FT_StartPESCalcs(FiretaskBase):
         "external_pressure",
     ]
     optional_params = [
-        "db_file",
         "prerelax",
         "prerelax_calculator",
         "prerelax_kwargs",
@@ -419,9 +419,6 @@ class FT_StartPESCalcs(FiretaskBase):
         tag = self.get("tag")
         pressure = self.get("external_pressure")
 
-        db_file = self.get("db_file")
-        if not db_file:
-            db_file = env_chk(">>db_file<<", fw_spec)
         prerelax = self.get("prerelax", True)
         prerelax_calculator = self.get("prerelax_calculator", "m3gnet")
         prerelax_kwargs = self.get("prerelax_kwargs", {})

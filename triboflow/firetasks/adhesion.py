@@ -38,10 +38,6 @@ class FT_RetrieveMatchedSlabs(FiretaskBase):
         MaterialsProject ID number for the first material
     mp_id_2 : str
         MaterialsProject ID number for the second material
-    miller_1 : str or [int]
-        Miller indices of the first material
-    miller_2 : str or [int]
-        Miller indices of the second material
     functional : str
         Functional with which the workflow is run. PBE or SCAN.
     external_pressure : float
@@ -55,7 +51,7 @@ class FT_RetrieveMatchedSlabs(FiretaskBase):
     bottom_out_name : str, optional
         Name the relaxed bottom slab will have in the high-level database.
         Defaults to 'bottom_aligned_relaxed'
-    high_level_db : str or True, optional
+    high_level : str or True, optional
         Name of the high_level database to use. Defaults to 'True', in which
         case it is read from the db.json file.
     """
@@ -63,8 +59,6 @@ class FT_RetrieveMatchedSlabs(FiretaskBase):
     required_params = [
         "mp_id_1",
         "mp_id_2",
-        "miller_1",
-        "miller_2",
         "functional",
         "external_pressure",
     ]
@@ -72,14 +66,12 @@ class FT_RetrieveMatchedSlabs(FiretaskBase):
         "db_file",
         "top_out_name",
         "bottom_out_name",
-        "high_level_db",
+        "high_level",
     ]
 
     def run_task(self, fw_spec):
         mp_id_1 = self.get("mp_id_1")
         mp_id_2 = self.get("mp_id_2")
-        miller_1 = self.get("miller_1")
-        miller_2 = self.get("miller_2")
         functional = self.get("functional")
         pressure = self.get("external_pressure")
         db_file = self.get("db_file")
@@ -87,10 +79,9 @@ class FT_RetrieveMatchedSlabs(FiretaskBase):
             db_file = env_chk(">>db_file<<", fw_spec)
         top_out_name = self.get("top_out_name", "top_aligned_relaxed")
         bot_out_name = self.get("bottom_out_name", "bottom_aligned_relaxed")
-        hl_db = self.get("high_level_db", True)
+        hl_db = self.get("high_level", True)
 
-        name = interface_name(mp_id_1, mp_id_2, miller_1, miller_2)
-
+        name = fw_spec.get("interface_name")
         input_list = fw_spec.get("relaxation_inputs")
 
         if input_list:
@@ -128,10 +119,6 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
         MaterialsProject ID number for the first material
     mp_id_2 : str
         MaterialsProject ID number for the second material
-    miller_1 : str or [int]
-        Miller indices of the first material
-    miller_2 : str or [int]
-        Miller indices of the second material
     functional : str
         Functional with which the workflow is run. PBE or SCAN.
     external_pressure : float
@@ -151,7 +138,7 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
     bottom_out_name : str, optional
         Name the relaxed bottom slab will have in the high-level database.
         Defaults to 'bottom_aligned_relaxed'
-    high_level_db : str or True, optional
+    high_level : str or True, optional
         Name of the high_level database to use. Defaults to 'True', in which
         case it is read from the db.json file.
     prerelax : bool, optional
@@ -166,8 +153,6 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
     required_params = [
         "mp_id_1",
         "mp_id_2",
-        "miller_1",
-        "miller_2",
         "functional",
         "external_pressure",
     ]
@@ -177,17 +162,13 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
         "top_out_name",
         "bottom_in_name",
         "bottom_out_name",
-        "high_level_db",
+        "high_level",
         "prerelax",
         "prerelax_calculator",
         "prerelax_kwargs",
     ]
 
     def run_task(self, fw_spec):
-        mp_id_1 = self.get("mp_id_1")
-        mp_id_2 = self.get("mp_id_2")
-        miller_1 = self.get("miller_1")
-        miller_2 = self.get("miller_2")
         functional = self.get("functional")
         pressure = self.get("external_pressure")
         db_file = self.get("db_file")
@@ -197,14 +178,13 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
         top_out_name = self.get("top_out_name", "top_aligned_relaxed")
         bot_in_name = self.get("bottom_in_name", "bottom_aligned")
         bot_out_name = self.get("bottom_out_name", "bottom_aligned_relaxed")
-        hl_db = self.get("high_level_db", True)
+        hl_db = self.get("high_level", True)
         prerelax = self.get("prerelax", True)
         prerelax_calculator = self.get("prerelax_calculator", "m3gnet")
         prerelax_kwargs = self.get("prerelax_kwargs", {})
 
-        name = interface_name(mp_id_1, mp_id_2, miller_1, miller_2)
-
-        nav = Navigator(db_file, high_level=hl_db)
+        name = fw_spec.get("interface_name")
+        nav = Navigator(db_file=db_file, high_level=hl_db)
 
         interface_dict = nav.find_data(
             collection=functional + ".interface_data",
@@ -235,17 +215,19 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
             label = "bot_slab_" + formula + miller + "_" + str(uuid4())
             inputs.append([bot_slab, bot_vis, label])
 
+        fw_spec["relaxation_inputs"] = inputs
+
         if inputs:
-            WF = dynamic_relax_swf(
+            wf = dynamic_relax_swf(
                 inputs_list=inputs,
                 wf_name="Relaxing the matched slabs",
                 prerelax_system=prerelax,
                 prerelax_calculator=prerelax_calculator,
                 prerelax_kwargs=prerelax_kwargs,
             )
-            return FWAction(detours=WF, update_spec={"relaxation_inputs": inputs})
+            return FWAction(detours=wf, update_spec=fw_spec)
         else:
-            return FWAction(update_spec={"relaxation_inputs": inputs})
+            return FWAction(update_spec=fw_spec)
 
 
 @explicit_serialize
@@ -282,7 +264,7 @@ class FT_CalcAdhesion(FiretaskBase):
         Key in the interface collection of the high_level database that
         contains the calculated adhesion energy as value. Defaults to
         'adhesion_energy@min'.
-    high_level_db : str or True, optional
+    high_level : str or True, optional
         Name of the high_level database to use. Defaults to 'True', in which
         case it is read from the db.json file.
     """
@@ -295,7 +277,9 @@ class FT_CalcAdhesion(FiretaskBase):
         "interface_label",
         "external_pressure",
     ]
-    optional_params = ["db_file", "out_name", "high_level_db"]
+    optional_params = ["db_file",
+                       "out_name",
+                       "high_level"]
 
     def run_task(self, fw_spec):
         name = self.get("interface_name")
@@ -309,7 +293,7 @@ class FT_CalcAdhesion(FiretaskBase):
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
         out_name = self.get("out_name", "adhesion_energy@min")
-        hl_db = self.get("high_level_db", True)
+        hl_db = self.get("high_level", True)
 
         nav = Navigator(db_file=db_file)
 

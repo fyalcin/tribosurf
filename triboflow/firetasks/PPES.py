@@ -60,7 +60,7 @@ class FT_DoPPESCalcs(FiretaskBase):
         "db_file",
         "structure_name",
         "out_name",
-        "high_level_db",
+        "high_level",
     ]
 
     def run_task(self, fw_spec):
@@ -74,7 +74,7 @@ class FT_DoPPESCalcs(FiretaskBase):
         structure_name = self.get("structure_name", "relaxed_structure@min")
 
         d_list = self.get("distance_list")
-        hl_db = self.get("high_level_db", True)
+        hl_db = self.get("high_level", True)
 
         nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
         interface_dict = nav_structure.get_interface_from_db(
@@ -142,7 +142,7 @@ class FT_FitPPES(FiretaskBase):
     """
 
     required_params = ["interface_name", "functional", "tag", "distance_list"]
-    optional_params = ["db_file", "out_name"]
+    optional_params = ["db_file", "out_name", "high_level"]
 
     def run_task(self, fw_spec):
         name = self.get("interface_name")
@@ -152,6 +152,8 @@ class FT_FitPPES(FiretaskBase):
         db_file = self.get("db_file")
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
+
+        high_level = self.get("high_level", True)
         out_name = self.get("out_name", "PPES@minimum")
         d_list = self.get("distance_list")
 
@@ -169,7 +171,7 @@ class FT_FitPPES(FiretaskBase):
 
         popt, perr = PPES_UBER(distance_energy_array=d_E_array)
 
-        nav_high = Navigator(db_file=db_file, high_level="triboflow")
+        nav_high = Navigator(db_file=db_file, high_level=high_level)
 
         nav_high.update_data(
             collection=functional + ".interface_data",

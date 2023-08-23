@@ -71,7 +71,7 @@ def dielectric_constant_swf(
     hl_db : str or bool, optional
         If a string is given, the high-level database will be chosen based on
         that string. If True, the db.json file will be used to determine the
-        name of the high_level_db. The default is True.
+        name of the high_level database. The default is True.
     update_bulk : bool, optional
         If the bulk entry for the given mpid should be updated.
         The default is True.
@@ -121,7 +121,7 @@ def dielectric_constant_swf(
             update_bulk=update_bulk,
             update_slabs=update_slabs,
             db_file=db_file,
-            high_level_db=hl_db,
+            high_level=hl_db,
         )
         Update_FW = Firework(
             tasks=[Get_Eps_FT, Update_Data_FT],
@@ -143,7 +143,7 @@ def dielectric_constant_swf(
             update_bulk=update_bulk,
             update_slabs=update_slabs,
             db_file=db_file,
-            high_level_db=hl_db,
+            high_level=hl_db,
         )
         Update_FW = Firework(
             tasks=[Update_Data_FT], spec=spec, name=flag + "_update_high_level"
@@ -158,7 +158,7 @@ def charge_analysis_swf(
     functional="PBE",
     external_pressure=0,
     db_file=None,
-    high_level_db="auto",
+    high_level="auto",
     comp_parameters=None,
 ):
     """Subworkflow to compute the charge redistribution of an interface.
@@ -186,7 +186,7 @@ def charge_analysis_swf(
     db_file : str, optional
         Full path of the db.json file to be used. The default is to use
         env_chk to find the file.
-    high_level_db : str, optional
+    high_level : str, optional
         Name of the high_level database to use. Defaults to 'auto', in which
         case it is read from the db.json file.
     comp_parameters : dict, optional
@@ -290,7 +290,7 @@ def charge_analysis_swf(
             functional=functional,
             external_pressure=external_pressure,
             db_file=db_file,
-            high_level_db=high_level_db,
+            high_level=high_level,
         ),
         name=f"Calculate charge density redistribution for {interface_name}",
     )
@@ -316,6 +316,8 @@ def adhesion_energy_swf(
     interface_name=None,
     functional="PBE",
     comp_parameters=None,
+    db_file="auto",
+    high_level=True,
 ):
     """Create a subworkflow to compute the adhesion energy for an interface.
 
@@ -331,6 +333,8 @@ def adhesion_energy_swf(
 
     Parameters
     ----------
+    db_file
+    high_level
     top_slab : pymatgen.core.surface.Slab
         Relaxed top slab of the interface.
     bottom_slab : pymatgen.core.surface.Slab
@@ -440,6 +444,8 @@ def adhesion_energy_swf(
             top_label=tag + "top",
             bottom_label=tag + "bottom",
             interface_label=tag + "interface",
+            db_file=db_file,
+            high_level=high_level,
         ),
         name=f"Calculate Adhesion FW for {interface_name}",
     )
@@ -624,6 +630,8 @@ def calc_pes_swf(
         prerelax=prerelax,
         prerelax_calculator=prerelax_calculator,
         prerelax_kwargs=prerelax_kwargs,
+        db_file=db_file,
+        high_level=high_level,
     )
 
     FW_2 = make_pes_fw(
@@ -631,13 +639,13 @@ def calc_pes_swf(
         functional=functional,
         external_pressure=pressure,
         tag=tag,
+        FW_name="Parse PES calcs for " + interface_name,
         file_output=file_output,
         output_dir=output_dir,
         remote_copy=remote_copy,
         server=server,
         user=user,
         port=port,
-        FW_name="Parse PES calcs for " + interface_name,
     )
 
     SWF = Workflow(
@@ -655,6 +663,8 @@ def calc_ppes_swf(
     out_name="PPES@minimum",
     structure_name="minimum_relaxed",
     spec=None,
+    db_file="auto",
+    high_level=True,
 ):
     """
     Generate a subworkflow that calculates a PPES using static calculations.
@@ -667,6 +677,8 @@ def calc_ppes_swf(
 
     Parameters
     ----------
+    db_file
+    high_level
     interface_name : str
         Name of the interface in the high-level database.
     functional : str
@@ -702,6 +714,8 @@ def calc_ppes_swf(
             distance_list=distance_list,
             tag=tag,
             structure_name=structure_name,
+            db_file=db_file,
+            high_level=high_level,
         ),
         spec=spec,
         name="PPES Calculations for " + interface_name,
@@ -714,6 +728,8 @@ def calc_ppes_swf(
             distance_list=distance_list,
             out_name=out_name,
             tag=tag,
+            db_file=db_file,
+            high_level=high_level,
         ),
         spec=spec,
         name="PPES Fitting for " + interface_name,

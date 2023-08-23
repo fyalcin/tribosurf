@@ -7,7 +7,6 @@ from pymatgen.core.interface import Interface
 from pymatgen.core.surface import Slab
 
 from triboflow.utils.database import Navigator, StructureNavigator
-from triboflow.utils.structure_manipulation import interface_name
 from triboflow.workflows.subworkflows import (
     adhesion_energy_swf,
     calc_pes_swf,
@@ -23,7 +22,7 @@ from triboflow.workflows.subworkflows import (
 class FT_StartChargeAnalysisSWF(FiretaskBase):
     """Start a charge redistribution analysis subworkflow.
 
-    Take an interface from the high_level_db and compute
+    Take an interface from the high_level database and compute
     the charge density redistribution through a subworkflow.
 
     Parameters
@@ -32,10 +31,6 @@ class FT_StartChargeAnalysisSWF(FiretaskBase):
         MaterialsProject ID number for the first material
     mp_id_2 : str
         MaterialsProject ID number for the second material
-    miller_1 : str or [int]
-        Miller indices of the first material
-    miller_2 : str or [int]
-        Miller indices of the second material
     functional : str
         Functional with which the workflow is run. PBE or SCAN.
     external_pressure : float
@@ -43,7 +38,7 @@ class FT_StartChargeAnalysisSWF(FiretaskBase):
     db_file : str, optional
         Full path of the db.json file to be used. The default is to use
         env_chk to find the file.
-    high_level_db : str or True, optional
+    high_level : str or True, optional
         Name of the high_level database to use. Defaults to 'True', in which
         case it is read from the db.json file.
     interface_label : str, optional
@@ -54,29 +49,23 @@ class FT_StartChargeAnalysisSWF(FiretaskBase):
     required_params = [
         "mp_id_1",
         "mp_id_2",
-        "miller_1",
-        "miller_2",
         "functional",
         "external_pressure",
     ]
-    optional_params = ["db_file", "high_level_db", "interface_label"]
+    optional_params = ["db_file", "high_level", "interface_label"]
 
     def run_task(self, fw_spec):
-        mp_id_1 = self.get("mp_id_1")
-        mp_id_2 = self.get("mp_id_2")
-        miller_1 = self.get("miller_1")
-        miller_2 = self.get("miller_2")
         functional = self.get("functional")
         pressure = self.get("external_pressure")
         db_file = self.get("db_file")
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
-        hl_db = self.get("high_level_db", True)
+        hl_db = self.get("high_level", True)
         interface_label = self.get("interface_label", "relaxed_structure@min")
 
-        nav = Navigator(db_file, high_level=hl_db)
+        nav = Navigator(db_file=db_file, high_level=hl_db)
 
-        name = interface_name(mp_id_1, mp_id_2, miller_1, miller_2)
+        name = fw_spec.get("interface_name")
 
         interface_dict = nav.find_data(
             collection=functional + ".interface_data",
@@ -89,15 +78,8 @@ class FT_StartChargeAnalysisSWF(FiretaskBase):
         if not redistribution_was_calculated:
             interface = Interface.from_dict(interface_dict[interface_label])
 
-            SWF = charge_analysis_swf(
-                interface=interface,
-                interface_name=name,
-                functional=functional,
-                external_pressure=pressure,
-                db_file=db_file,
-                high_level_db=hl_db,
-                comp_parameters=comp_params,
-            )
+            SWF = charge_analysis_swf(interface=interface, interface_name=name, functional=functional, external_pressure=pressure, db_file=db_file,
+                                      high_level=hl_db, comp_parameters=comp_params)
 
             return FWAction(detours=SWF)
         else:
@@ -118,10 +100,6 @@ class FT_StartAdhesionSWF(FiretaskBase):
         MaterialsProject ID number for the first material
     mp_id_2 : str
         MaterialsProject ID number for the second material
-    miller_1 : str or [int]
-        Miller indices of the first material
-    miller_2 : str or [int]
-        Miller indices of the second material
     functional : str
         Functional with which the workflow is run. PBE or SCAN.
     external_pressure : float
@@ -132,7 +110,7 @@ class FT_StartAdhesionSWF(FiretaskBase):
     adhesion_handle: str, optional
         Flag under which the adhesion energy will be saved in the interface_data
         collection of the high_level database.
-    high_level_db : str or True, optional
+    high_level : str or True, optional
         Name of the high_level database to use. Defaults to 'True', in which
         case it is read from the db.json file.
     """
@@ -140,29 +118,23 @@ class FT_StartAdhesionSWF(FiretaskBase):
     required_params = [
         "mp_id_1",
         "mp_id_2",
-        "miller_1",
-        "miller_2",
         "functional",
         "external_pressure",
     ]
-    optional_params = ["db_file", "adhesion_handle", "high_level_db"]
+    optional_params = ["db_file", "adhesion_handle", "high_level"]
 
     def run_task(self, fw_spec):
-        mp_id_1 = self.get("mp_id_1")
-        mp_id_2 = self.get("mp_id_2")
-        miller_1 = self.get("miller_1")
-        miller_2 = self.get("miller_2")
         functional = self.get("functional")
         pressure = self.get("external_pressure")
         db_file = self.get("db_file")
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
         adhesion_handle = self.get("adhesion_handle", "adhesion_energy@min")
-        hl_db = self.get("high_level_db", True)
+        hl_db = self.get("high_level", True)
 
-        nav = Navigator(db_file, high_level=hl_db)
+        nav = Navigator(db_file=db_file, high_level=hl_db)
 
-        name = interface_name(mp_id_1, mp_id_2, miller_1, miller_2)
+        name = fw_spec.get("interface_name")
 
         interface_dict = nav.find_data(
             collection=functional + ".interface_data",
@@ -177,17 +149,10 @@ class FT_StartAdhesionSWF(FiretaskBase):
             bottom_slab = Slab.from_dict(interface_dict["bottom_aligned_relaxed"])
             interface = Structure.from_dict(interface_dict["relaxed_structure@min"])
 
-            SWF = adhesion_energy_swf(
-                top_slab,
-                bottom_slab,
-                interface,
-                interface_name=name,
-                external_pressure=pressure,
-                functional=functional,
-                comp_parameters=comp_params,
-            )
+            swf = adhesion_energy_swf(top_slab, bottom_slab, interface, external_pressure=pressure, interface_name=name, functional=functional,
+                                      comp_parameters=comp_params, db_file=db_file, high_level=hl_db)
 
-            return FWAction(detours=SWF)
+            return FWAction(detours=swf)
         else:
             return FWAction(update_spec=fw_spec)
 
@@ -224,7 +189,7 @@ class FT_StartBulkConvoSWF(FiretaskBase):
     n_converge : int, optional
         Number of calculations that have to be inside the convergence
         threshold for convergence to be reached. Defaults to 3.
-    high_level_db : str or True, optional
+    high_level : str or True, optional
         Name of the high_level database to use. Defaults to 'True', in which
         case it is read from the db.json file.
     """
@@ -238,7 +203,7 @@ class FT_StartBulkConvoSWF(FiretaskBase):
         "k_dens_start",
         "k_dens_incr",
         "n_converge",
-        "high_level_db",
+        "high_level",
     ]
 
     def run_task(self, fw_spec):
@@ -253,7 +218,7 @@ class FT_StartBulkConvoSWF(FiretaskBase):
         k_dens_incr = self.get("k_dens_incr", 0.1)
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
-        hl_db = self.get("high_level_db", True)
+        hl_db = self.get("high_level", True)
 
         if conv_type not in ["kpoints", "encut"]:
             raise ValueError(
@@ -317,7 +282,7 @@ class FT_StartDielectricSWF(FiretaskBase):
     db_file : str, optional
         Full path of the db.json file to be used. The default is to use
         env_chk to find the file.
-    high_level_db : str or True, optional
+    high_level : str or True, optional
         Name of the high_level database to use. Defaults to 'True', in which
         case it is read from the db.json file.
     update_bulk : bool, optional
@@ -332,7 +297,7 @@ class FT_StartDielectricSWF(FiretaskBase):
     required_params = ["mp_id", "functional"]
     optional_params = [
         "db_file",
-        "high_level_db",
+        "high_level",
         "update_bulk",
         "update_slabs",
     ]
@@ -345,7 +310,7 @@ class FT_StartDielectricSWF(FiretaskBase):
         update_slabs = self.get("update_slabs", True)
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
-        hl_db = self.get("high_level_db", True)
+        hl_db = self.get("high_level", True)
 
         nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
         data = nav_structure.get_bulk_from_db(mp_id=mp_id, functional=functional)
@@ -391,10 +356,6 @@ class FT_StartPESCalcSWF(FiretaskBase):
         Materials Project database ID for the first material of the interface.
     mp_id_2 : str
         Materials Project database ID for the second material of the interface.
-    miller_1 : list of int or str
-        Miller index of the first material.
-    miller_2 : list of int or str
-        Miller index of the second material.
     functional : str
         Which functional to use; has to be 'PBE' or 'SCAN'.
     external_pressure : float
@@ -418,35 +379,29 @@ class FT_StartPESCalcSWF(FiretaskBase):
     required_params = [
         "mp_id_1",
         "mp_id_2",
-        "miller_1",
-        "miller_2",
         "functional",
         "external_pressure",
     ]
     optional_params = [
         "db_file",
-        "high_level_db",
+        "high_level",
         "prerelax",
         "prerelax_calculator",
         "prerelax_kwargs",
     ]
 
     def run_task(self, fw_spec):
-        mp_id_1 = self.get("mp_id_1")
-        mp_id_2 = self.get("mp_id_2")
-        miller_1 = self.get("miller_1")
-        miller_2 = self.get("miller_2")
         functional = self.get("functional")
         pressure = self.get("external_pressure")
         db_file = self.get("db_file")
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
-        hl_db = self.get("high_level_db", True)
+        hl_db = self.get("high_level", True)
         prerelax = self.get("prerelax", True)
         prerelax_calculator = self.get("prerelax_calculator", "m3gnet")
         prerelax_kwargs = self.get("prerelax_kwargs", {})
 
-        name = interface_name(mp_id_1, mp_id_2, miller_1, miller_2)
+        name = fw_spec.get("interface_name")
 
         nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
         interface_dict = nav_structure.get_interface_from_db(
@@ -457,8 +412,19 @@ class FT_StartPESCalcSWF(FiretaskBase):
         already_done = interface_dict.get("relaxed_structure@min")
 
         if not already_done:
-            SWF = calc_pes_swf(interface=interface, interface_name=name, functional=functional, pressure=pressure, comp_parameters=comp_params,
-                               output_dir=None, prerelax=prerelax, prerelax_calculator=prerelax_calculator, prerelax_kwargs=prerelax_kwargs)
+            SWF = calc_pes_swf(
+                interface=interface,
+                interface_name=name,
+                functional=functional,
+                pressure=pressure,
+                comp_parameters=comp_params,
+                output_dir=None,
+                prerelax=prerelax,
+                prerelax_calculator=prerelax_calculator,
+                prerelax_kwargs=prerelax_kwargs,
+                db_file=db_file,
+                high_level=hl_db,
+            )
 
             return FWAction(detours=SWF, update_spec=fw_spec)
 
@@ -506,7 +472,7 @@ class FT_StartPPESWF(FiretaskBase):
         "db_file",
         "structure_name",
         "out_name",
-        "high_level_db",
+        "high_level",
     ]
 
     def run_task(self, fw_spec):
@@ -522,7 +488,7 @@ class FT_StartPPESWF(FiretaskBase):
         out_name = self.get("out_name", "PPES@minimum")
 
         d_list = self.get("distance_list")
-        hl_db = self.get("high_level_db", True)
+        hl_db = self.get("high_level", True)
 
         nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
         interface_dict = nav_structure.get_interface_from_db(
@@ -544,14 +510,8 @@ class FT_StartPPESWF(FiretaskBase):
                 calc_PPES = False
 
         if calc_PPES:
-            SWF = calc_ppes_swf(
-                interface_name=name,
-                functional=functional,
-                distance_list=d_list,
-                out_name=out_name,
-                structure_name=structure_name,
-                spec=fw_spec,
-            )
+            SWF = calc_ppes_swf(interface_name=name, functional=functional, distance_list=d_list, out_name=out_name, structure_name=structure_name,
+                                spec=fw_spec)
 
             return FWAction(additions=SWF, update_spec=fw_spec)
         else:
@@ -599,7 +559,7 @@ class FT_StartSlabRelaxSWF(FiretaskBase):
         "relax_type",
         "bulk_struct_name",
         "slab_out_name",
-        "high_level_db",
+        "high_level",
     ]
 
     def run_task(self, fw_spec):
@@ -619,7 +579,7 @@ class FT_StartSlabRelaxSWF(FiretaskBase):
         relax_type = self.get("relax_type", "slab_pos_relax")
         bulk_name = self.get("bulk_struct_name", "structure_equiVol")
         slab_out_name = self.get("slab_out_name", "relaxed_slab")
-        hl_db = self.get("high_level_db", True)
+        hl_db = self.get("high_level", True)
 
         nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
 

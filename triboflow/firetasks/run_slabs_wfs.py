@@ -243,15 +243,8 @@ class FT_SlabOptThick(FiretaskBase):
             pymatgen bulk structure
         """
 
-        field, bulk = retrieve_from_db(
-            p["mp_id"],
-            collection=p["functional"] + ".bulk_data",
-            db_file=p["db_file"],
-            high_level_db=True,
-            entry=p["bulk_entry"],
-            is_slab=False,
-            pymatgen_obj=True,
-        )
+        field, bulk = retrieve_from_db(p["mp_id"], collection=p["functional"] + ".bulk_data", db_file=p["db_file"], high_level=True,
+                                       entry=p["bulk_entry"], is_slab=False, pymatgen_obj=True)
         return bulk
 
     def is_data(self, p, dfl):
@@ -275,14 +268,8 @@ class FT_SlabOptThick(FiretaskBase):
         """
 
         # Retrieve the slab from the database
-        field, _ = retrieve_from_db(
-            mp_id=p["mp_id"],
-            db_file=p["db_file"],
-            high_level_db=True,
-            miller=p["miller"],
-            collection=p["functional"] + ".slab_data",
-            pymatgen_obj=False,
-        )
+        field, _ = retrieve_from_db(mp_id=p["mp_id"], collection=p["functional"] + ".slab_data", db_file=p["db_file"], high_level=True,
+                                    miller=p["miller"], pymatgen_obj=False)
 
         if field is not None:
             # Check if an optimal thickness has been already calculated
@@ -911,34 +898,35 @@ class GetSlabSurfenListFromUids(FiretaskBase):
         opt_inp = {k: self.get(k) for k in self.optional_params}
         opt_inp = check_input(opt_inp, self.optional_params)
         inp = {**req_inp, **opt_inp}
+        print(f"inp: {inp}")
         prev_swf_info = fw_spec["StartSurfaceEnergy_info"]
         mpid, uids = prev_swf_info["mpid"], prev_swf_info["uids"]
         nav = VaspDB(db_file=inp["db_file"], high_level=inp["high_level"])
         results = list(
             nav.find_many_data(inp["surfen_coll"], {"uid": {"$in": uids}}, {"calcs": 0})
         )
-        for result in results:
-            slab = Slab.from_dict(result["structure"])
-            hkl = result["hkl"]
-            uid = result["uid"]
-            nav.update_data(
-                collection="test",
-                fltr={"mpid": mpid},
-                new_values={
-                    "$set": {
-                        uid + ".hkl": hkl,
-                        uid + ".shift": slab.shift,
-                        uid + ".surface_energy": result["surface_energy"],
-                        uid + ".structure": result["structure"],
-                        uid + ".terminations": result["terminations"],
-                    }
-                },
-                upsert=True,
-            )
+        # for result in results:
+        #     slab = Slab.from_dict(result["structure"])
+        #     hkl = result["hkl"]
+        #     uid = result["uid"]
+        #     nav.update_data(
+        #         collection="test",
+        #         fltr={"mpid": mpid},
+        #         new_values={
+        #             "$set": {
+        #                 uid + ".hkl": hkl,
+        #                 uid + ".shift": slab.shift,
+        #                 uid + ".surface_energy": result["surface_energy"],
+        #                 uid + ".structure": result["structure"],
+        #                 uid + ".terminations": result["terminations"],
+        #             }
+        #         },
+        #         upsert=True,
+        #     )
 
         slab_surfen_list = []
         for slab_dict in results:
-            slab = Slab.from_dict(slab_dict["fully_relaxed_slab"])
+            slab = Slab.from_dict(slab_dict["structure"])
             shift = round(slab.shift, 2)
             surfen_dict = slab_dict["surface_energy"]
             slab_params = slab_dict["slab_params"]
@@ -999,6 +987,8 @@ class RunSurfenSwfGetEnergies(FiretaskBase):
         mpid = inp["mpid"]
         comp_params = inp["comp_params"]
         sg_params = inp["sg_params"]
+        db_file = inp["db_file"]
+        high_level = inp["high_level"]
         # create a name_suffix variable and use miller or max_index from sg_params, whichever is available
         name_suffix = ""
         if sg_params.get("miller", False):
@@ -1011,7 +1001,7 @@ class RunSurfenSwfGetEnergies(FiretaskBase):
             )
         # check if comp_params_loc is given
         if inp["comp_params_from_db"]:
-            nav = VaspDB(db_file=inp["db_file"], high_level=inp["high_level"])
+            nav = VaspDB(db_file=db_file, high_level=high_level)
             bulk_coll = inp["bulk_coll"]
 
             bulk_data = nav.find_data(collection=bulk_coll, fltr={"mpid": mpid})
@@ -1030,8 +1020,8 @@ class RunSurfenSwfGetEnergies(FiretaskBase):
                     comp_params=comp_params,
                     sg_params=inp["sg_params"],
                     sg_filter=inp["sg_filter"],
-                    db_file=inp["db_file"],
-                    high_level=inp["high_level"],
+                    db_file=db_file,
+                    high_level=high_level,
                     custom_id=inp["custom_id"],
                     surfen_coll=inp["surfen_coll"],
                     bulk_coll=inp["bulk_coll"],
@@ -1044,9 +1034,10 @@ class RunSurfenSwfGetEnergies(FiretaskBase):
         fw2 = Firework(
             [
                 GetSlabSurfenListFromUids(
-                    db_file=inp["db_file"],
-                    high_level=inp["high_level"],
+                    db_file=db_file,
+                    high_level=high_level,
                     surfen_coll=inp["surfen_coll"],
+                    material_index=inp["material_index"],
                 )
             ],
             name=f"Get slabs and corresponding surface energies for {mpid} {name_suffix}",

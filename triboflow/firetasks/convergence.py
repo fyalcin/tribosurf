@@ -165,7 +165,7 @@ class FT_Convo(FiretaskBase):
         "server",
         "user",
         "port",
-        "high_level_db",
+        "high_level",
     ]
 
     def run_task(self, fw_spec):
@@ -189,7 +189,7 @@ class FT_Convo(FiretaskBase):
         db_file = self.get("db_file")
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
-        hl_db = self.get("high_level_db", True)
+        hl_db = self.get("high_level", True)
         if not deformations:
             deformations = deforms
 
@@ -275,7 +275,7 @@ class FT_Convo(FiretaskBase):
                         server=server,
                         user=user,
                         port=port,
-                        high_level_db=hl_db,
+                        high_level=hl_db,
                     ),
                 ],
                 name="Update BM Lists and Loop",

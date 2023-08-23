@@ -207,15 +207,8 @@ class FT_RelaxStructure(FiretaskBase):
         RelaxStructureError.check_collection(p["collection"])
 
         # Retrieve the structure from the Database
-        field, structure = retrieve_from_db(
-            db_file=p["db_file"],
-            high_level_db=p["database"],
-            collection=p["collection"],
-            mp_id=p["mp_id"],
-            miller=p["miller"],
-            entry=p["entry"],
-            pymatgen_obj=pymatgen_obj,
-        )
+        field, structure = retrieve_from_db(mp_id=p["mp_id"], collection=p["collection"], db_file=p["db_file"], high_level=p["database"],
+                                            miller=p["miller"], entry=p["entry"], pymatgen_obj=pymatgen_obj)
         RelaxStructureError.is_data(structure, p["mp_id"], p["functional"])
 
         # Check if the calculation is already done, searching for given keys
@@ -452,15 +445,8 @@ class FT_MoveTagResults(FiretaskBase):
 
         if p["check_entry"] is not None:
             # Retrieve the structure from the Database
-            _, check_dict = retrieve_from_db(
-                db_file=p["db_file"],
-                high_level_db=p["database_to"],
-                collection=p["collection_to"],
-                mp_id=p["mp_id"],
-                miller=p["miller"],
-                entry=p["check_entry"],
-                pymatgen_obj=False,
-            )
+            _, check_dict = retrieve_from_db(mp_id=p["mp_id"], collection=p["collection_to"], db_file=p["db_file"], high_level=p["database_to"],
+                                             miller=p["miller"], entry=p["check_entry"], pymatgen_obj=False)
 
             # Check if the calculation is already done
             is_done = True
@@ -480,14 +466,8 @@ class FT_MoveTagResults(FiretaskBase):
         """
 
         # Retrieve the vasp_calc_output and the info
-        vasp_calc, info = retrieve_from_tag(
-            db_file=p["db_file"],
-            collection=p["collection_from"],
-            tag=p["tag"],
-            tag_key=p["tag_key"],
-            entry=p["entry_from"],
-            high_level_db=p["database_from"],
-        )
+        vasp_calc, info = retrieve_from_tag(collection=p["collection_from"], tag=p["tag"], tag_key=p["tag_key"], entry=p["entry_from"],
+                                            db_file=p["db_file"], high_level=p["database_from"])
 
         return vasp_calc, info
 
