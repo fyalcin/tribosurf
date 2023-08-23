@@ -3,7 +3,7 @@ import pprint
 import argparse
 from pymatgen.io.vasp.inputs import Poscar
 from triboflow.phys.interface_matcher import InterfaceMatcher
-from tirboflow.utils import slab_from_file
+from triboflow.utils.structure_manipulation import slab_from_file
 
 """
 Match interfaces using Slabs from POSCAR files.
