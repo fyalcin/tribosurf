@@ -6,7 +6,7 @@ Created on Tue Oct 13 14:52:57 2020
 @author: wolloch
 """
 from operator import itemgetter
-
+from hitmen_utils.db_tools import VaspDB
 import numpy as np
 import pickle
 from atomate.utils.utils import env_chk
@@ -196,10 +196,8 @@ class FT_RetrievePESEnergies(FiretaskBase):
             db_file = env_chk(">>db_file<<", fw_spec)
         hl_db = self.get("high_level", True)
 
-        nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
-        interface_dict = nav_structure.get_interface_from_db(
-            name=name, functional=functional, pressure=pressure
-        )
+        db_structure = VaspDB(db_file=db_file, high_level=hl_db)
+        interface_dict = db_structure.find_data(f"{functional}.interface_data", fltr={'name': name})
         lateral_shifts = interface_dict["PES"]["high_symmetry_points"]["unique_shifts"]
         group_assignments = interface_dict["PES"]["high_symmetry_points"][
             "group_assignments"
