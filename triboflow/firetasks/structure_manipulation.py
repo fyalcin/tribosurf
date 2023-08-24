@@ -74,7 +74,9 @@ class FT_StartBulkPreRelax(FiretaskBase):
 
         # Querying the structure from the high level database.
         nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
-        data = nav_structure.get_bulk_from_db(mp_id=mp_id, functional=functional)
+        data = nav_structure.get_bulk_from_db(
+            mp_id=mp_id, functional=functional
+        )
 
         prim_struct = data.get("primitive_structure")
         if not prim_struct:
@@ -85,7 +87,9 @@ class FT_StartBulkPreRelax(FiretaskBase):
                     "be used as input for cell shape relaxation."
                 )
             struct = Structure.from_dict(struct)
-            prim_struct = SpacegroupAnalyzer(struct).get_primitive_standard_structure()
+            prim_struct = SpacegroupAnalyzer(
+                struct
+            ).get_primitive_standard_structure()
             prim_struct = transfer_average_magmoms(struct, prim_struct)
         else:
             prim_struct = Structure.from_dict(prim_struct)
@@ -123,7 +127,9 @@ class FT_StartBulkPreRelax(FiretaskBase):
                         high_level=hl_db,
                     )
                 ],
-                name="Move pre-relaxed structure for {}".format(prim_struct.formula),
+                name="Move pre-relaxed structure for {}".format(
+                    prim_struct.formula
+                ),
             )
             MoveResultsWF = Workflow([MoveResultsFW])
 
@@ -284,7 +290,9 @@ class FT_GetRelaxedSlab(FiretaskBase):
             vasp_calc = nav.find_data(
                 collection="tasks", fltr={"task_label": self["tag"]}
             )
-            relaxed_slab = Structure.from_dict(vasp_calc["output"]["structure"])
+            relaxed_slab = Structure.from_dict(
+                vasp_calc["output"]["structure"]
+            )
             slab = Slab(
                 relaxed_slab.lattice,
                 relaxed_slab.species_and_occu,
@@ -309,7 +317,9 @@ class FT_GetRelaxedSlab(FiretaskBase):
             )
 
             if vasp_calc:
-                relaxed_slab = Structure.from_dict(vasp_calc["output"]["structure"])
+                relaxed_slab = Structure.from_dict(
+                    vasp_calc["output"]["structure"]
+                )
                 slab = Slab(
                     relaxed_slab.lattice,
                     relaxed_slab.species_and_occu,
@@ -363,7 +373,9 @@ class FT_GetRelaxedSlab(FiretaskBase):
                 user=user,
                 port=port,
             )
-            FW = Firework([write_FT, copy_FT], name="Copy SlabRelax SWF results")
+            FW = Firework(
+                [write_FT, copy_FT], name="Copy SlabRelax SWF results"
+            )
             WF = Workflow.from_Firework(FW, name="Copy SlabRelax SWF results")
 
             return FWAction(update_spec=fw_spec, detours=WF)
@@ -446,7 +458,9 @@ class FT_StartSlabRelax(FiretaskBase):
 
         # Check if a relaxed slab is already in the DB entry
         if "relaxed_slab" not in slab_data:
-            vis = get_custom_vasp_relax_settings(slab_to_relax, comp_params, relax_type)
+            vis = get_custom_vasp_relax_settings(
+                slab_to_relax, comp_params, relax_type
+            )
             inputs = [[slab_to_relax, vis, tag]]
             wf_name = formula + miller_str + "_" + relax_type
             WF = dynamic_relax_swf(inputs_list=inputs, wf_name=wf_name)
@@ -525,9 +539,9 @@ class FT_MakeSlabInDB(FiretaskBase):
         #     functional=functional,
         #     miller=miller)
 
-        bulk_conv = SpacegroupAnalyzer(bulk_prim).get_conventional_standard_structure(
-            keep_site_properties=True
-        )
+        bulk_conv = SpacegroupAnalyzer(
+            bulk_prim
+        ).get_conventional_standard_structure(keep_site_properties=True)
         bulk_conv = transfer_average_magmoms(bulk_prim, bulk_conv)
 
         SG = SlabGenerator(
@@ -646,11 +660,15 @@ class FT_MakeHeteroStructure(FiretaskBase):
         nav_high = Navigator(db_file=db_file, high_level=hl_db)
 
         slab_surfen_list_1 = fw_spec.get(f"slab_surfen_list_1")
-        slab_surfen_list_2 = fw_spec.get(f"slab_surfen_list_2", slab_surfen_list_1)
+        slab_surfen_list_2 = fw_spec.get(
+            f"slab_surfen_list_2", slab_surfen_list_1
+        )
 
         # get the surface energies of the slabs
         pairs = list(itertools.product(slab_surfen_list_1, slab_surfen_list_2))
-        pairs.sort(key=lambda x: x[0]["surface_energy"] + x[1]["surface_energy"])
+        pairs.sort(
+            key=lambda x: x[0]["surface_energy"] + x[1]["surface_energy"]
+        )
 
         inter_comp_params = get_consolidated_comp_params(
             mpid1=mpid1,
@@ -666,7 +684,9 @@ class FT_MakeHeteroStructure(FiretaskBase):
             hkl1, hkl2 = slab1_dict["hkl"], slab2_dict["hkl"]
             shift1, shift2 = slab1_dict["shift"], slab2_dict["shift"]
 
-            inter_name = interface_name(mpid1, mpid2, hkl1, hkl2, shift1, shift2)
+            inter_name = interface_name(
+                mpid1, mpid2, hkl1, hkl2, shift1, shift2
+            )
 
             inter_data = nav_high.find_data(
                 collection=functional + ".interface_data",

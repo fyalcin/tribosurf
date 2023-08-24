@@ -26,16 +26,20 @@ The module contains the following Firetasks:
 """
 
 __author__ = "Gabriele Losi"
-__copyright__ = (
-    "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
-)
+__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "February 22nd, 2021"
 
 import os
 
 import numpy as np
-from fireworks import explicit_serialize, FiretaskBase, FWAction, Workflow, Firework
+from fireworks import (
+    explicit_serialize,
+    FiretaskBase,
+    FWAction,
+    Workflow,
+    Firework,
+)
 from monty.json import jsanitize
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import Slab
@@ -190,7 +194,9 @@ class FT_SlabOptThick(FiretaskBase):
                 self[key] = slab_data["slab_parameters"].get(key)
 
         if not self.get("conv_thr"):
-            self["conv_thr"] = slab_data.get("comp_parameters").get("surfene_thr")
+            self["conv_thr"] = slab_data.get("comp_parameters").get(
+                "surfene_thr"
+            )
             print(self["conv_thr"])
 
         # Define the json file containing default values and read parameters
@@ -243,8 +249,15 @@ class FT_SlabOptThick(FiretaskBase):
             pymatgen bulk structure
         """
 
-        field, bulk = retrieve_from_db(p["mp_id"], collection=p["functional"] + ".bulk_data", db_file=p["db_file"], high_level=True,
-                                       entry=p["bulk_entry"], is_slab=False, pymatgen_obj=True)
+        field, bulk = retrieve_from_db(
+            p["mp_id"],
+            collection=p["functional"] + ".bulk_data",
+            db_file=p["db_file"],
+            high_level=True,
+            entry=p["bulk_entry"],
+            is_slab=False,
+            pymatgen_obj=True,
+        )
         return bulk
 
     def is_data(self, p, dfl):
@@ -268,8 +281,14 @@ class FT_SlabOptThick(FiretaskBase):
         """
 
         # Retrieve the slab from the database
-        field, _ = retrieve_from_db(mp_id=p["mp_id"], collection=p["functional"] + ".slab_data", db_file=p["db_file"], high_level=True,
-                                    miller=p["miller"], pymatgen_obj=False)
+        field, _ = retrieve_from_db(
+            mp_id=p["mp_id"],
+            collection=p["functional"] + ".slab_data",
+            db_file=p["db_file"],
+            high_level=True,
+            miller=p["miller"],
+            pymatgen_obj=False,
+        )
 
         if field is not None:
             # Check if an optimal thickness has been already calculated
@@ -321,7 +340,9 @@ class FT_SlabOptThick(FiretaskBase):
 
         # Check for default values of comp_params and cluster_params
         comp_params = read_default_params(dfl, "comp_params", comp_params)
-        cluster_params = read_default_params(dfl, "cluster_params", p["cluster_params"])
+        cluster_params = read_default_params(
+            dfl, "cluster_params", p["cluster_params"]
+        )
 
         # Select the convergence function based on conv_kind
         if p["conv_kind"] == "surfene":
@@ -527,7 +548,9 @@ class FT_StartThickConvo(FiretaskBase):
             return wf
 
         else:
-            raise SystemExit("Lattice parameter convergence not yet implemented")
+            raise SystemExit(
+                "Lattice parameter convergence not yet implemented"
+            )
 
 
 @explicit_serialize
@@ -604,7 +627,8 @@ class FT_EndThickConvo(FiretaskBase):
             case = "lattice"
         else:
             raise SlabOptThickError(
-                "Wrong argument: 'conv_kind'. Allowed " "values: 'surfene', 'alat'"
+                "Wrong argument: 'conv_kind'. Allowed "
+                "values: 'surfene', 'alat'"
             )
         return case
 
@@ -778,7 +802,9 @@ class FT_EndThickConvo(FiretaskBase):
 
         # Extract the data to be saved in the database
         thickness_dict = get_one_info_from_dict(low_dict, ["thickness"])
-        out_struct_dict = thickness_dict["data_" + str(index)]["output"]["structure"]
+        out_struct_dict = thickness_dict["data_" + str(index)]["output"][
+            "structure"
+        ]
 
         # Convert out_struct_dict to slab (Issue in Atomate OptimizeFW, every
         # structure that is simulated in that way is saved in tasks collection
@@ -799,11 +825,15 @@ class FT_EndThickConvo(FiretaskBase):
             thick = int(k.split("_")[-1])
             if thick != 0:
                 thick_array.append(thick)
-                surfene_array.append(thickness_dict[k]["output"]["surface_energy"])
+                surfene_array.append(
+                    thickness_dict[k]["output"]["surface_energy"]
+                )
 
         array = np.column_stack((thick_array, surfene_array))
         thickness_dict["thick_surfene_array"] = array[np.argsort(array[:, 0])]
-        opt_surfen = thickness_dict[f"data_{index}"]["output"]["surface_energy"]
+        opt_surfen = thickness_dict[f"data_{index}"]["output"][
+            "surface_energy"
+        ]
         opt_surfen_dict = {
             "eV/A^2": opt_surfen * 6.241509e-2,
             "J/m^2": opt_surfen,
@@ -903,7 +933,9 @@ class GetSlabSurfenListFromUids(FiretaskBase):
         mpid, uids = prev_swf_info["mpid"], prev_swf_info["uids"]
         nav = VaspDB(db_file=inp["db_file"], high_level=inp["high_level"])
         results = list(
-            nav.find_many_data(inp["surfen_coll"], {"uid": {"$in": uids}}, {"calcs": 0})
+            nav.find_many_data(
+                inp["surfen_coll"], {"uid": {"$in": uids}}, {"calcs": 0}
+            )
         )
         # for result in results:
         #     slab = Slab.from_dict(result["structure"])
@@ -992,19 +1024,17 @@ class RunSurfenSwfGetEnergies(FiretaskBase):
         # create a name_suffix variable and use miller or max_index from sg_params, whichever is available
         name_suffix = ""
         if sg_params.get("miller", False):
-            name_suffix = (
-                f"Miller {sg_params['miller']} - Material Index {inp['material_index']}"
-            )
+            name_suffix = f"Miller {sg_params['miller']} - Material Index {inp['material_index']}"
         elif sg_params.get("max_index", False):
-            name_suffix = (
-                f"MMI {sg_params['max_index']} - Material Index {inp['material_index']}"
-            )
+            name_suffix = f"MMI {sg_params['max_index']} - Material Index {inp['material_index']}"
         # check if comp_params_loc is given
         if inp["comp_params_from_db"]:
             nav = VaspDB(db_file=db_file, high_level=high_level)
             bulk_coll = inp["bulk_coll"]
 
-            bulk_data = nav.find_data(collection=bulk_coll, fltr={"mpid": mpid})
+            bulk_data = nav.find_data(
+                collection=bulk_coll, fltr={"mpid": mpid}
+            )
             if bulk_data:
                 comp_params_db = bulk_data["comp_parameters"]
             else:

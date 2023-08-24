@@ -9,9 +9,7 @@ Classes to manage data from local and online DataBases at a high level.
 """
 
 __author__ = "Omar Chehaimi"
-__copyright__ = (
-    "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
-)
+__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "February 1st, 2021"
 
@@ -32,7 +30,9 @@ mp_id = nav_mp.get_mpid_from_formula("NaCl")
 print("NaCl mp id: ", mp_id)
 les = nav_mp.get_low_energy_structure("NaCl")
 print("Low energy structure: ", les)
-energy_properties = nav_mp.get_property_from_mp(mp_id, ["energy", "energy_per_atom"])
+energy_properties = nav_mp.get_property_from_mp(
+    mp_id, ["energy", "energy_per_atom"]
+)
 print(
     "Energy: ",
     energy_properties["energy"],

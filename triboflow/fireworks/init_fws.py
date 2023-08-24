@@ -23,9 +23,7 @@ The module contains:
 
 __author__ = "Gabriele Losi"
 __credits__ = "This module is based on the work of Michael Wolloch, TriboFlow"
-__copyright__ = (
-    "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
-)
+__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "January 20th, 2021"
 
@@ -204,7 +202,9 @@ class InitWF:
         return fw
 
     @staticmethod
-    def checkinp_bulk_convo(material, computational, fw_name="Check input parameters"):
+    def checkinp_bulk_convo(
+        material, computational, fw_name="Check input parameters"
+    ):
         """
         Create a Fireworks to check if the necessary input for a workflow
         to converge bulk parameters are given and assignes default values to
@@ -249,7 +249,9 @@ class InitWF:
         return fw
 
     @staticmethod
-    def checkinp_slab_convo(material, computational, fw_name="Check input parameters"):
+    def checkinp_slab_convo(
+        material, computational, fw_name="Check input parameters"
+    ):
         """
         Create a Fireworks to check if the necessary input for a homogeneous
         workflow are given and assignes default values to optional parameters.

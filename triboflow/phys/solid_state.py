@@ -15,9 +15,7 @@ The module contains the following functions:
 """
 
 __author__ = "Gabriele Losi"
-__copyright__ = (
-    "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
-)
+__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "February 22nd, 2021"
 
@@ -95,7 +93,9 @@ def generate_slabs(
     """
 
     # Manage the arguments type in order to have lists
-    if isinstance(miller, list) and not all([isinstance(m, list) for m in miller]):
+    if isinstance(miller, list) and not all(
+        [isinstance(m, list) for m in miller]
+    ):
         miller = [miller]
     if not isinstance(thickness, list):
         thickness = [thickness]
@@ -110,7 +110,9 @@ def generate_slabs(
         miller *= n
     # SlabGenerator expects conventional unit cell, so we convert the structure accordingly.
     # As a result, we require input structure to be the primitive standard structure.
-    conv_structure = SpacegroupAnalyzer(structure).get_conventional_standard_structure(keep_site_properties=True)
+    conv_structure = SpacegroupAnalyzer(
+        structure
+    ).get_conventional_standard_structure(keep_site_properties=True)
     structure = transfer_average_magmoms(structure, conv_structure)
 
     slabs = []

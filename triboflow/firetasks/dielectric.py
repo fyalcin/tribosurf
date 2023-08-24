@@ -40,9 +40,13 @@ class FT_GetEpsilon(FiretaskBase):
         db_file = self.get("db_file", "auto")
 
         nav = Navigator(db_file)
-        output_data = nav.find_data(collection="tasks", fltr={"task_label": label})
+        output_data = nav.find_data(
+            collection="tasks", fltr={"task_label": label}
+        )
         eps_tensor = output_data["output"]["epsilon_static"]
-        eps_average = sum([eps_tensor[0][0], eps_tensor[1][1], eps_tensor[1][1]]) / 3.0
+        eps_average = (
+            sum([eps_tensor[0][0], eps_tensor[1][1], eps_tensor[1][1]]) / 3.0
+        )
         bandgap = output_data["output"]["bandgap"]
 
         # If we are dealing with a metal, set epsilon very high since it should be inf.
@@ -50,6 +54,4 @@ class FT_GetEpsilon(FiretaskBase):
             eps_average = 1000000
 
         fw_spec.update({"epsilon_tensor": eps_tensor, "epsilon": eps_average})
-        return FWAction(
-            update_spec=fw_spec
-        )
+        return FWAction(update_spec=fw_spec)

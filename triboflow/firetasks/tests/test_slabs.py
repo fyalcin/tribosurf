@@ -10,9 +10,7 @@ Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
 """
 
 __author__ = "Gabriele Losi"
-__copyright__ = (
-    "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
-)
+__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "February 22nd, 2021"
 
@@ -40,7 +38,9 @@ entry = [["thickness", "data_" + str(thk), "unrelaxed"] for thk in thickness]
 
 # Call the Navigator and retrieve the bulk structure
 nav = StructureNavigator(db_file, high_level)
-structure = nav.get_bulk_from_db(mp_id, functional, warning=True)["structure_fromMP"]
+structure = nav.get_bulk_from_db(mp_id, functional, warning=True)[
+    "structure_fromMP"
+]
 structure = Structure.from_dict(structure)
 
 # Instantiate the Firetask and create a WF

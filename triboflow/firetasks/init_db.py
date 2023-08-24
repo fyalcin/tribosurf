@@ -31,9 +31,7 @@ The module contains:
 
 __author__ = "Gabriele Losi"
 __credits__ = "This module is based on the work of Michael Wolloch, TriboFlow"
-__copyright__ = (
-    "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
-)
+__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "January 20th, 2021"
 
@@ -264,7 +262,9 @@ def put_slab_in_db(data, comp_params, db_file, high_level=True):
     else:
         print(
             "Entry for mpid:{} and miller:{} already found in {} collection. "
-            "No update.".format(mp_id, data["miller"], functional + ".slab_data")
+            "No update.".format(
+                mp_id, data["miller"], functional + ".slab_data"
+            )
         )
 
 
@@ -376,9 +376,9 @@ def material_data_for_db(data, comp_params, db_file, metal_thr=None):
     struct, mp_id = mp_connection.get_low_energy_structure(formula, mp_id)
 
     # TODO : Is it correct that you need to slice the returned value?
-    bandgap = mp_connection.get_property_from_mp(mp_id, properties=["band_gap"])[
-        "band_gap"
-    ]
+    bandgap = mp_connection.get_property_from_mp(
+        mp_id, properties=["band_gap"]
+    )["band_gap"]
 
     # Set the metal value for the given material
     if metal_thr is not None:

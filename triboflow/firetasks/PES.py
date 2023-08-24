@@ -197,8 +197,12 @@ class FT_RetrievePESEnergies(FiretaskBase):
         hl_db = self.get("high_level", True)
 
         db_structure = VaspDB(db_file=db_file, high_level=hl_db)
-        interface_dict = db_structure.find_data(f"{functional}.interface_data", fltr={'name': name})
-        lateral_shifts = interface_dict["PES"]["high_symmetry_points"]["unique_shifts"]
+        interface_dict = db_structure.find_data(
+            f"{functional}.interface_data", fltr={"name": name}
+        )
+        lateral_shifts = interface_dict["PES"]["high_symmetry_points"][
+            "unique_shifts"
+        ]
         group_assignments = interface_dict["PES"]["high_symmetry_points"][
             "group_assignments"
         ]
@@ -206,7 +210,9 @@ class FT_RetrievePESEnergies(FiretaskBase):
         nav = Navigator(db_file=db_file)
         ref_struct = Interface.from_dict(interface_dict["unrelaxed_structure"])
         area = np.linalg.norm(
-            np.cross(ref_struct.lattice.matrix[0], ref_struct.lattice.matrix[1])
+            np.cross(
+                ref_struct.lattice.matrix[0], ref_struct.lattice.matrix[1]
+            )
         )
 
         energy_list = []
@@ -214,7 +220,9 @@ class FT_RetrievePESEnergies(FiretaskBase):
         calc_output = {}
         for s in lateral_shifts.keys():
             label = tag + "_" + s
-            vasp_calc = nav.find_data(collection="tasks", fltr={"task_label": label})
+            vasp_calc = nav.find_data(
+                collection="tasks", fltr={"task_label": label}
+            )
             struct = vasp_calc["output"]["structure"]
             energy = vasp_calc["output"]["energy"]
             energy *= 16.02176565 / area
@@ -344,7 +352,9 @@ class FT_FindHighSymmPoints(FiretaskBase):
             new_values={
                 "$set": {
                     "PES.high_symmetry_points": {
-                        "bottom_unique": hsp_dict["bottom_high_symm_points_unique"],
+                        "bottom_unique": hsp_dict[
+                            "bottom_high_symm_points_unique"
+                        ],
                         "bottom_all": hsp_dict["bottom_high_symm_points_all"],
                         "top_unique": hsp_dict["top_high_symm_points_unique"],
                         "top_all": hsp_dict["top_high_symm_points_all"],

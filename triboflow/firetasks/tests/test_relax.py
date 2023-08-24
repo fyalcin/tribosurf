@@ -11,9 +11,7 @@ Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
 """
 
 __author__ = "Omar Chehaimi"
-__copyright__ = (
-    "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
-)
+__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "February 22nd, 2021"
 

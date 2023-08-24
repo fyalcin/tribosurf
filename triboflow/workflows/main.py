@@ -304,7 +304,9 @@ def heterogeneous_wf_with_surfgen(inputs):
 
     wf_name = (
         "TriboFlow_"
-        + "-".join(sorted([f"{formula_1} ({mpid_1})", f"{formula_2} ({mpid_2})"]))
+        + "-".join(
+            sorted([f"{formula_1} ({mpid_1})", f"{formula_2} ({mpid_2})"])
+        )
         + "_"
         + f"{functional}@{pressure}GPa"
     )

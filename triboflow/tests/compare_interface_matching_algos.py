@@ -59,7 +59,12 @@ for i, slab_combinations in enumerate(slab_comb_list):
     progress = int((i + 1) / len(slab_comb_list) * 100)
     results["statistics"]["nr_of_interfaces"] += 1
 
-    name = interface_name(slab_combinations[0]["mpid"], slab_combinations[1]["mpid"], slab_combinations[0]["miller"], slab_combinations[1]["miller"])
+    name = interface_name(
+        slab_combinations[0]["mpid"],
+        slab_combinations[1]["mpid"],
+        slab_combinations[0]["miller"],
+        slab_combinations[1]["miller"],
+    )
     print("-".center(100, "-"))
     print(f"{i+1} of {len(slab_comb_list)}".center(progress, "|"))
     print("-".center(100, "-"))
@@ -84,8 +89,12 @@ for i, slab_combinations in enumerate(slab_comb_list):
         else:
             results["statistics"]["both_methods_matched_differently"] += 1
             results["matched_differently"].append(name)
-            interface_pmg.to("poscar", "./test_interfaces/" + name + "_pmg.vasp")
-            interface_mpi.to("poscar", "./test_interfaces/" + name + "_mpi.vasp")
+            interface_pmg.to(
+                "poscar", "./test_interfaces/" + name + "_pmg.vasp"
+            )
+            interface_mpi.to(
+                "poscar", "./test_interfaces/" + name + "_mpi.vasp"
+            )
         results[name] = {
             "pmg": {
                 "interface": interface_pmg,

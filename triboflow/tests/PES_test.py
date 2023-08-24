@@ -51,7 +51,9 @@ functional = "PBE"
 # lpad.add_wf(WF)
 # Test GrapheneGraphene interface
 mp_connect = MPConnection()
-struct, mpid = mp_connect.get_low_energy_structure(chem_formula="C", mp_id="mp-1040425")
+struct, mpid = mp_connect.get_low_energy_structure(
+    chem_formula="C", mp_id="mp-1040425"
+)
 slab = slab_from_structure([0, 0, 1], struct)
 
 IM = InterfaceMatcher(slab, slab, interface_distance=3.4)
@@ -80,8 +82,13 @@ comp_params = {
 
 external_pressure = 1.0
 
-WF = calc_pes_swf(interface=interface, pressure=external_pressure, comp_parameters=comp_params, file_output=True,
-                  output_dir="/fs/home/wolloch/git_test/testdir")
+WF = calc_pes_swf(
+    interface=interface,
+    pressure=external_pressure,
+    comp_parameters=comp_params,
+    file_output=True,
+    output_dir="/fs/home/wolloch/git_test/testdir",
+)
 
 lpad = LaunchPad.auto_load()
 lpad.add_wf(WF)

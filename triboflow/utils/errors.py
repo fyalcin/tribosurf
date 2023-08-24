@@ -25,9 +25,7 @@ The module contains the following error classes:
 """
 
 __author__ = "Gabriele Losi"
-__copyright__ = (
-    "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
-)
+__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "February 8th, 2021"
 
@@ -68,7 +66,8 @@ class GenerateSlabsError(GeneralErrorFT):
             [isinstance(x, list) for x in miller]
         ):
             raise GenerateSlabsError(
-                "Wrong type for elements of list: " "miller. Allowed types: list."
+                "Wrong type for elements of list: "
+                "miller. Allowed types: list."
             )
 
     @staticmethod
@@ -94,14 +93,16 @@ class GenerateSlabsError(GeneralErrorFT):
         if isinstance(vacuum, list):
             if not all([isinstance(x, (float, int)) for x in vacuum]):
                 raise GenerateSlabsError(
-                    "Wrong type for elements of list: " "vacuum. Allowed types: list."
+                    "Wrong type for elements of list: "
+                    "vacuum. Allowed types: list."
                 )
 
     @staticmethod
     def check_entry(entry):
         if not isinstance(entry, (str, list)):
             raise GenerateSlabsError(
-                "Wrong type for argument: entry. " "Allowed types: list of str, str."
+                "Wrong type for argument: entry. "
+                "Allowed types: list of str, str."
             )
 
     @staticmethod
@@ -134,7 +135,9 @@ class RelaxStructureError(GeneralErrorFT):
         if structure is None:
             raise RelaxStructureError(
                 "No entry found in DB for a "
-                "structure with mpid: {}, functional: {}".format(mp_id, functional)
+                "structure with mpid: {}, functional: {}".format(
+                    mp_id, functional
+                )
             )
 
 
@@ -146,7 +149,8 @@ class MoveTagResultsError(GeneralErrorFT):
         if isinstance(entry, list):
             if not all([isinstance(n, list) for n in entry]):
                 raise MoveTagResultsError(
-                    "Wrong type for arguments: {}. " "Allowed type: list".format(msg)
+                    "Wrong type for arguments: {}. "
+                    "Allowed type: list".format(msg)
                 )
 
         # elif not isinstance(entry, str):

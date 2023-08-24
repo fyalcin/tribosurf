@@ -20,9 +20,7 @@ The module contains:
 """
 
 __author__ = "Gabriele Losi"
-__copyright__ = (
-    "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
-)
+__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "February 2nd, 2021"
 
@@ -211,7 +209,9 @@ class SlabWF:
         if mp_id.startswith("mp-") and mp_id[3:].isdigit():
             mp_conn = MPConnection()
             formula_from_struct = structure.composition.reduced_formula
-            formula_from_flag = mp_conn.get_property_from_mp(mp_id, ["formula_pretty"])
+            formula_from_flag = mp_conn.get_property_from_mp(
+                mp_id, ["formula_pretty"]
+            )
             if not formula_from_flag["formula_pretty"] == formula_from_struct:
                 raise SystemExit(
                     "The chemical formula of your structure ({}) "

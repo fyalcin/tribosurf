@@ -79,9 +79,15 @@ class FT_UpdateInterfaceCompParams(FiretaskBase):
 
         high_level = self.get("high_level")
 
-        nav_structure = StructureNavigator(db_file=db_file, high_level=high_level)
-        bulk_1 = nav_structure.get_bulk_from_db(mp_id=mp_id_1, functional=functional)
-        bulk_2 = nav_structure.get_bulk_from_db(mp_id=mp_id_2, functional=functional)
+        nav_structure = StructureNavigator(
+            db_file=db_file, high_level=high_level
+        )
+        bulk_1 = nav_structure.get_bulk_from_db(
+            mp_id=mp_id_1, functional=functional
+        )
+        bulk_2 = nav_structure.get_bulk_from_db(
+            mp_id=mp_id_2, functional=functional
+        )
 
         encut_1 = bulk_1["comp_parameters"]["encut"]
         encut_2 = bulk_2["comp_parameters"]["encut"]
@@ -177,8 +183,12 @@ class FT_CopyCompParamsToSlab(FiretaskBase):
 
         high_level = self.get("high_level", True)
 
-        nav_structure = StructureNavigator(db_file=db_file, high_level=high_level)
-        bulk = nav_structure.get_bulk_from_db(mp_id=mp_id, functional=functional)
+        nav_structure = StructureNavigator(
+            db_file=db_file, high_level=high_level
+        )
+        bulk = nav_structure.get_bulk_from_db(
+            mp_id=mp_id, functional=functional
+        )
 
         encut = bulk["comp_parameters"]["encut"]
         k_dens = bulk["comp_parameters"]["k_dens"]
@@ -255,7 +265,9 @@ class FT_MakeInterfaceInDB(FiretaskBase):
 
         nav_high = Navigator(db_file=db_file, high_level=high_level)
 
-        name = interface_name(mp_id_1, mp_id_2, data1["miller"], data2["miller"])
+        name = interface_name(
+            mp_id_1, mp_id_2, data1["miller"], data2["miller"]
+        )
 
         if nav_high.find_data(
             collection=functional + ".interface_data", fltr={"name": name}
@@ -320,7 +332,9 @@ class FT_MakeSlabInDB(FiretaskBase):
             chem_formula=data["formula"], mp_id=data["mp_id"]
         )
 
-        bandgap = mp_connection.get_property_from_mp(mpid=mp_id, properties=["band_gap"])
+        bandgap = mp_connection.get_property_from_mp(
+            mpid=mp_id, properties=["band_gap"]
+        )
         bandgap = bandgap["band_gap"]
 
         if bandgap > 0.3:
@@ -403,7 +417,9 @@ class FT_MakeBulkInDB(FiretaskBase):
         # site properties are not retained, so we have to add magmom again.
         prim_struct = transfer_average_magmoms(struct, prim_struct)
 
-        bandgap = mp_connection.get_property_from_mp(mpid=mp_id, properties=["band_gap"])
+        bandgap = mp_connection.get_property_from_mp(
+            mpid=mp_id, properties=["band_gap"]
+        )
         bandgap = bandgap["band_gap"]
 
         if bandgap > 0.3:
@@ -545,7 +561,8 @@ class FT_CheckCompParamDict(FiretaskBase):
                     out_dict["use_vdw"] = True
                 elif (
                     value in vdw_keywords
-                    and input_dict.get("functional", functional_default) == "PBE"
+                    and input_dict.get("functional", functional_default)
+                    == "PBE"
                 ):
                     out_dict["use_vdw"] = value
                 else:
@@ -577,7 +594,9 @@ class FT_CheckCompParamDict(FiretaskBase):
                     input_dict.get(key) or volume_tolerance_default
                 )
             if key == "functional":
-                out_dict["functional"] = str(input_dict.get(key) or functional_default)
+                out_dict["functional"] = str(
+                    input_dict.get(key) or functional_default
+                )
             if key == "BM_tolerance":
                 out_dict["BM_tolerance"] = float(
                     input_dict.get(key) or BM_tolerance_default
@@ -658,7 +677,9 @@ class FT_CheckInterfaceParamDict(FiretaskBase):
                     "The input parameter <"
                     + str(key)
                     + "> is not known. Please check your input file"
-                    "and use only the following parameters:\n{}".format(known_keys)
+                    "and use only the following parameters:\n{}".format(
+                        known_keys
+                    )
                 )
             elif key == "max_area":
                 out_dict["max_area"] = float(input_dict[key])

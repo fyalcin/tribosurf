@@ -60,7 +60,9 @@ class FT_CopyHomogeneousSlabs(FiretaskBase):
 
         nav = Navigator(db_file, high_level=hl_db)
 
-        inter_name = interface_name(mpid1=mpid, mpid2=mpid, miller1=miller, miller2=miller)
+        inter_name = interface_name(
+            mpid1=mpid, mpid2=mpid, miller1=miller, miller2=miller
+        )
         interface_data = nav.find_data(
             collection=functional + ".interface_data",
             fltr={"name": inter_name, "pressure": pressure},
@@ -131,7 +133,9 @@ class FT_UpdateCompParams(FiretaskBase):
         # get values from spec:
         new_data = {"$set": {}}
         for param in new_params:
-            new_data["$set"][f"comp_parameters.{param}"] = fw_spec.get(param, None)
+            new_data["$set"][f"comp_parameters.{param}"] = fw_spec.get(
+                param, None
+            )
 
         if update_bulk:
             nav_high.update_data(
@@ -212,7 +216,9 @@ class FT_PrintFromBulkDB(FiretaskBase):
         hl_db = self.get("high_level", True)
 
         nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
-        bulk_dict = nav_structure.get_bulk_from_db(mp_id=mp_id, functional=functional)
+        bulk_dict = nav_structure.get_bulk_from_db(
+            mp_id=mp_id, functional=functional
+        )
         print("")
         pprint(bulk_dict)
         print("")

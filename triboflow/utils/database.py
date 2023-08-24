@@ -10,9 +10,7 @@ Classes to manage data from local and online DataBases at a high level.
 
 __author__ = "Omar Chehaimi"
 __credits__ = "This module is based on the Triboflow package, Michael Wolloch"
-__copyright__ = (
-    "Copyright 2021, Prof. M.C. Righi, TribChem, SLIDE-ERC, University of Bologna"
-)
+__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, SLIDE-ERC, University of Bologna"
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "February 1st, 2021"
 
@@ -231,7 +229,9 @@ class Navigator:
 
         return collection_obj
 
-    def update_data(self, collection, fltr, new_values, upsert=False, dolog=True):
+    def update_data(
+        self, collection, fltr, new_values, upsert=False, dolog=True
+    ):
         """
         Update a single document matching the filter (fltr) with the new value.
 
@@ -268,7 +268,9 @@ class Navigator:
             )
         collection_obj.update_one(fltr, new_values, upsert)
 
-    def update_many_data(self, collection, fltr, new_values, upsert=False, dolog=True):
+    def update_many_data(
+        self, collection, fltr, new_values, upsert=False, dolog=True
+    ):
         """
         Update many documents that match the filter (fltr) with the new values.
 
@@ -479,7 +481,9 @@ class Navigator:
 
         collection_obj = self.__initialize_obj_collection(collection)
 
-        log.info("Deleting {} from the collection {}." "".format(fltr, collection))
+        log.info(
+            "Deleting {} from the collection {}." "".format(fltr, collection)
+        )
         collection_obj.delete_one(fltr)
 
     def delete_many_data(self, collection, fltr):
@@ -523,7 +527,9 @@ class Navigator:
         current_date = datetime.today().strftime("%Y-%m-%d")
 
         if user_date == current_date:
-            log.critical("Removing {} from the database." "".format(collection))
+            log.critical(
+                "Removing {} from the database." "".format(collection)
+            )
             collection_obj = self.__initialize_obj_collection(collection)
             self.db.collection_obj.drop()
         else:
@@ -951,7 +957,9 @@ class NavigatorMP:
             )
         return mp_id[0]["material_id"]
 
-    def __get_low_energy_structure(self, chem_formula, mp_id=None, print_info=False):
+    def __get_low_energy_structure(
+        self, chem_formula, mp_id=None, print_info=False
+    ):
         """
         Search MaterialsProjects for structure.
 
@@ -1018,7 +1026,9 @@ class NavigatorMP:
 
                 return struct, mp_id
 
-    def get_low_energy_structure(self, chem_formula, mp_id=None, print_info=False):
+    def get_low_energy_structure(
+        self, chem_formula, mp_id=None, print_info=False
+    ):
         """
         Retrieve the structure corresponding to the lowest energy. If the mp_id is
         provided, before request to the Materials Project server it firstly
@@ -1076,7 +1086,9 @@ class NavigatorMP:
                 chem_formula=chem_formula, mp_id=mp_id, print_info=print_info
             )
 
-            self.__save_struct_object(structure=struct, mp_id=mp_id, path=struct_path)
+            self.__save_struct_object(
+                structure=struct, mp_id=mp_id, path=struct_path
+            )
         else:
             files = os.listdir(struct_path)
             found = False

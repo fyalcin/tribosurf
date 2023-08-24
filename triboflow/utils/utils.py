@@ -36,9 +36,7 @@ The module contains the following functions:
 """
 
 __author__ = "Gabriele Losi"
-__copyright__ = (
-    "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
-)
+__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "February 22nd, 2021"
 
@@ -74,7 +72,9 @@ def read_json(jsonfile):
     return data
 
 
-def load_defaults(file_location=project_folder + "/../", filename="defaults.json"):
+def load_defaults(
+    file_location=project_folder + "/../", filename="defaults.json"
+):
     data = read_json(file_location + filename)
     return data
 
@@ -574,7 +574,12 @@ def retrieve_from_db(
 
 
 def retrieve_from_tag(
-    collection, tag, tag_key="task_label", entry=None, db_file="auto", high_level=False
+    collection,
+    tag,
+    tag_key="task_label",
+    entry=None,
+    db_file="auto",
+    high_level=False,
 ):
     """
     Retrieve a dictionary field out of the database based on the combination

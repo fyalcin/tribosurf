@@ -44,11 +44,11 @@ interface_params = {
 
 
 def create_triboflow_inputs(
-        materials,
-        miller_indices,
-        default_thickness_params,
-        computational_params,
-        interface_params,
+    materials,
+    miller_indices,
+    default_thickness_params,
+    computational_params,
+    interface_params,
 ):
     slabs = []
     for k, v in materials.items():

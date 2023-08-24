@@ -89,9 +89,13 @@ class FT_RetrieveMatchedSlabs(FiretaskBase):
             for i in input_list:
                 label = i[-1]
                 miller = i[0].miller_index
-                calc = nav.find_data(collection="tasks", fltr={"task_label": label})
+                calc = nav.find_data(
+                    collection="tasks", fltr={"task_label": label}
+                )
                 out_struct = calc["output"]["structure"]
-                slab = slab_from_structure(miller, Structure.from_dict(out_struct))
+                slab = slab_from_structure(
+                    miller, Structure.from_dict(out_struct)
+                )
                 if label.startswith("top"):
                     out_name = top_out_name
                 else:
@@ -277,9 +281,7 @@ class FT_CalcAdhesion(FiretaskBase):
         "interface_label",
         "external_pressure",
     ]
-    optional_params = ["db_file",
-                       "out_name",
-                       "high_level"]
+    optional_params = ["db_file", "out_name", "high_level"]
 
     def run_task(self, fw_spec):
         name = self.get("interface_name")
@@ -297,13 +299,19 @@ class FT_CalcAdhesion(FiretaskBase):
 
         nav = Navigator(db_file=db_file)
 
-        top_calc = nav.find_data(collection="tasks", fltr={"task_label": top_label})
+        top_calc = nav.find_data(
+            collection="tasks", fltr={"task_label": top_label}
+        )
         top_energy = top_calc["output"]["energy"]
 
-        bot_calc = nav.find_data(collection="tasks", fltr={"task_label": bot_label})
+        bot_calc = nav.find_data(
+            collection="tasks", fltr={"task_label": bot_label}
+        )
         bot_energy = bot_calc["output"]["energy"]
 
-        inter_calc = nav.find_data(collection="tasks", fltr={"task_label": inter_label})
+        inter_calc = nav.find_data(
+            collection="tasks", fltr={"task_label": inter_label}
+        )
         inter_energy = inter_calc["output"]["energy"]
         struct = Structure.from_dict(inter_calc["output"]["structure"])
 

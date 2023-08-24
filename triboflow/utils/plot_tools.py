@@ -17,9 +17,7 @@ The module contains the following functions:
 """
 
 __author__ = "Gabriele Losi"
-__copyright__ = (
-    "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
-)
+__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "February 8th, 2021"
 
@@ -44,7 +42,9 @@ def export_legend(legend, filename="legend.png", expand=[-5, -5, 5, 5]):
     fig.savefig(filename, dpi="figure", bbox_inches=bbox)
 
 
-def plot_slab_hs(hs, slab, to_fig=None, hs_type="all", leg_size=10, in_frac=False):
+def plot_slab_hs(
+    hs, slab, to_fig=None, hs_type="all", leg_size=10, in_frac=False
+):
     """
     Plot the slab, displaying the atoms and the HS sites of the surface
 
@@ -94,7 +94,9 @@ def plot_slab_hs(hs, slab, to_fig=None, hs_type="all", leg_size=10, in_frac=Fals
     xupper = max([a[0] + b[0], a[0], b[0]])
     ylower = min(slab.lattice.matrix[:, 1])
     yupper = max([a[1] + b[1], a[1], b[1]])
-    ax.set(xlim=(xlower - 0.5, xupper + 0.5), ylim=(ylower - 0.5, yupper + 0.5))
+    ax.set(
+        xlim=(xlower - 0.5, xupper + 0.5), ylim=(ylower - 0.5, yupper + 0.5)
+    )
 
     xrange = abs(xupper - xlower)
     yrange = abs(yupper - ylower)
@@ -144,7 +146,9 @@ def plot_slab_hs(hs, slab, to_fig=None, hs_type="all", leg_size=10, in_frac=Fals
                     mec="black",
                 )
 
-    plt.legend(bbox_to_anchor=(1.025, 1), loc="upper left", prop={"size": leg_size})
+    plt.legend(
+        bbox_to_anchor=(1.025, 1), loc="upper left", prop={"size": leg_size}
+    )
     # legend = plt.legend(bbox_to_anchor=(1.025, 1), loc='upper left', prop={'size': leg_size})
     # export_legend(legend, f'{to_fig}_legend.png')
     # legend.remove()
@@ -274,7 +278,9 @@ def plot_uniform_grid(grid, cell, n_a, n_b):
     # 3D plot
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
-    ax.scatter(grid[:, 0], grid[:, 1], grid[:, 2], c="r", marker="o", label="3D grid")
+    ax.scatter(
+        grid[:, 0], grid[:, 1], grid[:, 2], c="r", marker="o", label="3D grid"
+    )
 
     # Plot the lattice edge of the plane
     x = [0, a[0], a[0] + b[0], b[0], 0]

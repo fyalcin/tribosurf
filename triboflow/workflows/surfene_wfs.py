@@ -23,9 +23,7 @@ The module contains:
 """
 
 __author__ = "Gabriele Losi"
-__copyright__ = (
-    "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
-)
+__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "February 9th, 2021"
 
@@ -109,7 +107,9 @@ class SurfEneWF:
         # Create the dictionary key where the unrelaxed slab will be saved
         formula = structure.composition.reduced_formula
         miller_str = get_miller_str(miller)
-        slab_entry = [["thickness", "data_" + str(thk), "input"] for thk in thickness]
+        slab_entry = [
+            ["thickness", "data_" + str(thk), "input"] for thk in thickness
+        ]
 
         # Generate the slabs and store them in the low level database, under
         # the dictionary key given by `slab_entry`
@@ -138,7 +138,9 @@ class SurfEneWF:
         # ==================================================
 
         # Create the tags to store the calculation of the slabs
-        tag_prefix = [formula + "_slab_" + miller_str + "_" + str(t) for t in thickness]
+        tag_prefix = [
+            formula + "_slab_" + miller_str + "_" + str(t) for t in thickness
+        ]
         tags = create_tags(tag_prefix)
 
         # Start the navigator
@@ -302,7 +304,9 @@ class SurfEneWF:
         return wf
 
 
-def check_choice(tag, nav, mp_id, miller, thk, functional, tol=1e-5, override=False):
+def check_choice(
+    tag, nav, mp_id, miller, thk, functional, tol=1e-5, override=False
+):
     """
     Check if the results are already stored in the database. This is necessary
     at the moment to avoid that FT_MoveTagResults goes in conflicts with
@@ -316,7 +320,9 @@ def check_choice(tag, nav, mp_id, miller, thk, functional, tol=1e-5, override=Fa
     if override:
         return check_relax, check_move
 
-    data = nav.find_data(functional + ".slab_data", {"mpid": mp_id, "miller": miller})
+    data = nav.find_data(
+        functional + ".slab_data", {"mpid": mp_id, "miller": miller}
+    )
 
     if data is not None:
         try:
@@ -342,7 +348,10 @@ def check_choice(tag, nav, mp_id, miller, thk, functional, tol=1e-5, override=Fa
                             out = calc["output"]
                             is_eq = (
                                 abs(out["energy"] - d["energy"]) < tol
-                                and abs(out["energy_per_atom"] - d["energy_per_atom"])
+                                and abs(
+                                    out["energy_per_atom"]
+                                    - d["energy_per_atom"]
+                                )
                                 < tol
                                 and d["nsites"] == calc["nsites"]
                             )

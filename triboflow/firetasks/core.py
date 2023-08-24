@@ -21,9 +21,7 @@ The module contains the following Firetasks:
 """
 
 __author__ = "Gabriele Losi"
-__copyright__ = (
-    "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
-)
+__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "February 22nd, 2021"
 
@@ -207,8 +205,15 @@ class FT_RelaxStructure(FiretaskBase):
         RelaxStructureError.check_collection(p["collection"])
 
         # Retrieve the structure from the Database
-        field, structure = retrieve_from_db(mp_id=p["mp_id"], collection=p["collection"], db_file=p["db_file"], high_level=p["database"],
-                                            miller=p["miller"], entry=p["entry"], pymatgen_obj=pymatgen_obj)
+        field, structure = retrieve_from_db(
+            mp_id=p["mp_id"],
+            collection=p["collection"],
+            db_file=p["db_file"],
+            high_level=p["database"],
+            miller=p["miller"],
+            entry=p["entry"],
+            pymatgen_obj=pymatgen_obj,
+        )
         RelaxStructureError.is_data(structure, p["mp_id"], p["functional"])
 
         # Check if the calculation is already done, searching for given keys
@@ -255,7 +260,9 @@ class FT_RelaxStructure(FiretaskBase):
         add_static = p.get("add_static", False)
 
         # Set options for vasp
-        vis = get_custom_vasp_relax_settings(structure, comp_params, p["relax_type"])
+        vis = get_custom_vasp_relax_settings(
+            structure, comp_params, p["relax_type"]
+        )
 
         # Define the workflow name
         wf_name = p["mp_id"] + "_" + p["relax_type"]
@@ -445,8 +452,15 @@ class FT_MoveTagResults(FiretaskBase):
 
         if p["check_entry"] is not None:
             # Retrieve the structure from the Database
-            _, check_dict = retrieve_from_db(mp_id=p["mp_id"], collection=p["collection_to"], db_file=p["db_file"], high_level=p["database_to"],
-                                             miller=p["miller"], entry=p["check_entry"], pymatgen_obj=False)
+            _, check_dict = retrieve_from_db(
+                mp_id=p["mp_id"],
+                collection=p["collection_to"],
+                db_file=p["db_file"],
+                high_level=p["database_to"],
+                miller=p["miller"],
+                entry=p["check_entry"],
+                pymatgen_obj=False,
+            )
 
             # Check if the calculation is already done
             is_done = True
@@ -466,8 +480,14 @@ class FT_MoveTagResults(FiretaskBase):
         """
 
         # Retrieve the vasp_calc_output and the info
-        vasp_calc, info = retrieve_from_tag(collection=p["collection_from"], tag=p["tag"], tag_key=p["tag_key"], entry=p["entry_from"],
-                                            db_file=p["db_file"], high_level=p["database_from"])
+        vasp_calc, info = retrieve_from_tag(
+            collection=p["collection_from"],
+            tag=p["tag"],
+            tag_key=p["tag_key"],
+            entry=p["entry_from"],
+            db_file=p["db_file"],
+            high_level=p["database_from"],
+        )
 
         return vasp_calc, info
 
@@ -511,7 +531,9 @@ class FT_MoveTagResults(FiretaskBase):
 
             # Output to screen
             print("")
-            print("Relaxed output structure as pymatgen.surface.Slab dictionary:")
+            print(
+                "Relaxed output structure as pymatgen.surface.Slab dictionary:"
+            )
             pprint(structure.as_dict())
             print("")
 

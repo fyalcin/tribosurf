@@ -110,7 +110,9 @@ def dielectric_constant_swf(
         vis = get_custom_vasp_static_settings(
             structure, comp_parameters, "bulk_epsilon_from_scratch"
         )
-        Calc_Eps_FW = StaticFW(structure=structure, name=flag, vasp_input_set=vis)
+        Calc_Eps_FW = StaticFW(
+            structure=structure, name=flag, vasp_input_set=vis
+        )
 
         Get_Eps_FT = FT_GetEpsilon(label=flag, db_file=db_file)
 
@@ -426,7 +428,9 @@ def adhesion_energy_swf(
         interface, comp_parameters, "slab_from_scratch"
     )
 
-    FW_top = StaticFW(structure=top_slab, vasp_input_set=vis_top, name=tag + "top")
+    FW_top = StaticFW(
+        structure=top_slab, vasp_input_set=vis_top, name=tag + "top"
+    )
     FW_bot = StaticFW(
         structure=bottom_slab, vasp_input_set=vis_bot, name=tag + "bottom"
     )
@@ -874,7 +878,9 @@ def make_and_relax_slab_swf(
             "import pprint\n"
             "from triboflow.utils.database import GetSlabFromDB\n"
             'results = GetBulkFromDB("{}", "{}", "{}", "{}")\n'
-            "pprint.pprint(results)\n".format(flag, db_file, miller, functional)
+            "pprint.pprint(results)\n".format(
+                flag, db_file, miller, functional
+            )
         )
 
     tag = formula + miller_str + "_" + str(uuid4())
@@ -1047,7 +1053,9 @@ def converge_swf(
             '"encut".\nYou have passed {}'.format(conv_type)
         )
     if conv_type == "encut":
-        name = "Encut Convergence SWF of " + structure.composition.reduced_formula
+        name = (
+            "Encut Convergence SWF of " + structure.composition.reduced_formula
+        )
         if not encut_start:
             # Get the largest EMIN value of the potcar and round up to the
             # next whole 25.
@@ -1058,7 +1066,10 @@ def converge_swf(
             enmax = encut_dict["ENMAX"]
             encut_start = int(25 * np.ceil(enmax / 25))
     elif conv_type == "kpoints":
-        name = "Kpoint Convergence SWF of " + structure.composition.reduced_formula
+        name = (
+            "Kpoint Convergence SWF of "
+            + structure.composition.reduced_formula
+        )
     else:
         raise ValueError(
             f'"type" input must be either "kpoints" or'

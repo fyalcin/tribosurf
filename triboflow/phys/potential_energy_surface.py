@@ -20,9 +20,7 @@ The module contains the following functions:
 """
 
 __author__ = "Gabriele Losi"
-__copyright__ = (
-    "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
-)
+__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
 __credits__ = "Code readapted from our past homogeneous workflow, MIT license, https://github.com/mcrighi/interface-workflow,"
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "February 8th, 2021"
@@ -299,8 +297,12 @@ def plot_pes(data, lattice, to_fig=None):
         color="white",
     )
     ax.plot(0.0, 0.0, "w.", ms=7)
-    ax.text(0.5, -0.5, "[1 0 1]", rotation="horizontal", color="white", fontsize=14)
-    ax.text(-0.5, 1.0, "[1 2 1]", rotation="vertical", color="white", fontsize=14)
+    ax.text(
+        0.5, -0.5, "[1 0 1]", rotation="horizontal", color="white", fontsize=14
+    )
+    ax.text(
+        -0.5, 1.0, "[1 2 1]", rotation="vertical", color="white", fontsize=14
+    )
     ax.axis([-fact * a, fact * a, -fact * b, fact * b])
     plt.xlabel(r"distance ($\AA$)", fontsize=12, family="serif")
     plt.ylabel(r"distance ($\AA$)", fontsize=12, family="serif")

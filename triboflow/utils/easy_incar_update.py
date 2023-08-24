@@ -96,7 +96,11 @@ def update_fws(id_list, update, rerun):
             for k, v in update.items():
                 lp.update_spec(
                     [i],
-                    {"_tasks.0.vasp_input_set.user_incar_settings.{}".format(k): v},
+                    {
+                        "_tasks.0.vasp_input_set.user_incar_settings.{}".format(
+                            k
+                        ): v
+                    },
                 )
         if rerun:
             lp.rerun_fw(i)
