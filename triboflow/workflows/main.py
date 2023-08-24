@@ -61,13 +61,17 @@ def homogeneous_wf(inputs):
     WF.append(PreRelaxation)
 
     ConvergeEncut = Firework(
-        FT_StartBulkConvoSWF(conv_type="encut", mp_id=mp_id, functional=functional),
+        FT_StartBulkConvoSWF(
+            conv_type="encut", mp_id=mp_id, functional=functional
+        ),
         name=f'Start encut convergence for {mat["formula"]}',
     )
     WF.append(ConvergeEncut)
 
     ConvergeKpoints = Firework(
-        FT_StartBulkConvoSWF(conv_type="kpoints", mp_id=mp_id, functional=functional),
+        FT_StartBulkConvoSWF(
+            conv_type="kpoints", mp_id=mp_id, functional=functional
+        ),
         name=f'Start kpoints convergence for {mat["formula"]}',
     )
     WF.append(ConvergeKpoints)
@@ -97,7 +101,9 @@ def homogeneous_wf(inputs):
     WF.append(Final_Params)
 
     MakeSlabs = Firework(
-        FT_SlabOptThick(mp_id=mp_id, miller=mat.get("miller"), functional=functional),
+        FT_SlabOptThick(
+            mp_id=mp_id, miller=mat.get("miller"), functional=functional
+        ),
         name=f'Slab thickness optimization for {mat["formula"]}',
     )
     WF.append(MakeSlabs)
@@ -229,10 +235,14 @@ def heterogeneous_wf(inputs):
     # WF.append(Initialize)
 
     add_bulk_to_db(
-        mp_id_1, f"{functional}.bulk_data", custom_data={"comp_parameters": comp_params}
+        mp_id_1,
+        f"{functional}.bulk_data",
+        custom_data={"comp_parameters": comp_params},
     )
     add_bulk_to_db(
-        mp_id_2, f"{functional}.bulk_data", custom_data={"comp_parameters": comp_params}
+        mp_id_2,
+        f"{functional}.bulk_data",
+        custom_data={"comp_parameters": comp_params},
     )
 
     PreRelaxation_M1 = Firework(
@@ -441,7 +451,9 @@ def heterogeneous_wf(inputs):
 
     WF_Name = (
         "TriboFlow_"
-        + interface_name(mp_id_1, mp_id_2, mat_1.get("miller"), mat_2.get("miller"))
+        + interface_name(
+            mp_id_1, mp_id_2, mat_1.get("miller"), mat_2.get("miller")
+        )
         + "_"
         + f"{functional}@{pressure}GPa"
     )
@@ -749,7 +761,10 @@ def heterogeneous_wf_with_surfgen(inputs):
         "TriboFlow_"
         + "-".join(
             sorted(
-                [f"{mat_1['formula']} ({mp_id_1})", f"{mat_2['formula']} ({mp_id_2})"]
+                [
+                    f"{mat_1['formula']} ({mp_id_1})",
+                    f"{mat_2['formula']} ({mp_id_2})",
+                ]
             )
         )
         + "_"

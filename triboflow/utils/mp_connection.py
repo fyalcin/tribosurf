@@ -119,9 +119,9 @@ class MPConnection:
                     "available in the SummaryRester of the Materials "
                     "Project database."
                 )
-            output_dict = mpr.summary.search(material_ids=[mpid], fields=properties)[
-                0
-            ].dict()
+            output_dict = mpr.summary.search(
+                material_ids=[mpid], fields=properties
+            )[0].dict()
 
             output_dict.pop("fields_not_requested")
         return output_dict
@@ -151,14 +151,17 @@ if __name__ == "__main__":
     db = MPConnection()
     mpid = db.get_mpid_from_formula("Fe2O3")
 
-    prop_dict = db.get_property_from_mp(mpid, [
-        "energy_per_atom",
-        "formation_energy_per_atom",
-        "band_gap",
-        "formula_pretty",
-        "energy_above_hull",
-        "g_vrh",
-    ])
+    prop_dict = db.get_property_from_mp(
+        mpid,
+        [
+            "energy_per_atom",
+            "formation_energy_per_atom",
+            "band_gap",
+            "formula_pretty",
+            "energy_above_hull",
+            "g_vrh",
+        ],
+    )
     print(prop_dict)
 
     struct = db.get_low_energy_structure(chem_formula="Fe2O3", mp_id=mpid)

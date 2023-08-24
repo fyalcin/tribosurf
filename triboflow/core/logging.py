@@ -26,9 +26,7 @@ Simple logger. This module contains the class:
 """
 
 __author__ = "Omar Chehaimi"
-__copyright__ = (
-    "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
-)
+__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "February 2nd, 2021"
 
@@ -205,7 +203,9 @@ class LoggingBase:
                 "ERROR: 40, CRITICAL: 50.".format(level)
             )
 
-    def __initialize_console_logger_handler(self, name, console_level, log_format):
+    def __initialize_console_logger_handler(
+        self, name, console_level, log_format
+    ):
         """
         Initializes a logger handler for the console.
 
@@ -231,7 +231,9 @@ class LoggingBase:
         if not console_logger.hasHandlers():
             console_logger.addHandler(console_handler)
 
-    def __initialize_file_logger_handler(self, name, file_level, path, log_format):
+    def __initialize_file_logger_handler(
+        self, name, file_level, path, log_format
+    ):
         """
         Initializes a logger handler for the file.
 

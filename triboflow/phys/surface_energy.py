@@ -14,9 +14,7 @@ The module contains the following functions:
 """
 
 __author__ = "Gabriele Losi"
-__copyright__ = (
-    "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
-)
+__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "February 22nd, 2021"
 
@@ -50,7 +48,9 @@ def calculate_surface_energy(output_list, sym_surface=True):
     energy_per_atom = output_list[0]["energy_per_atom"]
 
     # Calculate the surface area of a slab
-    bulk_latvecs = Structure.from_dict(output_list[1]["structure"]).lattice.matrix
+    bulk_latvecs = Structure.from_dict(
+        output_list[1]["structure"]
+    ).lattice.matrix
     area = np.linalg.norm(np.cross(bulk_latvecs[0], bulk_latvecs[1]))
 
     # Loop over the slab elements of output_list and calculate surface energy

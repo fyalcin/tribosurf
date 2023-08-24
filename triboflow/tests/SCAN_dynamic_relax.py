@@ -11,13 +11,14 @@ from fireworks import LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
 
 from hitmen_utils.workflows import dynamic_relax_swf
-from triboflow.utils.database import StructureNavigator
+from hitmen_utils.db_tools import VaspDB
 from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
 
 db_file = "/home/mwo/FireWorks/config/db.json"
+high_level = "triboflow"
+db = VaspDB(db_file=db_file, high_level=high_level)
 
-nav_structure = StructureNavigator(db_file=db_file, high_level="triboflow")
-data = nav_structure.get_bulk_from_db(mp_id="mp-30", functional="PBE")
+data = db.find_data(collection="PBE.bulk_data", fltr={"mpid": "mp-30"})
 
 comp_params = data["comp_parameters"]
 comp_params["functional"] = "SCAN"

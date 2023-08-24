@@ -24,13 +24,13 @@ inputs = {
         "slab_thick": 6,
         "vac_thick": 20.0,
         "min_thick_A": 4.0,
-        "miller": (1, 0, 0)
+        "miller": (1, 0, 0),
     },
     "sg_params_2": {
         "slab_thick": 6,
         "vac_thick": 20.0,
         "min_thick_A": 4.0,
-        "miller": (1, 0, 0)
+        "miller": (1, 0, 0),
     },
     "sg_filter_1": {"method": "all"},
     "sg_filter_2": {"method": "all"},

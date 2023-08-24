@@ -10,10 +10,10 @@ The module contains:
 ** Firetasks **:
     - FT_PutMaterialInDB
     Put a bulk and the required slab from MP into the high level DB.
-    
+
     - FT_PutInterfaceInDB
-    Put the information to make an interface between two materials into the 
-    high level DB.
+    Put the information to make an interface between two materials
+    into the high level DB.
 
 ** Functions **:
     - put_bulk_in_db
@@ -22,27 +22,21 @@ The module contains:
     - material_data_for_db
     - interface_name
 
-    Author: Gabriele Losi (glosi000)
-    Credits: The code is partially based on the original work of Michael 
-    Wolloch, Triboflow package, Wien University
-    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
+    Author: Gabriele Losi & Michael Wolloch
+    Credits: The code is partially based on the original work of Michael
+    Wolloch, Triboflow package, Wien University and was extended by Gabriele
+    Losi, Group of M.C. Righi "TribChem". University of Bologna. Afterwards
+    it was refactored again by Michael Wolloch.
 
 """
-
-__author__ = "Gabriele Losi"
-__credits__ = "This module is based on the work of Michael Wolloch, TriboFlow"
-__copyright__ = (
-    "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
-)
-__contact__ = "clelia.righi@unibo.it"
-__date__ = "January 20th, 2021"
 
 from atomate.utils.utils import env_chk
 from fireworks import FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
-from triboflow.utils.database import Navigator
+from hitmen_utils.db_tools import VaspDB
+
 from triboflow.utils.mp_connection import MPConnection
 from triboflow.utils.structure_manipulation import transfer_average_magmoms
 
@@ -200,10 +194,10 @@ def put_bulk_in_db(data, comp_params, db_file, high_level=True):
     prim_struct = transfer_average_magmoms(struct, prim_struct)
 
     # Load the bulk structure into the high level DB if not present already
-    nav = Navigator(db_file, high_level=high_level)
-    prev_data = nav.find_data(functional + ".bulk_data", {"mpid": mp_id})
+    db = VaspDB(db_file, high_level=high_level)
+    prev_data = db.find_data(functional + ".bulk_data", {"mpid": mp_id})
     if not prev_data:
-        nav.insert_data(
+        db.insert_data(
             functional + ".bulk_data",
             {
                 "mpid": mp_id,
@@ -241,12 +235,12 @@ def put_slab_in_db(data, comp_params, db_file, high_level=True):
     )
 
     # Load the slab structure into the high level DB if not already present
-    nav = Navigator(db_file=db_file, high_level=high_level)
-    prev_data = nav.find_data(
+    db = VaspDB(db_file=db_file, high_level=high_level)
+    prev_data = db.find_data(
         functional + ".slab_data", {"mpid": mp_id, "miller": data["miller"]}
     )
     if not prev_data:
-        nav.insert_data(
+        db.insert_data(
             functional + ".slab_data",
             {
                 "mpid": mp_id,
@@ -264,7 +258,9 @@ def put_slab_in_db(data, comp_params, db_file, high_level=True):
     else:
         print(
             "Entry for mpid:{} and miller:{} already found in {} collection. "
-            "No update.".format(mp_id, data["miller"], functional + ".slab_data")
+            "No update.".format(
+                mp_id, data["miller"], functional + ".slab_data"
+            )
         )
 
 
@@ -307,12 +303,12 @@ def put_inter_in_db(
     pressure = inter_params.get("external_pressure") or 0.0
 
     # Load the interface structure into the high level DB
-    nav = Navigator(db_file, high_level=high_level)
-    prev_data = nav.find_data(
+    db = VaspDB(db_file, high_level=high_level)
+    prev_data = db.find_data(
         functional + ".interface_data", {"name": name, "pressure": pressure}
     )
     if not prev_data:
-        nav.insert_data(
+        db.insert_data(
             functional + ".interface_data",
             {
                 "name": name,
@@ -376,9 +372,9 @@ def material_data_for_db(data, comp_params, db_file, metal_thr=None):
     struct, mp_id = mp_connection.get_low_energy_structure(formula, mp_id)
 
     # TODO : Is it correct that you need to slice the returned value?
-    bandgap = mp_connection.get_property_from_mp(mp_id, properties=["band_gap"])[
-        "band_gap"
-    ]
+    bandgap = mp_connection.get_property_from_mp(
+        mp_id, properties=["band_gap"]
+    )["band_gap"]
 
     # Set the metal value for the given material
     if metal_thr is not None:

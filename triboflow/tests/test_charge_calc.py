@@ -192,8 +192,12 @@ if __name__ == "__main__":
     graphite, _ = mp_conn.get_low_energy_structure("C", mp_id="mp-48")
     nickel, _ = mp_conn.get_low_energy_structure("Ni", mp_id="mp-23")
 
-    gr_conv = SpacegroupAnalyzer(graphite).get_conventional_standard_structure(keep_site_properties=True)
-    ni_conv = SpacegroupAnalyzer(nickel).get_conventional_standard_structure(keep_site_properties=True)
+    gr_conv = SpacegroupAnalyzer(graphite).get_conventional_standard_structure(
+        keep_site_properties=True
+    )
+    ni_conv = SpacegroupAnalyzer(nickel).get_conventional_standard_structure(
+        keep_site_properties=True
+    )
 
     sg_params_ni = {
         "miller": [1, 1, 1],

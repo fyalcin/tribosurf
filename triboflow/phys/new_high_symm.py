@@ -287,8 +287,12 @@ class InterfaceSymmetryAnalyzer:
         are deleted.
         """
 
-        top_u, self.top_sites_unique = self.__get_unique_hs_sites(self.top_slab)
-        bot_u, self.bot_sites_unique = self.__get_unique_hs_sites(self.bot_slab)
+        top_u, self.top_sites_unique = self.__get_unique_hs_sites(
+            self.top_slab
+        )
+        bot_u, self.bot_sites_unique = self.__get_unique_hs_sites(
+            self.bot_slab
+        )
 
         self.top_sites_all = self.__get_all_hs_sites(
             self.top_slab, top_u, self.top_adsf
@@ -368,7 +372,9 @@ class InterfaceSymmetryAnalyzer:
         group_assignment = {}
         replic_shifts = {}
         for i, intrfc_group in enumerate(grouped_interfaces):
-            unique_shifts["group_" + str(i + 1)] = intrfc_group[0].in_plane_offset
+            unique_shifts["group_" + str(i + 1)] = intrfc_group[
+                0
+            ].in_plane_offset
             group_assignment["group_" + str(i + 1)] = intrfc_group[0].name
             shift_list = []
             for intrfc in intrfc_group:

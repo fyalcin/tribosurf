@@ -21,7 +21,9 @@ from scipy.interpolate import interp1d
 # =============================================================================
 
 
-def evolve_mep(string_dict, rbf, method="neb", max_iter=99999, neb_forcetol=1e-3):
+def evolve_mep(
+    string_dict, rbf, method="neb", max_iter=99999, neb_forcetol=1e-3
+):
     """
     Compute minimum energy paths for all strings in the sting_dictionary.
 
@@ -50,7 +52,9 @@ def evolve_mep(string_dict, rbf, method="neb", max_iter=99999, neb_forcetol=1e-3
                 evolve_pool = multiprocessing.Pool(len(pool_inputs))
                 meps = evolve_pool.starmap(new_evolve_string, pool_inputs)
             except:
-                print("Parallel ZTS method failed and crashed. Swiching to sequential.")
+                print(
+                    "Parallel ZTS method failed and crashed. Swiching to sequential."
+                )
                 # try running sequentially because pool might be running into
                 # a recursion limit on some systems
                 meps = []
@@ -79,7 +83,9 @@ def evolve_mep(string_dict, rbf, method="neb", max_iter=99999, neb_forcetol=1e-3
                 evolve_pool = multiprocessing.Pool(len(pool_inputs))
                 meps = evolve_pool.starmap(run_neb, pool_inputs)
             except:
-                print("Parallel NEB method failed and crashed. Swiching to sequential.")
+                print(
+                    "Parallel NEB method failed and crashed. Swiching to sequential."
+                )
                 # try running sequentially because pool might be running into
                 # a recursion limit on some systems
                 meps = []
@@ -214,9 +220,15 @@ def get_initial_strings(
         if p[1] > end_y[1] and np.isclose(p[0], start[0], atol=0.01):
             end_y = p
 
-    npts_x = m.ceil((np.linalg.norm(end_x) - np.linalg.norm(start)) * point_density)
-    npts_y = m.ceil((np.linalg.norm(end_y) - np.linalg.norm(start)) * point_density)
-    npts_d = m.ceil((np.linalg.norm(end) - np.linalg.norm(start)) * point_density)
+    npts_x = m.ceil(
+        (np.linalg.norm(end_x) - np.linalg.norm(start)) * point_density
+    )
+    npts_y = m.ceil(
+        (np.linalg.norm(end_y) - np.linalg.norm(start)) * point_density
+    )
+    npts_d = m.ceil(
+        (np.linalg.norm(end) - np.linalg.norm(start)) * point_density
+    )
 
     string_d = np.linspace(start, end, npts_d)
     string_x = np.linspace(start, end_x, npts_x)
@@ -295,13 +307,19 @@ def reparametrize_string_with_equal_spacing(string, nr_of_points):
     lxy = np.cumsum(np.sqrt(dx**2 + dy**2))  # lxy[n-1] = sum(lxy[:n])
     lxy /= lxy[-1]  # rescale distance between points to [0,1] interval
     xf = interp1d(lxy, x, kind="cubic")  # interpolate x=f(lxy)
-    x = xf(g)  # since g is evenly spaced, now the new points are evenly distributed
+    x = xf(
+        g
+    )  # since g is evenly spaced, now the new points are evenly distributed
     yf = interp1d(lxy, y, kind="cubic")  # interpolate y=f(lxy)
-    y = yf(g)  # since g is evenly spaced, now the new points are evenly distributed
+    y = yf(
+        g
+    )  # since g is evenly spaced, now the new points are evenly distributed
     return np.stack((x, y), axis=1)
 
 
-def new_evolve_string(string, rbf, nstepmax=9999, mintol=1e-7, delta=0.005, h=0.005):
+def new_evolve_string(
+    string, rbf, nstepmax=9999, mintol=1e-7, delta=0.005, h=0.005
+):
     """
     Find a minumum energy path from an initial string.
 

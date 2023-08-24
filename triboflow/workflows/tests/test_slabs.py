@@ -11,9 +11,7 @@ Test the worflow to calculate the optimal slab thickness by surface energy.
 """
 
 __author__ = "Gabriele Losi"
-__copyright__ = (
-    "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
-)
+__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "April 6th, 2021"
 
@@ -36,7 +34,9 @@ functional = "PBE"
 miller = [0, 0, 1]
 mid = "mp-110"
 mp_conn = MPConnection()
-structure, mid = mp_conn.get_low_energy_structure(chem_formula="formula", mp_id=mid)
+structure, mid = mp_conn.get_low_energy_structure(
+    chem_formula="formula", mp_id=mid
+)
 
 # Get the bulk from a local simple Poscar
 # structure = Structure.from_file('POSCAR')

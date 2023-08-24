@@ -15,6 +15,7 @@ from hitmen_utils.vasp_tools import (
     get_emin_and_emax,
     get_custom_vasp_static_settings,
 )
+from hitmen_utils.db_tools import VaspDB
 from triboflow.firetasks.PPES import FT_DoPPESCalcs, FT_FitPPES
 from triboflow.firetasks.adhesion import FT_CalcAdhesion
 from triboflow.firetasks.charge_density_analysis import (
@@ -29,7 +30,6 @@ from triboflow.firetasks.structure_manipulation import (
 )
 from triboflow.firetasks.utils import FT_UpdateCompParams
 from triboflow.fireworks.common import run_pes_calc_fw, make_pes_fw
-from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.mp_connection import MPConnection
 
 
@@ -92,10 +92,12 @@ def dielectric_constant_swf(
     if comp_parameters is None:
         comp_parameters = {}
     try:
-        nav_high = StructureNavigator(db_file=db_file, high_level=hl_db)
-        bulk_data = nav_high.get_bulk_from_db(mpid, functional)
+        db_high = VaspDB(db_file=db_file, high_level=hl_db)
+        bulk_data = db_high.find_data(
+            collection=f"{functional}.bulk_data", fltr={"mpid": mpid}
+        )
         epsilon = bulk_data["comp_parameters"].get("epsilon", False)
-    except:
+    except KeyError:
         epsilon = False
 
     # if we know that the material is metallic, no need to calculate epsilon
@@ -110,7 +112,9 @@ def dielectric_constant_swf(
         vis = get_custom_vasp_static_settings(
             structure, comp_parameters, "bulk_epsilon_from_scratch"
         )
-        Calc_Eps_FW = StaticFW(structure=structure, name=flag, vasp_input_set=vis)
+        Calc_Eps_FW = StaticFW(
+            structure=structure, name=flag, vasp_input_set=vis
+        )
 
         Get_Eps_FT = FT_GetEpsilon(label=flag, db_file=db_file)
 
@@ -422,7 +426,9 @@ def adhesion_energy_swf(
         interface, comp_parameters, "slab_from_scratch"
     )
 
-    FW_top = StaticFW(structure=top_slab, vasp_input_set=vis_top, name=tag + "top")
+    FW_top = StaticFW(
+        structure=top_slab, vasp_input_set=vis_top, name=tag + "top"
+    )
     FW_bot = StaticFW(
         structure=bottom_slab, vasp_input_set=vis_bot, name=tag + "bottom"
     )
@@ -595,12 +601,14 @@ def calc_pes_swf(
 
     tag = interface_name + "_" + str(uuid4())
 
-    nav = StructureNavigator(db_file=db_file, high_level=high_level)
+    db_high = VaspDB(db_file=db_file, high_level=high_level)
     try:
-        nav.get_interface_from_db(interface_name, pressure, functional)[
-            "unrelaxed_structure"
-        ]
-    except:
+        interface_dict = db_high.find_data(
+            collection=f"{functional}.interface_data",
+            fltr={"name": interface_name, "pressure": pressure},
+        )
+        relaxed_structure = interface_dict["relaxed_structure"]
+    except KeyError:
         nav.insert_data(
             collection=functional + ".interface_data",
             data={
@@ -850,15 +858,16 @@ def make_and_relax_slab_swf(
         )
 
     if print_help:
-        nav = Navigator()
-        db_file = nav.path
+        db = VaspDB()
+        db_file = db.db_file
         print(
             "Once you workflow has finished you can access the "
             "results from the database using this code:\n\n"
             "import pprint\n"
-            "from triboflow.utils.database import GetSlabFromDB\n"
-            'results = GetBulkFromDB("{}", "{}", "{}", "{}")\n'
-            "pprint.pprint(results)\n".format(flag, db_file, miller, functional)
+            "from hitmen_utils.db_tools import VaspDB\n"
+            f"db = VaspDB(db_file='{db_file}')\n"
+            f"results = db.find_data(collection='{functional}.slab_data', fltr={'name': '{flag}'})\n"
+            "pprint.pprint(results)\n"
         )
 
     tag = formula + miller_str + "_" + str(uuid4())
@@ -1031,7 +1040,9 @@ def converge_swf(
             '"encut".\nYou have passed {}'.format(conv_type)
         )
     if conv_type == "encut":
-        name = "Encut Convergence SWF of " + structure.composition.reduced_formula
+        name = (
+            "Encut Convergence SWF of " + structure.composition.reduced_formula
+        )
         if not encut_start:
             # Get the largest EMIN value of the potcar and round up to the
             # next whole 25.
@@ -1042,7 +1053,10 @@ def converge_swf(
             enmax = encut_dict["ENMAX"]
             encut_start = int(25 * np.ceil(enmax / 25))
     elif conv_type == "kpoints":
-        name = "Kpoint Convergence SWF of " + structure.composition.reduced_formula
+        name = (
+            "Kpoint Convergence SWF of "
+            + structure.composition.reduced_formula
+        )
     else:
         raise ValueError(
             f'"type" input must be either "kpoints" or'
@@ -1097,15 +1111,16 @@ def converge_swf(
             )
 
     if print_help:
-        nav = Navigator()
-        db_file = nav.path
+        db = VaspDB()
+        db_file = db.db_file
         print(
             "Once you workflow has finished you can access the "
             "results from the database using this code:\n\n"
             "import pprint\n"
-            "from triboflow.utils.database import GetBulkFromDB\n"
-            'results = GetBulkFromDB("{}", "{}", "{}")\n'
-            "pprint.pprint(results)\n".format(flag, db_file, functional)
+            "from hitmen_utils.db_tools import VaspDB\n"
+            f"db = VaspDB(db_file='{db_file}')\n"
+            f"results = db.find_data(collection='{functional}.bulk_data', fltr={'name': '{flag}'})\n"
+            "pprint.pprint(results)\n"
         )
 
     if not comp_parameters.get("functional"):
