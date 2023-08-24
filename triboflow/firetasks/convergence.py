@@ -206,7 +206,7 @@ class FT_Convo(FiretaskBase):
 
         # Get the data arrays from the database (returns None when not there)
         db = VaspDB(db_file=db_file)
-        data = nav.find_data(collection="BM_data_sharing", fltr={"tag": tag})
+        data = db.find_data(collection="BM_data_sharing", fltr={"tag": tag})
 
         if data:
             BM_list = data.get("BM_list")
@@ -297,7 +297,7 @@ class FT_Convo(FiretaskBase):
                 "BM_list": [],
                 "V0_list": [],
             }
-            nav.insert_data(collection="BM_data_sharing", data=set_data)
+            db.insert_data(collection="BM_data_sharing", data=set_data)
 
             return FWAction(detours=BM_WF)
 
@@ -389,7 +389,7 @@ class FT_Convo(FiretaskBase):
                 )
 
                 if conv_type == "encut":
-                    nav.update_data(
+                    db.update_data(
                         collection="BM_data_sharing",
                         fltr={"tag": tag},
                         new_values={
@@ -405,7 +405,7 @@ class FT_Convo(FiretaskBase):
                         },
                     )
                 else:
-                    nav.update_data(
+                    db.update_data(
                         collection="BM_data_sharing",
                         fltr={"tag": tag},
                         new_values={
@@ -527,13 +527,13 @@ class FT_Convo(FiretaskBase):
 
             # Update Database entry for convo list
             if conv_type == "encut":
-                nav.update_data(
+                db.update_data(
                     collection="BM_data_sharing",
                     fltr={"tag": tag},
                     new_values={"$push": {"convo_list": encut}},
                 )
             else:
-                nav.update_data(
+                db.update_data(
                     collection="BM_data_sharing",
                     fltr={"tag": tag},
                     new_values={"$push": {"convo_list": k_dens}},

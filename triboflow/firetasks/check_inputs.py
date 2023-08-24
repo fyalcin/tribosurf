@@ -79,7 +79,7 @@ class FT_UpdateInterfaceCompParams(FiretaskBase):
 
         high_level = self.get("high_level")
 
-        db_high = VaspDB(db_file=db_file, high_level=high_level_db)
+        db_high = VaspDB(db_file=db_file, high_level=high_level)
         bulk_1 = db_high.find_data(
             functional + ".bulk_data", fltr={"mpid": mp_id_1}
         )
@@ -338,7 +338,7 @@ class FT_MakeSlabInDB(FiretaskBase):
         else:
             comp_data["is_metal"] = True
 
-        db_high = VaspDB(db_file=db_file, high_level=high_level_db)
+        db_high = VaspDB(db_file=db_file, high_level=high_level)
 
         if db_high.find_data(
             collection=functional + ".slab_data",
@@ -423,7 +423,7 @@ class FT_MakeBulkInDB(FiretaskBase):
         else:
             comp_data["is_metal"] = True
 
-        db_high = VaspDB(db_file=db_file, high_level=high_level_db)
+        db_high = VaspDB(db_file=db_file, high_level=high_level)
 
         if db_high.find_data(
             collection=functional + ".bulk_data", fltr={"mpid": mp_id}

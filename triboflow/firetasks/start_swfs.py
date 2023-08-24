@@ -121,7 +121,7 @@ class FT_StartAdhesionSWF(FiretaskBase):
     adhesion_handle: str, optional
         Flag under which the adhesion energy will be saved in the
         interface_data collection of the high_level database.
-    high_level_db : str or True, optional
+    high_level : str or True, optional
         Name of the high_level database to use. Defaults to 'True', in which
         case it is read from the db.json file.
     """

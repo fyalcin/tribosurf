@@ -56,7 +56,7 @@ def charge_analysis_swf(
     db_file : str, optional
         Full path of the db.json file to be used. The default is to use
         env_chk to find the file.
-    high_level_db : str, optional
+    high_level : str, optional
         Name of the high_level database to use. Defaults to 'auto', in which
         case it is read from the db.json file.
     comp_parameters : dict, optional
@@ -66,7 +66,7 @@ def charge_analysis_swf(
     Returns
     -------
     SWF : fireworks.core.firework.Workflow
-        A subworkflow to compute the charge density differnece of a certain
+        A subworkflow to compute the charge density difference of a certain
         interface.
 
     """

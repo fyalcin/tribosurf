@@ -615,7 +615,7 @@ def calc_pes_swf(
         )
         relaxed_structure = interface_dict["relaxed_structure"]
     except KeyError:
-        nav.insert_data(
+        db_high.insert_data(
             collection=functional + ".interface_data",
             data={
                 "name": interface_name,

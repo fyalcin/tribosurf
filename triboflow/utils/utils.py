@@ -41,17 +41,15 @@ __contact__ = "clelia.righi@unibo.it"
 __date__ = "February 22nd, 2021"
 
 import json
-import os
-from pathlib import Path, PurePosixPath
-from uuid import uuid4
-
 import numpy as np
+import os
 import pandas as pd
 from atomate.utils.utils import env_chk
+from pathlib import Path, PurePosixPath
 from pymatgen.core.surface import Structure, Slab
+from uuid import uuid4
 
 from hitmen_utils.db_tools import VaspDB
-from triboflow.utils.errors import ReadParamsError, WriteParamsError
 
 project_folder = os.path.dirname(__file__)
 
@@ -185,11 +183,8 @@ def read_default_params(default_file, default_key, dict_params):
 
     # Check if there are some unknown parameters
     if not set(dict_params.keys()).issubset(set(defaults.keys())):
-        raise ReadParamsError(
-            "The values passed as dictionary params are not "
-            "known. Allowed values for {}, read in {}: {}".format(
-                default_key, default_file, defaults.keys()
-            )
+        raise Exception(
+            f"Unknown parameters: {set(dict_params.keys()) - set(defaults.keys())}"
         )
 
     # Set the parameters, missing parameters are substituted with defaults
@@ -243,7 +238,7 @@ def get_one_info_from_dict(input_dict, entry):
             info = info[n]  # Read one key after the other
 
     else:
-        ReadParamsError("Error in reading input_dict, entry is wrong.")
+        raise Exception(f"Unknown type for entry: {type(entry)}")
 
     return info
 
@@ -408,7 +403,7 @@ def write_one_dict(data, entry, to_mongodb=True):
             d = {key: d}
 
     else:
-        WriteParamsError("Error in writing data, entry is wrong.")
+        raise Exception("Error in reading entry, it is wrong.")
 
     # Convert the dictionary to suit MongoDB query
     if to_mongodb:
@@ -549,7 +544,7 @@ def retrieve_from_db(
     """
 
     # retrieve the structure
-    db = VaspDB(db_file=db_file, high_level=high_level_db)
+    db = VaspDB(db_file=db_file, high_level=high_level)
 
     # Define the filter (fltr) to be used
     fltr = {"mpid": mp_id}
@@ -621,7 +616,7 @@ def retrieve_from_tag(
     """
 
     # Retrieve the simulation data from tag
-    db = VaspDB(db_file=db_file, high_level=high_level_db)
+    db = VaspDB(db_file=db_file, high_level=high_level)
     vasp_calc = db.find_data(collection, {tag_key: tag})
 
     # Retrieve the correct dictionary and obtain the structure

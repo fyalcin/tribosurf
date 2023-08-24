@@ -28,7 +28,6 @@ from triboflow.phys.interface_matcher import (
     InterfaceMatcher,
     get_consolidated_comp_params,
 )
-from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.file_manipulation import copy_output_files
 from triboflow.utils.structure_manipulation import (
     interface_name,
@@ -701,7 +700,6 @@ class FT_MakeHeteroStructure(FiretaskBase):
                 interface_missing = True
 
             if interface_missing:
-
                 bulk_data_1 = db_high.find_data(
                     collection=f"{functional}.bulk_data", fltr={"mpid": mpid1}
                 )
