@@ -57,5 +57,5 @@ today = datetime.today().strftime('%Y-%m-%d')
 lpad.reset(today)
 lpad.add_wf(WF)
 
-fworker = FWorker.from_file("/home/yalcin/config_local/my_fworker.yaml")
-rapidfire(launchpad=lpad, fworker=fworker, m_dir="/home/yalcin/scratch")
+# fworker = FWorker.from_file("/home/yalcin/config_local/my_fworker.yaml")
+# rapidfire(launchpad=lpad, fworker=fworker, m_dir="/home/yalcin/scratch")

@@ -170,6 +170,7 @@ def heterogeneous_wf_with_surfgen(inputs):
         final_params_parents.append(converge_kpoints_m2)
 
     bulk_coll = f"{functional}.bulk_data"
+    surfen_coll = f"{functional}.surfen_data"
 
     get_slabs_m1 = Firework(
         RunSurfenSwfGetEnergies(
@@ -180,6 +181,7 @@ def heterogeneous_wf_with_surfgen(inputs):
             bulk_coll=bulk_coll,
             add_full_relax=True,
             material_index=1,
+            surfen_coll=surfen_coll,
             db_file=db_file,
             high_level=high_level,
         ),
@@ -204,6 +206,7 @@ def heterogeneous_wf_with_surfgen(inputs):
                 bulk_coll=bulk_coll,
                 add_full_relax=True,
                 material_index=2,
+                surfen_coll=surfen_coll,
                 db_file=db_file,
                 high_level=high_level,
             ),
