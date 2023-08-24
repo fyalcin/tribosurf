@@ -323,7 +323,7 @@ class FT_FindHighSymmPoints(FiretaskBase):
         "interface_name",
         "external_pressure",
     ]
-    optional_params = ["db_file" "high_level"]
+    optional_params = ["db_file", "high_level"]
 
     def run_task(self, fw_spec):
         interface = self.get("interface")

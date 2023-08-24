@@ -5,8 +5,15 @@ Created on Fri Jun 19 16:15:02 2020
 
 @author: mwo
 """
+from datetime import datetime
+
+from fireworks import LaunchPad, Workflow, Firework
+
+
 
 from fireworks import LaunchPad
+from fireworks.core.fworker import FWorker
+from fireworks.core.rocket_launcher import rapidfire
 
 from triboflow.workflows.main import heterogeneous_wf_with_surfgen
 
@@ -46,5 +53,9 @@ inputs = {
 WF = heterogeneous_wf_with_surfgen(inputs)
 
 lpad = LaunchPad.from_file("/home/yalcin/config_local/my_launchpad.yaml")
+today = datetime.today().strftime('%Y-%m-%d')
+lpad.reset(today)
 lpad.add_wf(WF)
-# rapidfire(lpad)
+
+fworker = FWorker.from_file("/home/yalcin/config_local/my_fworker.yaml")
+rapidfire(launchpad=lpad, fworker=fworker, m_dir="/home/yalcin/scratch")

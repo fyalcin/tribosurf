@@ -219,7 +219,6 @@ def heterogeneous_wf_with_surfgen(inputs):
             mp_id_2=mpid_2,
             interface_params=interface_params,
             functional=functional,
-            external_pressure=pressure,
             db_file=db_file,
             high_level=high_level,
         ),

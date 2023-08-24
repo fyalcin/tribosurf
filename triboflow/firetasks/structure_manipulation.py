@@ -633,7 +633,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
         mpid2 = self.get("mp_id_2")
 
         interface_params = self.get("interface_params")
-        pressure = interface_params.get("pressure", 0.0)
+        pressure = interface_params.get("external_pressure", 0.0)
 
         functional = self.get("functional")
 
@@ -662,6 +662,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
 
         for pair in pairs:
             slab1_dict, slab2_dict = pair
+            slab1, slab2 = slab1_dict["slab"], slab2_dict["slab"]
             hkl1, hkl2 = slab1_dict["hkl"], slab2_dict["hkl"]
             shift1, shift2 = slab1_dict["shift"], slab2_dict["shift"]
 
@@ -675,54 +676,67 @@ class FT_MakeHeteroStructure(FiretaskBase):
             if inter_data:
                 unrelaxed_structure = inter_data.get("unrelaxed_structure")
                 if not unrelaxed_structure:
-                    nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
+                    interface_missing = True
+                else:
+                    interface_missing = False
+            else:
+                interface_missing = True
 
-                    slab1, slab2 = slab1_dict["slab"], slab2_dict["slab"]
+            if interface_missing:
+                bulk_data_1 = nav_high.find_data(
+                    collection=functional + ".bulk_data",
+                    fltr={"mpid": mpid1},
+                )
+                bulk_data_2 = nav_high.find_data(
+                    collection=functional + ".bulk_data",
+                    fltr={"mpid": mpid2},
+                )
 
-                    bulk_dat_1 = nav_structure.get_bulk_from_db(mpid1, functional)
-                    bulk_dat_2 = nav_structure.get_bulk_from_db(mpid2, functional)
+                bm_1 = bulk_data_1["bulk_moduls"]
+                bm_2 = bulk_data_2["bulk_moduls"]
 
-                    bm_1 = bulk_dat_1["bulk_moduls"]
-                    bm_2 = bulk_dat_2["bulk_moduls"]
+                im = InterfaceMatcher(
+                    slab_1=slab1,
+                    slab_2=slab2,
+                    strain_weight_1=bm_1,
+                    strain_weight_2=bm_2,
+                    **interface_params,
+                )
+                top_aligned, bottom_aligned = im.get_centered_slabs()
 
-                    im = InterfaceMatcher(
-                        slab_1=slab1,
-                        slab_2=slab2,
-                        strain_weight_1=bm_1,
-                        strain_weight_2=bm_2,
-                        **interface_params,
+                if top_aligned and bottom_aligned:
+                    interface = im.get_interface()
+
+                    inter_dict = interface.as_dict()
+                    bottom_dict = bottom_aligned.as_dict()
+                    top_dict = top_aligned.as_dict()
+
+                    nav_high.update_data(
+                        collection=functional + ".interface_data",
+                        fltr={"name": inter_name, "pressure": pressure},
+                        new_values={
+                            "$set": {
+                                "unrelaxed_structure": inter_dict,
+                                "bottom_aligned": bottom_dict,
+                                "top_aligned": top_dict,
+                                "comp_parameters": inter_comp_params,
+                                "interface_params": interface_params,
+                            }
+                        },
+                        upsert=True,
                     )
-                    top_aligned, bottom_aligned = im.get_centered_slabs()
 
-                    if top_aligned and bottom_aligned:
-                        interface = im.get_interface()
-
-                        inter_dict = interface.as_dict()
-                        bottom_dict = bottom_aligned.as_dict()
-                        top_dict = top_aligned.as_dict()
-
-                        nav_high.update_data(
-                            collection=functional + ".interface_data",
-                            fltr={"name": inter_name, "pressure": pressure},
-                            new_values={
-                                "$set": {
-                                    "unrelaxed_structure": inter_dict,
-                                    "bottom_aligned": bottom_dict,
-                                    "top_aligned": top_dict,
-                                    "comp_params": inter_comp_params,
-                                    "interface_params": interface_params,
-                                }
-                            },
-                        )
-
-                        fw_spec["interface_name"] = inter_name
-                        return FWAction(update_spec=fw_spec)
+                    fw_spec["interface_name"] = inter_name
+                    return FWAction(update_spec=fw_spec)
+                else:
+                    # check if we are at the last pair, meaning none of the pairs could be matched
+                    if pair == pairs[-1]:
+                        return FWAction(defuse_workflow=True)
                     else:
-                        # check if we are at the last pair, meaning none of the pairs could be matched
-                        if pair == pairs[-1]:
-                            return FWAction(defuse_workflow=True)
-                        else:
-                            continue
+                        continue
+            else:
+                fw_spec["interface_name"] = inter_name
+                return FWAction(update_spec=fw_spec)
 
 
 @explicit_serialize
