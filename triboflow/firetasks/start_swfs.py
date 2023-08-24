@@ -6,7 +6,9 @@ from pymatgen.core import Structure
 from pymatgen.core.interface import Interface
 from pymatgen.core.surface import Slab
 
-from triboflow.utils.database import Navigator, StructureNavigator
+from hitmen_utils.db_tools import VaspDB
+
+from triboflow.utils.structure_manipulation import interface_name
 from triboflow.workflows.subworkflows import (
     adhesion_energy_swf,
     calc_pes_swf,
@@ -63,11 +65,11 @@ class FT_StartChargeAnalysisSWF(FiretaskBase):
         hl_db = self.get("high_level", True)
         interface_label = self.get("interface_label", "relaxed_structure@min")
 
-        nav = Navigator(db_file=db_file, high_level=hl_db)
+        db = VaspDB(db_file, high_level=hl_db)
 
         name = fw_spec.get("interface_name")
 
-        interface_dict = nav.find_data(
+        interface_dict = db.find_data(
             collection=functional + ".interface_data",
             fltr={"name": name, "pressure": pressure},
         )
@@ -117,9 +119,9 @@ class FT_StartAdhesionSWF(FiretaskBase):
         Full path of the db.json file to be used. The default is to use
         env_chk to find the file.
     adhesion_handle: str, optional
-        Flag under which the adhesion energy will be saved in the interface_data
-        collection of the high_level database.
-    high_level : str or True, optional
+        Flag under which the adhesion energy will be saved in the
+        interface_data collection of the high_level database.
+    high_level_db : str or True, optional
         Name of the high_level database to use. Defaults to 'True', in which
         case it is read from the db.json file.
     """
@@ -141,11 +143,11 @@ class FT_StartAdhesionSWF(FiretaskBase):
         adhesion_handle = self.get("adhesion_handle", "adhesion_energy@min")
         hl_db = self.get("high_level", True)
 
-        nav = Navigator(db_file=db_file, high_level=hl_db)
+        db = VaspDB(db_file, high_level=hl_db)
 
         name = fw_spec.get("interface_name")
 
-        interface_dict = nav.find_data(
+        interface_dict = db.find_data(
             collection=functional + ".interface_data",
             fltr={"name": name, "pressure": pressure},
         )
@@ -248,9 +250,9 @@ class FT_StartBulkConvoSWF(FiretaskBase):
                 '"encut".\nYou have passed {}'.format(conv_type)
             )
 
-        nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
-        data = nav_structure.get_bulk_from_db(
-            mp_id=mp_id, functional=functional
+        db_high = VaspDB(db_file=db_file, high_level=hl_db)
+        data = db_high.find_data(
+            collection=f"{functional}.bulk_data", fltr={"mpid": mp_id}
         )
 
         if conv_type == "encut":
@@ -336,9 +338,9 @@ class FT_StartDielectricSWF(FiretaskBase):
             db_file = env_chk(">>db_file<<", fw_spec)
         hl_db = self.get("high_level", True)
 
-        nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
-        data = nav_structure.get_bulk_from_db(
-            mp_id=mp_id, functional=functional
+        db_high = VaspDB(db_file=db_file, high_level=hl_db)
+        data = db_high.find_data(
+            collection=f"{functional}.bulk_data", fltr={"mpid": mp_id}
         )
 
         structure_dict = data.get("structure_equiVol")
@@ -390,12 +392,14 @@ class FT_StartPESCalcSWF(FiretaskBase):
         Full path to the db.json file that should be used. Defaults to
         '>>db_file<<', to use env_chk.
     prerelax : bool, optional
-        Whether to perform a prerelaxation using a network potential before starting
-        a DFT relaxation. Defaults to True.
+        Whether to perform a prerelaxation using a network potential
+        before starting a DFT relaxation. Defaults to True.
     prerelax_calculator : str, optional
-        Which network potential to use for the prerelaxation. Defaults to 'm3gnet'.
+        Which network potential to use for the prerelaxation. Defaults
+        to 'm3gnet'.
     prerelax_kwargs : dict, optional
-        Keyword arguments to be passed to the ASE calculator for the prerelaxation.
+        Keyword arguments to be passed to the ASE calculator for
+        the prerelaxation.
 
     Returns
     -------
@@ -429,9 +433,10 @@ class FT_StartPESCalcSWF(FiretaskBase):
 
         name = fw_spec.get("interface_name")
 
-        nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
-        interface_dict = nav_structure.get_interface_from_db(
-            name=name, pressure=pressure, functional=functional
+        db_high = VaspDB(db_file=db_file, high_level=hl_db)
+        interface_dict = db_high.find_data(
+            collection=f"{functional}.interface_data",
+            fltr={"name": name, "pressure": pressure},
         )
         comp_params = interface_dict["comp_parameters"]
         interface = Interface.from_dict(interface_dict["unrelaxed_structure"])
@@ -504,7 +509,6 @@ class FT_StartPPESWF(FiretaskBase):
     def run_task(self, fw_spec):
         name = self.get("interface_name")
         functional = self.get("functional")
-        tag = self.get("tag")
 
         db_file = self.get("db_file")
         if not db_file:
@@ -516,10 +520,16 @@ class FT_StartPPESWF(FiretaskBase):
         d_list = self.get("distance_list")
         hl_db = self.get("high_level", True)
 
-        nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
-        interface_dict = nav_structure.get_interface_from_db(
-            name=name, functional=functional
+        db_high = VaspDB(db_file=db_file, high_level=hl_db)
+        interface_dict = db_high.find_data(
+            collection=f"{functional}.interface_data",
+            fltr={"name": name, "pressure": 0.0},
         )
+        if not interface_dict:
+            raise ValueError(
+                f"Interface {name} with functional {functional} and "
+                f"0 pressure not found in high-level database {db_file}!"
+            )
 
         calc_PPES = True
         if interface_dict.get("PPES") is not None:
@@ -613,15 +623,15 @@ class FT_StartSlabRelaxSWF(FiretaskBase):
         slab_out_name = self.get("slab_out_name", "relaxed_slab")
         hl_db = self.get("high_level", True)
 
-        nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
-
-        data = nav_structure.get_bulk_from_db(
-            mp_id=mp_id, functional=functional
+        db_high = VaspDB(db_file=db_file, high_level=hl_db)
+        data = db_high.find_data(
+            collection=f"{functional}.bulk_data", fltr={"mpid": mp_id}
         )
         bulk_struct = Structure.from_dict(data[bulk_name])
 
-        slab_data = nav_structure.get_slab_from_db(
-            mp_id=mp_id, functional=functional, miller=miller
+        slab_data = db_high.find_data(
+            collection=f"{functional}.slab_data",
+            fltr={"mpid": mp_id, "miller": miller},
         )
         comp_params = slab_data.get("comp_parameters")
         min_thickness = slab_data.get("min_thickness", 10)

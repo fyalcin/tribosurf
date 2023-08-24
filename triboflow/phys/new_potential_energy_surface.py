@@ -13,6 +13,8 @@ __credits__ = "Code partly inspired by a previous version of M. Wolloch and Gabr
 __contact__ = "michael.wolloch@univie.ac.at"
 __date__ = "April 14th, 2022"
 
+from PIL import Image
+from io import BytesIO
 import matplotlib.pyplot as plt
 import numpy as np
 from pymatgen.core import PeriodicSite
@@ -24,7 +26,8 @@ from triboflow.phys.minimum_energy_path import (
     reparametrize_string_with_equal_spacing,
     evolve_mep,
 )
-from triboflow.utils.database import convert_image_to_bytes, StructureNavigator
+from triboflow.utils.database import convert_image_to_bytes
+from hitmen_utils.db_tools import VaspDB
 
 
 def get_PESGenerator_from_db(
@@ -67,10 +70,10 @@ def get_PESGenerator_from_db(
         PESGenerator object.
 
     """
-
-    nav = StructureNavigator(db_file=db_file, high_level=high_level)
-    inter_dict = nav.get_interface_from_db(
-        interface_name, pressure, functional
+    db_high = VaspDB(db_file=db_file, high_level=high_level)
+    inter_dict = db_high.find_data(
+        collection=f"{functional}.interface_data",
+        fltr={"name": interface_name, "pressure": pressure},
     )
 
     possible_kwargs = [
@@ -1048,3 +1051,23 @@ class PESGenerator:
         X, Y = self.__get_grid(self.xlim, self.ylim)
         Z = self.__evaluate_on_grid(X, Y)
         return X, Y, Z
+
+
+def convert_image_to_bytes(path_to_img_file):
+    """Convert an image to bytes for storage in a MongoDB database.
+
+    Parameters
+    ----------
+    path_to_img_file : str
+        Path to the image file to be converted.
+
+    Returns
+    -------
+    bytes
+        Image as bytes.
+
+    """
+    im = Image.open(path_to_fig)
+    image_bytes = BytesIO()
+    im.save(image_bytes, format="png")
+    return image_bytes.getvalue()

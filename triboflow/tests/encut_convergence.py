@@ -7,23 +7,24 @@ Created on Fri Jun 19 16:15:02 2020
 """
 from pymatgen.core.structure import Structure
 from fireworks import LaunchPad
+from hitmen_utils.db_tools import VaspDB
 
 # from fireworks.core.rocket_launcher import rapidfire
 from triboflow.workflows.subworkflows import converge_swf
-from triboflow.utils.database import StructureNavigator
 
 
-db_file = "/home/mwo/FireWorks/config/db.json"
-
-nav_structure = StructureNavigator(db_file=db_file, high_level="triboflow")
-data = nav_structure.get_bulk_from_db(mp_id="mp-30", functional="PBE")
-
-struct = Structure.from_dict(data["structure_fromMP"])
-comp_parameters = data["comp_parameters"]
+db = VaspDB("auto", True)
+bulk_dict = db.find_data(collection="PBE.bulk_data", fltr={"mpid": "mp-30"})
+struct = Structure.from_dict(bulk_dict["structure_fromMP"])
+comp_parameters = bulk_dict["comp_parameters"]
+mpid = bulk_dict["mpid"]
 
 
 WF = converge_swf(
-    struct, comp_parameters, {}, data["mpid"], comp_parameters["functional"]
+    structure=struct,
+    conv_type="encut",
+    flag=f"encut_test for {mpid}",
+    comp_parameters=comp_parameters,
 )
 
 lpad = LaunchPad.auto_load()

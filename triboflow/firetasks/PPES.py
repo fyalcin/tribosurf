@@ -16,8 +16,9 @@ from atomate.utils.utils import env_chk
 from atomate.vasp.fireworks.core import StaticFW
 from atomate.vasp.powerups import add_modify_incar
 
-from triboflow.utils.database import Navigator, StructureNavigator
 from hitmen_utils.vasp_tools import get_custom_vasp_static_settings
+from hitmen_utils.db_tools import VaspDB
+
 from triboflow.utils.structure_manipulation import clean_up_site_properties
 
 
@@ -76,10 +77,16 @@ class FT_DoPPESCalcs(FiretaskBase):
         d_list = self.get("distance_list")
         hl_db = self.get("high_level", True)
 
-        nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
-        interface_dict = nav_structure.get_interface_from_db(
-            name=name, functional=functional
+        db_high = VaspDB(db_file=db_file, high_level=hl_db)
+        interface_dict = db_high.find_data(
+            collection=f"{functional}.interface_data",
+            fltr={"name": name, "pressure": 0.0},
         )
+        if not interface_dict:
+            raise ValueError(
+                f"Interface {name} with functional {functional} and "
+                f"0 pressure not found in high-level database {db_file}!"
+            )
 
         comp_params = interface_dict["comp_parameters"]
         struct = Structure.from_dict(interface_dict[structure_name])
@@ -157,23 +164,23 @@ class FT_FitPPES(FiretaskBase):
         out_name = self.get("out_name", "PPES@minimum")
         d_list = self.get("distance_list")
 
-        nav = Navigator(db_file=db_file)
+        db = VaspDB(db_file=db_file)
 
         d_E_array = []
         for d in d_list:
             calc_label = tag + "_PPES_" + str(d)
             # Get energy from vasp run for this distance
-            vasp_calc = nav.find_data(
-                collection=nav.db.tasks, fltr={"task_label": calc_label}
+            vasp_calc = db.find_data(
+                collection=db.db.tasks, fltr={"task_label": calc_label}
             )
             energy = vasp_calc["output"]["energy"]
             d_E_array.append([d, energy])
 
         popt, perr = PPES_UBER(distance_energy_array=d_E_array)
 
-        nav_high = Navigator(db_file=db_file, high_level=high_level)
+        db_high = VaspDB(db_file=db_file, high_level=high_level)
 
-        nav_high.update_data(
+        db_high.update_data(
             collection=functional + ".interface_data",
             fltr={"name": name},
             new_values={

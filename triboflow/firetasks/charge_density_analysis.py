@@ -17,7 +17,7 @@ from atomate.vasp.fireworks.core import StaticFW
 from atomate.utils.utils import env_chk
 
 from hitmen_utils.vasp_tools import get_custom_vasp_static_settings
-from triboflow.utils.database import Navigator
+from hitmen_utils.db_tools import VaspDB
 
 
 def plot_charge_profile(chgcar, axis=2, xmin=None, xmax=None):
@@ -132,21 +132,6 @@ class FT_MakeChargeCalc(FiretaskBase):
 
 
 @explicit_serialize
-class FT_GetCharge(FiretaskBase):
-    required_params = ["calc_name"]
-    optional_params = ["db_file"]
-
-    def run_task(self, fw_spec):
-        label = self.get("calc_name")
-        if self.get("db_file", None):
-            nav = Navigator(db_file=self.get("db_file"))
-        else:
-            nav = Navigator()
-        chgcar = nav.get_chgcar_from_label(label)
-        plot_charge_profile(chgcar)
-
-
-@explicit_serialize
 class FT_MakeChargeDensityDiff(FiretaskBase):
     required_params = [
         "interface",
@@ -171,17 +156,17 @@ class FT_MakeChargeDensityDiff(FiretaskBase):
         hl_db = self.get("high_level", "auto")
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
-        nav = Navigator(db_file=db_file)
-        chgcar_int = nav.get_chgcar_from_label(label_int)
-        chgcar_top = nav.get_chgcar_from_label(label_top)
-        chgcar_bot = nav.get_chgcar_from_label(label_bot)
+        db = VaspDB(db_file=db_file)
+        chgcar_int = db.get_chgcar_from_label(label_int)
+        chgcar_top = db.get_chgcar_from_label(label_top)
+        chgcar_bot = db.get_chgcar_from_label(label_bot)
 
         rho_dict = make_charge_differences(
             interface, chgcar_int, chgcar_bot, chgcar_top
         )
 
-        nav_high = Navigator(db_file=db_file, high_level=hl_db)
-        nav_high.update_data(
+        db_high = VaspDB(db_file=db_file, high_level=hl_db)
+        db_high.update_data(
             collection=functional + ".interface_data",
             fltr={"name": name, "pressure": pressure},
             new_values={"$set": {"charge_density_redist": rho_dict}},

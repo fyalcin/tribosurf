@@ -6,7 +6,7 @@ Created on Tue Oct 13 14:52:57 2020
 @author: wolloch
 """
 from operator import itemgetter
-from hitmen_utils.db_tools import VaspDB
+
 import numpy as np
 import pickle
 from atomate.utils.utils import env_chk
@@ -20,13 +20,13 @@ from triboflow.phys.new_high_symm import InterfaceSymmetryAnalyzer
 from triboflow.phys.new_potential_energy_surface import (
     get_PESGenerator_from_db,
 )
-from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.structure_manipulation import (
     clean_up_site_properties,
     get_interface_distance,
 )
 from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
 from hitmen_utils.workflows import dynamic_relax_swf
+from hitmen_utils.db_tools import VaspDB
 
 
 @explicit_serialize
@@ -82,12 +82,12 @@ class FT_ComputePES(FiretaskBase):
             pes_generator_kwargs={"fig_title": name},
         )
 
-        nav_high = Navigator(db_file=db_file, high_level=hl_db)
+        db_high = VaspDB(db_file=db_file, high_level=hl_db)
         # the data here might be too large to write to the DB, so if initial
         # write fails, we try bit by bit...
         # maybe should be replaced by gridFS instead?
         try:
-            nav_high.update_data(
+            db_high.update_data(
                 collection=functional + ".interface_data",
                 fltr={"name": name, "pressure": pressure},
                 new_values={
@@ -111,7 +111,7 @@ class FT_ComputePES(FiretaskBase):
                 dolog=False,
             )
         except:
-            nav_high.update_data(
+            db_high.update_data(
                 collection=functional + ".interface_data",
                 fltr={"name": name, "pressure": pressure},
                 new_values={
@@ -136,7 +136,7 @@ class FT_ComputePES(FiretaskBase):
                         data = pickle.dumps(getattr(PG, v))
                     else:
                         data = jsanitize(getattr(PG, v))
-                    nav_high.update_data(
+                    db_high.update_data(
                         collection="PBE.interface_data",
                         fltr={"name": name, "pressure": pressure},
                         new_values={"$set": {"PES." + k: data}},
@@ -196,9 +196,11 @@ class FT_RetrievePESEnergies(FiretaskBase):
             db_file = env_chk(">>db_file<<", fw_spec)
         hl_db = self.get("high_level", True)
 
-        db_structure = VaspDB(db_file=db_file, high_level=hl_db)
-        interface_dict = db_structure.find_data(
-            f"{functional}.interface_data", fltr={"name": name}
+        db_high = VaspDB(db_file=db_file, high_level=hl_db)
+
+        interface_dict = db_high.find_data(
+            collection=f"{functional}.interface_data",
+            fltr={"name": name, "pressure": pressure},
         )
         lateral_shifts = interface_dict["PES"]["high_symmetry_points"][
             "unique_shifts"
@@ -207,7 +209,7 @@ class FT_RetrievePESEnergies(FiretaskBase):
             "group_assignments"
         ]
 
-        nav = Navigator(db_file=db_file)
+        db = VaspDB(db_file=db_file)
         ref_struct = Interface.from_dict(interface_dict["unrelaxed_structure"])
         area = np.linalg.norm(
             np.cross(
@@ -220,7 +222,7 @@ class FT_RetrievePESEnergies(FiretaskBase):
         calc_output = {}
         for s in lateral_shifts.keys():
             label = tag + "_" + s
-            vasp_calc = nav.find_data(
+            vasp_calc = db.find_data(
                 collection="tasks", fltr={"task_label": label}
             )
             struct = vasp_calc["output"]["structure"]
@@ -238,10 +240,10 @@ class FT_RetrievePESEnergies(FiretaskBase):
 
         min_stacking = sorted_energy_list[0][0]
         max_stacking = sorted_energy_list[-1][0]
-        calc_min = nav.find_data(
+        calc_min = db.find_data(
             collection="tasks", fltr={"task_label": tag + "_" + min_stacking}
         )
-        calc_max = nav.find_data(
+        calc_max = db.find_data(
             collection="tasks", fltr={"task_label": tag + "_" + max_stacking}
         )
         struct_min_dict = calc_min["output"]["structure"]
@@ -274,8 +276,8 @@ class FT_RetrievePESEnergies(FiretaskBase):
         inter_dist_min = get_interface_distance(struct_min)
         inter_dist_max = get_interface_distance(struct_max)
 
-        nav_high = Navigator(db_file=db_file, high_level=hl_db)
-        nav_high.update_data(
+        db_high = VaspDB(db_file=db_file, high_level=hl_db)
+        db_high.update_data(
             collection=functional + ".interface_data",
             fltr={"name": name, "pressure": pressure},
             new_values={
@@ -345,8 +347,8 @@ class FT_FindHighSymmPoints(FiretaskBase):
         ISA = InterfaceSymmetryAnalyzer()
         hsp_dict = ISA(interface)
 
-        nav_high = Navigator(db_file=db_file, high_level=hl_db)
-        nav_high.update_data(
+        db_high = VaspDB(db_file=db_file, high_level=hl_db)
+        db_high.update_data(
             collection=functional + ".interface_data",
             fltr={"name": name, "pressure": pressure},
             new_values={

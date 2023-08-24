@@ -11,7 +11,7 @@ from pymatgen.transformations.standard_transformations import (
 )
 
 from hitmen_utils.shaper import Shaper
-from triboflow.utils.database import Navigator
+from hitmen_utils.db_tools import VaspDB
 from triboflow.utils.mp_connection import MPConnection
 
 
@@ -144,8 +144,8 @@ def get_conv_bulk_from_mpid(mpid, coll, db_file="auto", high_level=True):
         Conventional standard bulk structure for the material.
 
     """
-    nav = Navigator(db_file, high_level)
-    bulk_dict = nav.find_data(coll, {"mpid": mpid})
+    db = VaspDB(db_file, high_level)
+    bulk_dict = db.find_data(coll, {"mpid": mpid})
     if bulk_dict is None:
         with MPRester() as mpr:
             bulk_conv = mpr.get_structure_by_material_id(

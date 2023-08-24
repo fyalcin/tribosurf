@@ -8,12 +8,12 @@ from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
 from atomate.utils.utils import env_chk
 
-from triboflow.utils.database import Navigator, StructureNavigator
 from triboflow.utils.mp_connection import MPConnection
 from triboflow.utils.structure_manipulation import (
     interface_name,
     transfer_average_magmoms,
 )
+from hitmen_utils.db_tools import VaspDB
 
 
 @explicit_serialize
@@ -79,14 +79,12 @@ class FT_UpdateInterfaceCompParams(FiretaskBase):
 
         high_level = self.get("high_level")
 
-        nav_structure = StructureNavigator(
-            db_file=db_file, high_level=high_level
+        db_high = VaspDB(db_file=db_file, high_level=high_level_db)
+        bulk_1 = db_high.find_data(
+            functional + ".bulk_data", fltr={"mpid": mp_id_1}
         )
-        bulk_1 = nav_structure.get_bulk_from_db(
-            mp_id=mp_id_1, functional=functional
-        )
-        bulk_2 = nav_structure.get_bulk_from_db(
-            mp_id=mp_id_2, functional=functional
+        bulk_2 = db_high.find_data(
+            functional + ".bulk_data", fltr={"mpid": mp_id_2}
         )
 
         encut_1 = bulk_1["comp_parameters"]["encut"]
@@ -105,8 +103,8 @@ class FT_UpdateInterfaceCompParams(FiretaskBase):
         # else:
         #     epsilon_inter = 100000
 
-        nav_high = Navigator(db_file=db_file, high_level=high_level)
-        nav_high.update_data(
+        db_high = VaspDB(db_file=db_file, high_level=high_level)
+        db_high.update_data(
             collection=functional + ".slab_data",
             fltr={"mpid": mp_id_1, "miller": miller_1},
             new_values={
@@ -116,7 +114,7 @@ class FT_UpdateInterfaceCompParams(FiretaskBase):
                 }
             },
         )
-        nav_high.update_data(
+        db_high.update_data(
             collection=functional + ".slab_data",
             fltr={"mpid": mp_id_2, "miller": miller_2},
             new_values={
@@ -128,7 +126,7 @@ class FT_UpdateInterfaceCompParams(FiretaskBase):
         )
 
         inter_name = interface_name(mp_id_1, mp_id_2, miller_1, miller_2)
-        nav_high.update_data(
+        db_high.update_data(
             collection=functional + ".interface_data",
             fltr={"name": inter_name, "pressure": pressure},
             new_values={
@@ -183,18 +181,16 @@ class FT_CopyCompParamsToSlab(FiretaskBase):
 
         high_level = self.get("high_level", True)
 
-        nav_structure = StructureNavigator(
-            db_file=db_file, high_level=high_level
-        )
-        bulk = nav_structure.get_bulk_from_db(
-            mp_id=mp_id, functional=functional
+        db_high = VaspDB(db_file=db_file, high_level=high_level)
+        bulk = db_high.find_data(
+            functional + ".bulk_data", fltr={"mpid": mp_id}
         )
 
         encut = bulk["comp_parameters"]["encut"]
         k_dens = bulk["comp_parameters"]["k_dens"]
 
-        nav_high = Navigator(db_file=db_file, high_level=high_level)
-        nav_high.update_data(
+        db_high = VaspDB(db_file=db_file, high_level=high_level)
+        db_high.update_data(
             collection=functional + ".slab_data",
             fltr={"mpid": mp_id, "miller": miller},
             new_values={
@@ -263,13 +259,13 @@ class FT_MakeInterfaceInDB(FiretaskBase):
             chem_formula=data2["formula"], mp_id=data2["mp_id"]
         )
 
-        nav_high = Navigator(db_file=db_file, high_level=high_level)
+        db_high = VaspDB(db_file=db_file, high_level=high_level)
 
         name = interface_name(
             mp_id_1, mp_id_2, data1["miller"], data2["miller"]
         )
 
-        if nav_high.find_data(
+        if db_high.find_data(
             collection=functional + ".interface_data", fltr={"name": name}
         ):
             print(
@@ -279,7 +275,7 @@ class FT_MakeInterfaceInDB(FiretaskBase):
             )
             return
         else:
-            nav_high.insert_data(
+            db_high.insert_data(
                 collection=functional + ".interface_data",
                 data={
                     "name": name,
@@ -342,9 +338,9 @@ class FT_MakeSlabInDB(FiretaskBase):
         else:
             comp_data["is_metal"] = True
 
-        nav_high = Navigator(db_file=db_file, high_level=high_level)
+        db_high = VaspDB(db_file=db_file, high_level=high_level_db)
 
-        if nav_high.find_data(
+        if db_high.find_data(
             collection=functional + ".slab_data",
             fltr={"mpid": mp_id, "miller": data["miller"]},
         ):
@@ -356,7 +352,7 @@ class FT_MakeSlabInDB(FiretaskBase):
             )
             return
         else:
-            nav_high.insert_data(
+            db_high.insert_data(
                 collection=functional + ".slab_data",
                 data={
                     "mpid": mp_id,
@@ -427,9 +423,9 @@ class FT_MakeBulkInDB(FiretaskBase):
         else:
             comp_data["is_metal"] = True
 
-        nav_high = Navigator(db_file=db_file, high_level=high_level)
+        db_high = VaspDB(db_file=db_file, high_level=high_level_db)
 
-        if nav_high.find_data(
+        if db_high.find_data(
             collection=functional + ".bulk_data", fltr={"mpid": mp_id}
         ):
             print(
@@ -439,7 +435,7 @@ class FT_MakeBulkInDB(FiretaskBase):
             )
             return
         else:
-            nav_high.insert_data(
+            db_high.insert_data(
                 collection=functional + ".bulk_data",
                 data={
                     "mpid": mp_id,

@@ -7,6 +7,8 @@ from datetime import datetime
 from pprint import pprint, pformat
 
 import numpy as np
+import pymongo
+
 from atomate.utils.utils import env_chk
 from atomate.vasp.config import VASP_CMD, DB_FILE
 from atomate.vasp.powerups import add_modify_incar
@@ -19,7 +21,7 @@ from hitmen_utils.vasp_tools import (
     get_custom_vasp_static_settings,
     get_emin_and_emax,
 )
-from triboflow.utils.database import Navigator, StructureNavigator
+from hitmen_utils.db_tools import VaspDB
 from triboflow.utils.file_manipulation import copy_output_files
 from triboflow.utils.utils import is_list_converged
 
@@ -59,15 +61,16 @@ class FT_UpdateBMLists(FiretaskBase):
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
 
-        nav_structure = StructureNavigator(db_file=db_file, high_level=False)
-        results = nav_structure.get_last_bmd_data_from_db(formula=formula)
-
+        db = VaspDB(db_file=db_file)
+        results = db.vasp_calc_db.db.eos.find(
+            {"formula_pretty": formula}
+        ).sort("created_at", pymongo.DESCENDING)
         BM = results["bulk_modulus"]
         V0 = results["results"]["v0"]
 
         # Update data arrays in the database
-        nav = Navigator(db_file=db_file)
-        nav.update_data(
+        db = VaspDB(db_file=db_file)
+        db.update_data(
             collection="BM_data_sharing",
             fltr={"tag": tag},
             new_values={"$push": {"BM_list": BM, "V0_list": V0}},
@@ -202,7 +205,7 @@ class FT_Convo(FiretaskBase):
         BM_tolerance = comp_params.get("BM_tolerence", 0.01)
 
         # Get the data arrays from the database (returns None when not there)
-        nav = Navigator(db_file=db_file)
+        db = VaspDB(db_file=db_file)
         data = nav.find_data(collection="BM_data_sharing", fltr={"tag": tag})
 
         if data:
@@ -377,8 +380,8 @@ class FT_Convo(FiretaskBase):
                         "structure_equiVol": struct_dict,
                     }
 
-                nav_high = Navigator(db_file=db_file, high_level=hl_db)
-                nav_high.update_data(
+                db_high = VaspDB(db_file=db_file, high_level=hl_db)
+                db_high.update_data(
                     collection=functional + ".bulk_data",
                     fltr={"mpid": flag},
                     new_values={"$set": output_dict},

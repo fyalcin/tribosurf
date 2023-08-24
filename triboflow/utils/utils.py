@@ -50,7 +50,7 @@ import pandas as pd
 from atomate.utils.utils import env_chk
 from pymatgen.core.surface import Structure, Slab
 
-from triboflow.utils.database import Navigator
+from hitmen_utils.db_tools import VaspDB
 from triboflow.utils.errors import ReadParamsError, WriteParamsError
 
 project_folder = os.path.dirname(__file__)
@@ -548,8 +548,8 @@ def retrieve_from_db(
 
     """
 
-    # Call the navigator for retrieving structure
-    nav = Navigator(db_file=db_file, high_level=high_level)
+    # retrieve the structure
+    db = VaspDB(db_file=db_file, high_level=high_level_db)
 
     # Define the filter (fltr) to be used
     fltr = {"mpid": mp_id}
@@ -557,7 +557,7 @@ def retrieve_from_db(
         fltr.update({"miller": miller})
 
     # Extract data from the database
-    field = nav.find_data(collection=collection, fltr=fltr)
+    field = db.find_data(collection=collection, fltr=fltr)
 
     structure = None
     if field is not None and entry is not None:
@@ -620,9 +620,9 @@ def retrieve_from_tag(
 
     """
 
-    # Call the navigator and retrieve the simulation data from tag
-    nav = Navigator(db_file=db_file, high_level=high_level)
-    vasp_calc = nav.find_data(collection, {tag_key: tag})
+    # Retrieve the simulation data from tag
+    db = VaspDB(db_file=db_file, high_level=high_level_db)
+    vasp_calc = db.find_data(collection, {tag_key: tag})
 
     # Retrieve the correct dictionary and obtain the structure
     info = None
@@ -803,19 +803,19 @@ def move_result(
     # function to edit DB entries with the location set with loc
     if custom_dict is None:
         custom_dict = {}
-    nav = Navigator(db_file)
-    calc = nav.find_data("tasks", {"task_label": tag})
+    db = VaspDB(db_file)
+    calc = db.find_data("tasks", {"task_label": tag})
     # out is the whole output of the calculation including everything,
     fltr_out = ["input", "output", "orig_inputs", "custodian"]
     out = {f: calc[f] for f in fltr_out}
     if custom_dict:
         out.update(custom_dict)
 
-    nav_high = Navigator(db_file="auto", high_level=high_level)
+    db_high = VaspDB(db_file="auto", high_level=high_level)
 
     loc = ".".join(loc)
 
-    nav_high.update_data(
+    db_high.update_data(
         collection=coll,
         fltr=fltr,
         new_values={"$set": {loc + f".{k}": v for k, v in out.items()}},

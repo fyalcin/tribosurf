@@ -16,13 +16,13 @@ from fireworks.utilities.fw_utilities import explicit_serialize
 
 from atomate.utils.utils import env_chk
 
-from triboflow.utils.database import Navigator
 from triboflow.utils.structure_manipulation import (
     interface_name,
     slab_from_structure,
 )
 from hitmen_utils.workflows import dynamic_relax_swf
 from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
+from hitmen_utils.db_tools import VaspDB
 
 
 @explicit_serialize
@@ -85,11 +85,11 @@ class FT_RetrieveMatchedSlabs(FiretaskBase):
         input_list = fw_spec.get("relaxation_inputs")
 
         if input_list:
-            nav = Navigator(db_file)
+            db = VaspDB(db_file)
             for i in input_list:
                 label = i[-1]
                 miller = i[0].miller_index
-                calc = nav.find_data(
+                calc = db.find_data(
                     collection="tasks", fltr={"task_label": label}
                 )
                 out_struct = calc["output"]["structure"]
@@ -100,8 +100,8 @@ class FT_RetrieveMatchedSlabs(FiretaskBase):
                     out_name = top_out_name
                 else:
                     out_name = bot_out_name
-                nav_high = Navigator(db_file, high_level=hl_db)
-                nav_high.update_data(
+                db_high = VaspDB(db_file, high_level=hl_db)
+                db_high.update_data(
                     collection=functional + ".interface_data",
                     fltr={"name": name, "pressure": pressure},
                     new_values={"$set": {out_name: slab.as_dict()}},
@@ -188,9 +188,9 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
         prerelax_kwargs = self.get("prerelax_kwargs", {})
 
         name = fw_spec.get("interface_name")
-        nav = Navigator(db_file=db_file, high_level=hl_db)
+        db = VaspDB(db_file, high_level=hl_db)
 
-        interface_dict = nav.find_data(
+        interface_dict = db.find_data(
             collection=functional + ".interface_data",
             fltr={"name": name, "pressure": pressure},
         )
@@ -297,19 +297,19 @@ class FT_CalcAdhesion(FiretaskBase):
         out_name = self.get("out_name", "adhesion_energy@min")
         hl_db = self.get("high_level", True)
 
-        nav = Navigator(db_file=db_file)
+        db = VaspDB(db_file=db_file)
 
-        top_calc = nav.find_data(
+        top_calc = db.find_data(
             collection="tasks", fltr={"task_label": top_label}
         )
         top_energy = top_calc["output"]["energy"]
 
-        bot_calc = nav.find_data(
+        bot_calc = db.find_data(
             collection="tasks", fltr={"task_label": bot_label}
         )
         bot_energy = bot_calc["output"]["energy"]
 
-        inter_calc = nav.find_data(
+        inter_calc = db.find_data(
             collection="tasks", fltr={"task_label": inter_label}
         )
         inter_energy = inter_calc["output"]["energy"]
@@ -324,8 +324,8 @@ class FT_CalcAdhesion(FiretaskBase):
         # Convert adhesion energy from eV/Angstrom^2 to J/m^2
         E_Jm2 = 16.02176565 * E_abs / area
 
-        nav_high = Navigator(db_file=db_file, high_level=hl_db)
-        nav_high.update_data(
+        db_high = VaspDB(db_file=db_file, high_level=hl_db)
+        db_high.update_data(
             collection=functional + ".interface_data",
             fltr={"name": name, "pressure": pressure},
             new_values={"$set": {out_name: E_Jm2}},

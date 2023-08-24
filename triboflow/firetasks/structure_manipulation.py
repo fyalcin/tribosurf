@@ -18,9 +18,12 @@ from pymatgen.core.surface import SlabGenerator
 from pymatgen.io.vasp.inputs import Poscar
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
+from hitmen_utils.db_tools import VaspDB
+
 from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
 from hitmen_utils.workflows import dynamic_relax_swf
 from surfen.utils.structure_manipulation import add_bulk_to_db
+from triboflow.phys.interface_matcher import InterfaceMatcher
 from triboflow.phys.interface_matcher import (
     InterfaceMatcher,
     get_consolidated_comp_params,
@@ -73,9 +76,9 @@ class FT_StartBulkPreRelax(FiretaskBase):
         hl_db = self.get("high_level", True)
 
         # Querying the structure from the high level database.
-        nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
-        data = nav_structure.get_bulk_from_db(
-            mp_id=mp_id, functional=functional
+        db_high = VaspDB(db_file=db_file, high_level=hl_db)
+        data = db_high.find_data(
+            collection=f"{functional}.bulk_data", fltr={"mpid": mp_id}
         )
 
         prim_struct = data.get("primitive_structure")
@@ -101,8 +104,8 @@ class FT_StartBulkPreRelax(FiretaskBase):
         if data.get("pre_relaxed") or ((a == c) and (b == c)):
             return FWAction(update_spec=fw_spec)
         else:
-            # Querying the computational parameters from the high level database
-            # and updating with the optional inputs
+            # Querying the computational parameters from the high level
+            # database and updating with the optional inputs
             comp_params = data.get("comp_parameters")
             encut = self.get("encut", 1000)
             k_dens = self.get("k_dens", 15)
@@ -151,8 +154,8 @@ class FT_UpdatePrimStruct(FiretaskBase):
     flag : str
         An identifier to find the results in the database. It is strongly
         suggested to use the proper Materials-ID from the MaterialsProject
-        if it is known for the specific input structure. Otherwise, use something
-        unique which you can find again.
+        if it is known for the specific input structure. Otherwise, use
+        something unique which you can find again.
     db_file : str, optional
         Full path to the db.json file which holds the location and access
         credentials to the database. If not given uses env_chk.
@@ -175,8 +178,8 @@ class FT_UpdatePrimStruct(FiretaskBase):
             db_file = env_chk(">>db_file<<", fw_spec)
         hl_db = self.get("high_level", True)
 
-        nav = Navigator(db_file=db_file)
-        calc = nav.find_data("tasks", {"task_label": tag})
+        db = VaspDB(db_file=db_file)
+        calc = db.find_data("tasks", {"task_label": tag})
         out = calc["output"]
 
         struct_dict = {
@@ -184,8 +187,8 @@ class FT_UpdatePrimStruct(FiretaskBase):
             "pre_relaxed": True,
         }
 
-        nav_high = Navigator(db_file=db_file, high_level=hl_db)
-        nav_high.update_data(
+        db_high = VaspDB(db_file=db_file, high_level=hl_db)
+        db_high.update_data(
             collection=functional + ".bulk_data",
             fltr={"mpid": flag},
             new_values={"$set": struct_dict},
@@ -197,15 +200,15 @@ class FT_UpdatePrimStruct(FiretaskBase):
 
 @explicit_serialize
 class FT_GetRelaxedSlab(FiretaskBase):
-    """Get the relaxed structure from the DB, and put a Slab into the high-level DB.
+    """Get the relaxed structure, and put a Slab into the high-level DB.
 
     Parameters
     ----------
     flag : str
         An identifier to find the results in the database. It is strongly
         suggested to use the proper Materials-ID from the MaterialsProject
-        if it is known for the specific input structure. Otherwise, use something
-        unique which you can find again.
+        if it is known for the specific input structure. Otherwise, use
+        something unique which you can find again.
     miller : list of int or str
         Miller indices for the slab generation. Either single str e.g. '111',
         or a list of int e.g. [1, 1, 1]
@@ -279,15 +282,16 @@ class FT_GetRelaxedSlab(FiretaskBase):
         port = self.get("port", None)
 
         # Check if a relaxed slab is already in the DB entry
-        nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
-        slab_data = nav_structure.get_slab_from_db(
-            mp_id=flag, functional=functional, miller=miller
+        db_high = VaspDB(db_file=db_file, high_level=hl_db)
+        slab_data = db_high.find_data(
+            collection=f"{functional}.slab_data",
+            fltr={"mpid": flag, "miller": miller},
         )
 
         if out_name not in slab_data:
             # Get results from OptimizeFW
-            nav = Navigator(db_file=db_file)
-            vasp_calc = nav.find_data(
+            db = VaspDB(db_file=db_file)
+            vasp_calc = db.find_data(
                 collection="tasks", fltr={"task_label": self["tag"]}
             )
             relaxed_slab = Structure.from_dict(
@@ -304,15 +308,15 @@ class FT_GetRelaxedSlab(FiretaskBase):
                 site_properties=relaxed_slab.site_properties,
             )
 
-            nav_high = Navigator(db_file=db_file, high_level=hl_db)
-            nav_high.update_data(
+            db_high = VaspDB(db_file=db_file, high_level=hl_db)
+            db_high.update_data(
                 collection=functional + ".slab_data",
                 fltr={"mpid": flag, "miller": miller},
                 new_values={"$set": {out_name: slab.as_dict()}},
             )
         else:
-            nav = Navigator(db_file=db_file)
-            vasp_calc = nav.find_data(
+            db = VaspDB(db_file=db_file)
+            vasp_calc = db.find_data(
                 collection="tasks", fltr={"task_label": self["tag"]}
             )
 
@@ -392,8 +396,8 @@ class FT_StartSlabRelax(FiretaskBase):
     flag : str
         An identifier to find the results in the database. It is strongly
         suggested to use the proper Materials-ID from the MaterialsProject
-        if it is known for the specific input structure. Otherwise, use something
-        unique which you can find again.
+        if it is known for the specific input structure. Otherwise, use
+        something unique which you can find again.
     miller : list of int or str
         Miller indices for the slab generation. Either single str e.g. '111',
         or a list of int e.g. [1, 1, 1]
@@ -405,8 +409,8 @@ class FT_StartSlabRelax(FiretaskBase):
         Full path to the db.json file which holds the location and access
         credentials to the database. If not given uses env_chk.
     comp_parameters : dict, optional
-        Computational parameters to be passed to the vasp input file generation.
-        The default is {}.
+        Computational parameters to be passed to the vasp input file
+        generation. The default is {}.
     slab_struct_name : str, optional
         Name of the slab to be put in the DB (identified by mp_id and miller).
         Defaults to 'unrelaxed_slab'.
@@ -448,9 +452,10 @@ class FT_StartSlabRelax(FiretaskBase):
         relax_type = self.get("relax_type", "slab_pos_relax")
         hl_db = self.get("high_level", True)
 
-        nav_structure = StructureNavigator(db_file=db_file, high_level=hl_db)
-        slab_data = nav_structure.get_slab_from_db(
-            mp_id=flag, functional=functional, miller=miller
+        db_high = VaspDB(db_file=db_file, high_level=hl_db)
+        slab_data = db_high.find_data(
+            collection=f"{functional}.slab_data",
+            fltr={"mpid": flag, "miller": miller},
         )
 
         slab_to_relax = Slab.from_dict(slab_data.get(slab_name))
@@ -483,8 +488,8 @@ class FT_MakeSlabInDB(FiretaskBase):
     flag : str
         An identifier to find the results in the database. It is strongly
         suggested to use the proper Materials-ID from the MaterialsProject
-        if it is known for the specific input structure. Otherwise, use something
-        unique which you can find again.
+        if it is known for the specific input structure. Otherwise, use
+        something unique which you can find again.
     functional : str
         functional that is used for the calculation.
     db_file : str, optional
@@ -494,7 +499,8 @@ class FT_MakeSlabInDB(FiretaskBase):
         Name of the slab to be put in the DB (identified by mp_id and miller).
         Defaults to 'unrelaxed_slab'.
     min_thickness : float, optional
-        Minimal thickness of the unrelaxed slab in Angstrom. The default is 10.0.
+        Minimal thickness of the unrelaxed slab in Angstrom.
+        The default is 10.0.
     min_vacuum : float, optional
         Minimal thickness of the vacuum layer in Angstrom. The default is 25.0.
 
@@ -531,14 +537,6 @@ class FT_MakeSlabInDB(FiretaskBase):
         min_vacuum = self.get("min_vacuum", 25)
         hl_db = self.get("high_level", True)
 
-        # nav_structure = StructureNavigator(
-        #     db_file=db_file,
-        #     high_level=hl_db)
-        # slab_data = nav_structure.get_slab_from_db(
-        #     mp_id=flag,
-        #     functional=functional,
-        #     miller=miller)
-
         bulk_conv = SpacegroupAnalyzer(
             bulk_prim
         ).get_conventional_standard_structure(keep_site_properties=True)
@@ -570,9 +568,9 @@ class FT_MakeSlabInDB(FiretaskBase):
             repair=False,
         )[0]
 
-        nav_high = Navigator(db_file=db_file, high_level=hl_db)
+        db_high = VaspDB(db_file=db_file, high_level=hl_db)
         slab_dict = monty.json.jsanitize(slab.as_dict(), allow_bson=True)
-        nav_high.update_data(
+        db_high.update_data(
             collection=functional + ".slab_data",
             fltr={"mpid": flag, "miller": miller},
             new_values={"$set": {slab_name: slab_dict}},
@@ -657,7 +655,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
 
         hl_db = self.get("high_level", True)
 
-        nav_high = Navigator(db_file=db_file, high_level=hl_db)
+        db_high = VaspDB(db_file=db_file, high_level=hl_db)
 
         slab_surfen_list_1 = fw_spec.get(f"slab_surfen_list_1")
         slab_surfen_list_2 = fw_spec.get(
@@ -688,7 +686,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
                 mpid1, mpid2, hkl1, hkl2, shift1, shift2
             )
 
-            inter_data = nav_high.find_data(
+            inter_data = db_high.find_data(
                 collection=functional + ".interface_data",
                 fltr={"name": inter_name, "pressure": pressure},
             )
@@ -703,13 +701,12 @@ class FT_MakeHeteroStructure(FiretaskBase):
                 interface_missing = True
 
             if interface_missing:
-                bulk_data_1 = nav_high.find_data(
-                    collection=functional + ".bulk_data",
-                    fltr={"mpid": mpid1},
+
+                bulk_data_1 = db_high.find_data(
+                    collection=f"{functional}.bulk_data", fltr={"mpid": mpid1}
                 )
-                bulk_data_2 = nav_high.find_data(
-                    collection=functional + ".bulk_data",
-                    fltr={"mpid": mpid2},
+                bulk_data_2 = db_high.find_data(
+                    collection=f"{functional}.bulk_data", fltr={"mpid": mpid2}
                 )
 
                 bm_1 = bulk_data_1["bulk_moduls"]
@@ -731,7 +728,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
                     bottom_dict = bottom_aligned.as_dict()
                     top_dict = top_aligned.as_dict()
 
-                    nav_high.update_data(
+                    db_high.update_data(
                         collection=functional + ".interface_data",
                         fltr={"name": inter_name, "pressure": pressure},
                         new_values={

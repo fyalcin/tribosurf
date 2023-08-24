@@ -9,7 +9,7 @@ Created on Tue Dec 14 16:11:53 2021
 from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
 
-from triboflow.utils.database import Navigator
+from hitmen_utils.db_tools import VaspDB
 
 
 @explicit_serialize
@@ -39,8 +39,8 @@ class FT_GetEpsilon(FiretaskBase):
         label = self.get("label")
         db_file = self.get("db_file", "auto")
 
-        nav = Navigator(db_file)
-        output_data = nav.find_data(
+        db = VaspDB(db_file)
+        output_data = db.find_data(
             collection="tasks", fltr={"task_label": label}
         )
         eps_tensor = output_data["output"]["epsilon_static"]
