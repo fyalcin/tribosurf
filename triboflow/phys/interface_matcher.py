@@ -700,6 +700,16 @@ class InterfaceMatcher:
         that the interface is not too close to the slabs, which would lead to
         unphysical bond distances.
 
+        Parameters
+        ----------
+        distance_boost : float, optional
+            Boost the interface distance at each step by this amount.
+            The default is 0.05.
+        bond_dist_delta : float, optional
+            Minimum bond distance of the interface is set to the minimum bond
+            distance of the aligned slabs minus this value.
+            The default is 0.05.
+
         Returns
         -------
         list
@@ -707,6 +717,10 @@ class InterfaceMatcher:
 
         """
         initial_interface = self.get_interface()
+        # set interface distance extemely low initially, since we want to
+        # increase it until the minimum bond distance is equal to the
+        # minimum bond distance of the aligned slabs minus the bond_dist_delta
+        initial_interface.gap = 0.1 
         if not initial_interface:
             return None
 
@@ -732,6 +746,7 @@ class InterfaceMatcher:
                 struct=interface, r=min(interface.lattice.abc)
             )
             min_interface_bond = min(interface_bonds, key=lambda x: x[2])[2]
+
             while min_interface_bond <= min_bond - bond_dist_delta:
                 interface.gap = interface.gap + distance_boost
                 interface_bonds = Shaper.get_all_bonds(
