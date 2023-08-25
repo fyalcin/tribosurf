@@ -16,11 +16,12 @@ The module contains:
         contrast to the pymatgen implementation the strain put on the
         lattices to get them to match is more flexible and achieved via a
         weighted average.
-        The class contains the following modules, of which the last 4 alone
+        It is also possible to get a list of interfaces with different
+        lateral shifts, which is useful for fitting a PES to the interface.
+        The class contains the following modules, of which the last 5 alone
         usually are providing enough flexibility for the user.
             - __init__
             - __get_interface_dist
-            - __flip_slab
             - __assign_top_bottom
             - __make_3d_lattice_from_2d_lattice
             - __get_supercell_matrix
@@ -31,11 +32,12 @@ The module contains:
             - get_centered_slabs
             - get_interface
             - get_interface_distance
+            - get_all_high_symmetry_interfaces
 
     Functions:
+    - get_consolidated_comp_params
     - get_average_lattice
     - are_slabs_aligned
-    - flip_slab
 
     Author: Michael Wolloch
             michael.wolloch@univie.ac.at
@@ -47,8 +49,6 @@ import warnings
 from pymatgen.analysis.interfaces.zsl import ZSLGenerator
 from pymatgen.core.interface import Interface
 from pymatgen.core.lattice import Lattice
-from pymatgen.core.structure import Structure
-from pymatgen.core.surface import center_slab, Slab
 
 from hitmen_utils.db_tools import VaspDB
 from hitmen_utils.shaper import Shaper
@@ -56,6 +56,7 @@ from triboflow.utils.structure_manipulation import (
     recenter_aligned_slabs,
     clean_up_site_properties,
 )
+from triboflow.phys.new_high_symm import InterfaceSymmetryAnalyzer
 
 
 def get_consolidated_comp_params(mpid1, mpid2, bulk_coll, db_file, high_level):
@@ -148,50 +149,6 @@ def are_slabs_aligned(slab_1, slab_2, prec=12):
         return True
     else:
         return False
-
-
-def flip_slab(slab):
-    """
-    Flip the z coordinates of the input slab by multiplying all z-coords with -1.
-
-    Parameters
-    ----------
-    slab : pymatgen.core.surface.Slab
-       The input slab object flip
-
-    Returns
-    -------
-    flipped_slab : pymatgen.core.surface.Slab
-        The flipped slab
-
-    """
-    flip_matrix = np.array(
-        [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, -1.0]]
-    )
-    flipped_coords = np.dot(slab.cart_coords, flip_matrix)
-
-    try:
-        flipped_slab = Slab(
-            lattice=slab.lattice,
-            species=slab.species,
-            coords=flipped_coords,
-            miller_index=slab.miller_index,
-            oriented_unit_cell=slab.oriented_unit_cell,
-            shift=slab.shift,
-            scale_factor=slab.scale_factor,
-            reconstruction=slab.reconstruction,
-            coords_are_cartesian=True,
-            site_properties=slab.site_properties,
-        )
-    except:
-        flipped_slab = Structure(
-            lattice=slab.lattice,
-            species=slab.species,
-            coords=flipped_coords,
-            coords_are_cartesian=True,
-            site_properties=slab.site_properties,
-        )
-    return center_slab(flipped_slab)
 
 
 class InterfaceMatcher:
@@ -388,7 +345,7 @@ class InterfaceMatcher:
         """
         try:
             self.inter_dist = float(initial_distance)
-        except:
+        except ValueError:
             av_spacing_top = Shaper.get_average_layer_spacing(self.top_slab)
             av_spacing_bot = Shaper.get_average_layer_spacing(self.bot_slab)
             self.inter_dist = (
@@ -726,6 +683,80 @@ class InterfaceMatcher:
         }
 
         return self.interface
+
+    def get_all_high_symmetry_interfaces(
+        self, distance_boost=0.05, bond_dist_delta=0.05
+    ):
+        """
+        Return a list of interfaces with high-symmetry lateral shifts.
+
+        To fit a PES to the interface, it is necessary to have a set of
+        interfaces with different lateral shifts. This method returns a list
+        of interfaces with different shifts. The shifts are determined by the
+        InterfaceSymmetryAnalyzer class.
+        At the same time the interface distance is increased until the
+        minimum bond distance is larger than the minimum bond distance of the
+        aligned slabs minus the bond_dist_delta parameter. This is to ensure
+        that the interface is not too close to the slabs, which would lead to
+        unphysical bond distances.
+
+        Returns
+        -------
+        list
+            List of Interface objects.
+
+        """
+        initial_interface = self.get_interface()
+        if not initial_interface:
+            return None
+
+        bonds_top = Shaper.get_all_bonds(
+            struct=self.aligned_top_slab,
+            r=min(self.aligned_top_slab.lattice.abc),
+        )
+        bonds_bot = Shaper.get_all_bonds(
+            struct=self.aligned_bot_slab,
+            r=min(self.aligned_bot_slab.lattice.abc),
+        )
+        bonds = bonds_top + bonds_bot
+        min_bond = min(bonds, key=lambda x: x[2])[2]
+
+        ISA = InterfaceSymmetryAnalyzer()
+        hsp_dict = ISA(interface=initial_interface)
+
+        interfaces = []
+        for group_name, shift in hsp_dict["unique_shifts"].items():
+            interface = initial_interface.copy()
+            interface.in_plane_offset = shift
+            interface_bonds = Shaper.get_all_bonds(
+                struct=interface, r=min(interface.lattice.abc)
+            )
+            min_interface_bond = min(interface_bonds, key=lambda x: x[2])[2]
+            while min_interface_bond <= min_bond - bond_dist_delta:
+                interface.gap = interface.gap + distance_boost
+                interface_bonds = Shaper.get_all_bonds(
+                    struct=interface, r=min(interface.lattice.abc)
+                )
+                min_interface_bond = min(interface_bonds, key=lambda x: x[2])[
+                    2
+                ]
+            interface.interface_properties = {
+                "area": self.aligned_top_slab.surface_area,
+                "strain": self.get_strain(),
+                "film_miller": self.top_miller,
+                "substrate_miller": self.bot_miller,
+                "strain_weights": {
+                    "film": self.top_weight,
+                    "substrate": self.bot_weight,
+                },
+                "high_symmetry_info": {
+                    "this_group": group_name,
+                    "this_shift": shift,
+                    "all_info": hsp_dict,
+                },
+            }
+            interfaces.append(interface)
+        return interfaces
 
     def get_interface_distance(self):
         """

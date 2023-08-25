@@ -3,7 +3,7 @@ import warnings
 import numpy as np
 from pymatgen.core.sites import PeriodicSite
 from pymatgen.core.structure import Structure
-from pymatgen.core.surface import SlabGenerator, Slab
+from pymatgen.core.surface import SlabGenerator, Slab, center_slab
 from pymatgen.ext.matproj import MPRester
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.transformations.standard_transformations import (
@@ -587,3 +587,47 @@ def make_pymatgen_slab(
     )[0]
     slab.add_oxidation_state_by_guess()
     return slab
+
+
+def flip_slab(slab):
+    """
+    Flip the z coordinates of the input slab by multiplying all z-coords with -1.
+
+    Parameters
+    ----------
+    slab : pymatgen.core.surface.Slab
+       The input slab object flip
+
+    Returns
+    -------
+    flipped_slab : pymatgen.core.surface.Slab
+        The flipped slab
+
+    """
+    flip_matrix = np.array(
+        [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, -1.0]]
+    )
+    flipped_coords = np.dot(slab.cart_coords, flip_matrix)
+
+    try:
+        flipped_slab = Slab(
+            lattice=slab.lattice,
+            species=slab.species,
+            coords=flipped_coords,
+            miller_index=slab.miller_index,
+            oriented_unit_cell=slab.oriented_unit_cell,
+            shift=slab.shift,
+            scale_factor=slab.scale_factor,
+            reconstruction=slab.reconstruction,
+            coords_are_cartesian=True,
+            site_properties=slab.site_properties,
+        )
+    except:
+        flipped_slab = Structure(
+            lattice=slab.lattice,
+            species=slab.species,
+            coords=flipped_coords,
+            coords_are_cartesian=True,
+            site_properties=slab.site_properties,
+        )
+    return center_slab(flipped_slab)

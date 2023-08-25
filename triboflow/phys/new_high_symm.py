@@ -18,7 +18,7 @@ from pymatgen.analysis.structure_matcher import StructureMatcher
 #     pbc_hspoints,
 #     fix_hs_dicts,
 # )
-from triboflow.phys.interface_matcher import flip_slab
+from triboflow.utils.structure_manipulation import flip_slab
 
 
 class InterfaceSymmetryAnalyzer:

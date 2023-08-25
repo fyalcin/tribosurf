@@ -42,7 +42,7 @@ from pymatgen.core.surface import Slab
 from hitmen_utils.db_tools import VaspDB
 from hitmen_utils.misc_tools import check_input
 from surfen.firetasks.start_swfs import StartSurfaceEnergy
-from triboflow.phys.interface_matcher import flip_slab
+from triboflow.utils.structure_manipulation import flip_slab
 
 
 @explicit_serialize
