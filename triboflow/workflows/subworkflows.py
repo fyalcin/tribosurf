@@ -656,6 +656,8 @@ def calc_pes_swf(
         server=server,
         user=user,
         port=port,
+        db_file=db_file,
+        high_level=high_level,
     )
 
     SWF = Workflow(

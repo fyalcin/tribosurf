@@ -1,14 +1,11 @@
-from uuid import uuid4
-
 from atomate.utils.utils import env_chk
 from fireworks import explicit_serialize, FiretaskBase, FWAction
 from pymatgen.core import Structure
 from pymatgen.core.interface import Interface
 from pymatgen.core.surface import Slab
+from uuid import uuid4
 
 from hitmen_utils.db_tools import VaspDB
-
-from triboflow.utils.structure_manipulation import interface_name
 from triboflow.workflows.subworkflows import (
     adhesion_energy_swf,
     calc_pes_swf,
