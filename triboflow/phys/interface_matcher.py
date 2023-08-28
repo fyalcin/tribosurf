@@ -720,7 +720,7 @@ class InterfaceMatcher:
         # set interface distance extemely low initially, since we want to
         # increase it until the minimum bond distance is equal to the
         # minimum bond distance of the aligned slabs minus the bond_dist_delta
-        initial_interface.gap = 0.1 
+        initial_interface.gap = 0.1
         if not initial_interface:
             return None
 
