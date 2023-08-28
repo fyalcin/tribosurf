@@ -25,8 +25,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pymatgen.analysis.adsorption import plot_slab
 
-from triboflow.phys.high_symmetry import hs_dict_converter
-
 
 # =============================================================================
 # PLOTTING TOOLS
@@ -311,3 +309,55 @@ def surfen_graph(surfen_list, conv_thr=0.01, plot_title=None, to_fig=None):
         ax.set_title(plot_title)
     if to_fig:
         fig.savefig(to_fig + ".png", dpi=300, bbox_inches="tight")
+
+
+def hs_dict_converter(hs, to_array=True):
+    """
+    Modify the type of the elements of the HS dictionary to list or np.ndarray.
+
+    Parameters
+    ----------
+    hs : dict
+        Dictionary containing the High Symmetry points.
+    to_array : bool, optional
+        If set to True convert to array, otherwise convert to list.
+        The default is True.
+
+    Raises
+    ------
+    ValueError
+        Raised if the dictionary values are of different types.
+        Print to stdout: "Your dictionary is weird, values have mixed types"
+
+    Returns
+    -------
+    hs_new : dict
+        New HS dictionary converted to the desired type.
+
+    """
+
+    hs_new = {}
+    dict_types = list(set(type(k) for k in hs.values()))
+
+    try:
+        assert len(dict_types) == 1
+
+        typ = dict_types[0]
+        if to_array:
+            if typ == list:
+                for k in hs.keys():
+                    hs_new[k] = np.array(hs[k])
+            else:
+                return hs
+
+        else:
+            if typ == np.ndarray:
+                for k in hs.keys():
+                    hs_new[k] = hs[k].tolist()
+            else:
+                return hs
+
+        return hs_new
+
+    except:
+        raise ValueError("Your dictionary is weird, values have mixed types")

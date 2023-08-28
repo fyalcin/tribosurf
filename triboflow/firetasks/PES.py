@@ -5,28 +5,27 @@ Created on Tue Oct 13 14:52:57 2020
 
 @author: wolloch
 """
-from operator import itemgetter
-
 import numpy as np
 import pickle
 from atomate.utils.utils import env_chk
 from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
 from monty.json import jsanitize
-from pymatgen.core.structure import Structure
+from operator import itemgetter
 from pymatgen.core.interface import Interface
+from pymatgen.core.structure import Structure
 
-from triboflow.phys.new_high_symm import InterfaceSymmetryAnalyzer
-from triboflow.phys.new_potential_energy_surface import (
+from hitmen_utils.db_tools import VaspDB
+from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
+from hitmen_utils.workflows import dynamic_relax_swf
+from triboflow.phys.high_symmetry import InterfaceSymmetryAnalyzer
+from triboflow.phys.potential_energy_surface import (
     get_PESGenerator_from_db,
 )
 from triboflow.utils.structure_manipulation import (
     clean_up_site_properties,
     get_interface_distance,
 )
-from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
-from hitmen_utils.workflows import dynamic_relax_swf
-from hitmen_utils.db_tools import VaspDB
 
 
 @explicit_serialize
@@ -122,7 +121,6 @@ class FT_ComputePES(FiretaskBase):
                         "shear_strength": jsanitize(PG.shear_strength),
                     }
                 },
-                dolog=False,
             )
             for k, v in {
                 "all_energies": "extended_energies",
@@ -139,7 +137,6 @@ class FT_ComputePES(FiretaskBase):
                         collection="PBE.interface_data",
                         fltr={"name": name, "pressure": pressure},
                         new_values={"$set": {"PES." + k: data}},
-                        dolog=False,
                     )
                 except:
                     print(f"document {k} is too large to be put into DB.")
@@ -344,8 +341,8 @@ class FT_FindHighSymmPoints(FiretaskBase):
         hl_db = self.get("high_level", True)
 
         ISA = InterfaceSymmetryAnalyzer(interface)
-        hsp_dict = ISA.get_high_symmetry_points()
-        interfaces = ISA.get_interfaces()
+        hsp_dict = ISA.get_high_symmetry_info()
+        interfaces = ISA.get_all_high_symmetry_interfaces()
 
         db_high = VaspDB(db_file=db_file, high_level=hl_db)
         db_high.update_data(
@@ -438,12 +435,9 @@ class FT_StartPESCalcs(FiretaskBase):
 
         inputs = []
         for interface in interfaces:
-            group_name = interface.interface_properties[
-                "high_symmetry_info"
-                ]
-            [
+            group_name = interface.interface_properties["high_symmetry_info"][
                 "group_name"
-                ]
+            ]
             label = tag + "_" + group_name
             clean_struct = clean_up_site_properties(interface)
 

@@ -32,7 +32,6 @@ The module contains:
             - get_centered_slabs
             - get_interface
             - get_interface_distance
-            - get_all_high_symmetry_interfaces
 
     Functions:
     - get_consolidated_comp_params
@@ -56,7 +55,7 @@ from triboflow.utils.structure_manipulation import (
     recenter_aligned_slabs,
     clean_up_site_properties,
 )
-from triboflow.phys.new_high_symm import InterfaceSymmetryAnalyzer
+from triboflow.phys.high_symmetry import InterfaceSymmetryAnalyzer
 
 
 def get_consolidated_comp_params(mpid1, mpid2, bulk_coll, db_file, high_level):
@@ -684,98 +683,6 @@ class InterfaceMatcher:
 
         return self.interface
 
-<<<<<<< HEAD
-=======
-    def get_all_high_symmetry_interfaces(
-        self, distance_boost=0.05, bond_dist_delta=0.05
-    ):
-        """
-        Return a list of interfaces with high-symmetry lateral shifts.
-
-        To fit a PES to the interface, it is necessary to have a set of
-        interfaces with different lateral shifts. This method returns a list
-        of interfaces with different shifts. The shifts are determined by the
-        InterfaceSymmetryAnalyzer class.
-        At the same time the interface distance is increased until the
-        minimum bond distance is larger than the minimum bond distance of the
-        aligned slabs minus the bond_dist_delta parameter. This is to ensure
-        that the interface is not too close to the slabs, which would lead to
-        unphysical bond distances.
-
-        Parameters
-        ----------
-        distance_boost : float, optional
-            Boost the interface distance at each step by this amount.
-            The default is 0.05.
-        bond_dist_delta : float, optional
-            Minimum bond distance of the interface is set to the minimum bond
-            distance of the aligned slabs minus this value.
-            The default is 0.05.
-
-        Returns
-        -------
-        list
-            List of Interface objects.
-
-        """
-        initial_interface = self.get_interface()
-        # set interface distance extemely low initially, since we want to
-        # increase it until the minimum bond distance is equal to the
-        # minimum bond distance of the aligned slabs minus the bond_dist_delta
-        initial_interface.gap = 0.1
-        if not initial_interface:
-            return None
-
-        bonds_top = Shaper.get_all_bonds(
-            struct=self.aligned_top_slab,
-            r=min(self.aligned_top_slab.lattice.abc),
-        )
-        bonds_bot = Shaper.get_all_bonds(
-            struct=self.aligned_bot_slab,
-            r=min(self.aligned_bot_slab.lattice.abc),
-        )
-        bonds = bonds_top + bonds_bot
-        min_bond = min(bonds, key=lambda x: x[2])[2]
-
-        ISA = InterfaceSymmetryAnalyzer()
-        hsp_dict = ISA(interface=initial_interface)
-
-        interfaces = []
-        for group_name, shift in hsp_dict["unique_shifts"].items():
-            interface = initial_interface.copy()
-            interface.in_plane_offset = shift
-            interface_bonds = Shaper.get_all_bonds(
-                struct=interface, r=min(interface.lattice.abc)
-            )
-            min_interface_bond = min(interface_bonds, key=lambda x: x[2])[2]
-
-            while min_interface_bond <= min_bond - bond_dist_delta:
-                interface.gap = interface.gap + distance_boost
-                interface_bonds = Shaper.get_all_bonds(
-                    struct=interface, r=min(interface.lattice.abc)
-                )
-                min_interface_bond = min(interface_bonds, key=lambda x: x[2])[
-                    2
-                ]
-            interface.interface_properties = {
-                "area": self.aligned_top_slab.surface_area,
-                "strain": self.get_strain(),
-                "film_miller": self.top_miller,
-                "substrate_miller": self.bot_miller,
-                "strain_weights": {
-                    "film": self.top_weight,
-                    "substrate": self.bot_weight,
-                },
-                "high_symmetry_info": {
-                    "this_group": group_name,
-                    "this_shift": shift,
-                    "all_info": hsp_dict,
-                },
-            }
-            interfaces.append(interface)
-        return interfaces
-
->>>>>>> 71692b5e29a5e257449771a9654ec38b374f15b8
     def get_interface_distance(self):
         """
         Return the interface distance of the InterfaceMatcher class instance.

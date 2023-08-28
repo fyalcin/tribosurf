@@ -182,7 +182,7 @@ class FT_FitPPES(FiretaskBase):
 
         db_high.update_data(
             collection=functional + ".interface_data",
-            fltr={"name": name},
+            fltr={"name": name, "pressure": 0.0},
             new_values={
                 "$set": {
                     "PPES": {
