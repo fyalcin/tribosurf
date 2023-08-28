@@ -614,6 +614,8 @@ def calc_pes_swf(
             fltr={"name": interface_name, "pressure": pressure},
         )
         relaxed_structure = interface_dict["relaxed_structure"]
+        if relaxed_structure:
+            return None
     except KeyError:
         db_high.insert_data(
             collection=functional + ".interface_data",

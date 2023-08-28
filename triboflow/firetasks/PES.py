@@ -344,8 +344,9 @@ class FT_FindHighSymmPoints(FiretaskBase):
             db_file = env_chk(">>db_file<<", fw_spec)
         hl_db = self.get("high_level", True)
 
-        ISA = InterfaceSymmetryAnalyzer()
-        hsp_dict = ISA(interface)
+        ISA = InterfaceSymmetryAnalyzer(interface)
+        hsp_dict = ISA.get_high_symmetry_points()
+        interfaces = ISA.get_interfaces()
 
         db_high = VaspDB(db_file=db_file, high_level=hl_db)
         db_high.update_data(
@@ -368,7 +369,7 @@ class FT_FindHighSymmPoints(FiretaskBase):
             },
             upsert=True,
         )
-        fw_spec["lateral_shifts"] = hsp_dict["unique_shifts"]
+        fw_spec["high_symm_interfaces"] = interfaces
 
         return FWAction(update_spec=fw_spec)
 
@@ -382,8 +383,6 @@ class FT_StartPESCalcs(FiretaskBase):
     heterogeneous_wf
     Parameters
     ----------
-    interface : pymatgen.core.interface.Interface
-        Interface object for which the PES is to be constructed
     interface_name : str
         Name of the interface in the high-level database.
     comp_parameters : dict
@@ -410,7 +409,6 @@ class FT_StartPESCalcs(FiretaskBase):
     """
 
     required_params = [
-        "interface",
         "interface_name",
         "comp_parameters",
         "tag",
@@ -423,7 +421,6 @@ class FT_StartPESCalcs(FiretaskBase):
     ]
 
     def run_task(self, fw_spec):
-        interface = self.get("interface")
         interface_name = self.get("interface_name")
         comp_params = self.get("comp_parameters")
         tag = self.get("tag")
@@ -433,17 +430,22 @@ class FT_StartPESCalcs(FiretaskBase):
         prerelax_calculator = self.get("prerelax_calculator", "m3gnet")
         prerelax_kwargs = self.get("prerelax_kwargs", {})
 
-        lateral_shifts = fw_spec.get("lateral_shifts")
-        if not lateral_shifts:
+        interfaces = fw_spec.get("high_symm_interfaces")
+        if not interfaces:
             raise SystemExit(
-                "Lateral shifts not found in the fw_spec./n"
+                "High symmetry interface list not found in the fw_spec./n"
                 "Please check your Firework for errors!"
             )
 
         inputs = []
-        for name, shift in lateral_shifts.items():
-            label = tag + "_" + name
-            interface.in_plane_offset = shift
+        for interface in interfaces:
+            group_name = interface.interface_properties[
+                "high_symmetry_info"
+                ]
+            [
+                "group_name"
+                ]
+            label = tag + "_" + group_name
             clean_struct = clean_up_site_properties(interface)
 
             vis = get_custom_vasp_relax_settings(
