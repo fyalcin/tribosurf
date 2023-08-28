@@ -6,12 +6,9 @@ Created on Thu Jul 16 13:01:38 2020
 @author: mwo
 """
 
-import numpy as np
 from pymatgen import MPRester
-from pymatgen.io.vasp.inputs import Poscar
-from pymatgen.core.operations import SymmOp
-from pymatgen.symmetry.analyzer import SpacegroupAnalyzer as sga
 from pymatgen.analysis.structure_matcher import *
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer as sga
 
 NiO_struct = MPRester().get_structure_by_material_id("mp-19009")
 Fe_struct = MPRester().get_structure_by_material_id("mp-13")

@@ -11,17 +11,17 @@ Test the generation of the computational parameters to be used by VASP.
 """
 
 __author__ = "Gabriele Losi"
-__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
+__copyright__ = (
+    "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
+)
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "7th April, 2021"
-
 
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import SlabGenerator
 from triboflow.utils.tests.vasp_tools_debug import (
     get_custom_vasp_relax_settings,
 )
-
 
 bulk = Structure.from_file("../../workflows/tests/POSCAR")
 
@@ -48,7 +48,5 @@ s = s[0]
 
 comp_parameters = {}
 
-vis_1 = get_custom_vasp_relax_settings(
-    bulk, comp_parameters, "bulk_shape_relax"
-)
+vis_1 = get_custom_vasp_relax_settings(bulk, comp_parameters, "bulk_shape_relax")
 vis_2 = get_custom_vasp_relax_settings(s, comp_parameters, "slab_shape_relax")

@@ -6,12 +6,10 @@ Created on Fri Jun 19 16:15:02 2020
 @author: mwo
 """
 from fireworks import LaunchPad
-from fireworks.core.rocket_launcher import rapidfire
+
 from triboflow.workflows.subworkflows import calc_ppes_swf
 
-
 db_file = "/home/mwo/FireWorks/config/db.json"
-
 
 WF = calc_ppes_swf(
     interface_name="C001_Ni111_mp-23_mp-48",
@@ -20,7 +18,6 @@ WF = calc_ppes_swf(
     out_name="test_PPES",
     structure_name="unrelaxed_structure",
 )
-
 
 lpad = LaunchPad.auto_load()
 lpad.add_wf(WF)

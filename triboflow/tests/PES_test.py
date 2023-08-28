@@ -7,18 +7,16 @@ Created on Mon Dec 21 14:53:59 2020
 """
 
 from fireworks import LaunchPad
-from fireworks.core.rocket_launcher import rapidfire
-from triboflow.workflows.subworkflows import calc_pes_swf
-from triboflow.utils.structure_manipulation import slab_from_structure
-from triboflow.utils.mp_connection import MPConnection
+
 from triboflow.phys.interface_matcher import InterfaceMatcher
+from triboflow.utils.mp_connection import MPConnection
+from triboflow.utils.structure_manipulation import slab_from_structure
+from triboflow.workflows.subworkflows import calc_pes_swf
 
 functional = "PBE"
 
 mp_connect = MPConnection()
-struct, mpid = mp_connect.get_low_energy_structure(
-    chem_formula="C", mp_id="mp-1040425"
-)
+struct, mpid = mp_connect.get_low_energy_structure(chem_formula="C", mp_id="mp-1040425")
 slab = slab_from_structure([0, 0, 1], struct)
 
 IM = InterfaceMatcher(slab, slab, interface_distance=3.4)

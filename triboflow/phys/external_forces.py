@@ -1,8 +1,7 @@
 import numpy as np
-
-from typing import Union
-from pymatgen.core.surface import Slab
 from pymatgen.core.interface import Interface
+from pymatgen.core.surface import Slab
+from typing import Union
 
 from hitmen_utils.shaper import Shaper
 

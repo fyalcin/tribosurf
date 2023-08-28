@@ -7,12 +7,11 @@ Created on Wed Sep 22 11:17:06 2021
 """
 
 from fireworks import LaunchPad
-
 from pymatgen.core.structure import Structure
-from hitmen_utils.workflows import dynamic_relax_swf
+
 from hitmen_utils.db_tools import VaspDB
 from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
-
+from hitmen_utils.workflows import dynamic_relax_swf
 
 db = VaspDB("auto", True)
 # mpids = ['mp-134', 'mp-13', 'mp-66']
@@ -24,9 +23,7 @@ for mpid in mpids:
     comp_params = mat_dict["comp_parameters"]
     comp_params["functional"] = "SCAN"
     # comp_params['use_vdw'] = True
-    vis = get_custom_vasp_relax_settings(
-        struct, comp_params, "bulk_full_relax"
-    )
+    vis = get_custom_vasp_relax_settings(struct, comp_params, "bulk_full_relax")
     input_list.append(
         [struct, vis, f"{struct.composition.reduced_formula}_test_relax_SCAN"]
     )

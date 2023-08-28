@@ -11,9 +11,8 @@ Test the slab generations.
 
 from pymatgen.core.structure import Structure
 
-from triboflow.utils.mp_connection import MPConnection
 from triboflow.phys.solid_state import generate_slabs
-
+from triboflow.utils.mp_connection import MPConnection
 
 thickness = [0, 2, 3, 4, 5, 6, 7, 8]
 miller = [1, 1, 1]

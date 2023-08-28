@@ -4,30 +4,23 @@ Created on Wed Jun 17 15:47:39 2020
 @author: mwo
 """
 
-from uuid import uuid4
-
 import numpy as np
 from atomate.vasp.fireworks import StaticFW
 from atomate.vasp.powerups import add_modify_incar
 from fireworks import Workflow, Firework
+from uuid import uuid4
 
+from hitmen_utils.db_tools import VaspDB
 from hitmen_utils.vasp_tools import (
     get_emin_and_emax,
     get_custom_vasp_static_settings,
 )
-from hitmen_utils.db_tools import VaspDB
 from triboflow.firetasks.PPES import FT_DoPPESCalcs, FT_FitPPES
 from triboflow.firetasks.adhesion import FT_CalcAdhesion
 from triboflow.firetasks.charge_density_analysis import (
     FT_MakeChargeDensityDiff,
 )
 from triboflow.firetasks.convergence import FT_Convo
-from triboflow.firetasks.structure_manipulation import (
-    FT_MakeSlabInDB,
-    FT_StartSlabRelax,
-    FT_GetRelaxedSlab,
-)
-from triboflow.firetasks.utils import FT_UpdateCompParams
 from triboflow.fireworks.common import run_pes_calc_fw, make_pes_fw
 from triboflow.utils.mp_connection import MPConnection
 
@@ -306,9 +299,7 @@ def adhesion_energy_swf(
         interface, comp_parameters, "slab_from_scratch"
     )
 
-    FW_top = StaticFW(
-        structure=top_slab, vasp_input_set=vis_top, name=tag + "top"
-    )
+    FW_top = StaticFW(structure=top_slab, vasp_input_set=vis_top, name=tag + "top")
     FW_bot = StaticFW(
         structure=bottom_slab, vasp_input_set=vis_bot, name=tag + "bottom"
     )
@@ -744,9 +735,7 @@ def converge_swf(
             '"encut".\nYou have passed {}'.format(conv_type)
         )
     if conv_type == "encut":
-        name = (
-            "Encut Convergence SWF of " + structure.composition.reduced_formula
-        )
+        name = "Encut Convergence SWF of " + structure.composition.reduced_formula
         if not encut_start:
             # Get the largest EMIN value of the potcar and round up to the
             # next whole 25.
@@ -757,10 +746,7 @@ def converge_swf(
             enmax = encut_dict["ENMAX"]
             encut_start = int(25 * np.ceil(enmax / 25))
     elif conv_type == "kpoints":
-        name = (
-            "Kpoint Convergence SWF of "
-            + structure.composition.reduced_formula
-        )
+        name = "Kpoint Convergence SWF of " + structure.composition.reduced_formula
     else:
         raise ValueError(
             f'"type" input must be either "kpoints" or'

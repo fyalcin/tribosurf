@@ -13,10 +13,6 @@ __copyright__ = "Prof. M.C. Righi, University of Bologna"
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "February 2nd, 2021"
 
-
-import os
-from pathlib import Path, PurePosixPath
-
 from triboflow.core.logging import LoggingBase
 
 configurations = LoggingBase.get_config()

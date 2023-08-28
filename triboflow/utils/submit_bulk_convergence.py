@@ -8,12 +8,13 @@ Created on Mon Oct  4 16:12:32 2021
 
 from fireworks import LaunchPad
 from fireworks import Workflow, Firework
-from triboflow.firetasks.structure_manipulation import FT_StartBulkPreRelax
-from triboflow.utils.mp_connection import material_from_mp
+
 from triboflow.firetasks.start_swfs import (
     FT_StartBulkConvoSWF,
 )
+from triboflow.firetasks.structure_manipulation import FT_StartBulkPreRelax
 from triboflow.utils.homoatomic_materials import load_homoatomic_materials
+from triboflow.utils.mp_connection import material_from_mp
 
 computational_params = {
     "functional": "PBE",
@@ -64,9 +65,7 @@ def get_bulk_convergence_wf(material, comp_params):
     #     ConvergeKpoints: [CalcDielectric],
     # }
 
-    WF_Name = (
-        "ConvergeBulk " + material["formula"] + " " + mp_id + " " + functional
-    )
+    WF_Name = "ConvergeBulk " + material["formula"] + " " + mp_id + " " + functional
 
     WF = Workflow(
         WF,
@@ -96,7 +95,5 @@ if __name__ == "__main__":
 
     workflow_list = []
     for mat in materials_list:
-        workflow_list.append(
-            get_bulk_convergence_wf(mat, computational_params)
-        )
+        workflow_list.append(get_bulk_convergence_wf(mat, computational_params))
     submit_multiple_wfs(workflow_list)

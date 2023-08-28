@@ -11,20 +11,17 @@ Test the worflow to calculate the optimal slab thickness by surface energy.
 """
 
 __author__ = "Gabriele Losi"
-__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
+__copyright__ = (
+    "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
+)
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "April 6th, 2021"
 
-
-from pymatgen.core.structure import Structure
 from fireworks import LaunchPad
 from fireworks.core.rocket_launcher import rapidfire
-from fireworks import Workflow, Firework
+from triboflow.workflows.slabs_wfs import SlabWF
 
 from triboflow.utils.mp_connection import MPConnection
-from triboflow.workflows.slabs_wfs import SlabWF
-from triboflow.firetasks.run_slabs_wfs import FT_SlabOptThick
-
 
 lpad = LaunchPad.auto_load()
 
@@ -34,9 +31,7 @@ functional = "PBE"
 miller = [0, 0, 1]
 mid = "mp-110"
 mp_conn = MPConnection()
-structure, mid = mp_conn.get_low_energy_structure(
-    chem_formula="formula", mp_id=mid
-)
+structure, mid = mp_conn.get_low_energy_structure(chem_formula="formula", mp_id=mid)
 
 # Get the bulk from a local simple Poscar
 # structure = Structure.from_file('POSCAR')

@@ -10,7 +10,6 @@ from triboflow.firetasks.adhesion import (
     FT_RelaxMatchedSlabs,
     FT_RetrieveMatchedSlabs,
 )
-from triboflow.utils.mp_connection import material_from_mp
 from triboflow.firetasks.run_slabs_wfs import RunSurfenSwfGetEnergies
 from triboflow.firetasks.start_swfs import (
     FT_StartAdhesionSWF,
@@ -24,6 +23,7 @@ from triboflow.firetasks.structure_manipulation import (
     FT_MakeHeteroStructure,
     FT_StartBulkPreRelax,
 )
+from triboflow.utils.mp_connection import material_from_mp
 
 
 def heterogeneous_wf_with_surfgen(inputs):
@@ -304,9 +304,7 @@ def heterogeneous_wf_with_surfgen(inputs):
 
     wf_name = (
         "TriboFlow_"
-        + "-".join(
-            sorted([f"{formula_1} ({mpid_1})", f"{formula_2} ({mpid_2})"])
-        )
+        + "-".join(sorted([f"{formula_1} ({mpid_1})", f"{formula_2} ({mpid_2})"]))
         + "_"
         + f"{functional}@{pressure}GPa"
     )

@@ -3,34 +3,19 @@
 
 # TODO - change copyright
 """
-Created on Mon Feb 22 10:16:55 2021
 
-Collection of Firetasks to start workflows concerning slabs structure.
-They can be used to run existing workflows as subworkflows within other ones.
+Collection of Firetasks to start workflows concerning surfaces.
 
 The module contains the following Firetasks:
 
-    - FT_SlabOptThick 
-    Starts a subworkflow to perform a convergence process to find the optimal 
-    thickness of a slab structure. First step to be called within a workflow.
-
-    - FT_StartThickConvo
-    Start a subworkflow to select a desired convergence criterion to calculate
-    the slab thickness. Implemented criteria: surface energy.
-
-    - FT_EndThickConvo
-    Check the results and call recursively the slab thickness workflow it the
-    convergence has not been achieved yet.
-
-    Author: Gabriele Losi (glosi000)
-    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
+    - GetSlabSurfenListFromUids: query the surface energies with the list of uids provided
+    - RunSurfenSwfGetEnergies: run the surface energy workflow and get the surface energies
 
 """
 
-__author__ = "Gabriele Losi"
-__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
-__contact__ = "clelia.righi@unibo.it"
-__date__ = "February 22nd, 2021"
+__author__ = "Firat Yalcin"
+__copyright__ = ""
+__contact__ = "firat.yalcin@univie.ac.at"
 
 from fireworks import (
     explicit_serialize,
@@ -69,9 +54,7 @@ class GetSlabSurfenListFromUids(FiretaskBase):
         mpid, uids = prev_swf_info["mpid"], prev_swf_info["uids"]
         nav = VaspDB(db_file=inp["db_file"], high_level=inp["high_level"])
         results = list(
-            nav.find_many_data(
-                inp["surfen_coll"], {"uid": {"$in": uids}}, {"calcs": 0}
-            )
+            nav.find_many_data(inp["surfen_coll"], {"uid": {"$in": uids}}, {"calcs": 0})
         )
         # for result in results:
         #     slab = Slab.from_dict(result["structure"])
@@ -160,17 +143,19 @@ class RunSurfenSwfGetEnergies(FiretaskBase):
         # create a name_suffix variable and use miller or max_index from sg_params, whichever is available
         name_suffix = ""
         if sg_params.get("miller", False):
-            name_suffix = f"Miller {sg_params['miller']} - Material Index {inp['material_index']}"
+            name_suffix = (
+                f"Miller {sg_params['miller']} - Material Index {inp['material_index']}"
+            )
         elif sg_params.get("max_index", False):
-            name_suffix = f"MMI {sg_params['max_index']} - Material Index {inp['material_index']}"
+            name_suffix = (
+                f"MMI {sg_params['max_index']} - Material Index {inp['material_index']}"
+            )
         # check if comp_params_loc is given
         if inp["comp_params_from_db"]:
             nav = VaspDB(db_file=db_file, high_level=high_level)
             bulk_coll = inp["bulk_coll"]
 
-            bulk_data = nav.find_data(
-                collection=bulk_coll, fltr={"mpid": mpid}
-            )
+            bulk_data = nav.find_data(collection=bulk_coll, fltr={"mpid": mpid})
             if bulk_data:
                 comp_params_db = bulk_data["comp_parameters"]
             else:

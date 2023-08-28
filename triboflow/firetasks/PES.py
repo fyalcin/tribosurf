@@ -20,7 +20,7 @@ from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
 from hitmen_utils.workflows import dynamic_relax_swf
 from triboflow.phys.high_symmetry import InterfaceSymmetryAnalyzer
 from triboflow.phys.potential_energy_surface import (
-    get_PESGenerator_from_db,
+    get_pes_generator_from_db,
 )
 from triboflow.utils.structure_manipulation import (
     clean_up_site_properties,
@@ -65,14 +65,13 @@ class FT_ComputePES(FiretaskBase):
         name = self.get("interface_name")
         functional = self.get("functional")
         pressure = self.get("external_pressure")
-        file_output = self.get("file_output")
 
         db_file = self.get("db_file")
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
         hl_db = self.get("high_level", True)
 
-        PG = get_PESGenerator_from_db(
+        PG = get_pes_generator_from_db(
             interface_name=name,
             pressure=pressure,
             db_file=db_file,
@@ -198,9 +197,7 @@ class FT_RetrievePESEnergies(FiretaskBase):
             collection=f"{functional}.interface_data",
             fltr={"name": name, "pressure": pressure},
         )
-        lateral_shifts = interface_dict["PES"]["high_symmetry_points"][
-            "unique_shifts"
-        ]
+        lateral_shifts = interface_dict["PES"]["high_symmetry_points"]["unique_shifts"]
         group_assignments = interface_dict["PES"]["high_symmetry_points"][
             "group_assignments"
         ]
@@ -208,9 +205,7 @@ class FT_RetrievePESEnergies(FiretaskBase):
         db = VaspDB(db_file=db_file)
         ref_struct = Interface.from_dict(interface_dict["unrelaxed_structure"])
         area = np.linalg.norm(
-            np.cross(
-                ref_struct.lattice.matrix[0], ref_struct.lattice.matrix[1]
-            )
+            np.cross(ref_struct.lattice.matrix[0], ref_struct.lattice.matrix[1])
         )
 
         energy_list = []
@@ -218,9 +213,7 @@ class FT_RetrievePESEnergies(FiretaskBase):
         calc_output = {}
         for s in lateral_shifts.keys():
             label = tag + "_" + s
-            vasp_calc = db.find_data(
-                collection="tasks", fltr={"task_label": label}
-            )
+            vasp_calc = db.find_data(collection="tasks", fltr={"task_label": label})
             struct = vasp_calc["output"]["structure"]
             energy = vasp_calc["output"]["energy"]
             energy *= 16.02176565 / area
@@ -351,9 +344,7 @@ class FT_FindHighSymmPoints(FiretaskBase):
             new_values={
                 "$set": {
                     "PES.high_symmetry_points": {
-                        "bottom_unique": hsp_dict[
-                            "bottom_high_symm_points_unique"
-                        ],
+                        "bottom_unique": hsp_dict["bottom_high_symm_points_unique"],
                         "bottom_all": hsp_dict["bottom_high_symm_points_all"],
                         "top_unique": hsp_dict["top_high_symm_points_unique"],
                         "top_all": hsp_dict["top_high_symm_points_all"],

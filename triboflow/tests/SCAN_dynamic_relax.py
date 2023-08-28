@@ -6,13 +6,12 @@ Created on Fri Jun 19 16:15:02 2020
 @author: mwo
 """
 
-from pymatgen.core.structure import Structure
 from fireworks import LaunchPad
-from fireworks.core.rocket_launcher import rapidfire
+from pymatgen.core.structure import Structure
 
-from hitmen_utils.workflows import dynamic_relax_swf
 from hitmen_utils.db_tools import VaspDB
 from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
+from hitmen_utils.workflows import dynamic_relax_swf
 
 db_file = "/home/mwo/FireWorks/config/db.json"
 high_level = "triboflow"

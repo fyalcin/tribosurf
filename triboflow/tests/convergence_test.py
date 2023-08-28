@@ -6,9 +6,9 @@ Created on Fri Jun 19 16:15:02 2020
 @author: mwo
 """
 
-from pymatgen.core.structure import Structure
 from fireworks import LaunchPad
-from fireworks.core.rocket_launcher import rapidfire
+from pymatgen.core.structure import Structure
+
 from triboflow.workflows.subworkflows import converge_swf
 
 prim_bulk_dict = {
@@ -42,7 +42,6 @@ prim_bulk_dict = {
 
 struct = Structure.from_dict(prim_bulk_dict)
 
-
 # WF = converge_swf(structure=struct,
 #                   conv_type='kpoints',
 #                   flag='NewkspacingConvoTest_SCAN',
@@ -66,7 +65,6 @@ WF = converge_swf(
         "k_dens": 4.6,
     },
 )
-
 
 lpad = LaunchPad.auto_load()
 lpad.add_wf(WF)

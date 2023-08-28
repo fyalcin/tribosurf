@@ -6,13 +6,7 @@ Created on Fri Jun 19 16:15:02 2020
 @author: mwo
 """
 from datetime import datetime
-
-from fireworks import LaunchPad, Workflow, Firework
-
-
 from fireworks import LaunchPad
-from fireworks.core.fworker import FWorker
-from fireworks.core.rocket_launcher import rapidfire
 
 from triboflow.workflows.main import heterogeneous_wf_with_surfgen
 

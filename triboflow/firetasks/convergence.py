@@ -3,25 +3,23 @@
 Created on Wed Jun 17 15:59:59 2020
 @author: mwo
 """
-from datetime import datetime
-from pprint import pprint, pformat
-
 import numpy as np
 import pymongo
-
 from atomate.utils.utils import env_chk
 from atomate.vasp.config import VASP_CMD, DB_FILE
 from atomate.vasp.powerups import add_modify_incar
 from atomate.vasp.workflows.base.bulk_modulus import get_wf_bulk_modulus
+from datetime import datetime
 from fireworks import FWAction, FiretaskBase, Firework, Workflow, FileWriteTask
 from fireworks.utilities.fw_utilities import explicit_serialize
+from pprint import pprint, pformat
 
+from hitmen_utils.db_tools import VaspDB
 from hitmen_utils.kpoints import MeshFromDensity
 from hitmen_utils.vasp_tools import (
     get_custom_vasp_static_settings,
     get_emin_and_emax,
 )
-from hitmen_utils.db_tools import VaspDB
 from triboflow.utils.file_manipulation import copy_output_files
 
 
@@ -61,9 +59,9 @@ class FT_UpdateBMLists(FiretaskBase):
             db_file = env_chk(">>db_file<<", fw_spec)
 
         db = VaspDB(db_file=db_file)
-        results = db.vasp_calc_db.db.eos.find(
-            {"formula_pretty": formula}
-        ).sort("created_at", pymongo.DESCENDING)
+        results = db.vasp_calc_db.db.eos.find({"formula_pretty": formula}).sort(
+            "created_at", pymongo.DESCENDING
+        )
         BM = results["bulk_modulus"]
         V0 = results["results"]["v0"]
 
@@ -304,9 +302,9 @@ class FT_Convo(FiretaskBase):
             BM_tol = BM_list[-1] * BM_tolerance
             V0_tol = V0_list[-1] * V0_tolerance
 
-            if is_list_converged(
-                BM_list, BM_tol, n_converge
-            ) and is_list_converged(V0_list, V0_tol, n_converge):
+            if is_list_converged(BM_list, BM_tol, n_converge) and is_list_converged(
+                V0_list, V0_tol, n_converge
+            ):
                 # Handle the last iteration
                 final_BM = BM_list[-n_converge]
                 final_V0 = V0_list[-n_converge]
@@ -445,9 +443,7 @@ class FT_Convo(FiretaskBase):
                         name="Copy Convergence SWF results",
                     )
 
-                    WF = Workflow.from_Firework(
-                        FW, name="Copy Convergence SWF results"
-                    )
+                    WF = Workflow.from_Firework(FW, name="Copy Convergence SWF results")
 
                     return FWAction(update_spec=fw_spec, detours=WF)
                 else:
@@ -466,9 +462,7 @@ class FT_Convo(FiretaskBase):
             else:
                 k_dens = convo_list[-1] + k_dens_incr
                 # Ensure that the new density leads to a different mesh.
-                KPTS = MeshFromDensity(
-                    struct, k_dens, compare_density=convo_list[-1]
-                )
+                KPTS = MeshFromDensity(struct, k_dens, compare_density=convo_list[-1])
                 while KPTS.are_meshes_the_same():
                     k_dens = k_dens + k_dens_incr
                     KPTS = MeshFromDensity(

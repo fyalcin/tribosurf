@@ -1,16 +1,11 @@
-import warnings
-
 import numpy as np
+import warnings
 from pymatgen.core.sites import PeriodicSite
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import SlabGenerator, Slab, center_slab
 from pymatgen.ext.matproj import MPRester
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
-from pymatgen.transformations.standard_transformations import (
-    DeformStructureTransformation,
-)
 
-from hitmen_utils.shaper import Shaper
 from hitmen_utils.db_tools import VaspDB
 from triboflow.utils.mp_connection import MPConnection
 
@@ -80,13 +75,11 @@ def get_conv_bulk_from_mpid(mpid, coll, db_file="auto", high_level=True):
         )
         bulk_struct = bulk_dict.get("structure_fromMP")
         if bulk_struct is None:
-            raise ValueError(
-                f"Bulk structure not found in the bulk entry for {mpid}"
-            )
+            raise ValueError(f"Bulk structure not found in the bulk entry for {mpid}")
     bulk_struct = Structure.from_dict(bulk_struct)
-    bulk_conv = SpacegroupAnalyzer(
-        bulk_struct
-    ).get_conventional_standard_structure(keep_site_properties=True)
+    bulk_conv = SpacegroupAnalyzer(bulk_struct).get_conventional_standard_structure(
+        keep_site_properties=True
+    )
     return bulk_conv
 
 
@@ -123,9 +116,7 @@ def transfer_average_magmoms(magnetic_struct, struct_without_magmoms):
         print("No magnetic moments to transfer. Doing nothing...")
         return new_struct
 
-    if not sorted(mag_struct.types_of_species) == sorted(
-        new_struct.types_of_species
-    ):
+    if not sorted(mag_struct.types_of_species) == sorted(new_struct.types_of_species):
         warnings.warn(
             "\n##################################################\n"
             "You are trying to transfer magnetig moments between\n"
@@ -142,9 +133,7 @@ def transfer_average_magmoms(magnetic_struct, struct_without_magmoms):
         magmom_dict[s] = []
         for i, el in enumerate(mag_struct.species):
             if s == el:
-                magmom_dict[s].append(
-                    mag_struct.site_properties.get("magmom")[i]
-                )
+                magmom_dict[s].append(mag_struct.site_properties.get("magmom")[i])
         magmom_dict[s] = np.mean(magmom_dict[s])
 
     new_magmoms = []
@@ -346,14 +335,10 @@ def interface_name(
     """
 
     mp_connection = MPConnection()
-    f1 = mp_connection.get_property_from_mp(
-        mpid=mpid1, properties=["formula_pretty"]
-    )
+    f1 = mp_connection.get_property_from_mp(mpid=mpid1, properties=["formula_pretty"])
     f1 = f1["formula_pretty"]
 
-    f2 = mp_connection.get_property_from_mp(
-        mpid=mpid2, properties=["formula_pretty"]
-    )
+    f2 = mp_connection.get_property_from_mp(mpid=mpid2, properties=["formula_pretty"])
     f2 = f2["formula_pretty"]
 
     if type(miller1) is list:
@@ -413,9 +398,9 @@ def make_pymatgen_slab(
 
     """
 
-    bulk_conv = SpacegroupAnalyzer(
-        bulk_struct
-    ).get_conventional_standard_structure(keep_site_properties=True)
+    bulk_conv = SpacegroupAnalyzer(bulk_struct).get_conventional_standard_structure(
+        keep_site_properties=True
+    )
     bulk_conv = transfer_average_magmoms(bulk_struct, bulk_conv)
 
     SG = SlabGenerator(
@@ -456,9 +441,7 @@ def flip_slab(slab):
         The flipped slab
 
     """
-    flip_matrix = np.array(
-        [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, -1.0]]
-    )
+    flip_matrix = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, -1.0]])
     flipped_coords = np.dot(slab.cart_coords, flip_matrix)
 
     try:

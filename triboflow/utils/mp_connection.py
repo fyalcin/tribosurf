@@ -3,9 +3,9 @@
 # that module is not compatible with the new API.
 
 import os
-from typing import Union
 from mp_api.client import MPRester
 from pymatgen.core import Structure
+from typing import Union
 
 
 class MPConnection:
@@ -119,9 +119,9 @@ class MPConnection:
                     "available in the SummaryRester of the Materials "
                     "Project database."
                 )
-            output_dict = mpr.summary.search(
-                material_ids=[mpid], fields=properties
-            )[0].dict()
+            output_dict = mpr.summary.search(material_ids=[mpid], fields=properties)[
+                0
+            ].dict()
 
             output_dict.pop("fields_not_requested")
         return output_dict

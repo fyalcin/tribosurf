@@ -3,7 +3,6 @@ from fireworks import explicit_serialize, FiretaskBase, FWAction
 from pymatgen.core import Structure
 from pymatgen.core.interface import Interface
 from pymatgen.core.surface import Slab
-from uuid import uuid4
 
 from hitmen_utils.db_tools import VaspDB
 from triboflow.workflows.subworkflows import (
@@ -11,8 +10,6 @@ from triboflow.workflows.subworkflows import (
     calc_pes_swf,
     calc_ppes_swf,
     converge_swf,
-    dielectric_constant_swf,
-    make_and_relax_slab_swf,
     charge_analysis_swf,
 )
 
@@ -71,9 +68,7 @@ class FT_StartChargeAnalysisSWF(FiretaskBase):
             fltr={"name": name, "pressure": pressure},
         )
 
-        redistribution_was_calculated = interface_dict.get(
-            "charge_density_redist"
-        )
+        redistribution_was_calculated = interface_dict.get("charge_density_redist")
         comp_params = interface_dict.get("comp_parameters", {})
 
         if not redistribution_was_calculated:
@@ -154,12 +149,8 @@ class FT_StartAdhesionSWF(FiretaskBase):
 
         if not adhesion_was_calculated:
             top_slab = Slab.from_dict(interface_dict["top_aligned_relaxed"])
-            bottom_slab = Slab.from_dict(
-                interface_dict["bottom_aligned_relaxed"]
-            )
-            interface = Structure.from_dict(
-                interface_dict["relaxed_structure@min"]
-            )
+            bottom_slab = Slab.from_dict(interface_dict["bottom_aligned_relaxed"])
+            interface = Structure.from_dict(interface_dict["relaxed_structure@min"])
 
             swf = adhesion_energy_swf(
                 top_slab,

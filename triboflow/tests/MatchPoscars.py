@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-import pprint
 import argparse
+import pprint
 from pymatgen.io.vasp.inputs import Poscar
+
 from triboflow.phys.interface_matcher import InterfaceMatcher
 from triboflow.utils.structure_manipulation import slab_from_file
 
@@ -39,8 +40,7 @@ def match_the_interface(slab_1, slab_2, inter_params={}):
         return return_dict
     else:
         print(
-            "No match of the given slabs could be found with the "
-            "given parameters:"
+            "No match of the given slabs could be found with the " "given parameters:"
         )
         pprint.pprint(inter_params)
         print("")

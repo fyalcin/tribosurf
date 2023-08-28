@@ -6,23 +6,19 @@ Created on Tue Mar 23 15:36:52 2021
 @author: wolloch
 """
 import numpy as np
-from uuid import uuid4
-
-from pymatgen.core.structure import Structure
-from pymatgen.core.surface import Slab
-
+from atomate.utils.utils import env_chk
 from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
+from pymatgen.core.structure import Structure
+from pymatgen.core.surface import Slab
+from uuid import uuid4
 
-from atomate.utils.utils import env_chk
-
+from hitmen_utils.db_tools import VaspDB
+from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
+from hitmen_utils.workflows import dynamic_relax_swf
 from triboflow.utils.structure_manipulation import (
-    interface_name,
     slab_from_structure,
 )
-from hitmen_utils.workflows import dynamic_relax_swf
-from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
-from hitmen_utils.db_tools import VaspDB
 
 
 @explicit_serialize
@@ -89,13 +85,9 @@ class FT_RetrieveMatchedSlabs(FiretaskBase):
             for i in input_list:
                 label = i[-1]
                 miller = i[0].miller_index
-                calc = db.find_data(
-                    collection="tasks", fltr={"task_label": label}
-                )
+                calc = db.find_data(collection="tasks", fltr={"task_label": label})
                 out_struct = calc["output"]["structure"]
-                slab = slab_from_structure(
-                    miller, Structure.from_dict(out_struct)
-                )
+                slab = slab_from_structure(miller, Structure.from_dict(out_struct))
                 if label.startswith("top"):
                     out_name = top_out_name
                 else:
@@ -299,19 +291,13 @@ class FT_CalcAdhesion(FiretaskBase):
 
         db = VaspDB(db_file=db_file)
 
-        top_calc = db.find_data(
-            collection="tasks", fltr={"task_label": top_label}
-        )
+        top_calc = db.find_data(collection="tasks", fltr={"task_label": top_label})
         top_energy = top_calc["output"]["energy"]
 
-        bot_calc = db.find_data(
-            collection="tasks", fltr={"task_label": bot_label}
-        )
+        bot_calc = db.find_data(collection="tasks", fltr={"task_label": bot_label})
         bot_energy = bot_calc["output"]["energy"]
 
-        inter_calc = db.find_data(
-            collection="tasks", fltr={"task_label": inter_label}
-        )
+        inter_calc = db.find_data(collection="tasks", fltr={"task_label": inter_label})
         inter_energy = inter_calc["output"]["energy"]
         struct = Structure.from_dict(inter_calc["output"]["structure"])
 

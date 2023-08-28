@@ -18,7 +18,7 @@ comp_params = {}
 override = True
 fake = False
 
-sg_params = {  #'miller': [(3, 1, 1)],
+sg_params = {  # 'miller': [(3, 1, 1)],
     "symmetrize": False,
     "slab_thick": 14,
     "vac_thick": 15,

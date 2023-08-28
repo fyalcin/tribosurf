@@ -7,17 +7,15 @@ Created on Thu Aug  4 16:22:56 2022
 """
 
 import numpy as np
-from scipy.integrate import romb, simpson
-
+from atomate.utils.utils import env_chk
+from atomate.vasp.fireworks.core import StaticFW
+from atomate.vasp.powerups import add_modify_incar
 from fireworks import Workflow, FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
+from scipy.integrate import romb, simpson
 
-from atomate.vasp.powerups import add_modify_incar
-from atomate.vasp.fireworks.core import StaticFW
-from atomate.utils.utils import env_chk
-
-from hitmen_utils.vasp_tools import get_custom_vasp_static_settings
 from hitmen_utils.db_tools import VaspDB
+from hitmen_utils.vasp_tools import get_custom_vasp_static_settings
 
 
 def plot_charge_profile(chgcar, axis=2, xmin=None, xmax=None):
@@ -61,11 +59,7 @@ def make_charge_differences(interface, chgcar_int, chgcar_bot, chgcar_top):
 
     profile = chgcar_diff.get_average_along_axis(2)
     profile_inter_region = np.asarray(
-        [
-            profile[i]
-            for i in np.arange(chgcar_diff.dim[2])
-            if zmin <= z[i] <= zmax
-        ]
+        [profile[i] for i in np.arange(chgcar_diff.dim[2]) if zmin <= z[i] <= zmax]
     )
 
     abs_profile = abs_chgcar_diff.get_average_along_axis(2)
@@ -85,16 +79,10 @@ def make_charge_differences(interface, chgcar_int, chgcar_bot, chgcar_top):
         rho_total_abs = simpson(y=abs_profile, dx=dz) / (zmax - zmin)
 
     try:
-        rho_inter_region = romb(y=abs(profile_inter_region), dx=dz) / (
-            zmax - zmin
-        )
-        rho_inter_region_abs = romb(y=abs_profile_inter_region, dx=dz) / (
-            zmax - zmin
-        )
+        rho_inter_region = romb(y=abs(profile_inter_region), dx=dz) / (zmax - zmin)
+        rho_inter_region_abs = romb(y=abs_profile_inter_region, dx=dz) / (zmax - zmin)
     except:
-        rho_inter_region = simpson(y=abs(profile_inter_region), dx=dz) / (
-            zmax - zmin
-        )
+        rho_inter_region = simpson(y=abs(profile_inter_region), dx=dz) / (zmax - zmin)
         rho_inter_region_abs = simpson(y=abs_profile_inter_region, dx=dz) / (
             zmax - zmin
         )
@@ -117,9 +105,7 @@ class FT_MakeChargeCalc(FiretaskBase):
         comp_params = self.get("comp_params")
         label = self.get("calc_name")
 
-        vis = get_custom_vasp_static_settings(
-            struct, comp_params, "slab_from_scratch"
-        )
+        vis = get_custom_vasp_static_settings(struct, comp_params, "slab_from_scratch")
 
         FW = StaticFW(
             structure=struct,

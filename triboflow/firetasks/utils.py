@@ -4,14 +4,10 @@ Created on Wed Jun 17 15:59:59 2020
 @author: mwo
 """
 
-from atomate.utils.utils import env_chk
 from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
-from pprint import pprint
 
 from hitmen_utils.db_tools import VaspDB
-from triboflow.utils.structure_manipulation import interface_name
-from triboflow.utils.utils import move_result
 
 
 @explicit_serialize
@@ -65,9 +61,7 @@ class FT_UpdateCompParams(FiretaskBase):
         # get values from spec:
         new_data = {"$set": {}}
         for param in new_params:
-            new_data["$set"][f"comp_parameters.{param}"] = fw_spec.get(
-                param, None
-            )
+            new_data["$set"][f"comp_parameters.{param}"] = fw_spec.get(param, None)
 
         if update_bulk:
             nav_high.update_data(

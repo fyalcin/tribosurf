@@ -5,8 +5,8 @@ Created on Fri Jun 19 16:15:02 2020
 
 @author: mwo
 """
-from fireworks import Workflow, LaunchPad
-from fireworks.core.rocket_launcher import rapidfire
+from fireworks import LaunchPad
+
 from triboflow.workflows.subworkflows import make_and_relax_slab_swf
 
 db_file = "/home/mwo/FireWorks/config/db.json"

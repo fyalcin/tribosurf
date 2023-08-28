@@ -9,7 +9,6 @@ from triboflow.firetasks.PES import (
     FT_RetrievePESEnergies,
     FT_ComputePES,
 )
-
 from triboflow.utils.file_manipulation import copy_output_files
 
 __author__ = "Michael Wolloch"

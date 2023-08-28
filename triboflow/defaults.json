@@ -1,174 +1,167 @@
-{   
-    "comp_params":{
-      "use_vdw":"NO_DEFAULT",
-      "BM_tolerance":0.01,
-      "functional":"PBE",
-      "use_spin":true,
-      "volume_tolerance":0.001,
-      "encut":520,
-      "k_dens":9.0,
-      "surfene_thr":0.01,
-      "vacuum":15,
-      "is_metal":null,
-      "epsilon":null
-   },
-   "interface_params":{
-      "max_area":"NO_DEFAULT",
-      "interface_distance":"auto",
-      "max_angle_tol":0.01,
-      "max_length_tol":0.03,
-      "max_area_ratio_tol":0.1,
-      "external_pressure": null
-   },
-   "material_params":{
-      "formula":"NO_DEFAULT",
-      "mpid":null,
-      "thick_min":4,
-      "thick_max":10,
-      "thick_incr":1
-   },
-   "bulk_params":{
-      "formula":"NO_DEFAULT",
-      "mpid":null
-   },
-   "SlabOptThick":{
-      "db_file":null,
-      "low_level":"auto",
-      "high_level":null,
-      "conv_kind":"surfene",
-      "relax_type":"slab_pos_relax",
-      "thick_min":4,
-      "thick_max":10,
-      "thick_incr":1,
-      "vacuum":15,
-      "in_unit_planes":true,
-      "ext_index":0,
-      "conv_thr":0.01,
-      "parallelization":"low",
-      "bulk_entry":"structure_equiVol",
-      "cluster_params":{
-      
-      },
-      "override":false,
-      "add_static":true
-   },
-   "StartThickConvo":{
-      "db_file":null,
-      "low_level":"auto",
-      "high_level":null,
-      "conv_kind":"surfene",
-      "relax_type":"slab_pos_relax",
-      "comp_params":{
-          
-      },
-      "thick_min":4,
-      "thick_max":12,
-      "thick_incr":2,
-      "vacuum":15,
-      "in_unit_planes":true,
-      "ext_index":0,
-      "parallelization":null,
-      "recursion":0,
-      "cluster_params":{
-         
-      },
-      "override":false,
-      "add_static":true
-   },
-   "EndThickConvo":{
-      "db_file":null,
-      "low_level":"auto",
-      "high_level":null,
-      "spec":{},
-      "functional":"PBE",
-      "conv_kind":"surfene",
-      "relax_type":"slab_pos_relax",
-      "comp_params":{
-         
-      },
-      "thick_min":4,
-      "thick_max":12,
-      "thick_incr":2,
-      "vacuum":15,
-      "in_unit_planes":true,
-      "ext_index":0,
-      "conv_thr":0.025,
-      "parallelization":null,
-      "cluster_params":{
-         
-      },
-      "recursion":0,
-      "override":false,
-      "add_static":true
-   },
-   "GenerateSlabs":{
-      "db_file":null,
-      "database":null,
-      "thickness":4,
-      "thick_bulk":4,
-      "vacuum":15,
-      "symmetrize":false,
-      "ext_index":0,
-      "in_unit_planes":true,
-      "entry":"unrelaxed_slab"
-   },
-   "RelaxStructure":{
-      "db_file":null,
-      "database":null,
-      "relax_type":"slab_pos_relax",
-      "comp_params":{
-         
-      },
-      "miller":null,
-      "check_key":null,
-      "struct_kind":"bulk",
-      "add_static": false,
-      "prerelax": true,
-      "prerelax_algo": "m3gnet",
-      "prerelax_kwargs": {}
-   },
-   "MoveTagResults":{
-      "db_file":null,
-      "database_from":"auto",
-      "database_to":null,
-      "miller":null,
-      "check_entry":null,
-      "entry_to":[
-         [
-            "calc_output"
-         ],
-         [
-            "calc_output",
-            "task_id"
-         ]
+{
+  "comp_params": {
+    "use_vdw": "NO_DEFAULT",
+    "BM_tolerance": 0.01,
+    "functional": "PBE",
+    "use_spin": true,
+    "volume_tolerance": 0.001,
+    "encut": 520,
+    "k_dens": 9.0,
+    "surfene_thr": 0.01,
+    "vacuum": 15,
+    "is_metal": null,
+    "epsilon": null
+  },
+  "interface_params": {
+    "max_area": "NO_DEFAULT",
+    "interface_distance": "auto",
+    "max_angle_tol": 0.01,
+    "max_length_tol": 0.03,
+    "max_area_ratio_tol": 0.1,
+    "external_pressure": null
+  },
+  "material_params": {
+    "formula": "NO_DEFAULT",
+    "mpid": null,
+    "thick_min": 4,
+    "thick_max": 10,
+    "thick_incr": 1
+  },
+  "bulk_params": {
+    "formula": "NO_DEFAULT",
+    "mpid": null
+  },
+  "SlabOptThick": {
+    "db_file": null,
+    "low_level": "auto",
+    "high_level": null,
+    "conv_kind": "surfene",
+    "relax_type": "slab_pos_relax",
+    "thick_min": 4,
+    "thick_max": 10,
+    "thick_incr": 1,
+    "vacuum": 15,
+    "in_unit_planes": true,
+    "ext_index": 0,
+    "conv_thr": 0.01,
+    "parallelization": "low",
+    "bulk_entry": "structure_equiVol",
+    "cluster_params": {
+    },
+    "override": false,
+    "add_static": true
+  },
+  "StartThickConvo": {
+    "db_file": null,
+    "low_level": "auto",
+    "high_level": null,
+    "conv_kind": "surfene",
+    "relax_type": "slab_pos_relax",
+    "comp_params": {
+    },
+    "thick_min": 4,
+    "thick_max": 12,
+    "thick_incr": 2,
+    "vacuum": 15,
+    "in_unit_planes": true,
+    "ext_index": 0,
+    "parallelization": null,
+    "recursion": 0,
+    "cluster_params": {
+    },
+    "override": false,
+    "add_static": true
+  },
+  "EndThickConvo": {
+    "db_file": null,
+    "low_level": "auto",
+    "high_level": null,
+    "spec": {},
+    "functional": "PBE",
+    "conv_kind": "surfene",
+    "relax_type": "slab_pos_relax",
+    "comp_params": {
+    },
+    "thick_min": 4,
+    "thick_max": 12,
+    "thick_incr": 2,
+    "vacuum": 15,
+    "in_unit_planes": true,
+    "ext_index": 0,
+    "conv_thr": 0.025,
+    "parallelization": null,
+    "cluster_params": {
+    },
+    "recursion": 0,
+    "override": false,
+    "add_static": true
+  },
+  "GenerateSlabs": {
+    "db_file": null,
+    "database": null,
+    "thickness": 4,
+    "thick_bulk": 4,
+    "vacuum": 15,
+    "symmetrize": false,
+    "ext_index": 0,
+    "in_unit_planes": true,
+    "entry": "unrelaxed_slab"
+  },
+  "RelaxStructure": {
+    "db_file": null,
+    "database": null,
+    "relax_type": "slab_pos_relax",
+    "comp_params": {
+    },
+    "miller": null,
+    "check_key": null,
+    "struct_kind": "bulk",
+    "add_static": false,
+    "prerelax": true,
+    "prerelax_algo": "m3gnet",
+    "prerelax_kwargs": {}
+  },
+  "MoveTagResults": {
+    "db_file": null,
+    "database_from": "auto",
+    "database_to": null,
+    "miller": null,
+    "check_entry": null,
+    "entry_to": [
+      [
+        "calc_output"
       ],
-      "entry_from":[
-         [
-            "output",
-            "structure"
-         ],
-         [
-            "_id"
-         ]
+      [
+        "calc_output",
+        "task_id"
+      ]
+    ],
+    "entry_from": [
+      [
+        "output",
+        "structure"
       ],
-      "struct_kind":"bulk",
-      "override":false,
-      "tag_key":"task_label",
-      "cluster_params":{
-      
-      }
-   },
-   "SurfaceEnergy":{
-      "db_file":null,
-      "high_level_db":null
-   },
-   "cluster_params":{
-      "file_output":false,
-      "output_dir":null,
-      "remote_copy":false,
-      "server":null,
-      "user":null,
-      "port":null,
-      "print_help":false
-   }
+      [
+        "_id"
+      ]
+    ],
+    "struct_kind": "bulk",
+    "override": false,
+    "tag_key": "task_label",
+    "cluster_params": {
+    }
+  },
+  "SurfaceEnergy": {
+    "db_file": null,
+    "high_level_db": null
+  },
+  "cluster_params": {
+    "file_output": false,
+    "output_dir": null,
+    "remote_copy": false,
+    "server": null,
+    "user": null,
+    "port": null,
+    "print_help": false
+  }
 }

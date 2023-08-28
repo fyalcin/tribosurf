@@ -5,13 +5,12 @@ Created on Thu Oct 28 16:23:42 2021
 
 @author: mwo
 """
-from uuid import uuid4
-
 from atomate.vasp.fireworks.core import StaticFW
 from atomate.vasp.powerups import add_modify_incar
 from fireworks import LaunchPad
 from fireworks import Workflow, Firework
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
+from uuid import uuid4
 
 from hitmen_utils.shaper import Shaper
 from hitmen_utils.vasp_tools import get_custom_vasp_static_settings

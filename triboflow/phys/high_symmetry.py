@@ -8,12 +8,10 @@ Created on Wed Mar 16 14:40:07 2022
 
 import numpy as np
 from monty.json import jsanitize
-
 from pymatgen.analysis.adsorption import AdsorbateSiteFinder
 from pymatgen.analysis.structure_matcher import StructureMatcher
 
 from hitmen_utils.shaper import Shaper
-
 from triboflow.utils.structure_manipulation import flip_slab
 
 
@@ -319,12 +317,8 @@ class InterfaceSymmetryAnalyzer:
         are deleted.
         """
 
-        top_u, self.top_sites_unique = self.__get_unique_hs_sites(
-            self.top_slab
-        )
-        bot_u, self.bot_sites_unique = self.__get_unique_hs_sites(
-            self.bot_slab
-        )
+        top_u, self.top_sites_unique = self.__get_unique_hs_sites(self.top_slab)
+        bot_u, self.bot_sites_unique = self.__get_unique_hs_sites(self.bot_slab)
 
         self.top_sites_all = self.__get_all_hs_sites(
             self.top_slab, top_u, self.top_adsf
@@ -404,9 +398,7 @@ class InterfaceSymmetryAnalyzer:
         group_assignment = {}
         replic_shifts = {}
         for i, intrfc_group in enumerate(grouped_interfaces):
-            unique_shifts["group_" + str(i + 1)] = intrfc_group[
-                0
-            ].in_plane_offset
+            unique_shifts["group_" + str(i + 1)] = intrfc_group[0].in_plane_offset
             group_assignment["group_" + str(i + 1)] = intrfc_group[0].name
             shift_list = []
             for intrfc in intrfc_group:
@@ -562,9 +554,7 @@ class InterfaceSymmetryAnalyzer:
                 interface_bonds = Shaper.get_all_bonds(
                     struct=interface, r=min(interface.lattice.abc)
                 )
-                min_interface_bond = min(interface_bonds, key=lambda x: x[2])[
-                    2
-                ]
+                min_interface_bond = min(interface_bonds, key=lambda x: x[2])[2]
             interface.interface_properties.update(
                 {
                     "high_symmetry_info": {
