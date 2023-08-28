@@ -10,7 +10,7 @@ from triboflow.firetasks.adhesion import (
     FT_RelaxMatchedSlabs,
     FT_RetrieveMatchedSlabs,
 )
-from triboflow.firetasks.init_check import material_from_mp
+from triboflow.utils.mp_connection import material_from_mp
 from triboflow.firetasks.run_slabs_wfs import RunSurfenSwfGetEnergies
 from triboflow.firetasks.start_swfs import (
     FT_StartAdhesionSWF,

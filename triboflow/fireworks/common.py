@@ -9,14 +9,7 @@ from triboflow.firetasks.PES import (
     FT_RetrievePESEnergies,
     FT_ComputePES,
 )
-from triboflow.firetasks.check_inputs import (
-    FT_CheckCompParamDict,
-    FT_CheckInterfaceParamDict,
-    FT_CheckMaterialInputDict,
-    FT_MakeBulkInDB,
-    FT_MakeSlabInDB,
-    FT_MakeInterfaceInDB,
-)
+
 from triboflow.utils.file_manipulation import copy_output_files
 
 __author__ = "Michael Wolloch"
@@ -200,96 +193,12 @@ def make_pes_fw(
             output_dir=output_dir,
             remote_copy=remote_copy,
             server=server,
-            user=server,
+            user=user,
             port=port,
         )
 
         FW = Firework([FT_1, FT_2, FT_3], name=FW_name)
     else:
         FW = Firework([FT_1, FT_2], name=FW_name)
-
-    return FW
-
-
-def check_inputs_fw(
-    mat1_params, mat2_params, compparams, interface_params, FW_name
-):
-    """Check the input parameters for completeness and add default values.
-
-
-    SEEMS TO BE OBSOLETE. CHECK IF IT IS STILL USED SOMEWHERE!
-
-    This Firework uses several Firetasks to check if the necessary input for
-    the heterogeneous Triboflow workflow is given and assigns default values
-    to optional parameters that are not given. Also makes sure that the
-    input parameters are of the correct type and in the correct locations
-    in the spec.
-
-    Parameters
-    ----------
-    mat1loc : list of str
-        List of keys in the fw_spec pointing to the input dictionary for the
-        first material.
-    mat2loc : list of str
-        List of keys in the fw_spec pointing to the input dictionary for the
-        second material.
-    compparamloc : list of str
-        List of keys in the fw_spec pointing to the input dictionary for the
-        computational parameters.
-    interparamloc : list of str
-        List of keys in the fw_spec pointing to the input dictionary for the
-        parameters needed for interface matching. THESE MIGHT CHANGE IF
-        INITIALLY NO INTERFACE IS FOUND!
-    name : str
-        Name for the firework.
-
-    Returns
-    -------
-    FW : fireworks.core.firework.Firework
-        Firework for checking the parameters.
-
-    """
-    FT_Mat1 = FT_CheckMaterialInputDict(
-        input_dict=mat1_params, output_dict_name="mat_1"
-    )
-    FT_Mat2 = FT_CheckMaterialInputDict(
-        input_dict=mat2_params, output_dict_name="mat_2"
-    )
-
-    FT_CompParams = FT_CheckCompParamDict(
-        input_dict=compparams, output_dict_name="comp"
-    )
-
-    FT_InterParams = FT_CheckInterfaceParamDict(
-        input_dict=interface_params, output_dict_name="inter"
-    )
-
-    FT_Mat1ToDB = FT_MakeBulkInDB(mat_data_loc="mat_1", comp_data_loc="comp")
-    FT_Mat2ToDB = FT_MakeBulkInDB(mat_data_loc="mat_2", comp_data_loc="comp")
-
-    FT_Slab1ToDB = FT_MakeSlabInDB(mat_data_loc="mat_1", comp_data_loc="comp")
-    FT_Slab2ToDB = FT_MakeSlabInDB(mat_data_loc="mat_2", comp_data_loc="comp")
-
-    FT_InterfaceToDB = FT_MakeInterfaceInDB(
-        mat1_data_loc="mat_1",
-        mat2_data_loc="mat_2",
-        comp_data_loc="comp",
-        interface_data_loc="inter",
-    )
-
-    FW = Firework(
-        [
-            FT_Mat1,
-            FT_Mat2,
-            FT_CompParams,
-            FT_InterParams,
-            FT_Mat1ToDB,
-            FT_Mat2ToDB,
-            FT_Slab1ToDB,
-            FT_Slab2ToDB,
-            FT_InterfaceToDB,
-        ],
-        name=FW_name,
-    )
 
     return FW

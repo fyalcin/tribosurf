@@ -168,3 +168,43 @@ if __name__ == "__main__":
     print(struct)
 
     # db._print_all_properties("elasticity")
+
+
+def material_from_mp(material_dict):
+    """
+    It reads the dictionary containing the input parameters for a material.
+    It needs at least the key: `formula`, providing an MPID is also helpful.
+    The corresponding structure from the MP database or the local structure list
+    is returned along with the MPID.
+
+    Parameters
+    ----------
+    material_dict : dict
+        Dictionary containing the input parameters for running a tribological
+        workflow, e.g. homogeneous and heterogeneous ones.
+
+    Raises
+    ------
+    SystemExit
+        If the parameters in the inputs dictionary are not set correctly.
+
+    Returns
+    -------
+    struct : pymatgen.core.structure.Structure
+        Contains the material structures.
+    mpid : str or list of str
+        Contains the MPID found for the corresponding structures
+    functional : str
+        The functional for the pseudopotential to be adopted.
+
+    """
+
+    # Collect the data from Material's Project API
+    mp_connection = MPConnection()
+
+    struct, mpid = mp_connection.get_low_energy_structure(
+        chem_formula=material_dict.get("formula"),
+        mp_id=material_dict.get("mpid"),
+    )
+
+    return struct, mpid

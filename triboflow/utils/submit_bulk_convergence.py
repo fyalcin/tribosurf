@@ -8,14 +8,12 @@ Created on Mon Oct  4 16:12:32 2021
 
 from fireworks import LaunchPad
 from fireworks import Workflow, Firework
-from triboflow.fireworks.init_fws import InitWF
 from triboflow.firetasks.structure_manipulation import FT_StartBulkPreRelax
-from triboflow.firetasks.init_check import material_from_mp
+from triboflow.utils.mp_connection import material_from_mp
 from triboflow.firetasks.start_swfs import (
     FT_StartBulkConvoSWF,
-    FT_StartDielectricSWF,
 )
-from triboflow.utils.utils import load_homoatomic_materials
+from triboflow.utils.homoatomic_materials import load_homoatomic_materials
 
 computational_params = {
     "functional": "PBE",
@@ -32,11 +30,6 @@ def get_bulk_convergence_wf(material, comp_params):
     functional = comp_params.get("functional", "PBE")
 
     WF = []
-
-    Initialize = InitWF.checkinp_bulk_convo(
-        material=material, computational=comp_params
-    )
-    WF.append(Initialize)
 
     PreRelaxation = Firework(
         FT_StartBulkPreRelax(mp_id=mp_id, functional=functional),
@@ -64,29 +57,22 @@ def get_bulk_convergence_wf(material, comp_params):
     )
     WF.append(ConvergeKpoints)
 
-    CalcDielectric = Firework(
-        FT_StartDielectricSWF(
-            mp_id=mp_id,
-            functional=functional,
-            update_bulk=True,
-            update_slabs=False,
-        ),
-        name=f'Start dielectric SWF for {material["formula"]}',
-    )
-    WF.append(CalcDielectric)
-
-    Dependencies = {
-        Initialize: [PreRelaxation],
-        PreRelaxation: [ConvergeEncut],
-        ConvergeEncut: [ConvergeKpoints],
-        ConvergeKpoints: [CalcDielectric],
-    }
+    # Dependencies = {
+    #     Initialize: [PreRelaxation],
+    #     PreRelaxation: [ConvergeEncut],
+    #     ConvergeEncut: [ConvergeKpoints],
+    #     ConvergeKpoints: [CalcDielectric],
+    # }
 
     WF_Name = (
         "ConvergeBulk " + material["formula"] + " " + mp_id + " " + functional
     )
 
-    WF = Workflow(WF, Dependencies, name=WF_Name)
+    WF = Workflow(
+        WF,
+        # Dependencies,
+        name=WF_Name,
+    )
 
     return WF
 

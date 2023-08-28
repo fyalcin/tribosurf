@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
+# TODO - change copyright
 """
 Created on Mon Feb 22 10:16:55 2021
 
