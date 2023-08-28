@@ -108,7 +108,6 @@ class FT_ComputePES(FiretaskBase):
                         },
                     }
                 },
-                dolog=False,
             )
         except:
             db_high.update_data(
