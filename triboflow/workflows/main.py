@@ -128,6 +128,7 @@ def heterogeneous_wf_with_surfgen(inputs):
             ),
             name=f"Add {formula_2} ({mpid_2}) to DB",
         )
+        wf_list.append(add_bulk_m2)
 
         pre_relaxation_m2 = Firework(
             FT_StartBulkPreRelax(
@@ -304,7 +305,8 @@ def heterogeneous_wf_with_surfgen(inputs):
 
     wf_name = (
         "TriboFlow_"
-        + "-".join(sorted([f"{formula_1} ({mpid_1})", f"{formula_2} ({mpid_2})"]))
+        + "-".join(sorted([f"{formula_1}_({mpid_1})",
+                           f"{formula_2}_({mpid_2})"]))
         + "_"
         + f"{functional}@{pressure}GPa"
     )
