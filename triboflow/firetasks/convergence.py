@@ -59,9 +59,9 @@ class FT_UpdateBMLists(FiretaskBase):
             db_file = env_chk(">>db_file<<", fw_spec)
 
         db = VaspDB(db_file=db_file)
-        results = db.vasp_calc_db.db.eos.find({"formula_pretty": formula}).sort(
+        results = list(db.vasp_calc_db.db.eos.find({"formula_pretty": formula}).sort(
             "created_at", pymongo.DESCENDING
-        )
+        ))[0]
         BM = results["bulk_modulus"]
         V0 = results["results"]["v0"]
 

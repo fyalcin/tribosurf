@@ -26,7 +26,7 @@ from triboflow.firetasks.structure_manipulation import (
 from triboflow.utils.mp_connection import material_from_mp
 
 
-def heterogeneous_wf_with_surfgen(inputs):
+def heterogeneous_wf(inputs):
     """Return main workflow for heterogeneous interfaces within Triboflow.
 
     Parameters

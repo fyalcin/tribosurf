@@ -27,7 +27,7 @@ from fireworks import (
 from pymatgen.core.surface import Slab
 
 from hitmen_utils.db_tools import VaspDB
-from hitmen_utils.misc_tools import check_input
+from surfen.utils.misc_tools import check_input
 from surfen.firetasks.start_swfs import StartSurfaceEnergy
 from triboflow.utils.structure_manipulation import flip_slab
 
