@@ -8,7 +8,7 @@ Created on Fri Jun 19 16:15:02 2020
 from datetime import datetime
 from fireworks import LaunchPad
 
-from triboflow.workflows.main import heterogeneous_wf_with_surfgen
+from triboflow.workflows.main import heterogeneous_wf
 
 inputs = {
     "material_1": {"formula": "Si", "mpid": "mp-149"},
@@ -43,7 +43,7 @@ inputs = {
     "high_level": "surfflow_test",
 }
 
-WF = heterogeneous_wf_with_surfgen(inputs)
+WF = heterogeneous_wf(inputs)
 
 lpad = LaunchPad.from_file("/home/yalcin/config_local/my_launchpad.yaml")
 today = datetime.today().strftime("%Y-%m-%d")

@@ -19,58 +19,6 @@
     "max_area_ratio_tol": 0.1,
     "external_pressure": null
   },
-  "material_params": {
-    "formula": "NO_DEFAULT",
-    "mpid": null
-  },
-  "bulk_params": {
-    "formula": "NO_DEFAULT",
-    "mpid": null
-  },
-  "RelaxStructure": {
-    "db_file": null,
-    "database": null,
-    "relax_type": "slab_pos_relax",
-    "comp_params": {
-    },
-    "miller": null,
-    "check_key": null,
-    "struct_kind": "bulk",
-    "add_static": false,
-    "prerelax": true,
-    "prerelax_algo": "m3gnet",
-    "prerelax_kwargs": {}
-  },
-  "MoveTagResults": {
-    "db_file": null,
-    "database_from": "auto",
-    "database_to": null,
-    "miller": null,
-    "check_entry": null,
-    "entry_to": [
-      [
-        "calc_output"
-      ],
-      [
-        "calc_output",
-        "task_id"
-      ]
-    ],
-    "entry_from": [
-      [
-        "output",
-        "structure"
-      ],
-      [
-        "_id"
-      ]
-    ],
-    "struct_kind": "bulk",
-    "override": false,
-    "tag_key": "task_label",
-    "cluster_params": {
-    }
-  },
   "cluster_params": {
     "file_output": false,
     "output_dir": null,
