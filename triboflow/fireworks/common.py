@@ -91,7 +91,6 @@ def run_pes_calc_fw(
     )
 
     FT_2 = FT_StartPESCalcs(
-        interface=interface,
         interface_name=interface_name,
         comp_parameters=comp_parameters,
         tag=tag,
