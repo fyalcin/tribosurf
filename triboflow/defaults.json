@@ -1,4 +1,8 @@
 {
+  "material": {
+    "mpid": null,
+    "formula": "NO_DEFAULT"
+  },
   "comp_params": {
     "use_vdw": "NO_DEFAULT",
     "BM_tolerance": 0.01,
@@ -7,12 +11,10 @@
     "use_spin": true,
     "encut": 520,
     "k_dens": 9.0,
-    "vacuum": 15,
-    "is_metal": null,
-    "epsilon": null
+    "is_metal": null
   },
   "interface_params": {
-    "max_area": "NO_DEFAULT",
+    "max_area": 100,
     "interface_distance": "auto",
     "max_angle_tol": 0.01,
     "max_length_tol": 0.03,
