@@ -7,6 +7,7 @@ Created on Wed Mar 16 14:40:07 2022
 """
 
 import numpy as np
+from copy import deepcopy
 from monty.json import jsanitize
 from pymatgen.analysis.adsorption import AdsorbateSiteFinder
 from pymatgen.analysis.structure_matcher import StructureMatcher
@@ -542,7 +543,7 @@ class InterfaceSymmetryAnalyzer:
 
         interfaces = []
         for group_name, shift in hsp_dict["unique_shifts"].items():
-            interface = initial_interface.copy()
+            interface = deepcopy(initial_interface)
             interface.in_plane_offset = shift
             interface_bonds = Shaper.get_all_bonds(
                 struct=interface, r=min(interface.lattice.abc)

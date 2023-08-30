@@ -164,7 +164,7 @@ class InterfaceMatcher:
         vacuum=15.0,
         interface_distance="auto",
         interface_distance_addon=0.0,
-        external_pressure=None,
+        pressure=None,
     ):
         """Initialize the InterfaceMatcher class
 
@@ -225,7 +225,7 @@ class InterfaceMatcher:
             This will be added to the automatic interface distance if
             interface_distance is not set explicitly to a float or int.
             The default is 0.0
-        external_pressure : float, optional
+        pressure : float, optional
             External pressure to be applied to the interface structure in GPa.
             For now this is doing nothing. However, one could use this to
             reduce the automatic interface distance if it is not explicitly

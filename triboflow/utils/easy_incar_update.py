@@ -74,13 +74,19 @@ def update_fws(id_list, update, rerun):
     """
     for i in id_list:
         fw = lp.get_fw_by_id(i)
+        
+        if "CopyVaspOutputs" in fw.spec["_tasks"][0]["_fw_name"]:
+            is_followup = True
+        else:
+            is_followup = False
+
         try:
             metagga = fw.spec["_tasks"][1]["vasp_input_set_params"][
                 "user_incar_settings"
             ]["METAGGA"]
-        except:
+        except KeyError:
             metagga = False
-        if metagga:
+        if metagga and not is_followup:
             # print('FW_ID {} is MetaGGA calc'.format(i))
             for k, v in update.items():
                 lp.update_spec(
@@ -91,13 +97,21 @@ def update_fws(id_list, update, rerun):
                         ): v
                     },
                 )
-        else:
+        elif not metagga and not is_followup:
             # print('FW_ID {} is GGA calc'.format(i))
             for k, v in update.items():
                 lp.update_spec(
                     [i],
                     {"_tasks.0.vasp_input_set.user_incar_settings.{}".format(k): v},
                 )
+        else:
+            # print('FW_ID {} is GGA follow-up calc'.format(i))
+            for k, v in update.items():
+                lp.update_spec(
+                    [i],
+                    {"_tasks.1.other_params.user_incar_settings.{}".format(k): v},
+                )
+
         if rerun:
             lp.rerun_fw(i)
 

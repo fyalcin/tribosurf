@@ -16,6 +16,7 @@ if __name__ == "__main__":
                         'hitmen_utils@git+ssh://git@gitlab.com/hit_group/hitmen_utils.git@surfgen_merge',
                         'surfen@git+ssh://git@gitlab.com/hit_group/SurfGen.git',
                         'mep@git+https://github.com/fyalcin/mep.git',
+                        'python-Levenshtein',
                         ],
         classifiers=["Programming Language :: Python :: 3",
                      "Programming Language :: Python :: 3.6",
