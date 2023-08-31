@@ -40,7 +40,7 @@ inputs = {
         "max_area": 100,
         "max_area_ratio_tol": 0.1,
         "max_length_tol": 0.05,
-        "pressure": 1,
+        "external_pressure": 1,
     },
     "db_file": "/home/fs71411/mwo3/FireWorks/config_VSC5_Zen3/db.json",
     "high_level": "release_test_db",

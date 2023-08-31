@@ -64,7 +64,7 @@ class FT_ComputePES(FiretaskBase):
     def run_task(self, fw_spec):
         name = self.get("interface_name")
         functional = self.get("functional")
-        pressure = self.get("external_pressure")
+        external_pressure = self.get("external_pressure")
 
         db_file = self.get("db_file")
         if not db_file:
@@ -73,7 +73,7 @@ class FT_ComputePES(FiretaskBase):
 
         PG = get_pes_generator_from_db(
             interface_name=name,
-            pressure=pressure,
+            external_pressure=external_pressure,
             db_file=db_file,
             high_level=hl_db,
             functional=functional,
@@ -87,7 +87,7 @@ class FT_ComputePES(FiretaskBase):
         try:
             db_high.update_data(
                 collection=functional + ".interface_data",
-                fltr={"name": name, "pressure": pressure},
+                fltr={"name": name, "external_pressure": external_pressure},
                 new_values={
                     "$set": {
                         "PES.all_energies": jsanitize(PG.extended_energies),
@@ -110,7 +110,7 @@ class FT_ComputePES(FiretaskBase):
         except:
             db_high.update_data(
                 collection=functional + ".interface_data",
-                fltr={"name": name, "pressure": pressure},
+                fltr={"name": name, "external_pressure": external_pressure},
                 new_values={
                     "$set": {
                         "corrugation": PG.corrugation,
@@ -134,7 +134,7 @@ class FT_ComputePES(FiretaskBase):
                         data = jsanitize(getattr(PG, v))
                     db_high.update_data(
                         collection="PBE.interface_data",
-                        fltr={"name": name, "pressure": pressure},
+                        fltr={"name": name, "external_pressure": external_pressure},
                         new_values={"$set": {"PES." + k: data}},
                     )
                 except:
@@ -184,7 +184,7 @@ class FT_RetrievePESEnergies(FiretaskBase):
         name = self.get("interface_name")
         functional = self.get("functional")
         tag = self.get("tag")
-        pressure = self.get("external_pressure")
+        external_pressure = self.get("external_pressure")
 
         db_file = self.get("db_file")
         if not db_file:
@@ -195,7 +195,7 @@ class FT_RetrievePESEnergies(FiretaskBase):
 
         interface_dict = db_high.find_data(
             collection=f"{functional}.interface_data",
-            fltr={"name": name, "pressure": pressure},
+            fltr={"name": name, "external_pressure": external_pressure},
         )
         lateral_shifts = interface_dict["PES"]["high_symmetry_points"]["unique_shifts"]
         group_assignments = interface_dict["PES"]["high_symmetry_points"][
@@ -268,7 +268,7 @@ class FT_RetrievePESEnergies(FiretaskBase):
         db_high = VaspDB(db_file=db_file, high_level=hl_db)
         db_high.update_data(
             collection=functional + ".interface_data",
-            fltr={"name": name, "pressure": pressure},
+            fltr={"name": name, "external_pressure": external_pressure},
             new_values={
                 "$set": {
                     "relaxed_structure@min": interface_min.as_dict(),
@@ -326,7 +326,7 @@ class FT_FindHighSymmPoints(FiretaskBase):
         interface = self.get("interface")
         name = self.get("interface_name")
         functional = self.get("functional")
-        pressure = self.get("external_pressure")
+        external_pressure = self.get("external_pressure")
 
         db_file = self.get("db_file")
         if not db_file:
@@ -340,7 +340,7 @@ class FT_FindHighSymmPoints(FiretaskBase):
         db_high = VaspDB(db_file=db_file, high_level=hl_db)
         db_high.update_data(
             collection=functional + ".interface_data",
-            fltr={"name": name, "pressure": pressure},
+            fltr={"name": name, "external_pressure": external_pressure},
             new_values={
                 "$set": {
                     "PES.high_symmetry_points": {
@@ -411,7 +411,7 @@ class FT_StartPESCalcs(FiretaskBase):
         interface_name = self.get("interface_name")
         comp_params = self.get("comp_parameters")
         tag = self.get("tag")
-        pressure = self.get("external_pressure")
+        external_pressure = self.get("external_pressure")
 
         prerelax = self.get("prerelax", True)
         prerelax_calculator = self.get("prerelax_calculator", "m3gnet")
@@ -436,7 +436,7 @@ class FT_StartPESCalcs(FiretaskBase):
                 structure=clean_struct,
                 comp_parameters=comp_params,
                 relax_type="interface_z_relax",
-                apply_pressure=pressure,
+                apply_external_pressure=external_pressure,
             )
             inputs.append([clean_struct, vis, label])
 

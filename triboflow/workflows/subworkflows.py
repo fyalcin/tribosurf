@@ -339,7 +339,7 @@ def calc_pes_swf(
     interface,
     interface_name=None,
     functional="PBE",
-    pressure=0,
+    external_pressure=0,
     comp_parameters=None,
     file_output=False,
     output_dir=None,
@@ -375,7 +375,7 @@ def calc_pes_swf(
         generation which will be printed on screen.
     functional : str, optional
         Which functional to use; has to be 'PBE' or 'SCAN'. The default is 'PBE'
-    pressure : float, optional
+    external_pressure : float, optional
         External pressure in GPa to be applied to the interface.
         The default is 0.
     comp_parameters : dict, optional
@@ -478,7 +478,7 @@ def calc_pes_swf(
     try:
         interface_dict = db_high.find_data(
             collection=f"{functional}.interface_data",
-            fltr={"name": interface_name, "pressure": pressure},
+            fltr={"name": interface_name, "external_pressure": external_pressure},
         )
         relaxed_structure = interface_dict["relaxed_structure"]
         if relaxed_structure:
@@ -488,7 +488,7 @@ def calc_pes_swf(
             collection=functional + ".interface_data",
             data={
                 "name": interface_name,
-                "pressure": pressure,
+                "external_pressure": external_pressure,
                 "comp_parameters": comp_parameters,
                 "unrelaxed_structure": interface.as_dict(),
                 "top_aligned": interface.film.as_dict(),
@@ -499,7 +499,7 @@ def calc_pes_swf(
     FW_1 = run_pes_calc_fw(
         interface=interface,
         interface_name=interface_name,
-        external_pressure=pressure,
+        external_pressure=external_pressure,
         functional=functional,
         comp_parameters=comp_parameters,
         tag=tag,
@@ -514,7 +514,7 @@ def calc_pes_swf(
     FW_2 = make_pes_fw(
         interface_name=interface_name,
         functional=functional,
-        external_pressure=pressure,
+        external_pressure=external_pressure,
         tag=tag,
         FW_name="Parse PES calcs for " + interface_name,
         file_output=file_output,

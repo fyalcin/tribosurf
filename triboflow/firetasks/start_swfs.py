@@ -52,7 +52,7 @@ class FT_StartChargeAnalysisSWF(FiretaskBase):
 
     def run_task(self, fw_spec):
         functional = self.get("functional")
-        pressure = self.get("external_pressure")
+        external_pressure = self.get("external_pressure")
         db_file = self.get("db_file")
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
@@ -65,7 +65,7 @@ class FT_StartChargeAnalysisSWF(FiretaskBase):
 
         interface_dict = db.find_data(
             collection=functional + ".interface_data",
-            fltr={"name": name, "pressure": pressure},
+            fltr={"name": name, "external_pressure": external_pressure},
         )
 
         redistribution_was_calculated = interface_dict.get("charge_density_redist")
@@ -78,7 +78,7 @@ class FT_StartChargeAnalysisSWF(FiretaskBase):
                 interface=interface,
                 interface_name=name,
                 functional=functional,
-                external_pressure=pressure,
+                external_pressure=external_pressure,
                 db_file=db_file,
                 high_level=hl_db,
                 comp_parameters=comp_params,
@@ -128,7 +128,7 @@ class FT_StartAdhesionSWF(FiretaskBase):
 
     def run_task(self, fw_spec):
         functional = self.get("functional")
-        pressure = self.get("external_pressure")
+        external_pressure = self.get("external_pressure")
         db_file = self.get("db_file")
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
@@ -141,7 +141,7 @@ class FT_StartAdhesionSWF(FiretaskBase):
 
         interface_dict = db.find_data(
             collection=functional + ".interface_data",
-            fltr={"name": name, "pressure": pressure},
+            fltr={"name": name, "external_pressure": external_pressure},
         )
 
         adhesion_was_calculated = interface_dict.get(adhesion_handle)
@@ -156,7 +156,7 @@ class FT_StartAdhesionSWF(FiretaskBase):
                 top_slab,
                 bottom_slab,
                 interface,
-                external_pressure=pressure,
+                external_pressure=external_pressure,
                 interface_name=name,
                 functional=functional,
                 comp_parameters=comp_params,
@@ -331,7 +331,7 @@ class FT_StartPESCalcSWF(FiretaskBase):
 
     def run_task(self, fw_spec):
         functional = self.get("functional")
-        pressure = self.get("external_pressure")
+        external_pressure = self.get("external_pressure")
         db_file = self.get("db_file")
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
@@ -345,7 +345,7 @@ class FT_StartPESCalcSWF(FiretaskBase):
         db_high = VaspDB(db_file=db_file, high_level=hl_db)
         interface_dict = db_high.find_data(
             collection=f"{functional}.interface_data",
-            fltr={"name": name, "pressure": pressure},
+            fltr={"name": name, "external_pressure": external_pressure},
         )
         comp_params = interface_dict["comp_parameters"]
         interface = Interface.from_dict(interface_dict["unrelaxed_structure"])
@@ -356,7 +356,7 @@ class FT_StartPESCalcSWF(FiretaskBase):
                 interface=interface,
                 interface_name=name,
                 functional=functional,
-                pressure=pressure,
+                external_pressure=external_pressure,
                 comp_parameters=comp_params,
                 output_dir=None,
                 prerelax=prerelax,
@@ -432,12 +432,12 @@ class FT_StartPPESWF(FiretaskBase):
         db_high = VaspDB(db_file=db_file, high_level=hl_db)
         interface_dict = db_high.find_data(
             collection=f"{functional}.interface_data",
-            fltr={"name": name, "pressure": 0.0},
+            fltr={"name": name, "external_pressure": 0.0},
         )
         if not interface_dict:
             raise ValueError(
                 f"Interface {name} with functional {functional} and "
-                f"0 pressure not found in high-level database {db_file}!"
+                f"0 external_pressure not found in high-level database {db_file}!"
             )
 
         calc_PPES = True

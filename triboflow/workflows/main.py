@@ -62,8 +62,8 @@ def heterogeneous_wf(inputs):
 
     wf_list = []
 
-    # pressure might default to None, so we have to check for that
-    pressure = interface_params.get("external_pressure", 0.0) or 0.0
+    # external_pressure might default to None, so we have to check for that
+    external_pressure = interface_params.get("external_pressure", 0.0) or 0.0
 
     add_bulk_m1 = Firework(
         FT_AddBulkToDB(
@@ -236,7 +236,7 @@ def heterogeneous_wf(inputs):
             mp_id_1=mpid_1,
             mp_id_2=mpid_2,
             functional=functional,
-            external_pressure=pressure,
+            external_pressure=external_pressure,
             prerelax=True,
             db_file=db_file,
             high_level=high_level,
@@ -251,7 +251,7 @@ def heterogeneous_wf(inputs):
             mp_id_1=mpid_1,
             mp_id_2=mpid_2,
             functional=functional,
-            external_pressure=pressure,
+            external_pressure=external_pressure,
             prerelax=True,
             db_file=db_file,
             high_level=high_level,
@@ -266,7 +266,7 @@ def heterogeneous_wf(inputs):
             mp_id_1=mpid_1,
             mp_id_2=mpid_2,
             functional=functional,
-            external_pressure=pressure,
+            external_pressure=external_pressure,
             db_file=db_file,
             high_level=high_level,
         ),
@@ -280,7 +280,7 @@ def heterogeneous_wf(inputs):
             mp_id_1=mpid_1,
             mp_id_2=mpid_2,
             functional=functional,
-            external_pressure=pressure,
+            external_pressure=external_pressure,
             db_file=db_file,
             high_level=high_level,
         ),
@@ -294,7 +294,7 @@ def heterogeneous_wf(inputs):
             mp_id_1=mpid_1,
             mp_id_2=mpid_2,
             functional=functional,
-            external_pressure=pressure,
+            external_pressure=external_pressure,
             db_file=db_file,
             high_level=high_level,
         ),
@@ -308,7 +308,7 @@ def heterogeneous_wf(inputs):
         + "-".join(sorted([f"{formula_1}_({mpid_1})",
                            f"{formula_2}_({mpid_2})"]))
         + "_"
-        + f"{functional}@{pressure}GPa"
+        + f"{functional}@{external_pressure}GPa"
     )
 
     wf_list = Workflow(wf_list, name=wf_name)

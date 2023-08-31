@@ -69,7 +69,7 @@ class FT_RetrieveMatchedSlabs(FiretaskBase):
         mp_id_1 = self.get("mp_id_1")
         mp_id_2 = self.get("mp_id_2")
         functional = self.get("functional")
-        pressure = self.get("external_pressure")
+        external_pressure = self.get("external_pressure")
         db_file = self.get("db_file")
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
@@ -95,7 +95,7 @@ class FT_RetrieveMatchedSlabs(FiretaskBase):
                 db_high = VaspDB(db_file, high_level=hl_db)
                 db_high.update_data(
                     collection=functional + ".interface_data",
-                    fltr={"name": name, "pressure": pressure},
+                    fltr={"name": name, "external_pressure": external_pressure},
                     new_values={"$set": {out_name: slab.as_dict()}},
                 )
 
@@ -166,7 +166,7 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
 
     def run_task(self, fw_spec):
         functional = self.get("functional")
-        pressure = self.get("external_pressure")
+        external_pressure = self.get("external_pressure")
         db_file = self.get("db_file")
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
@@ -184,7 +184,7 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
 
         interface_dict = db.find_data(
             collection=functional + ".interface_data",
-            fltr={"name": name, "pressure": pressure},
+            fltr={"name": name, "external_pressure": external_pressure},
         )
 
         relaxed_top_present = interface_dict.get(top_out_name)
@@ -278,7 +278,7 @@ class FT_CalcAdhesion(FiretaskBase):
     def run_task(self, fw_spec):
         name = self.get("interface_name")
         functional = self.get("functional")
-        pressure = self.get("external_pressure")
+        external_pressure = self.get("external_pressure")
         top_label = self.get("top_label")
         bot_label = self.get("bottom_label")
         inter_label = self.get("interface_label")
@@ -313,7 +313,7 @@ class FT_CalcAdhesion(FiretaskBase):
         db_high = VaspDB(db_file=db_file, high_level=hl_db)
         db_high.update_data(
             collection=functional + ".interface_data",
-            fltr={"name": name, "pressure": pressure},
+            fltr={"name": name, "external_pressure": external_pressure},
             new_values={"$set": {out_name: E_Jm2}},
         )
 

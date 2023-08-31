@@ -436,7 +436,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
         mpid2 = self.get("mp_id_2")
 
         interface_params = self.get("interface_params")
-        pressure = interface_params.get("external_pressure", 0.0)
+        external_pressure = interface_params.get("external_pressure", 0.0)
 
         functional = self.get("functional")
 
@@ -473,7 +473,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
 
             inter_data = db_high.find_data(
                 collection=functional + ".interface_data",
-                fltr={"name": inter_name, "pressure": pressure},
+                fltr={"name": inter_name, "external_pressure": external_pressure},
             )
 
             if inter_data:
@@ -514,7 +514,7 @@ class FT_MakeHeteroStructure(FiretaskBase):
 
                     db_high.update_data(
                         collection=functional + ".interface_data",
-                        fltr={"name": inter_name, "pressure": pressure},
+                        fltr={"name": inter_name, "external_pressure": external_pressure},
                         new_values={
                             "$set": {
                                 "unrelaxed_structure": inter_dict,

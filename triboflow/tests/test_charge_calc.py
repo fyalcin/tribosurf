@@ -223,12 +223,12 @@ if __name__ == "__main__":
     IM = InterfaceMatcher(gr_slab, ni_slab)
     interface = IM.get_interface()
 
-    pressure = 0.0
+    external_pressure = 0.0
 
     WF = charge_analysis_swf(
         interface=interface,
         functional="PBE",
-        external_pressure=pressure,
+        external_pressure=external_pressure,
         high_level="test",
         comp_parameters=comp_params,
     )

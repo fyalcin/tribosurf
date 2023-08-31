@@ -78,12 +78,12 @@ class FT_DoPPESCalcs(FiretaskBase):
         db_high = VaspDB(db_file=db_file, high_level=hl_db)
         interface_dict = db_high.find_data(
             collection=f"{functional}.interface_data",
-            fltr={"name": name, "pressure": 0.0},
+            fltr={"name": name, "external_pressure": 0.0},
         )
         if not interface_dict:
             raise ValueError(
                 f"Interface {name} with functional {functional} and "
-                f"0 pressure not found in high-level database {db_file}!"
+                f"0 external_pressure not found in high-level database {db_file}!"
             )
 
         comp_params = interface_dict["comp_parameters"]
@@ -180,7 +180,7 @@ class FT_FitPPES(FiretaskBase):
 
         db_high.update_data(
             collection=functional + ".interface_data",
-            fltr={"name": name, "pressure": 0.0},
+            fltr={"name": name, "external_pressure": 0.0},
             new_values={
                 "$set": {
                     "PPES": {

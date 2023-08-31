@@ -34,7 +34,7 @@ from triboflow.phys.minimum_energy_path import (
 
 def get_pes_generator_from_db(
     interface_name,
-    pressure,
+    external_pressure,
     db_file="auto",
     high_level=True,
     functional="PBE",
@@ -52,8 +52,8 @@ def get_pes_generator_from_db(
     ----------
     interface_name : pymatgen.core.interface.Interface
         The Interface object
-    pressure : float
-        Pressure in GPa.
+    external_pressure : float
+        external_pressure in GPa.
     db_file : str, optional
         path to a db.json file. If 'auto', it is loaded from the default
         location. The default is 'auto'.
@@ -77,7 +77,7 @@ def get_pes_generator_from_db(
     db_high = VaspDB(db_file=db_file, high_level=high_level)
     inter_dict = db_high.find_data(
         collection=f"{functional}.interface_data",
-        fltr={"name": interface_name, "pressure": pressure},
+        fltr={"name": interface_name, "external_pressure": external_pressure},
     )
 
     possible_kwargs = [

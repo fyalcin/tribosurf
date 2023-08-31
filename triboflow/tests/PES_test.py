@@ -35,7 +35,7 @@ external_pressure = 1.0
 
 WF = calc_pes_swf(
     interface=interface,
-    pressure=external_pressure,
+    external_pressure=external_pressure,
     comp_parameters=comp_params,
     file_output=True,
     output_dir="/fs/home/wolloch/git_test/testdir",
