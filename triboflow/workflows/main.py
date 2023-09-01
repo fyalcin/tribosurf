@@ -26,6 +26,91 @@ from triboflow.firetasks.structure_manipulation import (
 from triboflow.utils.mp_connection import material_from_mp
 
 
+def optimize_bulk_wf(inputs):
+    """Return main workflow for bulk optimization within Triboflow.
+
+    Parameters
+    ----------
+    inputs : dict
+        Dictionary containing sub-dictionaries with material information and
+        parameters for the interface creation and computational settings.
+
+    Returns
+    -------
+    wf_list : FireWorks Workflow
+        Main Triboflow workflow for bulk optimization.
+
+    """
+    material = inputs["material"]
+    computational_params = inputs["computational_params"]
+    db_file = inputs["db_file"]
+    high_level = inputs["high_level"]
+
+    struct, mpid = material_from_mp(material)
+
+    formula = struct.composition.reduced_formula
+
+    functional = computational_params.get("functional", "PBE")
+
+    wf_list = []
+
+    add_bulk = Firework(
+        FT_AddBulkToDB(
+            mpid=mpid,
+            functional=functional,
+            db_file=db_file,
+            high_level=high_level,
+            custom_data={"comp_parameters": computational_params},
+        ),
+        name=f"Add {formula} ({mpid}) to DB",
+    )
+    wf_list.append(add_bulk)
+
+    pre_relaxation = Firework(
+        FT_StartBulkPreRelax(
+            mp_id=mpid,
+            functional=functional,
+            db_file=db_file,
+            high_level=high_level,
+        ),
+        name=f"Start pre-relaxation for {formula} ({mpid})",
+        parents=[add_bulk],
+    )
+    wf_list.append(pre_relaxation)
+
+    converge_encut = Firework(
+        FT_StartBulkConvoSWF(
+            conv_type="encut",
+            mp_id=mpid,
+            functional=functional,
+            db_file=db_file,
+            high_level=high_level,
+        ),
+        name=f"Start encut convergence for {formula} ({mpid})",
+        parents=[pre_relaxation],
+    )
+    wf_list.append(converge_encut)
+
+    converge_kpoints = Firework(
+        FT_StartBulkConvoSWF(
+            conv_type="kpoints",
+            mp_id=mpid,
+            functional=functional,
+            db_file=db_file,
+            high_level=high_level,
+        ),
+        name=f"Start kpoints convergence for {formula} ({mpid})",
+        parents=[converge_encut],
+    )
+    wf_list.append(converge_kpoints)
+
+    wf_name = f"Converge_bulk_{formula}_{functional}"
+
+    wf = Workflow(wf_list, name=wf_name)
+
+    return wf
+
+
 def heterogeneous_wf(inputs):
     """Return main workflow for heterogeneous interfaces within Triboflow.
 
@@ -311,6 +396,6 @@ def heterogeneous_wf(inputs):
         + f"{functional}@{external_pressure}GPa"
     )
 
-    wf_list = Workflow(wf_list, name=wf_name)
+    wf = Workflow(wf_list, name=wf_name)
 
-    return wf_list
+    return wf
