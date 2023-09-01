@@ -32,10 +32,8 @@ inputs = {
         "min_thick_A": 3.0,
         "max_index": 2,
     },
-    "sg_filter_1": {"method": "bvs_min_N",
-                    "bvs_param": 10},
-    "sg_filter_2": {"method": "bvs_min_N",
-                    "bvs_param": 10},
+    "sg_filter_1": {"method": "bvs_min_N", "bvs_param": 10},
+    "sg_filter_2": {"method": "bvs_min_N", "bvs_param": 10},
     "interface_params": {
         "max_area": 100,
         "max_area_ratio_tol": 0.1,
@@ -49,8 +47,8 @@ inputs = {
 WF = heterogeneous_wf(inputs)
 
 lpad = LaunchPad.auto_load()
-#today = datetime.today().strftime("%Y-%m-%d")
-#lpad.reset(today)
+# today = datetime.today().strftime("%Y-%m-%d")
+# lpad.reset(today)
 lpad.add_wf(WF)
 
 # fworker = FWorker.from_file("/home/yalcin/config_local/my_fworker.yaml")

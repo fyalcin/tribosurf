@@ -61,7 +61,9 @@ class FT_UpdateCompParams(FiretaskBase):
         # get values from spec:
         new_data = {"$set": {}}
         for param in new_params:
-            new_data["$set"][f"comp_parameters.{param}"] = fw_spec.get(param, None)
+            new_data["$set"][f"comp_parameters.{param}"] = fw_spec.get(
+                param, None
+            )
 
         if update_bulk:
             nav_high.update_data(

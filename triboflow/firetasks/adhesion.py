@@ -85,9 +85,13 @@ class FT_RetrieveMatchedSlabs(FiretaskBase):
             for i in input_list:
                 label = i[-1]
                 miller = i[0].miller_index
-                calc = db.find_data(collection="tasks", fltr={"task_label": label})
+                calc = db.find_data(
+                    collection="tasks", fltr={"task_label": label}
+                )
                 out_struct = calc["output"]["structure"]
-                slab = slab_from_structure(miller, Structure.from_dict(out_struct))
+                slab = slab_from_structure(
+                    miller, Structure.from_dict(out_struct)
+                )
                 if label.startswith("top"):
                     out_name = top_out_name
                 else:
@@ -95,7 +99,10 @@ class FT_RetrieveMatchedSlabs(FiretaskBase):
                 db_high = VaspDB(db_file, high_level=hl_db)
                 db_high.update_data(
                     collection=functional + ".interface_data",
-                    fltr={"name": name, "external_pressure": external_pressure},
+                    fltr={
+                        "name": name,
+                        "external_pressure": external_pressure,
+                    },
                     new_values={"$set": {out_name: slab.as_dict()}},
                 )
 
@@ -291,13 +298,19 @@ class FT_CalcAdhesion(FiretaskBase):
 
         db = VaspDB(db_file=db_file)
 
-        top_calc = db.find_data(collection="tasks", fltr={"task_label": top_label})
+        top_calc = db.find_data(
+            collection="tasks", fltr={"task_label": top_label}
+        )
         top_energy = top_calc["output"]["energy"]
 
-        bot_calc = db.find_data(collection="tasks", fltr={"task_label": bot_label})
+        bot_calc = db.find_data(
+            collection="tasks", fltr={"task_label": bot_label}
+        )
         bot_energy = bot_calc["output"]["energy"]
 
-        inter_calc = db.find_data(collection="tasks", fltr={"task_label": inter_label})
+        inter_calc = db.find_data(
+            collection="tasks", fltr={"task_label": inter_label}
+        )
         inter_energy = inter_calc["output"]["energy"]
         struct = Structure.from_dict(inter_calc["output"]["structure"])
 

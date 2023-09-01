@@ -68,7 +68,9 @@ class FT_StartChargeAnalysisSWF(FiretaskBase):
             fltr={"name": name, "external_pressure": external_pressure},
         )
 
-        redistribution_was_calculated = interface_dict.get("charge_density_redist")
+        redistribution_was_calculated = interface_dict.get(
+            "charge_density_redist"
+        )
         comp_params = interface_dict.get("comp_parameters", {})
 
         if not redistribution_was_calculated:
@@ -149,8 +151,12 @@ class FT_StartAdhesionSWF(FiretaskBase):
 
         if not adhesion_was_calculated:
             top_slab = Slab.from_dict(interface_dict["top_aligned_relaxed"])
-            bottom_slab = Slab.from_dict(interface_dict["bottom_aligned_relaxed"])
-            interface = Structure.from_dict(interface_dict["relaxed_structure@min"])
+            bottom_slab = Slab.from_dict(
+                interface_dict["bottom_aligned_relaxed"]
+            )
+            interface = Structure.from_dict(
+                interface_dict["relaxed_structure@min"]
+            )
 
             swf = adhesion_energy_swf(
                 top_slab,

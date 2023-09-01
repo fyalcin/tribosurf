@@ -390,8 +390,9 @@ def heterogeneous_wf(inputs):
 
     wf_name = (
         "TriboFlow_"
-        + "-".join(sorted([f"{formula_1}_({mpid_1})",
-                           f"{formula_2}_({mpid_2})"]))
+        + "-".join(
+            sorted([f"{formula_1}_({mpid_1})", f"{formula_2}_({mpid_2})"])
+        )
         + "_"
         + f"{functional}@{external_pressure}GPa"
     )

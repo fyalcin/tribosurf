@@ -59,9 +59,11 @@ class FT_UpdateBMLists(FiretaskBase):
             db_file = env_chk(">>db_file<<", fw_spec)
 
         db = VaspDB(db_file=db_file)
-        results = list(db.vasp_calc_db.db.eos.find({"formula_pretty": formula}).sort(
-            "created_at", pymongo.DESCENDING
-        ))[0]
+        results = list(
+            db.vasp_calc_db.db.eos.find({"formula_pretty": formula}).sort(
+                "created_at", pymongo.DESCENDING
+            )
+        )[0]
         BM = results["bulk_modulus"]
         V0 = results["results"]["v0"]
 
@@ -302,9 +304,9 @@ class FT_Convo(FiretaskBase):
             BM_tol = BM_list[-1] * BM_tolerance
             V0_tol = V0_list[-1] * V0_tolerance
 
-            if is_list_converged(BM_list, BM_tol, n_converge) and is_list_converged(
-                V0_list, V0_tol, n_converge
-            ):
+            if is_list_converged(
+                BM_list, BM_tol, n_converge
+            ) and is_list_converged(V0_list, V0_tol, n_converge):
                 # Handle the last iteration
                 final_BM = BM_list[-n_converge]
                 final_V0 = V0_list[-n_converge]
@@ -443,7 +445,9 @@ class FT_Convo(FiretaskBase):
                         name="Copy Convergence SWF results",
                     )
 
-                    WF = Workflow.from_Firework(FW, name="Copy Convergence SWF results")
+                    WF = Workflow.from_Firework(
+                        FW, name="Copy Convergence SWF results"
+                    )
 
                     return FWAction(update_spec=fw_spec, detours=WF)
                 else:
@@ -462,7 +466,9 @@ class FT_Convo(FiretaskBase):
             else:
                 k_dens = convo_list[-1] + k_dens_incr
                 # Ensure that the new density leads to a different mesh.
-                KPTS = MeshFromDensity(struct, k_dens, compare_density=convo_list[-1])
+                KPTS = MeshFromDensity(
+                    struct, k_dens, compare_density=convo_list[-1]
+                )
                 while KPTS.are_meshes_the_same():
                     k_dens = k_dens + k_dens_incr
                     KPTS = MeshFromDensity(

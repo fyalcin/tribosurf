@@ -54,7 +54,9 @@ class GetSlabSurfenListFromUids(FiretaskBase):
         mpid, uids = prev_swf_info["mpid"], prev_swf_info["uids"]
         nav = VaspDB(db_file=inp["db_file"], high_level=inp["high_level"])
         results = list(
-            nav.find_many_data(inp["surfen_coll"], {"uid": {"$in": uids}}, {"calcs": 0})
+            nav.find_many_data(
+                inp["surfen_coll"], {"uid": {"$in": uids}}, {"calcs": 0}
+            )
         )
         # for result in results:
         #     slab = Slab.from_dict(result["structure"])
@@ -143,19 +145,17 @@ class RunSurfenSwfGetEnergies(FiretaskBase):
         # create a name_suffix variable and use miller or max_index from sg_params, whichever is available
         name_suffix = ""
         if sg_params.get("miller", False):
-            name_suffix = (
-                f"Miller {sg_params['miller']} - Material Index {inp['material_index']}"
-            )
+            name_suffix = f"Miller {sg_params['miller']} - Material Index {inp['material_index']}"
         elif sg_params.get("max_index", False):
-            name_suffix = (
-                f"MMI {sg_params['max_index']} - Material Index {inp['material_index']}"
-            )
+            name_suffix = f"MMI {sg_params['max_index']} - Material Index {inp['material_index']}"
         # check if comp_params_loc is given
         if inp["comp_params_from_db"]:
             nav = VaspDB(db_file=db_file, high_level=high_level)
             bulk_coll = inp["bulk_coll"]
 
-            bulk_data = nav.find_data(collection=bulk_coll, fltr={"mpid": mpid})
+            bulk_data = nav.find_data(
+                collection=bulk_coll, fltr={"mpid": mpid}
+            )
             if bulk_data:
                 comp_params_db = bulk_data["comp_parameters"]
             else:

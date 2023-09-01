@@ -9,9 +9,7 @@ Python class to interpolate and plot the Potential Energy Surface (PES) of an in
 
 __author__ = "Michael Wolloch"
 __copyright__ = "Copyright 2022, Michael Wolloch, HIT, University of Vienna"
-__credits__ = (
-    "Code partly inspired by a previous version of M. Wolloch and Gabriele Losi"
-)
+__credits__ = "Code partly inspired by a previous version of M. Wolloch and Gabriele Losi"
 __contact__ = "michael.wolloch@univie.ac.at"
 __date__ = "April 14th, 2022"
 
@@ -116,8 +114,12 @@ def get_pes_generator_from_db(
     try:
         interface = Interface.from_dict(inter_dict["unrelaxed_structure"])
         all_shifts = inter_dict["PES"]["high_symmetry_points"]["all_shifts"]
-        unique_shifts = inter_dict["PES"]["high_symmetry_points"]["unique_shifts"]
-        energy_dict = inter_dict["PES"]["high_symmetry_points"]["energies_dict"]
+        unique_shifts = inter_dict["PES"]["high_symmetry_points"][
+            "unique_shifts"
+        ]
+        energy_dict = inter_dict["PES"]["high_symmetry_points"][
+            "energies_dict"
+        ]
         group_assignments = inter_dict["PES"]["high_symmetry_points"][
             "group_assignments"
         ]
@@ -407,7 +409,9 @@ class PESGenerator:
         puc_mult = 1
         while len(string_d) < 10 and len(string_x) < 10 and len(string_y) < 10:
             try:
-                max_x, max_y = self.__get_mep_limits(puc_mult=puc_mult, delta=0.0)
+                max_x, max_y = self.__get_mep_limits(
+                    puc_mult=puc_mult, delta=0.0
+                )
                 string_d, string_x, string_y = get_initial_strings(
                     extended_energy_list=self.extended_energies,
                     xlim=max_x,
@@ -477,7 +481,9 @@ class PESGenerator:
         self.shear_strength = {}
         for k, v in self.mep.items():
             mep = v["mep"]
-            fine_mep = reparametrize_string_with_equal_spacing(mep, len(mep) * 20)
+            fine_mep = reparametrize_string_with_equal_spacing(
+                mep, len(mep) * 20
+            )
             dx = np.ediff1d(fine_mep[:, 0], to_begin=0)
             dy = np.ediff1d(fine_mep[:, 1], to_begin=0)
             spacing = np.cumsum(np.sqrt(dx**2 + dy**2))
@@ -491,7 +497,9 @@ class PESGenerator:
             ax1.plot(spacing, potential, "k:", label=k)
             ax2.plot(spacing, shrstrgth, "k-", label="shearstrength")
             ax1.set_xlabel(r"path length l [$\rm\AA$]")
-            ax1.set_ylabel(r"$\Delta\gamma$ along MEP (dotted line) $[\rm J/ \rm m^2]$")
+            ax1.set_ylabel(
+                r"$\Delta\gamma$ along MEP (dotted line) $[\rm J/ \rm m^2]$"
+            )
             ax2.set_ylabel(r"$\rm d \gamma / \rm d \rm l$ (solid line) [GPa]")
             # ax1.title(k)
             fig.savefig(
@@ -620,7 +628,9 @@ class PESGenerator:
         for x in xrange:
             for y in yrange:
                 for entry in self.unit_cell_energies:
-                    extended_energy_list.append([entry[0] + x, entry[1] + y, entry[2]])
+                    extended_energy_list.append(
+                        [entry[0] + x, entry[1] + y, entry[2]]
+                    )
         self.extended_energies = self.__from_frac_to_cart(
             np.asarray(extended_energy_list)
         )
@@ -656,7 +666,9 @@ class PESGenerator:
         if np.asarray(array).ndim == 1:
             array = [array]
         if len(array[0]) == 3:
-            m = np.vstack((np.hstack((m, np.zeros((2, 1)))), np.asarray([0, 0, 1])))
+            m = np.vstack(
+                (np.hstack((m, np.zeros((2, 1)))), np.asarray([0, 0, 1]))
+            )
         return np.dot(array, m)
 
     def __get_plotting_rectangle(self):
@@ -738,7 +750,9 @@ class PESGenerator:
         plt.ylim = (0, self.ylim)
         ax.set_title(self.fig_name, fontsize=24, family="sans-serif", pad=10)
         if self.plot_hs_points == "unique":
-            self.__plot_hs_points(self.unique_shifts, fig, self.group_names_dict)
+            self.__plot_hs_points(
+                self.unique_shifts, fig, self.group_names_dict
+            )
         elif self.plot_hs_points == "all":
             self.__plot_hs_points(self.all_shifts, fig, self.group_names_dict)
 
@@ -879,7 +893,9 @@ class PESGenerator:
         x = [0, a[0], a[0] + b[0], b[0]]
         x_shifted = [i + self.shift_x for i in x]
         y = [0, a[1], a[1] + b[1], b[1]]
-        ax.add_patch(patches.Polygon(xy=list(zip(x_shifted, y)), fill=False, lw=2))
+        ax.add_patch(
+            patches.Polygon(xy=list(zip(x_shifted, y)), fill=False, lw=2)
+        )
 
         if self.plot_pes_unit_cell:
             try:
@@ -904,7 +920,9 @@ class PESGenerator:
                     start = self.initial_string_d[0] - vertices[min_vx]
                     vertices = vertices + start
                     ax.add_patch(
-                        patches.Polygon(xy=vertices, fill=False, lw=2, color="blue")
+                        patches.Polygon(
+                            xy=vertices, fill=False, lw=2, color="blue"
+                        )
                     )
 
     def __get_fig_and_ax(self):
@@ -932,7 +950,9 @@ class PESGenerator:
                 dpi=300,
             )
         else:
-            fig = plt.figure(figsize=(self.xlim, self.ylim + add_height), dpi=300)
+            fig = plt.figure(
+                figsize=(self.xlim, self.ylim + add_height), dpi=300
+            )
         ax = fig.add_subplot(111)
         ax.set_aspect("equal")
         return fig, ax

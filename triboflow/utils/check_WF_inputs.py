@@ -43,15 +43,18 @@ def check_hetero_wf_inputs(inputs):
                     "There is no default value for this keyword. "
                     "Please set it in the input file."
                 )
-            
+
     # extra check if either sg_params["miller"] or sg_params["max_index"]
     # is set (not None). If not, raise an error.
-    if checked_inputs["sg_params"]["miller"] is None and checked_inputs["sg_params"]["max_index"] is None:
+    if (
+        checked_inputs["sg_params"]["miller"] is None
+        and checked_inputs["sg_params"]["max_index"] is None
+    ):
         raise ValueError(
             "Either sg_params['miller'] or sg_params['max_index'] NEEDS to be set by the user.\n"
             "Please set one of them in the input file."
         )
-    
+
     return checked_inputs
 
 

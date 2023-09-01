@@ -74,7 +74,7 @@ def update_fws(id_list, update, rerun):
     """
     for i in id_list:
         fw = lp.get_fw_by_id(i)
-        
+
         if "CopyVaspOutputs" in fw.spec["_tasks"][0]["_fw_name"]:
             is_followup = True
         else:
@@ -102,14 +102,22 @@ def update_fws(id_list, update, rerun):
             for k, v in update.items():
                 lp.update_spec(
                     [i],
-                    {"_tasks.0.vasp_input_set.user_incar_settings.{}".format(k): v},
+                    {
+                        "_tasks.0.vasp_input_set.user_incar_settings.{}".format(
+                            k
+                        ): v
+                    },
                 )
         else:
             # print('FW_ID {} is GGA follow-up calc'.format(i))
             for k, v in update.items():
                 lp.update_spec(
                     [i],
-                    {"_tasks.1.other_params.user_incar_settings.{}".format(k): v},
+                    {
+                        "_tasks.1.other_params.user_incar_settings.{}".format(
+                            k
+                        ): v
+                    },
                 )
 
         if rerun:

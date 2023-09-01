@@ -84,7 +84,9 @@ class FT_StartBulkPreRelax(FiretaskBase):
                     "be used as input for cell shape relaxation."
                 )
             struct = Structure.from_dict(struct)
-            prim_struct = SpacegroupAnalyzer(struct).get_primitive_standard_structure()
+            prim_struct = SpacegroupAnalyzer(
+                struct
+            ).get_primitive_standard_structure()
             prim_struct = transfer_average_magmoms(struct, prim_struct)
         else:
             prim_struct = Structure.from_dict(prim_struct)
@@ -122,7 +124,9 @@ class FT_StartBulkPreRelax(FiretaskBase):
                         high_level=hl_db,
                     )
                 ],
-                name="Move pre-relaxed structure for {}".format(prim_struct.formula),
+                name="Move pre-relaxed structure for {}".format(
+                    prim_struct.formula
+                ),
             )
             MoveResultsWF = Workflow([MoveResultsFW])
 
@@ -284,7 +288,9 @@ class FT_GetRelaxedSlab(FiretaskBase):
             vasp_calc = db.find_data(
                 collection="tasks", fltr={"task_label": self["tag"]}
             )
-            relaxed_slab = Structure.from_dict(vasp_calc["output"]["structure"])
+            relaxed_slab = Structure.from_dict(
+                vasp_calc["output"]["structure"]
+            )
             slab = Slab(
                 relaxed_slab.lattice,
                 relaxed_slab.species_and_occu,
@@ -309,7 +315,9 @@ class FT_GetRelaxedSlab(FiretaskBase):
             )
 
             if vasp_calc:
-                relaxed_slab = Structure.from_dict(vasp_calc["output"]["structure"])
+                relaxed_slab = Structure.from_dict(
+                    vasp_calc["output"]["structure"]
+                )
                 slab = Slab(
                     relaxed_slab.lattice,
                     relaxed_slab.species_and_occu,
@@ -363,7 +371,9 @@ class FT_GetRelaxedSlab(FiretaskBase):
                 user=user,
                 port=port,
             )
-            FW = Firework([write_FT, copy_FT], name="Copy SlabRelax SWF results")
+            FW = Firework(
+                [write_FT, copy_FT], name="Copy SlabRelax SWF results"
+            )
             WF = Workflow.from_Firework(FW, name="Copy SlabRelax SWF results")
 
             return FWAction(update_spec=fw_spec, detours=WF)
@@ -449,11 +459,15 @@ class FT_MakeHeteroStructure(FiretaskBase):
         db_high = VaspDB(db_file=db_file, high_level=hl_db)
 
         slab_surfen_list_1 = fw_spec.get(f"slab_surfen_list_1")
-        slab_surfen_list_2 = fw_spec.get(f"slab_surfen_list_2", slab_surfen_list_1)
+        slab_surfen_list_2 = fw_spec.get(
+            f"slab_surfen_list_2", slab_surfen_list_1
+        )
 
         # get the surface energies of the slabs
         pairs = list(itertools.product(slab_surfen_list_1, slab_surfen_list_2))
-        pairs.sort(key=lambda x: x[0]["surface_energy"] + x[1]["surface_energy"])
+        pairs.sort(
+            key=lambda x: x[0]["surface_energy"] + x[1]["surface_energy"]
+        )
 
         inter_comp_params = get_consolidated_comp_params(
             mpid1=mpid1,
@@ -469,11 +483,16 @@ class FT_MakeHeteroStructure(FiretaskBase):
             hkl1, hkl2 = slab1_dict["hkl"], slab2_dict["hkl"]
             shift1, shift2 = slab1_dict["shift"], slab2_dict["shift"]
 
-            inter_name = interface_name(mpid1, mpid2, hkl1, hkl2, shift1, shift2)
+            inter_name = interface_name(
+                mpid1, mpid2, hkl1, hkl2, shift1, shift2
+            )
 
             inter_data = db_high.find_data(
                 collection=functional + ".interface_data",
-                fltr={"name": inter_name, "external_pressure": external_pressure},
+                fltr={
+                    "name": inter_name,
+                    "external_pressure": external_pressure,
+                },
             )
 
             if inter_data:
@@ -514,7 +533,10 @@ class FT_MakeHeteroStructure(FiretaskBase):
 
                     db_high.update_data(
                         collection=functional + ".interface_data",
-                        fltr={"name": inter_name, "external_pressure": external_pressure},
+                        fltr={
+                            "name": inter_name,
+                            "external_pressure": external_pressure,
+                        },
                         new_values={
                             "$set": {
                                 "unrelaxed_structure": inter_dict,
