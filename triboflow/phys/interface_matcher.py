@@ -165,6 +165,7 @@ class InterfaceMatcher:
         interface_distance="auto",
         interface_distance_addon=0.0,
         external_pressure=None,
+        max_sites=200,
     ):
         """Initialize the InterfaceMatcher class
 
@@ -181,6 +182,7 @@ class InterfaceMatcher:
 
         Parameters
         ----------
+        max_sites
         slab_1 : pymatgen.core.surface.Slab
             First slab for the interface matching
         slab_2 : pymatgen.core.surface.Slab
@@ -251,11 +253,14 @@ class InterfaceMatcher:
             "max_area_ratio_tol": max_area_ratio_tol,
             "bidirectional": bidirectional_search,
         }
+        self.max_sites = max_sites
         self.vacuum_thickness = vacuum
         self.aligned_top_slab = None
         self.aligned_bot_slab = None
         # Assign top and bottom slabs with strain weights.
-        self.__assign_top_bottom(slab_1.copy(), slab_2.copy(), weight_1, weight_2)
+        self.__assign_top_bottom(
+            slab_1.copy(), slab_2.copy(), weight_1, weight_2
+        )
         # Set interface distance
         self.__set_interface_dist(interface_distance, interface_distance_addon)
         # Set the vacua for the centered slabs to ensure correct vacuum for the
@@ -311,8 +316,12 @@ class InterfaceMatcher:
         """
         thickness_top = Shaper.get_proj_height(self.top_slab, "slab")
         thickness_bot = Shaper.get_proj_height(self.bot_slab, "slab")
-        self.vacuum_top = thickness_bot + self.vacuum_thickness + self.inter_dist
-        self.vacuum_bot = thickness_top + self.vacuum_thickness + self.inter_dist
+        self.vacuum_top = (
+            thickness_bot + self.vacuum_thickness + self.inter_dist
+        )
+        self.vacuum_bot = (
+            thickness_top + self.vacuum_thickness + self.inter_dist
+        )
 
     def __set_interface_dist(self, initial_distance, distance_boost):
         """
@@ -341,7 +350,9 @@ class InterfaceMatcher:
         except ValueError:
             av_spacing_top = Shaper.get_average_layer_spacing(self.top_slab)
             av_spacing_bot = Shaper.get_average_layer_spacing(self.bot_slab)
-            self.inter_dist = np.mean([av_spacing_top, av_spacing_bot]) + distance_boost
+            self.inter_dist = (
+                np.mean([av_spacing_top, av_spacing_bot]) + distance_boost
+            )
 
     def __get_formula_and_miller(self, slab):
         """
@@ -425,7 +436,9 @@ class InterfaceMatcher:
 
         """
 
-        latt = Lattice(np.array([uv[0][:], uv[1][:], slab.lattice.matrix[2, :]]))
+        latt = Lattice(
+            np.array([uv[0][:], uv[1][:], slab.lattice.matrix[2, :]])
+        )
         return latt
 
     def __get_supercell_matrix(self, slab, lattice):
@@ -452,7 +465,9 @@ class InterfaceMatcher:
         return sc_matrix
 
     def _set_intended_vacuum(self, slab, vacuum):
-        return Shaper.modify_vacuum(slab, vacuum, method="to_value", center=False)
+        return Shaper.modify_vacuum(
+            slab, vacuum, method="to_value", center=False
+        )
 
     def _find_lattice_match(self):
         """
@@ -505,8 +520,12 @@ class InterfaceMatcher:
         # the possibility that no match is found and both top_vec and bot_vec
         # are None.
         try:
-            top_latt = self.__make_3d_lattice_from_2d_lattice(self.top_slab, top_vec)
-            bot_latt = self.__make_3d_lattice_from_2d_lattice(self.bot_slab, bot_vec)
+            top_latt = self.__make_3d_lattice_from_2d_lattice(
+                self.top_slab, top_vec
+            )
+            bot_latt = self.__make_3d_lattice_from_2d_lattice(
+                self.bot_slab, bot_vec
+            )
         except TypeError:
             return None, None
 
@@ -531,8 +550,12 @@ class InterfaceMatcher:
         # Handle the possibility that no match is found
         if not top_latt and not bot_latt:
             return None, None
-        supercell_matrix_top = self.__get_supercell_matrix(self.top_slab, top_latt)
-        supercell_matrix_bot = self.__get_supercell_matrix(self.bot_slab, bot_latt)
+        supercell_matrix_top = self.__get_supercell_matrix(
+            self.top_slab, top_latt
+        )
+        supercell_matrix_bot = self.__get_supercell_matrix(
+            self.bot_slab, bot_latt
+        )
         supercell_top = self.top_slab.copy()
         supercell_bot = self.bot_slab.copy()
         supercell_top.make_supercell(supercell_matrix_top)
@@ -573,8 +596,12 @@ class InterfaceMatcher:
                 self.top_weight,
                 self.bot_weight,
             )
-            l_top = self.__make_3d_lattice_from_2d_lattice(sc_top, new_lattice.matrix)
-            l_bot = self.__make_3d_lattice_from_2d_lattice(sc_bot, new_lattice.matrix)
+            l_top = self.__make_3d_lattice_from_2d_lattice(
+                sc_top, new_lattice.matrix
+            )
+            l_bot = self.__make_3d_lattice_from_2d_lattice(
+                sc_bot, new_lattice.matrix
+            )
 
             sc_top.lattice = l_top
             sc_bot.lattice = l_bot
@@ -611,7 +638,9 @@ class InterfaceMatcher:
             return None, None
         top_slab = self._set_intended_vacuum(top_slab, self.vacuum_top)
         bot_slab = self._set_intended_vacuum(bot_slab, self.vacuum_bot)
-        tcs, bcs = recenter_aligned_slabs(top_slab, bot_slab, d=self.inter_dist)
+        tcs, bcs = recenter_aligned_slabs(
+            top_slab, bot_slab, d=self.inter_dist
+        )
         return tcs, bcs
 
     def get_interface(self):
@@ -631,18 +660,26 @@ class InterfaceMatcher:
         if not tcs and not bcs:
             return None
 
-        # Note that the from_slab method of the Inteface object flips the film over!
+        # Note that the from_slab method of the Interface object flips the film over!
         # UPDATE ON 27.06.22: After noticing some discrepancies with the high symmetry points
         # we decided to leave the film as is, since it gets flipped once more by the Interface
         # class. This seems to fix the issues with the high symmetry points.
-        self.interface = Interface.from_slabs(
+        interface = Interface.from_slabs(
             substrate_slab=bcs,
             film_slab=tcs,
             gap=self.inter_dist,
             vacuum_over_film=self.vacuum_thickness,
         )
 
-        self.interface = clean_up_site_properties(self.interface)
+        # check if the interface is too large
+        if interface.num_sites > self.max_sites:
+            warnings.warn(
+                f"Interface has {interface.num_sites} sites, which is larger than the maximum of {self.max_sites} sites."
+                f" Please increase the max_sites parameter in the InterfaceMatcher class to get a larger interface."
+            )
+            return None
+
+        self.interface = clean_up_site_properties(interface)
 
         self.interface.interface_properties = {
             "area": tcs.surface_area,

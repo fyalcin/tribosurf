@@ -15,6 +15,7 @@
   },
   "interface_params": {
     "max_area": 100,
+    "max_sites": 200,
     "interface_distance": "auto",
     "max_angle_tol": 0.01,
     "max_length_tol": 0.03,

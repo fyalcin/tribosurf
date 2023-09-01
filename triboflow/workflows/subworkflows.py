@@ -299,7 +299,9 @@ def adhesion_energy_swf(
         interface, comp_parameters, "slab_from_scratch"
     )
 
-    FW_top = StaticFW(structure=top_slab, vasp_input_set=vis_top, name=tag + "top")
+    FW_top = StaticFW(
+        structure=top_slab, vasp_input_set=vis_top, name=tag + "top"
+    )
     FW_bot = StaticFW(
         structure=bottom_slab, vasp_input_set=vis_bot, name=tag + "bottom"
     )
@@ -478,7 +480,10 @@ def calc_pes_swf(
     try:
         interface_dict = db_high.find_data(
             collection=f"{functional}.interface_data",
-            fltr={"name": interface_name, "external_pressure": external_pressure},
+            fltr={
+                "name": interface_name,
+                "external_pressure": external_pressure,
+            },
         )
         relaxed_structure = interface_dict["relaxed_structure"]
         if relaxed_structure:
@@ -735,7 +740,9 @@ def converge_swf(
             '"encut".\nYou have passed {}'.format(conv_type)
         )
     if conv_type == "encut":
-        name = "Encut Convergence SWF of " + structure.composition.reduced_formula
+        name = (
+            "Encut Convergence SWF of " + structure.composition.reduced_formula
+        )
         if not encut_start:
             # Get the largest EMIN value of the potcar and round up to the
             # next whole 25.
@@ -746,7 +753,10 @@ def converge_swf(
             enmax = encut_dict["ENMAX"]
             encut_start = int(25 * np.ceil(enmax / 25))
     elif conv_type == "kpoints":
-        name = "Kpoint Convergence SWF of " + structure.composition.reduced_formula
+        name = (
+            "Kpoint Convergence SWF of "
+            + structure.composition.reduced_formula
+        )
     else:
         raise ValueError(
             f'"type" input must be either "kpoints" or'

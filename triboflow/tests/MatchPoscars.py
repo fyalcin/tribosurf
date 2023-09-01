@@ -21,10 +21,10 @@ def match_the_interface(slab_1, slab_2, inter_params={}):
     IM = InterfaceMatcher(
         slab_1,
         slab_2,
+        max_area_ratio_tol=max_area_ratio_tol,
         max_area=max_area,
         max_length_tol=max_length_tol,
         max_angle_tol=max_angle_tol,
-        max_area_ratio_tol=max_area_ratio_tol,
         interface_distance=separation,
     )
 
@@ -40,7 +40,8 @@ def match_the_interface(slab_1, slab_2, inter_params={}):
         return return_dict
     else:
         print(
-            "No match of the given slabs could be found with the " "given parameters:"
+            "No match of the given slabs could be found with the "
+            "given parameters:"
         )
         pprint.pprint(inter_params)
         print("")
