@@ -447,7 +447,7 @@ class FT_StartPESCalcs(FiretaskBase):
                 structure=clean_struct,
                 comp_parameters=comp_params,
                 relax_type="interface_z_relax",
-                apply_external_pressure=external_pressure,
+                apply_pressure=external_pressure,
             )
             inputs.append([clean_struct, vis, label])
 
