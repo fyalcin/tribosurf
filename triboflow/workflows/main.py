@@ -176,7 +176,6 @@ def heterogeneous_wf(inputs):
     get_slabs_m1 = Firework(
         RunSurfenSwfGetEnergies(
             mpid=mpid_1,
-            comp_params_from_db=True,
             sg_params=sg_params_1,
             sg_filter=sg_filter_1,
             bulk_coll=bulk_coll,
@@ -201,7 +200,6 @@ def heterogeneous_wf(inputs):
         get_slabs_m2 = Firework(
             RunSurfenSwfGetEnergies(
                 mpid=mpid_2,
-                comp_params_from_db=True,
                 sg_params=sg_params_2,
                 sg_filter=sg_filter_2,
                 bulk_coll=bulk_coll,
