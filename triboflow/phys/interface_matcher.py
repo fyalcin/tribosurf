@@ -43,8 +43,9 @@ The module contains:
 
 """
 
-import numpy as np
 import warnings
+
+import numpy as np
 from pymatgen.analysis.interfaces.zsl import ZSLGenerator
 from pymatgen.core.interface import Interface
 from pymatgen.core.lattice import Lattice
@@ -564,7 +565,7 @@ class InterfaceMatcher:
 
     def get_aligned_slabs(self):
         """
-        Get alinged slabs that are stretched according to the supplied weights.
+        Get aligned slabs that are stretched according to the supplied weights.
 
         The first slab returned will be flipped horizontally so that the side
         facing the interface will be the one initially facing in the positive
@@ -674,8 +675,9 @@ class InterfaceMatcher:
         # check if the interface is too large
         if interface.num_sites > self.max_sites:
             warnings.warn(
-                f"Interface has {interface.num_sites} sites, which is larger than the maximum of {self.max_sites} sites."
-                f" Please increase the max_sites parameter in the InterfaceMatcher class to get a larger interface."
+                f"\n\nWARNING: Interface is too large!\n"
+                f"No interface could be generated with the given interface parameters.\n"
+                f"Try increasing the max_sites parameter.\n"
             )
             return None
 
