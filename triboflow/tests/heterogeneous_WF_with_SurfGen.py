@@ -6,6 +6,7 @@ Created on Fri Jun 19 16:15:02 2020
 @author: mwo
 """
 from datetime import datetime
+from atomate.vasp.powerups import add_modify_incar
 from fireworks import LaunchPad
 
 from triboflow.workflows.main import heterogeneous_wf
@@ -39,6 +40,7 @@ inputs = {
         "max_area_ratio_tol": 0.1,
         "max_length_tol": 0.05,
         "external_pressure": 1,
+        "max_sites": 30,
     },
     "db_file": "/home/fs71411/mwo3/FireWorks/config_VSC5_Zen3/db.json",
     "high_level": "release_test_db",
