@@ -10,7 +10,7 @@ from triboflow.firetasks.adhesion import (
     FT_RelaxMatchedSlabs,
     FT_RetrieveMatchedSlabs,
 )
-from triboflow.firetasks.run_slabs_wfs import RunSurfenSwfGetEnergies
+from triboflow.firetasks.run_slabs_wfs import GetCandidatesForHeteroStructure
 from triboflow.firetasks.start_swfs import (
     FT_StartAdhesionSWF,
     FT_StartBulkConvoSWF,
@@ -37,7 +37,7 @@ def heterogeneous_wf(inputs):
 
     Returns
     -------
-    wf_list : FireWorks Workflow
+    fw_list : FireWorks Workflow
         Main Triboflow workflow for heterogeneous interfaces.
 
     """
@@ -60,7 +60,7 @@ def heterogeneous_wf(inputs):
 
     functional = computational_params.get("functional", "PBE")
 
-    wf_list = []
+    fw_list = []
 
     # external_pressure might default to None, so we have to check for that
     external_pressure = interface_params.get("external_pressure", 0.0) or 0.0
@@ -75,7 +75,7 @@ def heterogeneous_wf(inputs):
         ),
         name=f"Add {formula_1} ({mpid_1}) to DB",
     )
-    wf_list.append(add_bulk_m1)
+    fw_list.append(add_bulk_m1)
 
     pre_relaxation_m1 = Firework(
         FT_StartBulkPreRelax(
@@ -87,7 +87,7 @@ def heterogeneous_wf(inputs):
         name=f"Start pre-relaxation for {formula_1} ({mpid_1})",
         parents=[add_bulk_m1],
     )
-    wf_list.append(pre_relaxation_m1)
+    fw_list.append(pre_relaxation_m1)
 
     converge_encut_m1 = Firework(
         FT_StartBulkConvoSWF(
@@ -100,7 +100,7 @@ def heterogeneous_wf(inputs):
         name=f"Start encut convergence for {formula_1} ({mpid_1})",
         parents=[pre_relaxation_m1],
     )
-    wf_list.append(converge_encut_m1)
+    fw_list.append(converge_encut_m1)
 
     converge_kpoints_m1 = Firework(
         FT_StartBulkConvoSWF(
@@ -113,7 +113,7 @@ def heterogeneous_wf(inputs):
         name=f"Start kpoints convergence for {formula_1} ({mpid_1})",
         parents=[converge_encut_m1],
     )
-    wf_list.append(converge_kpoints_m1)
+    fw_list.append(converge_kpoints_m1)
 
     final_params_parents = [converge_kpoints_m1]
 
@@ -128,7 +128,7 @@ def heterogeneous_wf(inputs):
             ),
             name=f"Add {formula_2} ({mpid_2}) to DB",
         )
-        wf_list.append(add_bulk_m2)
+        fw_list.append(add_bulk_m2)
 
         pre_relaxation_m2 = Firework(
             FT_StartBulkPreRelax(
@@ -140,7 +140,7 @@ def heterogeneous_wf(inputs):
             name=f"Start pre-relaxation for {formula_2} ({mpid_2})",
             parents=[add_bulk_m2],
         )
-        wf_list.append(pre_relaxation_m2)
+        fw_list.append(pre_relaxation_m2)
 
         converge_encut_m2 = Firework(
             FT_StartBulkConvoSWF(
@@ -153,7 +153,7 @@ def heterogeneous_wf(inputs):
             name=f"Start encut convergence for {formula_2} ({mpid_2})",
             parents=[pre_relaxation_m2],
         )
-        wf_list.append(converge_encut_m2)
+        fw_list.append(converge_encut_m2)
 
         converge_kpoints_m2 = Firework(
             FT_StartBulkConvoSWF(
@@ -166,54 +166,35 @@ def heterogeneous_wf(inputs):
             name=f"Start kpoints convergence for {formula_2} ({mpid_2})",
             parents=[converge_encut_m2],
         )
-        wf_list.append(converge_kpoints_m2)
+        fw_list.append(converge_kpoints_m2)
 
         final_params_parents.append(converge_kpoints_m2)
 
     bulk_coll = f"{functional}.bulk_data"
     surfen_coll = f"{functional}.surfen_data"
 
-    get_slabs_m1 = Firework(
-        RunSurfenSwfGetEnergies(
-            mpid=mpid_1,
-            sg_params=sg_params_1,
-            sg_filter=sg_filter_1,
-            bulk_coll=bulk_coll,
-            add_full_relax=True,
-            material_index=1,
-            surfen_coll=surfen_coll,
+    find_candidate_slabs = Firework(
+        GetCandidatesForHeteroStructure(
+            mpid_1=mpid_1,
+            mpid_2=mpid_2,
+            comp_params_1={},
+            comp_params_2={},
+            interface_params=interface_params,
+            sg_params_1=sg_params_1,
+            sg_params_2=sg_params_2,
+            sg_filter_1=sg_filter_1,
+            sg_filter_2=sg_filter_2,
             db_file=db_file,
             high_level=high_level,
+            surfen_coll=surfen_coll,
+            bulk_coll=bulk_coll,
+            add_full_relax=True,
         ),
-        name=f"Get slabs for {formula_1} ({mpid_1})",
+        name="Get candidate slabs for heterostructure generation",
         parents=final_params_parents,
     )
-    wf_list.append(get_slabs_m1)
 
-    match_interface_parents = [get_slabs_m1]
-
-    if (
-        (mpid_2 != mpid_1)
-        or (sg_params_1 != sg_params_2)
-        or (sg_filter_1 != sg_filter_2)
-    ):
-        get_slabs_m2 = Firework(
-            RunSurfenSwfGetEnergies(
-                mpid=mpid_2,
-                sg_params=sg_params_2,
-                sg_filter=sg_filter_2,
-                bulk_coll=bulk_coll,
-                add_full_relax=True,
-                material_index=2,
-                surfen_coll=surfen_coll,
-                db_file=db_file,
-                high_level=high_level,
-            ),
-            name=f"Get slabs for {formula_2} ({mpid_2})",
-            parents=final_params_parents,
-        )
-        wf_list.append(get_slabs_m2)
-        match_interface_parents.append(get_slabs_m2)
+    fw_list.append(find_candidate_slabs)
 
     make_interface = Firework(
         FT_MakeHeteroStructure(
@@ -225,9 +206,9 @@ def heterogeneous_wf(inputs):
             high_level=high_level,
         ),
         name="Match the interface",
-        parents=match_interface_parents,
+        parents=[find_candidate_slabs],
     )
-    wf_list.append(make_interface)
+    fw_list.append(make_interface)
 
     relax_matched_slabs = Firework(
         FT_RelaxMatchedSlabs(
@@ -242,7 +223,7 @@ def heterogeneous_wf(inputs):
         name="Fully relax the matched slabs",
         parents=[make_interface],
     )
-    wf_list.append(relax_matched_slabs)
+    fw_list.append(relax_matched_slabs)
 
     calc_pes_points = Firework(
         FT_StartPESCalcSWF(
@@ -257,7 +238,7 @@ def heterogeneous_wf(inputs):
         name="Compute PES high-symmetry points",
         parents=[make_interface],
     )
-    wf_list.append(calc_pes_points)
+    fw_list.append(calc_pes_points)
 
     retrieve_matched_slabs = Firework(
         FT_RetrieveMatchedSlabs(
@@ -271,7 +252,7 @@ def heterogeneous_wf(inputs):
         name="Retrieve relaxed matched slabs",
         parents=[relax_matched_slabs],
     )
-    wf_list.append(retrieve_matched_slabs)
+    fw_list.append(retrieve_matched_slabs)
 
     compute_adhesion = Firework(
         FT_StartAdhesionSWF(
@@ -285,7 +266,7 @@ def heterogeneous_wf(inputs):
         name="Calculate Adhesion",
         parents=[calc_pes_points, retrieve_matched_slabs],
     )
-    wf_list.append(compute_adhesion)
+    fw_list.append(compute_adhesion)
 
     charge_analysis = Firework(
         FT_StartChargeAnalysisSWF(
@@ -299,7 +280,7 @@ def heterogeneous_wf(inputs):
         name="Charge Analysis",
         parents=[calc_pes_points],
     )
-    wf_list.append(charge_analysis)
+    fw_list.append(charge_analysis)
 
     wf_name = (
         "TriboFlow_"
@@ -310,6 +291,6 @@ def heterogeneous_wf(inputs):
         + f"{functional}@{external_pressure}GPa"
     )
 
-    wf_list = Workflow(wf_list, name=wf_name)
+    fw_list = Workflow(fw_list, name=wf_name)
 
-    return wf_list
+    return fw_list
