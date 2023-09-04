@@ -4,16 +4,18 @@ Created on Wed Jun 17 15:59:59 2020
 @author: mwo
 """
 import itertools
+import warnings
+from pprint import pprint, pformat
+from uuid import uuid4
+
 import numpy as np
 from atomate.utils.utils import env_chk
 from fireworks import FWAction, FiretaskBase, Firework, Workflow, FileWriteTask
 from fireworks.utilities.fw_utilities import explicit_serialize
-from pprint import pprint, pformat
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import Slab
 from pymatgen.io.vasp.inputs import Poscar
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
-from uuid import uuid4
 
 from hitmen_utils.db_tools import VaspDB
 from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
@@ -441,7 +443,6 @@ class FT_MakeHeteroStructure(FiretaskBase):
     optional_params = ["db_file", "high_level"]
 
     def run_task(self, fw_spec):
-        print(f"spec is {fw_spec}")
         mpid1 = self.get("mp_id_1")
         mpid2 = self.get("mp_id_2")
 
@@ -527,6 +528,15 @@ class FT_MakeHeteroStructure(FiretaskBase):
                 if top_aligned and bottom_aligned:
                     interface = im.get_interface()
 
+                    if interface is None:
+                        continue
+
+                    surface_energies_film = pair[0]["surface_energies"]
+                    surface_energies_substrate = pair[1]["surface_energies"]
+
+                    terminations_film = pair[0]["terminations"]
+                    terminations_substrate = pair[1]["terminations"]
+
                     inter_dict = interface.as_dict()
                     bottom_dict = bottom_aligned.as_dict()
                     top_dict = top_aligned.as_dict()
@@ -544,6 +554,10 @@ class FT_MakeHeteroStructure(FiretaskBase):
                                 "top_aligned": top_dict,
                                 "comp_parameters": inter_comp_params,
                                 "interface_params": interface_params,
+                                "surface_energies.film": surface_energies_film,
+                                "surface_energies.substrate": surface_energies_substrate,
+                                "terminations.film": terminations_film,
+                                "terminations.substrate": terminations_substrate,
                             }
                         },
                         upsert=True,
@@ -554,6 +568,11 @@ class FT_MakeHeteroStructure(FiretaskBase):
                 else:
                     # check if we are at the last pair, meaning none of the pairs could be matched
                     if pair == pairs[-1]:
+                        warnings.warn(
+                            f"\nWARNING:"
+                            f"Could not find a matching interface for {mpid1} and {mpid2} with the given accuracy criteria."
+                            f"Defusing workflow.\n"
+                        )
                         return FWAction(defuse_workflow=True)
                     else:
                         continue
