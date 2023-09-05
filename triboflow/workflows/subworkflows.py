@@ -521,18 +521,17 @@ def calc_pes_swf(
     tag = interface_name + "_" + make_calculation_hash(structure=interface)
 
     db_high = VaspDB(db_file=db_file, high_level=high_level)
-    try:
-        interface_dict = db_high.find_data(
-            collection=f"{functional}.interface_data",
-            fltr={
-                "name": interface_name,
-                "external_pressure": external_pressure,
-            },
-        )
-        relaxed_structure = interface_dict["relaxed_structure"]
-        if relaxed_structure:
+    interface_dict = db_high.find_data(
+        collection=f"{functional}.interface_data",
+        fltr={
+            "name": interface_name,
+            "external_pressure": external_pressure,
+        },
+    )
+    if interface_dict:
+        if interface_dict.get("relaxed_structure@min"):
             return None
-    except KeyError:
+    else:
         db_high.insert_data(
             collection=functional + ".interface_data",
             data={
