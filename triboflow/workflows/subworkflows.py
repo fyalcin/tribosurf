@@ -4,13 +4,15 @@ Created on Wed Jun 17 15:47:39 2020
 @author: mwo
 """
 
+from uuid import uuid4
+
 import numpy as np
 from atomate.vasp.fireworks import StaticFW
 from atomate.vasp.powerups import add_modify_incar
 from fireworks import Workflow, Firework
-from uuid import uuid4
 
 from hitmen_utils.db_tools import VaspDB
+from hitmen_utils.misc_tools import make_calculation_hash
 from hitmen_utils.vasp_tools import (
     get_emin_and_emax,
     get_custom_vasp_static_settings,
@@ -122,8 +124,6 @@ def charge_analysis_swf(
             '    "k_dens": <int>}\n'
         )
 
-    tag = interface_name + "_" + str(uuid4())
-
     vis_top = get_custom_vasp_static_settings(
         top_slab, comp_parameters, "slab_from_scratch"
     )
@@ -134,47 +134,69 @@ def charge_analysis_swf(
         interface, comp_parameters, "slab_from_scratch"
     )
 
-    FW_top = StaticFW(
-        structure=top_slab,
-        vasp_input_set=vis_top,
-        name=tag + "top",
-        vasptodb_kwargs={"store_volumetric_data": ["chgcar"]},
+    db = VaspDB(db_file=db_file, high_level=False)
+    main_tag = (
+        interface_name
+        + "_"
+        + make_calculation_hash(interface, vis=vis_interface.as_dict())
     )
-    FW_bot = StaticFW(
-        structure=bot_slab,
-        vasp_input_set=vis_bot,
-        name=tag + "bottom",
-        vasptodb_kwargs={"store_volumetric_data": ["chgcar"]},
-    )
-    FW_interface = StaticFW(
-        structure=interface,
-        vasp_input_set=vis_interface,
-        name=tag + "interface",
-        vasptodb_kwargs={"store_volumetric_data": ["chgcar"]},
-    )
+
+    if not db.find_data("tasks", {"task_label": main_tag + "top"}):
+        FW_top = StaticFW(
+            structure=top_slab,
+            vasp_input_set=vis_top,
+            name=main_tag + "top",
+            vasptodb_kwargs={"store_volumetric_data": ["chgcar"]},
+        )
+    else:
+        FW_top = None
+
+    if not db.find_data("tasks", {"task_label": main_tag + "bottom"}):
+        FW_bot = StaticFW(
+            structure=bot_slab,
+            vasp_input_set=vis_bot,
+            name=main_tag + "bottom",
+            vasptodb_kwargs={"store_volumetric_data": ["chgcar"]},
+        )
+    else:
+        FW_bot = None
+
+    if not db.find_data("tasks", {"task_label": main_tag + "interface"}):
+        FW_interface = StaticFW(
+            structure=interface,
+            vasp_input_set=vis_interface,
+            name=main_tag + "interface",
+            vasptodb_kwargs={"store_volumetric_data": ["chgcar"]},
+        )
+    else:
+        FW_interface = None
+
+    parents = [fw for fw in [FW_top, FW_bot, FW_interface] if fw is not None]
 
     FW_charge_analysis = Firework(
         FT_MakeChargeDensityDiff(
             interface=interface,
             interface_name=interface_name,
-            interface_calc_name=tag + "interface",
-            top_calc_name=tag + "top",
-            bot_calc_name=tag + "bottom",
+            interface_calc_name=main_tag + "interface",
+            top_calc_name=main_tag + "top",
+            bot_calc_name=main_tag + "bottom",
             functional=functional,
             external_pressure=external_pressure,
             db_file=db_file,
             high_level=high_level,
         ),
         name=f"Calculate charge density redistribution for {interface_name}",
+        parents=parents if parents else None,
     )
 
+    fws = [
+        fw
+        for fw in [FW_top, FW_bot, FW_interface, FW_charge_analysis]
+        if fw is not None
+    ]
+
     SWF = Workflow(
-        fireworks=[FW_top, FW_bot, FW_interface, FW_charge_analysis],
-        links_dict={
-            FW_top.fw_id: [FW_charge_analysis.fw_id],
-            FW_bot.fw_id: [FW_charge_analysis.fw_id],
-            FW_interface.fw_id: [FW_charge_analysis.fw_id],
-        },
+        fireworks=fws,
         name="Calculate adhesion SWF for {}".format(interface_name),
     )
 
@@ -287,8 +309,6 @@ def adhesion_energy_swf(
             '    "k_dens": <int>}\n'
         )
 
-    tag = interface_name + "_" + str(uuid4())
-
     vis_top = get_custom_vasp_static_settings(
         top_slab, comp_parameters, "slab_from_scratch"
     )
@@ -299,38 +319,62 @@ def adhesion_energy_swf(
         interface, comp_parameters, "slab_from_scratch"
     )
 
-    FW_top = StaticFW(
-        structure=top_slab, vasp_input_set=vis_top, name=tag + "top"
+    main_tag = (
+        interface_name
+        + "_"
+        + make_calculation_hash(structure=interface, vis=vis_interface)
     )
-    FW_bot = StaticFW(
-        structure=bottom_slab, vasp_input_set=vis_bot, name=tag + "bottom"
-    )
-    FW_interface = StaticFW(
-        structure=interface,
-        vasp_input_set=vis_interface,
-        name=tag + "interface",
-    )
+    db = VaspDB(db_file=db_file, high_level=False)
+
+    if not db.find_one("tasks", {"task_label": main_tag}):
+        FW_top = StaticFW(
+            structure=top_slab, vasp_input_set=vis_top, name=main_tag + "top"
+        )
+    else:
+        FW_top = None
+
+    if not db.find_one("tasks", {"task_label": main_tag + "bottom"}):
+        FW_bot = StaticFW(
+            structure=bottom_slab,
+            vasp_input_set=vis_bot,
+            name=main_tag + "bottom",
+        )
+    else:
+        FW_bot = None
+
+    if not db.find_one("tasks", {"task_label": main_tag + "interface"}):
+        FW_interface = StaticFW(
+            structure=interface,
+            vasp_input_set=vis_interface,
+            name=main_tag + "interface",
+        )
+    else:
+        FW_interface = None
+
+    parents = [fw for fw in [FW_top, FW_bot, FW_interface] if fw is not None]
 
     FW_results = Firework(
         FT_CalcAdhesion(
             interface_name=interface_name,
             functional=functional,
             external_pressure=external_pressure,
-            top_label=tag + "top",
-            bottom_label=tag + "bottom",
-            interface_label=tag + "interface",
+            top_label=main_tag + "_top",
+            bottom_label=main_tag + "_bottom",
+            interface_label=main_tag + "_interface",
             db_file=db_file,
             high_level=high_level,
         ),
         name=f"Calculate Adhesion FW for {interface_name}",
+        parents=parents if parents else None,
     )
+
+    fws = [
+        fw
+        for fw in [FW_top, FW_bot, FW_interface, FW_results]
+        if fw is not None
+    ]
     SWF = Workflow(
-        fireworks=[FW_top, FW_bot, FW_interface, FW_results],
-        links_dict={
-            FW_top.fw_id: [FW_results.fw_id],
-            FW_bot.fw_id: [FW_results.fw_id],
-            FW_interface.fw_id: [FW_results.fw_id],
-        },
+        fireworks=fws,
         name="Calculate adhesion SWF for {}".format(interface_name),
     )
 
@@ -474,7 +518,7 @@ def calc_pes_swf(
             '    "k_dens": <int>}\n'
         )
 
-    tag = interface_name + "_" + str(uuid4())
+    tag = interface_name + "_" + make_calculation_hash(structure=interface)
 
     db_high = VaspDB(db_file=db_file, high_level=high_level)
     try:

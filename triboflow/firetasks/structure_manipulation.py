@@ -6,7 +6,6 @@ Created on Wed Jun 17 15:59:59 2020
 import itertools
 import warnings
 from pprint import pprint, pformat
-from uuid import uuid4
 
 import numpy as np
 from atomate.utils.utils import env_chk
@@ -18,6 +17,7 @@ from pymatgen.io.vasp.inputs import Poscar
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 from hitmen_utils.db_tools import VaspDB
+from hitmen_utils.misc_tools import make_calculation_hash
 from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
 from hitmen_utils.workflows import dynamic_relax_swf
 from surfen.utils.structure_manipulation import add_bulk_to_db
@@ -107,14 +107,15 @@ class FT_StartBulkPreRelax(FiretaskBase):
             k_dens = self.get("k_dens", 15)
             comp_params.update({"encut": encut, "k_dens": k_dens})
 
-            tag = "CellShapeRelax-{}".format(str(uuid4()))
             vis = get_custom_vasp_relax_settings(
                 prim_struct, comp_params, "bulk_pos_shape_relax"
             )
+            tag = f"CellShapeRelax-{make_calculation_hash(structure=prim_struct, vis=vis)}"
             RelaxWF = dynamic_relax_swf(
                 inputs_list=[[prim_struct, vis, tag]],
                 prerelax_system=True,
                 prerelax_kwargs={"relax_cell": True},
+                db_file=db_file,
             )
 
             MoveResultsFW = Firework(
@@ -126,15 +127,15 @@ class FT_StartBulkPreRelax(FiretaskBase):
                         high_level=hl_db,
                     )
                 ],
-                name="Move pre-relaxed structure for {}".format(
-                    prim_struct.formula
-                ),
+                name=f"Move pre-relaxed structure for {prim_struct.formula}",
             )
             MoveResultsWF = Workflow([MoveResultsFW])
 
-            RelaxWF.append_wf(MoveResultsWF, RelaxWF.leaf_fw_ids)
+            if RelaxWF is not None:
+                RelaxWF.append_wf(MoveResultsWF, RelaxWF.leaf_fw_ids)
+            wf = RelaxWF if RelaxWF else MoveResultsWF
 
-            return FWAction(detours=RelaxWF, update_spec=fw_spec)
+            return FWAction(detours=wf, update_spec=fw_spec)
 
 
 @explicit_serialize

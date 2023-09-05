@@ -35,6 +35,7 @@ WF = dynamic_relax_swf(
     wf_name="test_relax_wf",
     add_static=True,
     prerelax_system=True,
+    db_file="auto",
 )
 lpad = LaunchPad.auto_load()
 lpad.add_wf(WF)

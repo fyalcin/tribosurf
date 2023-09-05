@@ -11,9 +11,9 @@ from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import Slab
-from uuid import uuid4
 
 from hitmen_utils.db_tools import VaspDB
+from hitmen_utils.misc_tools import make_calculation_hash
 from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
 from hitmen_utils.workflows import dynamic_relax_swf
 from triboflow.utils.structure_manipulation import (
@@ -206,8 +206,14 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
             )
             formula = top_slab.composition.reduced_formula
             miller = "".join(str(s) for s in top_slab.miller_index)
-            label = "top_slab_" + formula + miller + "_" + str(uuid4())
-            inputs.append([top_slab, top_vis, label])
+            label_top = (
+                "top_slab_"
+                + formula
+                + miller
+                + "_"
+                + make_calculation_hash(structure=top_slab, vis=top_vis)
+            )
+            inputs.append([top_slab, top_vis, label_top])
         if not relaxed_bot_present:
             bot_slab = Slab.from_dict(interface_dict[bot_in_name])
             bot_vis = get_custom_vasp_relax_settings(
@@ -215,8 +221,14 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
             )
             formula = bot_slab.composition.reduced_formula
             miller = "".join(str(s) for s in bot_slab.miller_index)
-            label = "bot_slab_" + formula + miller + "_" + str(uuid4())
-            inputs.append([bot_slab, bot_vis, label])
+            label_bot = (
+                "bot_slab_"
+                + formula
+                + miller
+                + "_"
+                + make_calculation_hash(structure=bot_slab, vis=bot_vis)
+            )
+            inputs.append([bot_slab, bot_vis, label_bot])
 
         fw_spec["relaxation_inputs"] = inputs
 
@@ -227,6 +239,7 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
                 prerelax_system=prerelax,
                 prerelax_calculator=prerelax_calculator,
                 prerelax_kwargs=prerelax_kwargs,
+                db_file=db_file,
             )
             return FWAction(detours=wf, update_spec=fw_spec)
         else:

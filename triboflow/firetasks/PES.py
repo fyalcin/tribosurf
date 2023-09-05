@@ -416,6 +416,7 @@ class FT_StartPESCalcs(FiretaskBase):
         "prerelax",
         "prerelax_calculator",
         "prerelax_kwargs",
+        "db_file",
     ]
 
     def run_task(self, fw_spec):
@@ -427,6 +428,7 @@ class FT_StartPESCalcs(FiretaskBase):
         prerelax = self.get("prerelax", True)
         prerelax_calculator = self.get("prerelax_calculator", "m3gnet")
         prerelax_kwargs = self.get("prerelax_kwargs", {})
+        db_file = self.get("db_file", "auto")
 
         interfaces = fw_spec.get("high_symm_interfaces")
         if not interfaces:
@@ -459,6 +461,7 @@ class FT_StartPESCalcs(FiretaskBase):
             prerelax_system=prerelax,
             prerelax_calculator=prerelax_calculator,
             prerelax_kwargs=prerelax_kwargs,
+            db_file=db_file,
         )
 
         return FWAction(detours=WF)

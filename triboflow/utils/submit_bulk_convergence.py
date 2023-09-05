@@ -36,21 +36,17 @@ if __name__ == "__main__":
     #     materials_list.append({'formula': formula, 'mpid': mpid})
 
     materials_list = [
-        {
-            "formula": "Al2O3",
-            "mpid": "mp-1143"
-        },
-        {
-            "formula": "Cu3Sn",
-            "mpid": "mp-13138"
-         },
-         ]
+        {"formula": "Al2O3", "mpid": "mp-1143"},
+        {"formula": "Cu3Sn", "mpid": "mp-13138"},
+    ]
 
     workflow_list = []
     for mat in materials_list:
-        inputs = {"material": mat,
-                  "computational_params": computational_params,
-                  "db_file": db_file,
-                  "high_level": high_level}
+        inputs = {
+            "material": mat,
+            "computational_params": computational_params,
+            "db_file": db_file,
+            "high_level": high_level,
+        }
         workflow_list.append(optimize_bulk_wf(inputs))
     submit_multiple_wfs(workflow_list)
