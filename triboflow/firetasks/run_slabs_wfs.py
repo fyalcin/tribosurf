@@ -308,12 +308,23 @@ class GetSlabSurfenListFromUids(FiretaskBase):
             )
 
         slab_surfen_list.sort(key=lambda x: x["surface_energy"])
-        fw_spec[f"slab_surfen_list_1"] = [
+
+        slab_surfen_list_1 = [
             entry for entry in slab_surfen_list if entry["material_index"] == 1
         ]
-        fw_spec[f"slab_surfen_list_2"] = [
+
+        slab_surfen_list_2 = [
             entry for entry in slab_surfen_list if entry["material_index"] == 2
         ]
+
+        # if either of them is an empty list, set it to the other one
+        # TODO: FIND A BETTER WAY TO DO THIS, PERHAPS IN MakeHeterostructure
+        if not slab_surfen_list_1:
+            slab_surfen_list_1 = slab_surfen_list_2
+        if not slab_surfen_list_2:
+            slab_surfen_list_2 = slab_surfen_list_1
+        fw_spec[f"slab_surfen_list_1"] = slab_surfen_list_1
+        fw_spec[f"slab_surfen_list_2"] = slab_surfen_list_2
 
         return FWAction(update_spec=fw_spec)
 
@@ -405,10 +416,12 @@ class GetCandidatesForHeteroStructure(FiretaskBase):
         else:
             fw2 = None
 
+        parents = [fw1, fw2] if fw2 else [fw1]
+
         fw3 = Firework(
             [MatchCandidateSlabs(interface_params=interface_params)],
             name="Match Candidate Slabs",
-            parents=[fw1, fw2] if fw2 else [fw1],
+            parents=parents,
         )
 
         fw_list.append(fw3)
