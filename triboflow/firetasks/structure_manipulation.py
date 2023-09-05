@@ -10,7 +10,13 @@ from uuid import uuid4
 
 import numpy as np
 from atomate.utils.utils import env_chk
-from fireworks import FWAction, FiretaskBase, Firework, Workflow, FileWriteTask
+from fireworks import (
+    FWAction,
+    FiretaskBase,
+    Firework,
+    Workflow,
+    FileWriteTask,
+)
 from fireworks.utilities.fw_utilities import explicit_serialize
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import Slab
@@ -347,7 +353,9 @@ class FT_GetRelaxedSlab(FiretaskBase):
 
         # screen output:
         print("")
-        print("Relaxed output structure as pymatgen.surface.Slab dictionary:")
+        print(
+            "Relaxed output structure as pymatgen.surface.Slab dictionary:"
+        )
         pprint(slab.as_dict())
         print("")
 
@@ -376,7 +384,9 @@ class FT_GetRelaxedSlab(FiretaskBase):
             FW = Firework(
                 [write_FT, copy_FT], name="Copy SlabRelax SWF results"
             )
-            WF = Workflow.from_Firework(FW, name="Copy SlabRelax SWF results")
+            WF = Workflow.from_Firework(
+                FW, name="Copy SlabRelax SWF results"
+            )
 
             return FWAction(update_spec=fw_spec, detours=WF)
         else:
@@ -465,7 +475,9 @@ class FT_MakeHeteroStructure(FiretaskBase):
         )
 
         # get the surface energies of the slabs
-        pairs = list(itertools.product(slab_surfen_list_1, slab_surfen_list_2))
+        pairs = list(
+            itertools.product(slab_surfen_list_1, slab_surfen_list_2)
+        )
         pairs.sort(
             key=lambda x: x[0]["surface_energy"] + x[1]["surface_energy"]
         )
@@ -507,10 +519,12 @@ class FT_MakeHeteroStructure(FiretaskBase):
 
             if interface_missing:
                 bulk_data_1 = db_high.find_data(
-                    collection=f"{functional}.bulk_data", fltr={"mpid": mpid1}
+                    collection=f"{functional}.bulk_data",
+                    fltr={"mpid": mpid1},
                 )
                 bulk_data_2 = db_high.find_data(
-                    collection=f"{functional}.bulk_data", fltr={"mpid": mpid2}
+                    collection=f"{functional}.bulk_data",
+                    fltr={"mpid": mpid2},
                 )
 
                 bm_1 = bulk_data_1["bulk_moduls"]

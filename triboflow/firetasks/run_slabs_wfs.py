@@ -90,7 +90,13 @@ class GenerateCandidateSlabs(FiretaskBase):
 
     @staticmethod
     def get_inputs_list(
-        bulk_coll, comp_params, db_file, high_level, mpid, sg_filter, sg_params
+        bulk_coll,
+        comp_params,
+        db_file,
+        high_level,
+        mpid,
+        sg_filter,
+        sg_params,
     ):
         inputs_list = get_surfen_inputs_from_mpid(
             mpid=mpid,
@@ -117,7 +123,10 @@ class MatchCandidateSlabs(FiretaskBase):
         inputs_list_1 = fw_spec["surfen_inputs_list_1"]
         inputs_list_2 = fw_spec.get("surfen_inputs_list_2", inputs_list_1)
 
-        valid_inputs_list_1, valid_inputs_list_2 = self.match_candidate_inputs(
+        (
+            valid_inputs_list_1,
+            valid_inputs_list_2,
+        ) = self.match_candidate_inputs(
             inputs_list_1, inputs_list_2, interface_params
         )
 
@@ -133,7 +142,9 @@ class MatchCandidateSlabs(FiretaskBase):
         return FWAction(update_spec=fw_spec)
 
     @staticmethod
-    def match_candidate_inputs(inputs_list_1, inputs_list_2, interface_params):
+    def match_candidate_inputs(
+        inputs_list_1, inputs_list_2, interface_params
+    ):
         pair_indices = list(
             itertools.product(
                 range(len(inputs_list_1)), range(len(inputs_list_2))
@@ -309,10 +320,14 @@ class GetSlabSurfenListFromUids(FiretaskBase):
 
         slab_surfen_list.sort(key=lambda x: x["surface_energy"])
         fw_spec[f"slab_surfen_list_1"] = [
-            entry for entry in slab_surfen_list if entry["material_index"] == 1
+            entry
+            for entry in slab_surfen_list
+            if entry["material_index"] == 1
         ]
         fw_spec[f"slab_surfen_list_2"] = [
-            entry for entry in slab_surfen_list if entry["material_index"] == 2
+            entry
+            for entry in slab_surfen_list
+            if entry["material_index"] == 2
         ]
 
         return FWAction(update_spec=fw_spec)

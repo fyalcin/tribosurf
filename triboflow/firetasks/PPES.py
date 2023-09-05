@@ -54,7 +54,12 @@ class FT_DoPPESCalcs(FiretaskBase):
     FWActions that produce a detour workflow with static PPES calculations.
     """
 
-    required_params = ["interface_name", "functional", "tag", "distance_list"]
+    required_params = [
+        "interface_name",
+        "functional",
+        "tag",
+        "distance_list",
+    ]
     optional_params = [
         "db_file",
         "structure_name",
@@ -109,7 +114,9 @@ class FT_DoPPESCalcs(FiretaskBase):
                 struct_d, comp_params, "slab_from_scratch"
             )
 
-            FW = StaticFW(structure=struct_d, vasp_input_set=vis, name=label)
+            FW = StaticFW(
+                structure=struct_d, vasp_input_set=vis, name=label
+            )
             FW_list.append(FW)
 
         WF = Workflow(FW_list, name="PPES calcs for: " + name)
@@ -146,7 +153,12 @@ class FT_FitPPES(FiretaskBase):
 
     """
 
-    required_params = ["interface_name", "functional", "tag", "distance_list"]
+    required_params = [
+        "interface_name",
+        "functional",
+        "tag",
+        "distance_list",
+    ]
     optional_params = ["db_file", "out_name", "high_level"]
 
     def run_task(self, fw_spec):

@@ -94,7 +94,9 @@ class MPConnection:
                 )
         return doc[0].material_id
 
-    def get_property_from_mp(self, mpid: str, properties: list[str]) -> dict:
+    def get_property_from_mp(
+        self, mpid: str, properties: list[str]
+    ) -> dict:
         """
         Get a property of a material from the Materials Project database.
 
@@ -113,7 +115,9 @@ class MPConnection:
         with MPRester(api_key=self.mp_api_key) as mpr:
             available_properties = mpr.summary.available_fields
 
-            if not all([prop in available_properties for prop in properties]):
+            if not all(
+                [prop in available_properties for prop in properties]
+            ):
                 raise ValueError(
                     "One or more of the requested properties is not "
                     "available in the SummaryRester of the Materials "

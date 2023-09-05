@@ -154,7 +154,9 @@ class LoggingBase:
             log_format=log_format,
         )
         # Create console logger
-        self.console_logger = logging.getLogger(self.name + "_console_logger")
+        self.console_logger = logging.getLogger(
+            self.name + "_console_logger"
+        )
 
         if path:
             # Initialize file logger

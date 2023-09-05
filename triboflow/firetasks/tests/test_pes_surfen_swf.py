@@ -2,8 +2,12 @@ from datetime import datetime
 
 from fireworks import LaunchPad, Firework, Workflow
 
-from triboflow.firetasks.run_slabs_wfs import GetCandidatesForHeteroStructure
-from triboflow.firetasks.structure_manipulation import FT_MakeHeteroStructure
+from triboflow.firetasks.run_slabs_wfs import (
+    GetCandidatesForHeteroStructure,
+)
+from triboflow.firetasks.structure_manipulation import (
+    FT_MakeHeteroStructure,
+)
 
 required_params = ["mpid_1", "mpid_2"]
 optional_params = [

@@ -137,7 +137,9 @@ def get_shear_strength_xy(lattice, rbf, params=None):
         coordx = x[i]
         coordy = y[i]
         zdev_x[i] = take_derivative(rbf, coordx, coordy, m=0, delta=delta)
-        zdev_y[i] = take_derivative(rbf, coordx, coordy, m=None, delta=delta)
+        zdev_y[i] = take_derivative(
+            rbf, coordx, coordy, m=None, delta=delta
+        )
 
     # Shear strength in GPa
     ss_x = np.amax(np.abs(zdev_x)) * 10.0

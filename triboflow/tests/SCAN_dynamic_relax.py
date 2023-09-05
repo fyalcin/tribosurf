@@ -27,7 +27,9 @@ print(comp_params)
 
 prim_bulk = Structure.from_dict(data["structure_equiVol"])
 
-vis = get_custom_vasp_relax_settings(prim_bulk, comp_params, "bulk_full_relax")
+vis = get_custom_vasp_relax_settings(
+    prim_bulk, comp_params, "bulk_full_relax"
+)
 
 inputs = [[prim_bulk, vis, "Cu_test_SCAN"]]
 

@@ -75,7 +75,10 @@ def get_pes_generator_from_db(
     db_high = VaspDB(db_file=db_file, high_level=high_level)
     inter_dict = db_high.find_data(
         collection=f"{functional}.interface_data",
-        fltr={"name": interface_name, "external_pressure": external_pressure},
+        fltr={
+            "name": interface_name,
+            "external_pressure": external_pressure,
+        },
     )
 
     possible_kwargs = [
@@ -387,8 +390,12 @@ class PESGenerator:
             )
             shift_x, shift_y = string[0]
 
-        max_x = self.xlim if self.xlim < max_x + shift_x else max_x + shift_x
-        max_y = self.ylim if self.ylim < max_y + shift_y else max_y + shift_y
+        max_x = (
+            self.xlim if self.xlim < max_x + shift_x else max_x + shift_x
+        )
+        max_y = (
+            self.ylim if self.ylim < max_y + shift_y else max_y + shift_y
+        )
 
         return max_x, max_y
 
@@ -407,7 +414,9 @@ class PESGenerator:
         """
         string_d = string_x = string_y = []
         puc_mult = 1
-        while len(string_d) < 10 and len(string_x) < 10 and len(string_y) < 10:
+        while (
+            len(string_d) < 10 and len(string_x) < 10 and len(string_y) < 10
+        ):
             try:
                 max_x, max_y = self.__get_mep_limits(
                     puc_mult=puc_mult, delta=0.0
@@ -489,7 +498,9 @@ class PESGenerator:
             spacing = np.cumsum(np.sqrt(dx**2 + dy**2))
             potential = self.rbf(fine_mep)
             potential -= min(potential)
-            shrstrgth = np.gradient(potential, spacing) * 10  # convert to GPa
+            shrstrgth = (
+                np.gradient(potential, spacing) * 10
+            )  # convert to GPa
             max_ss = max(shrstrgth)
 
             fig, ax1 = plt.subplots()
@@ -500,7 +511,9 @@ class PESGenerator:
             ax1.set_ylabel(
                 r"$\Delta\gamma$ along MEP (dotted line) $[\rm J/ \rm m^2]$"
             )
-            ax2.set_ylabel(r"$\rm d \gamma / \rm d \rm l$ (solid line) [GPa]")
+            ax2.set_ylabel(
+                r"$\rm d \gamma / \rm d \rm l$ (solid line) [GPa]"
+            )
             # ax1.title(k)
             fig.savefig(
                 self.plot_path + "/" + k + "." + self.fig_type,
@@ -534,8 +547,14 @@ class PESGenerator:
             if v > max_group[1]:
                 max_group = [k, v]
         if self.group_names_dict:
-            self.hsp_min = [min_group[0], self.group_names_dict[min_group[0]]]
-            self.hsp_max = [max_group[0], self.group_names_dict[max_group[0]]]
+            self.hsp_min = [
+                min_group[0],
+                self.group_names_dict[min_group[0]],
+            ]
+            self.hsp_max = [
+                max_group[0],
+                self.group_names_dict[max_group[0]],
+            ]
         else:
             self.hsp_min = min_group[0]
             self.hsp_max = max_group[0]
@@ -748,13 +767,17 @@ class PESGenerator:
         plt.yticks(fontsize=20)
         plt.xlim = (0, self.xlim)
         plt.ylim = (0, self.ylim)
-        ax.set_title(self.fig_name, fontsize=24, family="sans-serif", pad=10)
+        ax.set_title(
+            self.fig_name, fontsize=24, family="sans-serif", pad=10
+        )
         if self.plot_hs_points == "unique":
             self.__plot_hs_points(
                 self.unique_shifts, fig, self.group_names_dict
             )
         elif self.plot_hs_points == "all":
-            self.__plot_hs_points(self.all_shifts, fig, self.group_names_dict)
+            self.__plot_hs_points(
+                self.all_shifts, fig, self.group_names_dict
+            )
 
         fig.set_tight_layout(True)
         plt.tight_layout()

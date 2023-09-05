@@ -93,9 +93,9 @@ def make_charge_differences(interface, chgcar_int, chgcar_bot, chgcar_top):
         rho_inter_region = simpson(y=abs(profile_inter_region), dx=dz) / (
             zmax - zmin
         )
-        rho_inter_region_abs = simpson(y=abs_profile_inter_region, dx=dz) / (
-            zmax - zmin
-        )
+        rho_inter_region_abs = simpson(
+            y=abs_profile_inter_region, dx=dz
+        ) / (zmax - zmin)
 
     return {
         "rho_classic": rho_inter_region,

@@ -49,4 +49,6 @@ comp_parameters = {}
 vis_1 = get_custom_vasp_relax_settings(
     bulk, comp_parameters, "bulk_shape_relax"
 )
-vis_2 = get_custom_vasp_relax_settings(s, comp_parameters, "slab_shape_relax")
+vis_2 = get_custom_vasp_relax_settings(
+    s, comp_parameters, "slab_shape_relax"
+)

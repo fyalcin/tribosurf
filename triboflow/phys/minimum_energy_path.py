@@ -76,7 +76,9 @@ def evolve_mep(
         model = RBFModel(rbf)
         for name, s in string_dict.items():
             if len(s) > 10:
-                pool_inputs.append([model, Path(s, 1), nsteps, neb_forcetol])
+                pool_inputs.append(
+                    [model, Path(s, 1), nsteps, neb_forcetol]
+                )
                 mep_list.append(name)
         if len(pool_inputs) > 0:
             try:

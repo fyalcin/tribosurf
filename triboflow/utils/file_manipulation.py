@@ -44,7 +44,12 @@ def write_file_from_dict(Dict, Filename):
 
 
 def copy_output_files(
-    file_list, output_dir, remote_copy=False, server=None, user=None, port=None
+    file_list,
+    output_dir,
+    remote_copy=False,
+    server=None,
+    user=None,
+    port=None,
 ):
     """Return a Firetask that copys output files locally or to remote server.
 

@@ -57,7 +57,9 @@ from triboflow.utils.structure_manipulation import (
 )
 
 
-def get_consolidated_comp_params(mpid1, mpid2, bulk_coll, db_file, high_level):
+def get_consolidated_comp_params(
+    mpid1, mpid2, bulk_coll, db_file, high_level
+):
     nav = VaspDB(db_file=db_file, high_level=high_level)
     bulk_1 = nav.find_data(collection=bulk_coll, fltr={"mpid": mpid1})
     bulk_2 = nav.find_data(collection=bulk_coll, fltr={"mpid": mpid2})
@@ -114,9 +116,13 @@ def get_average_lattice(latt1, latt2, weight1, weight2):
     a = np.average([latt1.a, latt2.a], weights=[weight1, weight2])
     b = np.average([latt1.b, latt2.b], weights=[weight1, weight2])
     c = np.average([latt1.c, latt2.c], weights=[weight1, weight2])
-    alpha = np.average([latt1.alpha, latt2.alpha], weights=[weight1, weight2])
+    alpha = np.average(
+        [latt1.alpha, latt2.alpha], weights=[weight1, weight2]
+    )
     beta = np.average([latt1.beta, latt2.beta], weights=[weight1, weight2])
-    gamma = np.average([latt1.gamma, latt2.gamma], weights=[weight1, weight2])
+    gamma = np.average(
+        [latt1.gamma, latt2.gamma], weights=[weight1, weight2]
+    )
 
     av_latt = Lattice.from_parameters(a, b, c, alpha, beta, gamma)
     return av_latt
@@ -262,7 +268,9 @@ class InterfaceMatcher:
             slab_1.copy(), slab_2.copy(), weight_1, weight_2
         )
         # Set interface distance
-        self.__set_interface_dist(interface_distance, interface_distance_addon)
+        self.__set_interface_dist(
+            interface_distance, interface_distance_addon
+        )
         # Set the vacua for the centered slabs to ensure correct vacuum for the
         # interface
         self.__set_vacua()
@@ -631,7 +639,10 @@ class InterfaceMatcher:
 
         """
         if self.aligned_top_slab and self.aligned_bot_slab:
-            top_slab, bot_slab = self.aligned_top_slab, self.aligned_bot_slab
+            top_slab, bot_slab = (
+                self.aligned_top_slab,
+                self.aligned_bot_slab,
+            )
         else:
             top_slab, bot_slab = self.get_aligned_slabs()
         if not top_slab and not bot_slab:
@@ -735,11 +746,15 @@ class InterfaceMatcher:
         inter_latt = self.interface.lattice
 
         top_strain_ab = [
-            100 * (inter_latt.abc[i] - u_top_latt.abc[i]) / u_top_latt.abc[i]
+            100
+            * (inter_latt.abc[i] - u_top_latt.abc[i])
+            / u_top_latt.abc[i]
             for i in range(2)
         ]
         bot_strain_ab = [
-            100 * (inter_latt.abc[i] - u_bot_latt.abc[i]) / u_bot_latt.abc[i]
+            100
+            * (inter_latt.abc[i] - u_bot_latt.abc[i])
+            / u_bot_latt.abc[i]
             for i in range(2)
         ]
 

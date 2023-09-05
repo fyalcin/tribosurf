@@ -13,7 +13,8 @@ project_folder = os.path.dirname(__file__)
 
 
 def load_homoatomic_materials(
-    file_location=project_folder + "/../", filename="homoatomic_materials.json"
+    file_location=project_folder + "/../",
+    filename="homoatomic_materials.json",
 ):
     with open(file_location + filename, "r") as f:
         data = json.load(f)

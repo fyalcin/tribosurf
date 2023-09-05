@@ -54,6 +54,14 @@ def check_hetero_wf_inputs(inputs):
             "Either sg_params['miller'] or sg_params['max_index'] NEEDS to be set by the user.\n"
             "Please set one of them in the input file."
         )
+    elif (
+        checked_inputs["sg_params"]["miller"]
+        and checked_inputs["sg_params"]["max_index"]
+    ):
+        raise ValueError(
+            "Both sg_params['miller'] AND sg_params['max_index'] are set.\n"
+            "Please set only one of them in the input file."
+        )
 
     return checked_inputs
 
@@ -76,7 +84,9 @@ def compare_keywords_and_add_defaults(
         if key not in default_dict.keys():
             for default_key in default_dict.keys():
                 if (
-                    ratio(key, default_key, score_cutoff=lv_threshold - 0.01)
+                    ratio(
+                        key, default_key, score_cutoff=lv_threshold - 0.01
+                    )
                     > lv_threshold
                 ):
                     raise KeyError(

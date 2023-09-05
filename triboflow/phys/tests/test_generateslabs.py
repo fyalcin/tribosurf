@@ -68,4 +68,6 @@ for el, thk in zip(b, thickness):
 for el, thk in zip(c, thickness):
     print(el.lattice)
     print("")
-    el.to("poscar", "POSCAR_" + str(thk) + "_Cu_local_" + miller_str + ".vasp")
+    el.to(
+        "poscar", "POSCAR_" + str(thk) + "_Cu_local_" + miller_str + ".vasp"
+    )

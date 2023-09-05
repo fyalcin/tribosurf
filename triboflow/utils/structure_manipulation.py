@@ -312,7 +312,12 @@ def recenter_aligned_slabs(top_slab, bottom_slab, d=2.5):
 
 
 def interface_name(
-    mpid1, mpid2, miller1, miller2, shift1: float = None, shift2: float = None
+    mpid1,
+    mpid2,
+    miller1,
+    miller2,
+    shift1: float = None,
+    shift2: float = None,
 ):
     """Return a name for an interface based on MP-IDs and miller indices.
 

@@ -27,7 +27,11 @@ for mpid in mpids:
         struct, comp_params, "bulk_full_relax"
     )
     input_list.append(
-        [struct, vis, f"{struct.composition.reduced_formula}_test_relax_SCAN"]
+        [
+            struct,
+            vis,
+            f"{struct.composition.reduced_formula}_test_relax_SCAN",
+        ]
     )
 
 WF = dynamic_relax_swf(

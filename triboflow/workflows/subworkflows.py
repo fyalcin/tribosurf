@@ -741,7 +741,8 @@ def converge_swf(
         )
     if conv_type == "encut":
         name = (
-            "Encut Convergence SWF of " + structure.composition.reduced_formula
+            "Encut Convergence SWF of "
+            + structure.composition.reduced_formula
         )
         if not encut_start:
             # Get the largest EMIN value of the potcar and round up to the
@@ -832,7 +833,9 @@ def converge_swf(
                 "does not match the one given in the input ({})!\n"
                 "The functional in the computational parameter has been "
                 "overwritten to {}!\n".format(
-                    comp_parameters.get("functional"), functional, functional
+                    comp_parameters.get("functional"),
+                    functional,
+                    functional,
                 )
             )
             comp_parameters["functional"] = functional

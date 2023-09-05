@@ -57,7 +57,9 @@ class FT_StartChargeAnalysisSWF(FiretaskBase):
         if not db_file:
             db_file = env_chk(">>db_file<<", fw_spec)
         hl_db = self.get("high_level", True)
-        interface_label = self.get("interface_label", "relaxed_structure@min")
+        interface_label = self.get(
+            "interface_label", "relaxed_structure@min"
+        )
 
         db = VaspDB(db_file, high_level=hl_db)
 
@@ -354,7 +356,9 @@ class FT_StartPESCalcSWF(FiretaskBase):
             fltr={"name": name, "external_pressure": external_pressure},
         )
         comp_params = interface_dict["comp_parameters"]
-        interface = Interface.from_dict(interface_dict["unrelaxed_structure"])
+        interface = Interface.from_dict(
+            interface_dict["unrelaxed_structure"]
+        )
         already_done = interface_dict.get("relaxed_structure@min")
 
         if not already_done:

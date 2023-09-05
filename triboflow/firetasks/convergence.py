@@ -10,7 +10,13 @@ from atomate.vasp.config import VASP_CMD, DB_FILE
 from atomate.vasp.powerups import add_modify_incar
 from atomate.vasp.workflows.base.bulk_modulus import get_wf_bulk_modulus
 from datetime import datetime
-from fireworks import FWAction, FiretaskBase, Firework, Workflow, FileWriteTask
+from fireworks import (
+    FWAction,
+    FiretaskBase,
+    Firework,
+    Workflow,
+    FileWriteTask,
+)
 from fireworks.utilities.fw_utilities import explicit_serialize
 from pprint import pprint, pformat
 
@@ -283,7 +289,9 @@ class FT_Convo(FiretaskBase):
                 name="Update BM Lists and Loop",
             )
 
-            BM_WF.append_wf(Workflow.from_Firework(UAL_FW), BM_WF.leaf_fw_ids)
+            BM_WF.append_wf(
+                Workflow.from_Firework(UAL_FW), BM_WF.leaf_fw_ids
+            )
             # Use add_modify_incar powerup to add KPAR and NCORE settings
             # based on env_chk in my_fworker.yaml
             BM_WF = add_modify_incar(BM_WF)
@@ -519,7 +527,9 @@ class FT_Convo(FiretaskBase):
                 name="Update BM Lists and Loop",
             )
 
-            BM_WF.append_wf(Workflow.from_Firework(UAL_FW), BM_WF.leaf_fw_ids)
+            BM_WF.append_wf(
+                Workflow.from_Firework(UAL_FW), BM_WF.leaf_fw_ids
+            )
             # Use add_modify_incar powerup to add KPAR and NCORE settings
             # based on env_chk in my_fworker.yaml
             BM_WF = add_modify_incar(BM_WF)

@@ -208,7 +208,9 @@ class FT_RetrievePESEnergies(FiretaskBase):
         ]
 
         db = VaspDB(db_file=db_file)
-        ref_struct = Interface.from_dict(interface_dict["unrelaxed_structure"])
+        ref_struct = Interface.from_dict(
+            interface_dict["unrelaxed_structure"]
+        )
         area = np.linalg.norm(
             np.cross(
                 ref_struct.lattice.matrix[0], ref_struct.lattice.matrix[1]
@@ -239,10 +241,12 @@ class FT_RetrievePESEnergies(FiretaskBase):
         min_stacking = sorted_energy_list[0][0]
         max_stacking = sorted_energy_list[-1][0]
         calc_min = db.find_data(
-            collection="tasks", fltr={"task_label": tag + "_" + min_stacking}
+            collection="tasks",
+            fltr={"task_label": tag + "_" + min_stacking},
         )
         calc_max = db.find_data(
-            collection="tasks", fltr={"task_label": tag + "_" + max_stacking}
+            collection="tasks",
+            fltr={"task_label": tag + "_" + max_stacking},
         )
         struct_min_dict = calc_min["output"]["structure"]
         struct_max_dict = calc_max["output"]["structure"]
@@ -327,6 +331,7 @@ class FT_FindHighSymmPoints(FiretaskBase):
         "interface",
         "functional",
         "interface_name",
+        "interface_params",
         "external_pressure",
     ]
     optional_params = ["db_file", "high_level"]
@@ -334,6 +339,7 @@ class FT_FindHighSymmPoints(FiretaskBase):
     def run_task(self, fw_spec):
         interface = self.get("interface")
         name = self.get("interface_name")
+        interface_params = self.get("interface_params")
         functional = self.get("functional")
         external_pressure = self.get("external_pressure")
 
@@ -344,7 +350,9 @@ class FT_FindHighSymmPoints(FiretaskBase):
 
         ISA = InterfaceSymmetryAnalyzer(interface)
         hsp_dict = ISA.get_high_symmetry_info()
-        interfaces = ISA.get_all_high_symmetry_interfaces()
+        interfaces = ISA.get_all_high_symmetry_interfaces(
+            interface_distance=interface_params.get("interface_distance")
+        )
 
         db_high = VaspDB(db_file=db_file, high_level=hl_db)
         db_high.update_data(
@@ -356,8 +364,12 @@ class FT_FindHighSymmPoints(FiretaskBase):
                         "bottom_unique": hsp_dict[
                             "bottom_high_symm_points_unique"
                         ],
-                        "bottom_all": hsp_dict["bottom_high_symm_points_all"],
-                        "top_unique": hsp_dict["top_high_symm_points_unique"],
+                        "bottom_all": hsp_dict[
+                            "bottom_high_symm_points_all"
+                        ],
+                        "top_unique": hsp_dict[
+                            "top_high_symm_points_unique"
+                        ],
                         "top_all": hsp_dict["top_high_symm_points_all"],
                         "unique_shifts": hsp_dict["unique_shifts"],
                         "all_shifts": hsp_dict["all_shifts"],
@@ -437,9 +449,9 @@ class FT_StartPESCalcs(FiretaskBase):
 
         inputs = []
         for interface in interfaces:
-            group_name = interface.interface_properties["high_symmetry_info"][
-                "group_name"
-            ]
+            group_name = interface.interface_properties[
+                "high_symmetry_info"
+            ]["group_name"]
             label = tag + "_" + group_name
             clean_struct = clean_up_site_properties(interface)
 

@@ -57,7 +57,7 @@ class InterfaceSymmetryAnalyzer:
 
     Furthermore, you can use the method get_all_high_symmetry_interfaces()
     to get a list of all interfaces with unique shifts and individually optimized
-    interface gaps.
+    interface gaps (if you not pass a specific interface distance).
 
     Parameters
     ----------
@@ -148,7 +148,7 @@ class InterfaceSymmetryAnalyzer:
         """
         Convert cartesian coordinates in a high_symmetry dictionary to fractional.
         """
-        if only_2d:
+        if only_2d:i
             m = self.interface.lattice.inv_matrix[:2, :2]
         else:
             m = self.interface.lattice.inv_matrix
@@ -262,7 +262,7 @@ class InterfaceSymmetryAnalyzer:
         Parameters
         ----------
         adsf : pymatgen.analysis.adsorption.AdsorptionSiteFinder
-            The AdsorptionSiteFinder object associated with the slab in question.
+            The AdsorptionSiteFinder object associated witih the slab in question.
         all_sites : dict
             Dictionary previously constructed containing all (also symmetrically
             equivalent) high symmetry surface sites of the slab in question.
@@ -495,7 +495,10 @@ class InterfaceSymmetryAnalyzer:
         return self.__check_cartesian_and_jsanitize(out_dict)
 
     def get_all_high_symmetry_interfaces(
-        self, distance_boost=0.05, bond_dist_delta=0.05
+        self,
+        interface_distance=None,
+        distance_boost=0.05,
+        bond_dist_delta=0.05
     ):
         """
         Return a list of interfaces with high-symmetry lateral shifts.
@@ -551,19 +554,25 @@ class InterfaceSymmetryAnalyzer:
         for group_name, shift in hsp_dict["unique_shifts"].items():
             interface = deepcopy(initial_interface)
             interface.in_plane_offset = shift
-            interface_bonds = Shaper.get_all_bonds(
-                struct=interface, r=min(interface.lattice.abc)
-            )
-            min_interface_bond = min(interface_bonds, key=lambda x: x[2])[2]
-
-            while min_interface_bond <= min_bond - bond_dist_delta:
-                interface.gap = interface.gap + distance_boost
+            # only update interface distance if it is set to auto
+            # or if it is None. If a float is passed, use that.
+            if interface_distance == "auto" or interface_distance is None:
                 interface_bonds = Shaper.get_all_bonds(
                     struct=interface, r=min(interface.lattice.abc)
                 )
-                min_interface_bond = min(interface_bonds, key=lambda x: x[2])[
-                    2
-                ]
+                min_interface_bond = min(interface_bonds, key=lambda x: x[2])[2]
+
+                while min_interface_bond <= min_bond - bond_dist_delta:
+                    interface.gap = interface.gap + distance_boost
+                    interface_bonds = Shaper.get_all_bonds(
+                        struct=interface, r=min(interface.lattice.abc)
+                    )
+                    min_interface_bond = min(interface_bonds, key=lambda x: x[2])[
+                        2
+                    ]
+            else:
+                interface.gap = interface_distance
+
             interface.interface_properties.update(
                 {
                     "high_symmetry_info": {

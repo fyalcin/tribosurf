@@ -10,7 +10,9 @@ from triboflow.firetasks.adhesion import (
     FT_RelaxMatchedSlabs,
     FT_RetrieveMatchedSlabs,
 )
-from triboflow.firetasks.run_slabs_wfs import GetCandidatesForHeteroStructure
+from triboflow.firetasks.run_slabs_wfs import (
+    GetCandidatesForHeteroStructure,
+)
 from triboflow.firetasks.start_swfs import (
     FT_StartAdhesionSWF,
     FT_StartBulkConvoSWF,
@@ -24,6 +26,7 @@ from triboflow.firetasks.structure_manipulation import (
     FT_StartBulkPreRelax,
 )
 from triboflow.utils.mp_connection import material_from_mp
+from triboflow.utils.check_WF_inputs import check_hetero_wf_inputs
 
 
 def optimize_bulk_wf(inputs):
@@ -41,6 +44,8 @@ def optimize_bulk_wf(inputs):
         Main Triboflow workflow for bulk optimization.
 
     """
+    inputs = check_hetero_wf_inputs(inputs)
+
     material = inputs["material"]
     computational_params = inputs["computational_params"]
     db_file = inputs["db_file"]
@@ -148,7 +153,9 @@ def heterogeneous_wf(inputs):
     fw_list = []
 
     # external_pressure might default to None, so we have to check for that
-    external_pressure = interface_params.get("external_pressure", 0.0) or 0.0
+    external_pressure = (
+        interface_params.get("external_pressure", 0.0) or 0.0
+    )
 
     add_bulk_m1 = Firework(
         FT_AddBulkToDB(
