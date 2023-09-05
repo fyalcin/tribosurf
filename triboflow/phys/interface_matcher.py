@@ -16,8 +16,7 @@ The module contains:
         contrast to the pymatgen implementation the strain put on the
         lattices to get them to match is more flexible and achieved via a
         weighted average.
-        It is also possible to get a list of interfaces with different
-        lateral shifts, which is useful for fitting a PES to the interface.
+
         The class contains the following modules, of which the last 5 alone
         usually are providing enough flexibility for the user.
             - __init__

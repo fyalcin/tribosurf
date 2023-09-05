@@ -7,75 +7,17 @@ Created on Mon Oct  4 16:12:32 2021
 """
 
 from fireworks import LaunchPad
-from fireworks import Workflow, Firework
-
-from triboflow.firetasks.start_swfs import (
-    FT_StartBulkConvoSWF,
-)
-from triboflow.firetasks.structure_manipulation import FT_StartBulkPreRelax
+from triboflow.workflows.main import optimize_bulk_wf
 from triboflow.utils.homoatomic_materials import load_homoatomic_materials
-from triboflow.utils.mp_connection import material_from_mp
 
 computational_params = {
-    "functional": "PBE",
+    "functional": "SCAN",
     "volume_tolerance": 0.001,
     "BM_tolerance": 0.01,
-    "use_vdw": False,
-    "surfene_thr": 0.01,
-    "vacuum": 15,
+    "use_vdw": True,
 }
-
-
-def get_bulk_convergence_wf(material, comp_params):
-    struct, mp_id = material_from_mp(material)
-    functional = comp_params.get("functional", "PBE")
-
-    WF = []
-
-    PreRelaxation = Firework(
-        FT_StartBulkPreRelax(mp_id=mp_id, functional=functional),
-        name="Start pre-relaxation for {}".format(material["formula"]),
-    )
-    WF.append(PreRelaxation)
-
-    ConvergeEncut = Firework(
-        FT_StartBulkConvoSWF(
-            conv_type="encut",
-            mp_id=mp_id,
-            functional=functional,
-        ),
-        name="Start encut convergence for {}".format(material["formula"]),
-    )
-    WF.append(ConvergeEncut)
-
-    ConvergeKpoints = Firework(
-        FT_StartBulkConvoSWF(
-            conv_type="kpoints",
-            mp_id=mp_id,
-            functional=functional,
-        ),
-        name="Start kpoints convergence for {}".format(material["formula"]),
-    )
-    WF.append(ConvergeKpoints)
-
-    # Dependencies = {
-    #     Initialize: [PreRelaxation],
-    #     PreRelaxation: [ConvergeEncut],
-    #     ConvergeEncut: [ConvergeKpoints],
-    #     ConvergeKpoints: [CalcDielectric],
-    # }
-
-    WF_Name = (
-        "ConvergeBulk " + material["formula"] + " " + mp_id + " " + functional
-    )
-
-    WF = Workflow(
-        WF,
-        # Dependencies,
-        name=WF_Name,
-    )
-
-    return WF
+db_file = "/home/fs71411/mwo3/FireWorks/config_VSC5_Zen3/db.json"
+high_level = "release_test_db"
 
 
 def submit_multiple_wfs(workflow_list):
@@ -93,11 +35,22 @@ if __name__ == "__main__":
     #     mpid = materials_dict[formula]['mpids'][materials_dict[formula]['default']]
     #     materials_list.append({'formula': formula, 'mpid': mpid})
 
-    materials_list = [{"formula": "WC", "mpid": "mp-13136"}]
+    materials_list = [
+        {
+            "formula": "Al2O3",
+            "mpid": "mp-1143"
+        },
+        {
+            "formula": "Cu3Sn",
+            "mpid": "mp-13138"
+         },
+         ]
 
     workflow_list = []
     for mat in materials_list:
-        workflow_list.append(
-            get_bulk_convergence_wf(mat, computational_params)
-        )
+        inputs = {"material": mat,
+                  "computational_params": computational_params,
+                  "db_file": db_file,
+                  "high_level": high_level}
+        workflow_list.append(optimize_bulk_wf(inputs))
     submit_multiple_wfs(workflow_list)
