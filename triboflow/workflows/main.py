@@ -47,8 +47,8 @@ def optimize_bulk_wf(inputs):
 
     material = inputs["material"]
     computational_params = inputs["computational_params"]
-    db_file = inputs["db_file"]
-    high_level = inputs["high_level"]
+    db_file = inputs["database_params"]["db_file"]
+    high_level = inputs["database_params"]["high_level"]
 
     struct, mpid = material_from_mp(material)
 
