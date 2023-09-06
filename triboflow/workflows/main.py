@@ -44,7 +44,6 @@ def optimize_bulk_wf(inputs):
         Main Triboflow workflow for bulk optimization.
 
     """
-    inputs = check_hetero_wf_inputs(inputs)
 
     material = inputs["material"]
     computational_params = inputs["computational_params"]
@@ -131,6 +130,9 @@ def heterogeneous_wf(inputs):
         Main Triboflow workflow for heterogeneous interfaces.
 
     """
+
+    inputs = check_hetero_wf_inputs(inputs)
+
     material_1 = inputs["material_1"]
     material_2 = inputs["material_2"]
     computational_params = inputs["computational_params"]
@@ -143,7 +145,20 @@ def heterogeneous_wf(inputs):
     high_level = inputs["high_level"]
 
     struct_1, mpid_1 = material_from_mp(material_1)
+    if mpid_1 != material_1["mpid"]:
+        raise ValueError(
+            f"MPID {material_1['mpid']} does not match the MPID\n"
+            f"for the formula {material_1['formula']} returned by the Materials Project API\n"
+            "Please update your inputs with matching formulas and mpids."
+        )
     struct_2, mpid_2 = material_from_mp(material_2)
+    if mpid_2 != material_2["mpid"]:
+        raise ValueError(
+            f"MPID {material_2['mpid']} does not match the MPID\n"
+            f"for the formula {material_2['formula']} returned by the Materials Project API\n"
+            "Please update your inputs with matching formulas and mpids."
+        )
+
 
     formula_1 = struct_1.composition.reduced_formula
     formula_2 = struct_2.composition.reduced_formula
