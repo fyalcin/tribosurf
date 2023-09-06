@@ -326,14 +326,14 @@ def adhesion_energy_swf(
     )
     db = VaspDB(db_file=db_file, high_level=False)
 
-    if not db.find_one("tasks", {"task_label": main_tag}):
+    if not db.find_data("tasks", {"task_label": main_tag}):
         FW_top = StaticFW(
             structure=top_slab, vasp_input_set=vis_top, name=main_tag + "top"
         )
     else:
         FW_top = None
 
-    if not db.find_one("tasks", {"task_label": main_tag + "bottom"}):
+    if not db.find_data("tasks", {"task_label": main_tag + "bottom"}):
         FW_bot = StaticFW(
             structure=bottom_slab,
             vasp_input_set=vis_bot,
@@ -342,7 +342,7 @@ def adhesion_energy_swf(
     else:
         FW_bot = None
 
-    if not db.find_one("tasks", {"task_label": main_tag + "interface"}):
+    if not db.find_data("tasks", {"task_label": main_tag + "interface"}):
         FW_interface = StaticFW(
             structure=interface,
             vasp_input_set=vis_interface,
