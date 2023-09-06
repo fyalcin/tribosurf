@@ -148,7 +148,7 @@ class InterfaceSymmetryAnalyzer:
         """
         Convert cartesian coordinates in a high_symmetry dictionary to fractional.
         """
-        if only_2d:i
+        if only_2d:
             m = self.interface.lattice.inv_matrix[:2, :2]
         else:
             m = self.interface.lattice.inv_matrix
