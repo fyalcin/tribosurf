@@ -74,7 +74,7 @@ class FT_ComputePES(FiretaskBase):
         db_high = VaspDB(db_file=db_file, high_level=hl_db)
 
         data = db_high.find_data(collection=functional + ".interface_data",
-                fltr={"name": name, "external_pressure": external_pressure})
+                                 fltr={"name": name, "external_pressure": external_pressure})
         if data:
             pes_data = data["PES"].get("all_energies", None)
             if pes_data:
