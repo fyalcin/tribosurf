@@ -3,7 +3,7 @@
     "mpid": null,
     "formula": "NO_DEFAULT"
   },
-  "comp_params": {
+  "computational_params": {
     "use_vdw": "NO_DEFAULT",
     "BM_tolerance": 0.01,
     "volume_tolerance": 0.001,

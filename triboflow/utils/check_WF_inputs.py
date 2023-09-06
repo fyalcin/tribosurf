@@ -14,24 +14,27 @@ def check_hetero_wf_inputs(inputs):
     triboflow_defaults = load_defaults("triboflow")
     surfgen_defaults = load_defaults("surfen")
     for key, value in inputs.items():
-        if key in triboflow_defaults.keys():
+        if key.endswith("_1") or key.endswith("_2"):
+            check_key = key[:-2]
+        else:
+            check_key = key
+        if check_key in triboflow_defaults.keys():
             checked_inputs[key] = compare_keywords_and_add_defaults(
                 input_dict=value,
-                default_dict=triboflow_defaults[key],
+                default_dict=triboflow_defaults[check_key],
                 input_dict_name=key,
             )
-        elif key in surfgen_defaults.keys():
+        elif check_key in surfgen_defaults.keys():
             checked_inputs[key] = compare_keywords_and_add_defaults(
                 input_dict=value,
-                default_dict=surfgen_defaults[key],
+                default_dict=surfgen_defaults[check_key],
                 input_dict_name=key,
             )
         else:
             raise KeyError(
-                f"Keyword {key} is not a valid keyword."
-                f"Please only use the following keywords:\n"
-                f"{pprint(triboflow_defaults.keys())}\n"
-                f"{pprint(surfgen_defaults.keys())}"
+                f"Keyword {key} is not a valid keyword. "
+                "Please only use the following keywords: "
+                f"{list(triboflow_defaults.keys())+list(surfgen_defaults.keys())}"
             )
     # check if any of the final values are "NO_DEFAULT",
     # in which case raise an error
@@ -45,23 +48,24 @@ def check_hetero_wf_inputs(inputs):
                 )
 
     # extra check if either sg_params["miller"] or sg_params["max_index"]
-    # is set (not None). If not, raise an error.
-    if (
-        checked_inputs["sg_params"]["miller"] is None
-        and checked_inputs["sg_params"]["max_index"] is None
-    ):
-        raise ValueError(
-            "Either sg_params['miller'] or sg_params['max_index'] NEEDS to be set by the user.\n"
-            "Please set one of them in the input file."
-        )
-    elif (
-        checked_inputs["sg_params"]["miller"]
-        and checked_inputs["sg_params"]["max_index"]
-    ):
-        raise ValueError(
-            "Both sg_params['miller'] AND sg_params['max_index'] are set.\n"
-            "Please set only one of them in the input file."
-        )
+    # is set (not None) for each material. If not, raise an error.
+    for mat in ["_1", "_2"]:
+        if (
+            checked_inputs["sg_params" + mat]["miller"] is None
+            and checked_inputs["sg_params" + mat]["max_index"] is None
+        ):
+            raise ValueError(
+                f"Either sg_params{mat}['miller'] or sg_params{mat}['max_index'] NEEDS to be set by the user.\n"
+                "Please set one of them in the input file."
+            )
+        elif (
+            checked_inputs["sg_params" + mat]["miller"]
+            and checked_inputs["sg_params" + mat]["max_index"]
+        ):
+            raise ValueError(
+                f"Both sg_params{mat}['miller'] AND sg_params{mat}['max_index'] are set.\n"
+                "Please set only one of them in the input file."
+            )
 
     return checked_inputs
 
@@ -84,9 +88,7 @@ def compare_keywords_and_add_defaults(
         if key not in default_dict.keys():
             for default_key in default_dict.keys():
                 if (
-                    ratio(
-                        key, default_key, score_cutoff=lv_threshold - 0.01
-                    )
+                    ratio(key, default_key, score_cutoff=lv_threshold - 0.01)
                     > lv_threshold
                 ):
                     raise KeyError(
