@@ -155,7 +155,7 @@ def heterogeneous_wf(inputs):
         raise ValueError(
             f"Formula {material_1['formula']} does not match the formula\n"
             f"for the MPID {material_1['mpid']} returned by the Materials Project API\n"
-            "Please update your inputs with matching formulas and mpids."
+            f"{struct_1.composition.reduced_formula}. Please update your inputs with matching formulas and mpids."
         )
     struct_2, mpid_2 = material_from_mp(material_2)
     if material_2["mpid"] and mpid_2 != material_2["mpid"]:
@@ -168,7 +168,7 @@ def heterogeneous_wf(inputs):
         raise ValueError(
             f"Formula {material_2['formula']} does not match the formula\n"
             f"for the MPID {material_2['mpid']} returned by the Materials Project API\n"
-            "Please update your inputs with matching formulas and mpids."
+            f"{struct_2.composition.reduced_formula}. Please update your inputs with matching formulas and mpids."
         )
 
 
