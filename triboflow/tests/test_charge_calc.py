@@ -10,8 +10,9 @@ from atomate.vasp.powerups import add_modify_incar
 from fireworks import LaunchPad
 from fireworks import Workflow, Firework
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
-from uuid import uuid4
 
+from hitmen_utils.db_tools import VaspDB
+from hitmen_utils.misc_tools import make_calculation_hash
 from hitmen_utils.shaper import Shaper
 from hitmen_utils.vasp_tools import get_custom_vasp_static_settings
 from triboflow.firetasks.charge_density_analysis import (
@@ -116,7 +117,7 @@ def charge_analysis_swf(
             '    "k_dens": <int>}\n'
         )
 
-    tag = interface_name + "_" + str(uuid4())
+    db = VaspDB(db_file=db_file, high_level=False)
 
     vis_top = get_custom_vasp_static_settings(
         top_slab, comp_parameters, "slab_from_scratch"
@@ -128,47 +129,61 @@ def charge_analysis_swf(
         interface, comp_parameters, "slab_from_scratch"
     )
 
-    FW_top = StaticFW(
-        structure=top_slab,
-        vasp_input_set=vis_top,
-        name=tag + "top",
-        vasptodb_kwargs={"store_volumetric_data": ["chgcar"]},
+    main_tag = (
+        interface_name
+        + "_"
+        + make_calculation_hash(structure=interface, vis=vis_interface)
     )
-    FW_bot = StaticFW(
-        structure=bot_slab,
-        vasp_input_set=vis_bot,
-        name=tag + "bottom",
-        vasptodb_kwargs={"store_volumetric_data": ["chgcar"]},
-    )
-    FW_interface = StaticFW(
-        structure=interface,
-        vasp_input_set=vis_interface,
-        name=tag + "interface",
-        vasptodb_kwargs={"store_volumetric_data": ["chgcar"]},
-    )
+    if not db.find_data("tasks", {"task_label": main_tag + "top"}):
+        FW_top = StaticFW(
+            structure=top_slab,
+            vasp_input_set=vis_top,
+            name=main_tag + "top",
+            vasptodb_kwargs={"store_volumetric_data": ["chgcar"]},
+        )
+    else:
+        FW_top = None
+
+    if not db.find_data("tasks", {"task_label": main_tag + "bottom"}):
+        FW_bot = StaticFW(
+            structure=bot_slab,
+            vasp_input_set=vis_bot,
+            name=main_tag + "bottom",
+            vasptodb_kwargs={"store_volumetric_data": ["chgcar"]},
+        )
+    else:
+        FW_bot = None
+
+    if not db.find_data("tasks", {"task_label": main_tag + "interface"}):
+        FW_interface = StaticFW(
+            structure=interface,
+            vasp_input_set=vis_interface,
+            name=main_tag + "interface",
+            vasptodb_kwargs={"store_volumetric_data": ["chgcar"]},
+        )
+    else:
+        FW_interface = None
+
+    parents = [fw for fw in [FW_top, FW_bot, FW_interface] if fw is not None]
 
     FW_charge_analysis = Firework(
         FT_MakeChargeDensityDiff(
             interface=interface,
             interface_name=interface_name,
-            interface_calc_name=tag + "interface",
-            top_calc_name=tag + "top",
-            bot_calc_name=tag + "bottom",
+            interface_calc_name=main_tag + "interface",
+            top_calc_name=main_tag + "top",
+            bot_calc_name=main_tag + "bottom",
             functional=functional,
             external_pressure=external_pressure,
             db_file=db_file,
             high_level=high_level,
         ),
         name=f"Calculate charge density redistribution for {interface_name}",
+        parents=parents,
     )
 
     SWF = Workflow(
         fireworks=[FW_top, FW_bot, FW_interface, FW_charge_analysis],
-        links_dict={
-            FW_top.fw_id: [FW_charge_analysis.fw_id],
-            FW_bot.fw_id: [FW_charge_analysis.fw_id],
-            FW_interface.fw_id: [FW_charge_analysis.fw_id],
-        },
         name="Calculate adhesion SWF for {}".format(interface_name),
     )
 

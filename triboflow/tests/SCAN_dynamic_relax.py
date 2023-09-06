@@ -33,7 +33,7 @@ vis = get_custom_vasp_relax_settings(
 
 inputs = [[prim_bulk, vis, "Cu_test_SCAN"]]
 
-WF = dynamic_relax_swf(inputs, "test_scan_wf")
+WF = dynamic_relax_swf(inputs, "test_scan_wf", db_file=db_file)
 
 lpad = LaunchPad.auto_load()
 lpad.add_wf(WF)

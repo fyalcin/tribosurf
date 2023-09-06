@@ -98,6 +98,7 @@ def run_pes_calc_fw(
         prerelax=prerelax,
         prerelax_calculator=prerelax_calculator,
         prerelax_kwargs=prerelax_kwargs,
+        db_file=db_file,
     )
 
     FW = Firework([FT_1, FT_2], name=FW_name)

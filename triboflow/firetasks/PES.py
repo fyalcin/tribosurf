@@ -71,6 +71,18 @@ class FT_ComputePES(FiretaskBase):
             db_file = env_chk(">>db_file<<", fw_spec)
         hl_db = self.get("high_level", True)
 
+        db_high = VaspDB(db_file=db_file, high_level=hl_db)
+
+        data = db_high.find_data(
+            collection=functional + ".interface_data",
+            fltr={"name": name, "external_pressure": external_pressure},
+        )
+        if data:
+            pes_data = data["PES"].get("all_energies", None)
+            if pes_data:
+                print("PES already computed for this interface. Skipping...")
+                return FWAction()
+
         PG = get_pes_generator_from_db(
             interface_name=name,
             external_pressure=external_pressure,
@@ -80,7 +92,6 @@ class FT_ComputePES(FiretaskBase):
             pes_generator_kwargs={"fig_title": name},
         )
 
-        db_high = VaspDB(db_file=db_file, high_level=hl_db)
         # the data here might be too large to write to the DB, so if initial
         # write fails, we try bit by bit...
         # maybe should be replaced by gridFS instead?
@@ -428,6 +439,7 @@ class FT_StartPESCalcs(FiretaskBase):
         "prerelax",
         "prerelax_calculator",
         "prerelax_kwargs",
+        "db_file",
     ]
 
     def run_task(self, fw_spec):
@@ -439,6 +451,7 @@ class FT_StartPESCalcs(FiretaskBase):
         prerelax = self.get("prerelax", True)
         prerelax_calculator = self.get("prerelax_calculator", "m3gnet")
         prerelax_kwargs = self.get("prerelax_kwargs", {})
+        db_file = self.get("db_file", "auto")
 
         interfaces = fw_spec.get("high_symm_interfaces")
         if not interfaces:
@@ -471,6 +484,7 @@ class FT_StartPESCalcs(FiretaskBase):
             prerelax_system=prerelax,
             prerelax_calculator=prerelax_calculator,
             prerelax_kwargs=prerelax_kwargs,
+            db_file=db_file,
         )
 
         return FWAction(detours=WF)
