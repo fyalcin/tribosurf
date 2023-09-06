@@ -16,8 +16,10 @@ computational_params = {
     "BM_tolerance": 0.01,
     "use_vdw": True,
 }
-db_file = "/home/fs71411/mwo3/FireWorks/config_VSC5_Zen3/db.json"
-high_level = "release_test_db"
+database_params = {
+    "db_file": "/home/fs71411/mwo3/FireWorks/config_VSC5_Zen3/db.json",
+    "high_level": "release_test_db",
+}
 
 
 def submit_multiple_wfs(workflow_list):
@@ -45,8 +47,7 @@ if __name__ == "__main__":
         inputs = {
             "material": mat,
             "computational_params": computational_params,
-            "db_file": db_file,
-            "high_level": high_level,
+            "database_params": database_params,
         }
         workflow_list.append(optimize_bulk_wf(inputs))
     submit_multiple_wfs(workflow_list)

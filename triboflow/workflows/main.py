@@ -141,8 +141,8 @@ def heterogeneous_wf(inputs):
     sg_params_2 = inputs["sg_params_2"]
     sg_filter_1 = inputs["sg_filter_1"]
     sg_filter_2 = inputs["sg_filter_2"]
-    db_file = inputs["db_file"]
-    high_level = inputs["high_level"]
+    db_file = inputs["database_params"]["db_file"]
+    high_level = inputs["database_params"]["high_level"]
 
     struct_1, mpid_1 = material_from_mp(material_1)
     if mpid_1 != material_1["mpid"]:
