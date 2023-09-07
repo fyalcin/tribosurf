@@ -342,7 +342,6 @@ class FT_FindHighSymmPoints(FiretaskBase):
         "interface",
         "functional",
         "interface_name",
-        "interface_params",
         "external_pressure",
     ]
     optional_params = ["db_file", "high_level"]
@@ -350,7 +349,6 @@ class FT_FindHighSymmPoints(FiretaskBase):
     def run_task(self, fw_spec):
         interface = self.get("interface")
         name = self.get("interface_name")
-        interface_params = self.get("interface_params")
         functional = self.get("functional")
         external_pressure = self.get("external_pressure")
 
@@ -359,13 +357,19 @@ class FT_FindHighSymmPoints(FiretaskBase):
             db_file = env_chk(">>db_file<<", fw_spec)
         hl_db = self.get("high_level", True)
 
+        db_high = VaspDB(db_file=db_file, high_level=hl_db)
+        interface_data = db_high.find_data(
+            f"{functional}.interface_data",
+            {"name": name, "external_pressure": external_pressure},
+        )
+        interface_params = interface_data["interface_params"]
+
         ISA = InterfaceSymmetryAnalyzer(interface)
         hsp_dict = ISA.get_high_symmetry_info()
         interfaces = ISA.get_all_high_symmetry_interfaces(
             interface_distance=interface_params.get("interface_distance")
         )
 
-        db_high = VaspDB(db_file=db_file, high_level=hl_db)
         db_high.update_data(
             collection=functional + ".interface_data",
             fltr={"name": name, "external_pressure": external_pressure},
