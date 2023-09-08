@@ -731,14 +731,14 @@ class InterfaceMatcher:
             strain in the two directions of the lattice vectors.
 
         """
-        if hasattr(self, "strain"):
+        if self.strain:
             return self.strain
 
         if are_slabs_aligned(self.top_slab, self.bot_slab):
             self.strain = {"top": [0, 0], "bot": [0, 0]}
             return self.strain
 
-        if not hasattr(self, "interface"):
+        if not self.interface:
             self.get_interface()
 
         u_top_latt = self.unstrained_top_lattice
