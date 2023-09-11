@@ -44,44 +44,49 @@ def run_pes_calc_fw(
     and start the VASP calculations for the unique high-symmetry points
     respectively.
 
+    :param interface: Interface object for which the PES is to be constructed
+    :type interface: pymatgen.core.interface.Interface
 
-    Parameters
-    ----------
-    db_file
-    high_level
-    interface : pymatgen.core.interface.Interface
-        Interface object for which the PES is to be constructed
-    interface_name : str
-        Unique name for the interface that is used in the output and the
-        database.
-    external_pressure : float
-        External pressure in GPa.
-    functional : str
-        Functional to be used. 'PBE' or 'SCAN' will work.
-    comp_parameters : dict
-        Dictionary containing computational options. E.g. encut, k_dens, vdw,...
-    tag : str
-        combination of the interface_name and a uuid. To uniquely identify the
-        computations in the database.
-    FW_name : str
-        Name of the Firework.
-    prerelax : bool, optional
-        Whether to perform a prerelaxation using a network potential before starting
-        a DFT relaxation. Defaults to True.
-    prerelax_calculator : str, optional
-        Which network potential to use for the prerelaxation. Defaults to 'm3gnet'.
-    prerelax_kwargs : dict, optional
-        Keyword arguments to be passed to the ASE calculator for the prerelaxation.
+    :param interface_name: Unique name for the interface that is used in the output and the database.
+    :type interface_name: str
 
-    Returns
-    -------
-    FW : fireworks.core.firework.Firework
-        First Firework of a PES subworkflow.
+    :param external_pressure: External pressure in GPa.
+    :type external_pressure: float
+
+    :param functional: Functional to be used. 'PBE' or 'SCAN' will work.
+    :type functional: str
+
+    :param comp_parameters: Dictionary containing computational options. E.g. encut, k_dens, vdw,...
+    :type comp_parameters: dict
+
+    :param tag: combination of the interface_name and a uuid. To uniquely identify the computations in the database.
+    :type tag: str
+
+    :param FW_name: Name of the Firework.
+    :type FW_name: str
+
+    :param prerelax: Whether to perform a prerelaxation using a neural-network potential before starting a DFT relaxation. Defaults to True.
+    :type prerelax: bool, optional
+
+    :param prerelax_calculator: Which neural-network potential to use for the prerelaxation. Defaults to 'm3gnet'.
+    :type prerelax_calculator: str, optional
+
+    :param prerelax_kwargs: Keyword arguments to be passed to the ASE calculator for the prerelaxation.
+    :type prerelax_kwargs: dict, optional
+
+    :param db_file: Full path to the db.json file that should be used. Defaults to '>>db_file<<', to use env_chk.
+    :type db_file: str
+
+    :param high_level: Whether to use the high-level database. Defaults to True.
+    :type high_level: bool, optional
+
+    :return: First Firework of a PES subworkflow.
+    :rtype: fireworks.core.firework.Firework
 
     """
     if prerelax_kwargs is None:
         prerelax_kwargs = {}
-    FT_1 = FT_FindHighSymmPoints(
+    ft_1 = FT_FindHighSymmPoints(
         interface=interface,
         interface_name=interface_name,
         functional=functional,
@@ -90,7 +95,7 @@ def run_pes_calc_fw(
         high_level=high_level,
     )
 
-    FT_2 = FT_StartPESCalcs(
+    ft_2 = FT_StartPESCalcs(
         interface_name=interface_name,
         comp_parameters=comp_parameters,
         tag=tag,
@@ -101,9 +106,9 @@ def run_pes_calc_fw(
         db_file=db_file,
     )
 
-    FW = Firework([FT_1, FT_2], name=FW_name)
+    fw = Firework([ft_1, ft_2], name=FW_name)
 
-    return FW
+    return fw
 
 
 def make_pes_fw(
@@ -128,47 +133,50 @@ def make_pes_fw(
     radial basis functions and saves the results. Plots the results as well.
     Optionally write file output and copy it to an output directory.
 
+    :param interface_name: Unique name for the interface that is used in the output and the database.
+    :type interface_name: str
 
-    Parameters
-    ----------
-    db_file
-    high_level
-    interface_name : str
-        Unique name for the interface that is used in the output and the
-        database.
-    functional : str
-        Functional to be used. 'PBE' or 'SCAN' will work.
-    external_pressure : float
-        External pressure in GPa.
-    tag : str
-        combination of the interface_name and a uuid. To uniquely identify the
-        computations in the database.
-    FW_name : str
-        Name of the Firework.
-    file_output : bool
-        Determines if files are written to disk.
-    output_dir : str
-        Location the output files are copied to if file_output is selected.
-    remote_copy : bool, optional
-        If true, scp will be used to copy the results to a remote server. Be
-        advised that ssh-key certification must be set up between the two
-        machines. The default is False.
-    server : str, optional
-        Fully qualified domain name of the server the output should be copied
-        to. The default is None.
-    user : str, optional
-        The username on the remote server.
-    port : int, optional
-        On some machines ssh-key certification is only supported for certain
-        ports. A port may be selected here. The default is None.
+    :param functional: Functional to be used. 'PBE' or 'SCAN' will work.
+    :type functional: str
 
-    Returns
-    -------
-    FW : fireworks.core.firework.Firework
-        Final Firework of a PES subworkflow.
+    :param external_pressure: External pressure in GPa.
+    :type external_pressure: float
+
+    :param tag: combination of the interface_name and a uuid. To uniquely identify the computations in the database.
+    :type tag: str
+
+    :param FW_name: Name of the Firework.
+    :type FW_name: str
+
+    :param file_output: Determines if files are written to disk.
+    :type file_output: bool
+
+    :param output_dir: Location the output files are copied to if file_output is selected.
+    :type output_dir: str
+
+    :param remote_copy: If true, scp will be used to copy the results to a remote server. Be advised that ssh-key certification must be set up between the two machines. The default is False.
+    :type remote_copy: bool, optional
+
+    :param server: Fully qualified domain name of the server the output should be copied to. The default is None.
+    :type server: str, optional
+
+    :param user: The username on the remote server.
+    :type user: str, optional
+
+    :param port: On some machines ssh-key certification is only supported for certain ports. A port may be selected here. The default is None.
+    :type port: int, optional
+
+    :param db_file: Full path to the db.json file that should be used. Defaults to '>>db_file<<', to use env_chk.
+    :type db_file: str
+
+    :param high_level: Whether to use the high-level database. Defaults to True.
+    :type high_level: bool, optional
+
+    :return: Final Firework of a PES subworkflow.
+    :rtype: fireworks.core.firework.Firework
 
     """
-    FT_1 = FT_RetrievePESEnergies(
+    ft_1 = FT_RetrievePESEnergies(
         interface_name=interface_name,
         functional=functional,
         tag=tag,
@@ -176,7 +184,7 @@ def make_pes_fw(
         db_file=db_file,
         high_level=high_level,
     )
-    FT_2 = FT_ComputePES(
+    ft_2 = FT_ComputePES(
         interface_name=interface_name,
         functional=functional,
         external_pressure=external_pressure,
@@ -187,7 +195,7 @@ def make_pes_fw(
 
     if file_output:
         output_files = [str(interface_name) + ".png"]
-        FT_3 = copy_output_files(
+        ft_3 = copy_output_files(
             file_list=output_files,
             output_dir=output_dir,
             remote_copy=remote_copy,
@@ -196,8 +204,8 @@ def make_pes_fw(
             port=port,
         )
 
-        FW = Firework([FT_1, FT_2, FT_3], name=FW_name)
+        fw = Firework([ft_1, ft_2, ft_3], name=FW_name)
     else:
-        FW = Firework([FT_1, FT_2], name=FW_name)
+        fw = Firework([ft_1, ft_2], name=FW_name)
 
-    return FW
+    return fw

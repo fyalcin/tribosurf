@@ -39,6 +39,36 @@ from triboflow.utils.structure_manipulation import flip_slab
 
 @explicit_serialize
 class GenerateCandidateSlabs(FiretaskBase):
+    """Generate candidate slabs for a given material.
+
+    :param mpid: Material Project's material identifier ID.
+    :type mpid: str
+
+    :param material_index: Material index for the given material.
+    :type material_index: int
+
+    :param comp_params: Computational parameters for the slab calculations.
+    :type comp_params: dict
+
+    :param sg_params: Slab generation parameters.
+    :type sg_params: dict
+
+    :param sg_filter: Slab generation filter.
+    :type sg_filter: dict
+
+    :param bulk_coll: Name of the bulk collection.
+    :type bulk_coll: str
+
+    :param db_file: Path to the database file.
+    :type db_file: str
+
+    :param high_level: Name of the high-level database.
+    :type high_level: str
+
+    :return: FWAction that updates the spec.
+    :rtype: FWAction
+
+    """
     _fw_name = "Generate candidate slabs"
     required_params = ["mpid", "material_index"]
     optional_params = [
@@ -113,6 +143,15 @@ class GenerateCandidateSlabs(FiretaskBase):
 
 @explicit_serialize
 class MatchCandidateSlabs(FiretaskBase):
+    """Match candidate slabs.
+
+    :param interface_params: Interface parameters.
+    :type interface_params: dict
+
+    :return: FWAction that updates the spec.
+    :rtype: FWAction
+
+    """
     _fw_name = "Match candidate slabs"
     required_params = []
     optional_params = ["interface_params"]
@@ -192,6 +231,22 @@ class MatchCandidateSlabs(FiretaskBase):
 
 @explicit_serialize
 class RunSurfenSWFOnMatchedSlabs(FiretaskBase):
+    """Run the surface energy workflow on the matched slabs.
+
+    :param db_file: Path to the database file.
+    :type db_file: str
+
+    :param high_level: Name of the high-level database.
+    :type high_level: str
+
+    :param surfen_coll: Name of the surface energy collection.
+    :type surfen_coll: str
+
+    :param add_full_relax: Add a full relaxation calculation to the workflow.
+    :type add_full_relax: bool
+
+    :return: FWAction that updates the spec.
+    """
     _fw_name = (
         "Starts a sub-workflow that calculates surface energies as detour"
     )
@@ -241,6 +296,19 @@ class RunSurfenSWFOnMatchedSlabs(FiretaskBase):
 
 @explicit_serialize
 class GetSlabSurfenListFromUids(FiretaskBase):
+    """Query the surface energies with the list of uids provided.
+
+    :param db_file: Path to the database file.
+    :type db_file: str
+
+    :param high_level: Name of the high-level database.
+    :type high_level: str
+
+    :param surfen_coll: Name of the surface energy collection.
+    :type surfen_coll: str
+
+    :return: FWAction that updates the spec.
+    """
     _fw_name = "Query the surface energies with the list of uids provided"
     required_params = []
     optional_params = [

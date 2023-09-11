@@ -35,24 +35,27 @@ class FT_UpdateBMLists(FiretaskBase):
 
     Used with FT_Convo to converge energy cutoffs or kpoints using the
     get_wf_bulk_modulus workflow of atomate. This Firetasks reads the
-    neccessary information from the eos collection of the database. Since no
+    necessary information from the eos collection of the database. Since no
     useful tag is placed, the identification of the correct entry is done
     by the chemical formula and the timestamp. The shared data entry for the
     convergence is then identified via a tag and updated with the new
     equilibrium volume and the bulk modulus.
 
-    Parameters
-    ----------
-    formula : str
-        Chemical formula on the material to be matched with the database.
-    tag : str
-        String from an uuid4 to identify the shared data entry in the database.
-    db_file : str, optional
-        Full path to the db.json file detailing access to the database.
-        Defaults to '>>db_file<<' to use with env_chk.
+    :param formula: Chemical formula on the material to be matched with the
+        database.
+    :type formula: str
 
+    :param tag: String from an uuid4 to identify the shared data entry in the
+        database.
+    :type tag: str
+
+    :param db_file: Full path to the db.json file detailing access to the
+        database. Defaults to '>>db_file<<' to use with env_chk.
+    :type db_file: str, optional
+
+    :return: None
+    :rtype: NoneType
     """
-
     _fw_name = "Update Bulk Modulus Lists"
     required_params = ["formula", "tag"]
     optional_params = ["db_file"]
@@ -86,69 +89,91 @@ class FT_UpdateBMLists(FiretaskBase):
 class FT_Convo(FiretaskBase):
     """Converge the encut or kpoint density via fits to an EOS.
 
-    Uses the get_bulk_modulus workflow of atomate to fit Birch-Murnaghen EOS
+    Uses the get_bulk_modulus workflow of atomate to fit Birch-Murnaghan EOS
     for increasing values of the energy cutoff or kpoint density. Once bulk
     modulus and equilibrium volume are converged, the subsequent detours are
     stopped and the convergence data is passed on.
 
-    Parameters
-    ----------
-    structure : pymatgen.core.structure.Structure
-        The structure for which to converge the K-pint grids.
-    conv_type : str
-        Either "kpoints" or "encut", depending on what to converge.
-    comp_parameters : dict
-        Dictionary of computational parameters for the VASP calculations.
-    tag : str
-        String from an uuid4 to identify the shared data entry in the database
-        and group the deformations calculations together.
-    deformations: list of lists, optional
-        List of deformation matrices for the fit to the EOS. Defaults to None,
-        which results in 5 volumes from 90% to 110% of the initial volume.
-    n_converge : int, optional
-        Number of iterations that have to be below the convergence threshold
-        for the system to be considered converged. Defaults to 3
-    encut_start : float, optional
-        Starting encut value for the first run in eV. Defaults to the largest
-        EMIN in the POTCAR.
-    encut_incr : float, optional
-        Increment for the encut during the convergence. Defaults to 25.
-    k_dens_start : float, optional
-        Starting kpoint density in 1/Angstrom. Defaults to 1.0
-    k_dens_increment : float, optional
-        Increment for the kpoint convergence. Can be set quite small since
-        there is a check in place to see if a new mesh is actually constructed
-        for each density. Defaults to 0.1.
-    k_dens_default : float, optional
-        Default (quite high) kpoints density for encut convergence studies if
-        no k_dens parameter is found in the comp_parameters. The default is 12.5
-    db_file : str
-        Full path to the db.json file that should be used. Defaults to
-        '>>db_file<<', to use env_chk.
-    file_output : bool, optional
-        Toggles file output. The default is False.
-    output_dir : str, optional
-        Defines a directory the output is to be copied to. (Do not use a
-        trailing / and/or relative location symbols like ~/.)
+    :param structure: The structure for which to converge the K-point grids or the
+        energy cutoff.
+    :type structure: pymatgen.core.structure.Structure
+
+    :param conv_type: Either "kpoints" or "encut", depending on what to
+        converge.
+    :type conv_type: str
+
+    :param comp_params: Dictionary of computational parameters for the VASP
+        calculations.
+    :type comp_params: dict
+
+    :param tag: String from an uuid4 to identify the shared data entry in the
+        database and group the deformations calculations together.
+    :type tag: str
+
+    :param deformations: List of deformation matrices for the fit to the EOS.
+        Defaults to None, which results in 5 volumes from 90% to 110% of the
+        initial volume.
+    :type deformations: list of lists, optional
+
+    :param n_converge: Number of iterations that have to be below the
+        convergence threshold for the system to be considered converged.
+        Defaults to 3
+    :type n_converge: int, optional
+
+    :param encut_start: Starting encut value for the first run in eV.
+        Defaults to the largest EMIN in the POTCAR.
+    :type encut_start: float, optional
+
+    :param encut_incr: Increment for the encut during the convergence.
+        Defaults to 25.
+    :type encut_incr: float, optional
+
+    :param k_dens_start: Starting kpoint density in 1/Angstrom.
+        Defaults to 1.0
+    :type k_dens_start: float, optional
+
+    :param k_dens_increment: Increment for the kpoint convergence.
+        Can be set quite small since there is a check in place to see if a new
+        mesh is actually constructed for each density. Defaults to 0.1.
+    :type k_dens_increment: float, optional
+
+    :param k_dens_default: Default (quite high) kpoints density for encut
+        convergence studies if no k_dens parameter is found in the
+        comp_parameters. The default is 12.5
+    :type k_dens_default: float, optional
+
+    :param db_file: Full path to the db.json file that should be used.
+        Defaults to '>>db_file<<', to use env_chk.
+    :type db_file: str
+
+    :param file_output: Toggles file output. The default is False.
+    :type file_output: bool, optional
+
+    :param output_dir: Defines a directory the output is to be copied to.
+        (Do not use a trailing / and/or relative location symbols like ~/.)
         The default is None.
-    remote_copy : bool, optional
-        If true, scp will be used to copy the results to a remote server. Be
-        advised that ssh-key certification must be set up between the two
-        machines. The default is False.
-    server : str, optional
-        Fully qualified domain name of the server the output should be copied
-        to. The default is None.
-    user : str, optional
-        The username on the remote server. The default is None.
-    port : int, optional
-        On some machines ssh-key certification is only supported for certain
-        ports. A port may be selected here. The default is None.
+    :type output_dir: str, optional
 
-    Returns
-    -------
-    FWActions that produce detour subworkflows until convergence is reached.
+    :param remote_copy: If true, scp will be used to copy the results to a
+        remote server. Be advised that ssh-key certification must be set up
+        between the two machines. The default is False.
+    :type remote_copy: bool, optional
+
+    :param server: Fully qualified domain name of the server the output should
+        be copied to. The default is None.
+    :type server: str, optional
+
+    :param user: The username on the remote server. The default is None.
+    :type user: str, optional
+
+    :param port: On some machines ssh-key certification is only supported for
+        certain ports. A port may be selected here. The default is None.
+    :type port: int, optional
+
+    :return: FWActions that produce detour subworkflows until convergence is
+        reached.
+    :rtype: FWAction
     """
-
     _fw_name = "Convergence for encut or kpoints"
     required_params = [
         "structure",
@@ -251,7 +276,7 @@ class FT_Convo(FiretaskBase):
                 struct, comp_params, "bulk_from_scratch"
             )
 
-            BM_WF = get_wf_bulk_modulus(
+            bm_wf = get_wf_bulk_modulus(
                 struct,
                 deformations,
                 vasp_input_set=vis,
@@ -262,7 +287,7 @@ class FT_Convo(FiretaskBase):
             )
 
             formula = struct.composition.reduced_formula
-            UAL_FW = Firework(
+            ual_fw = Firework(
                 [
                     FT_UpdateBMLists(formula=formula, tag=tag),
                     FT_Convo(
@@ -289,12 +314,12 @@ class FT_Convo(FiretaskBase):
                 name="Update BM Lists and Loop",
             )
 
-            BM_WF.append_wf(
-                Workflow.from_Firework(UAL_FW), BM_WF.leaf_fw_ids
+            bm_wf.append_wf(
+                Workflow.from_Firework(ual_fw), bm_wf.leaf_fw_ids
             )
             # Use add_modify_incar powerup to add KPAR and NCORE settings
             # based on env_chk in my_fworker.yaml
-            BM_WF = add_modify_incar(BM_WF)
+            bm_wf = add_modify_incar(bm_wf)
             # Set up the entry for the data arrays in the database
             set_data = {
                 "tag": tag,
@@ -306,7 +331,7 @@ class FT_Convo(FiretaskBase):
             }
             db.insert_data(collection="BM_data_sharing", data=set_data)
 
-            return FWAction(detours=BM_WF)
+            return FWAction(detours=bm_wf)
 
         else:
             BM_tol = BM_list[-1] * BM_tolerance
@@ -474,12 +499,12 @@ class FT_Convo(FiretaskBase):
             else:
                 k_dens = convo_list[-1] + k_dens_incr
                 # Ensure that the new density leads to a different mesh.
-                KPTS = MeshFromDensity(
+                kpts = MeshFromDensity(
                     struct, k_dens, compare_density=convo_list[-1]
                 )
-                while KPTS.are_meshes_the_same():
+                while kpts.are_meshes_the_same():
                     k_dens = k_dens + k_dens_incr
-                    KPTS = MeshFromDensity(
+                    kpts = MeshFromDensity(
                         struct, k_dens, compare_density=convo_list[-1]
                     )
                 # Pass kspacing to ensure correct meshes for all deformations
@@ -489,7 +514,7 @@ class FT_Convo(FiretaskBase):
                 struct, comp_params, "bulk_from_scratch"
             )
 
-            BM_WF = get_wf_bulk_modulus(
+            bm_wf = get_wf_bulk_modulus(
                 struct,
                 deformations,
                 vasp_input_set=vis,
@@ -501,7 +526,7 @@ class FT_Convo(FiretaskBase):
             )
 
             formula = struct.composition.reduced_formula
-            UAL_FW = Firework(
+            ual_fw = Firework(
                 [
                     FT_UpdateBMLists(formula=formula, tag=tag),
                     FT_Convo(
@@ -527,12 +552,12 @@ class FT_Convo(FiretaskBase):
                 name="Update BM Lists and Loop",
             )
 
-            BM_WF.append_wf(
-                Workflow.from_Firework(UAL_FW), BM_WF.leaf_fw_ids
+            bm_wf.append_wf(
+                Workflow.from_Firework(ual_fw), bm_wf.leaf_fw_ids
             )
             # Use add_modify_incar powerup to add KPAR and NCORE settings
             # based on env_chk in my_fworker.yaml
-            BM_WF = add_modify_incar(BM_WF)
+            bm_wf = add_modify_incar(bm_wf)
 
             # Update Database entry for convo list
             if conv_type == "encut":
@@ -548,28 +573,24 @@ class FT_Convo(FiretaskBase):
                     new_values={"$push": {"convo_list": k_dens}},
                 )
 
-            return FWAction(detours=BM_WF)
+            return FWAction(detours=bm_wf)
 
 
 def is_list_converged(input_list, tol, n=3):
     """Check if the last n values of an array are within tol of each other.
 
+    :param input_list: List of values to be checked for convergence.
+    :type input_list: list of float
 
-    Parameters
-    ----------
-    input_list : list of float
-        Total energies to be checked for convergence
-    tol : float
-        Tolerance for the convergence.
-    n : int, optional
-        Number of entries at the end of energy_list that have to be within
-        etol for the list to be considered converged. The default is 3.
+    :param tol: Tolerance for the convergence.
+    :type tol: float
 
-    Returns
-    -------
-    Bool
-        True if input_list is converged, False otherwise.
+    :param n: Number of entries at the end of input_list that have to be within
+        tol for the list to be considered converged. The default is 3.
+    :type n: int, optional
 
+    :return: True if input_list is converged, False otherwise.
+    :rtype: bool
     """
     if len(input_list) <= n:
         return False
