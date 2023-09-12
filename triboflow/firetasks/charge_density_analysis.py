@@ -19,6 +19,23 @@ from hitmen_utils.vasp_tools import get_custom_vasp_static_settings
 
 
 def plot_charge_profile(chgcar, axis=2, xmin=None, xmax=None):
+    """Plots the charge density profile along the given axis.
+
+    :param chgcar: Charge density object.
+    :type chgcar: pymatgen.io.vasp.outputs.Chgcar
+
+    :param axis: Axis along which the profile is plotted.
+    :type axis: int
+
+    :param xmin: Minimum value of the x-axis.
+    :type xmin: float
+
+    :param xmax: Maximum value of the x-axis.
+    :type xmax: float
+
+    :return: None
+    :rtype: NoneType
+    """
     x = chgcar.get_axis_grid(axis)
     y = chgcar.get_average_along_axis(axis)
     from matplotlib import pyplot as plt

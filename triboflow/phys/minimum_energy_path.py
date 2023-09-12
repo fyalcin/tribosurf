@@ -163,7 +163,7 @@ def get_initial_strings(
     border_padding=0.1,
 ):
     """
-    Make 3 straigth strings that connect minima of the PES.
+    Make 3 straight strings that connect minima of the PES.
 
     One string each is set up be parallel to the cartesian x and y directions,
     while the third one is roughly diagonal. The number of points is controlled
@@ -173,9 +173,9 @@ def get_initial_strings(
 
     Parameters
     ----------
-    extended_energy_list : np.array
+    extended_energy_list : numpy array
         High symmetry points with x and y coordinates and the total energy
-        as third collumn.
+        as third column.
     xlim : float
         maximum x value for the minima search
     ylim : float
@@ -246,19 +246,17 @@ def numgrad(string, rbf, delta=0.002):
     """
     Numerically compute the gradient of a potential given by rbf at the points in string.
 
-    Parameters
-    ----------
-    string : np.array
-        The string in the potential
-    rbf : TYPEscipy.interpolate._rbfinterp.RBFInterpolator or other callable
-        potential for which the gradient is calculated
-    delta : float, optional
-        step size for the gradient evaluation. The default is 0.002.
+    :param string: The string in the potential
+    :type string: numpy array
 
-    Returns
-    -------
-    np.array
-        The gradient at each string point.
+    :param rbf: Method to interpolate the potential
+    :type rbf: scipy.interpolate._rbfinterp.RBFInterpolator or other callable
+
+    :param delta: step size for the gradient evaluation. The default is 0.002.
+    :type delta: float, optional
+
+    :return: The gradient at each string point.
+    :rtype: numpy array
 
     """
     x = string[:, 0]

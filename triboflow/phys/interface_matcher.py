@@ -60,6 +60,29 @@ from triboflow.utils.structure_manipulation import (
 def get_consolidated_comp_params(
     mpid1, mpid2, bulk_coll, db_file, high_level
 ):
+    """
+    Get consolidated computational parameters for two materials.
+
+    :param mpid1: Materials Project ID of the first material
+    :type mpid1: str
+
+    :param mpid2: Materials Project ID of the second material
+    :type mpid2: str
+
+    :param bulk_coll: Name of the collection in the database that contains the bulk data
+    :type bulk_coll: str
+
+    :param db_file: Full path to the db.json file that should be used. Defaults to
+        '>>db_file<<', to use env_chk.
+    :type db_file: str
+
+    :param high_level: Name of the collection in the database that contains the
+        high-level data
+    :type high_level: str
+
+    :return: Dictionary with consolidated computational parameters
+    :rtype: dict
+    """
     nav = VaspDB(db_file=db_file, high_level=high_level)
     bulk_1 = nav.find_data(collection=bulk_coll, fltr={"mpid": mpid1})
     bulk_2 = nav.find_data(collection=bulk_coll, fltr={"mpid": mpid2})
@@ -90,27 +113,25 @@ def get_average_lattice(latt1, latt2, weight1, weight2):
     """Return a Lattice that is the weighted average of the input lattices.
 
     The weighted average of the lattice parameters and angles of two input
-    lattices is returned. The orignal lattices are not changed. All lattices
+    lattices is returned. The original lattices are not changed. All lattices
     have to be pymatgen.core.lattice.Lattice objects.
     This is useful to get a single lattice for interface matching when two
     close lattices are found by another algorithm.
 
+    :param latt1: First lattice for the averaging
+    :type latt1: pymatgen.core.lattice.Lattice
 
-    Parameters
-    ----------
-    latt1 : pymatgen.core.lattice.Lattice
-        First lattice for the averaging.
-    latt2 : pymatgen.core.lattice.Lattice
-        Second lattice for the averaging.
-    weight1 : float
-        Weight factor for the first lattice
-    weight2 : float
-        Weight factor for the first lattice
+    :param latt2: Second lattice for the averaging
+    :type latt2: pymatgen.core.lattice.Lattice
 
-    Returns
-    -------
-    av_latt : pymatgen.core.lattice.Lattice
-        Averaged lattice
+    :param weight1: Weight factor for the first lattice
+    :type weight1: float
+
+    :param weight2: Weight factor for the second lattice
+    :type weight2: float
+
+    :return: Averaged lattice
+    :rtype: pymatgen.core.lattice.Lattice
 
     """
     a = np.average([latt1.a, latt2.a], weights=[weight1, weight2])
@@ -131,20 +152,18 @@ def get_average_lattice(latt1, latt2, weight1, weight2):
 def are_slabs_aligned(slab_1, slab_2, prec=12):
     """Check if two slabs have the same x and y lattice (z coordinate may differ)
 
-    Parameters
-    ----------
-    slab_1 : pymatgen.core.surface.Slab
-        First slab of two, which alignment is checked.
-    slab_2 : pymatgen.core.surface.Slab
-        Second slab of two, which alignment is checked.
-    prec : int, optional
-        Fixes the allowed deviation. The lattices are rounded to 'prec' digits.
-        The default is 12.
+    :param slab_1: First slab of two, for which alignment is checked.
+    :type slab_1: pymatgen.core.surface.Slab
 
-    Returns
-    -------
-    bool
-        Aligned or not
+    :param slab_2: Second slab of two, for which alignment is checked.
+    :type slab_2: pymatgen.core.surface.Slab
+
+    :param prec: Fixes the allowed deviation. The lattices are rounded to 'prec' digits.
+        The default is 12.
+    :type prec: int, optional
+
+    :return: Aligned or not
+    :rtype: bool
 
     """
     m1 = np.round(slab_1.lattice.matrix, prec)
@@ -185,63 +204,65 @@ class InterfaceMatcher:
         "best_match" can be set to "mismatch" to find the smallest possible
         mismatch while staying below "max_area".
 
+        :param slab_1: First slab for the interface matching
+        :type slab_1: pymatgen.core.surface.Slab
 
-        Parameters
-        ----------
-        max_sites
-        slab_1 : pymatgen.core.surface.Slab
-            First slab for the interface matching
-        slab_2 : pymatgen.core.surface.Slab
-            Second slab for the interface matching
-        strain_weight_1 : float, optional
-            Weight for the lattice straining of the first slab. Combined with the
+        :param slab_2: Second slab for the interface matching
+        :type slab_2: pymatgen.core.surface.Slab
+
+        :param strain_weight_1: Weight for the lattice straining of the first slab. Combined with the
             'strain_weight_2' this determines which slab will be strained by
             how much to get unified lattice for the interface. The default is 1.0
-        strain_weight_2 : float, optional
-            Weight for the lattice straining of the first slab. Combined with the
-            'strain_weight_1' this determines which slab will be strained by
-            how much to get unified lattice for the interface.  The default is 1.0
-        max_area_ratio_tol : float, optional
-            Tolerance parameter related to the lattice search
+        :type strain_weight_1: float, optional
+
+        :param strain_weight_2: See strain_weight_1
+        :type strain_weight_2: float, optional
+
+        :param max_area_ratio_tol: Tolerance parameter related to the lattice search
             Lattice vectors are considered for the search if the areas do not
-            differ more than max_area_ratio_tol
-            The default is 0.09
-        max_area : float, optional
-            Maximally allowed cross-sectional area of the interface.
-            The default is 100.0
-        max_length_tol : float, optional
-            Maximally allowed mismatch between the length of the lattice vectors
-            in %. E.g. 0.01 is indicating a maximal 1% mismatch.
-            The default is 0.03
-        max_angle_tol : float, optional
-            Maximally allowed angle mismatch between the cells in %.
-            E.g. 0.01 is indicating a maximal 1% mismatch.
-            The default is 0.01
-        bidirectional_search : bool, optional
-            Select if vectors of substrate and film are exchangeable during the
-            lattice search. The default is True
-        vacuum : float, optional
-            Thickness of the vacuum layer for the final interface. The default
-            is 15.0
-        interface_distance : int, float or str, optional
-            Determines the distance between the matched slabs if an interface
+            differ more than max_area_ratio_tol. The default is 0.09.
+        :type max_area_ratio_tol: float, optional
+
+        :param max_area: Maximally allowed cross-sectional area of the interface. The default is 100.0 A^2.
+        :type max_area: float, optional
+
+        :param max_length_tol: Maximally allowed mismatch between the length of the lattice vectors
+            in %. E.g. 0.01 is indicating a maximal 1% mismatch. The default is 0.03.
+        :type max_length_tol: float, optional
+
+        :param max_angle_tol: Maximally allowed angle mismatch between the cells in %.
+            E.g. 0.01 is indicating a maximal 1% mismatch. The default is 0.01.
+        :type max_angle_tol: float, optional
+
+        :param bidirectional_search: Select if vectors of substrate and film are exchangeable during the
+            lattice search. The default is True.
+        :type bidirectional_search: bool, optional
+
+        :param vacuum: Thickness of the vacuum layer for the final interface. The default is 15.0 A.
+        :type vacuum: float, optional
+
+        :param interface_distance: Determines the distance between the matched slabs if an interface
             structure is returned. If the input can be transformed into a float,
-            that float will be used as the distance. If not, the distance will
-            be automatically computed as the average layer distance of the
-            two slabs. The default is "auto"
-        interface_distance_addon : float, optional
-            This will be added to the automatic interface distance if
-            interface_distance is not set explicitly to a float or int.
-            The default is 0.0
-        external_pressure : float, optional
-            External pressure to be applied to the interface structure in GPa.
+            that float will be used as the distance. If set to "auto", the distance will
+            be automatically computed as the average of the minimum bond lengths in the film and substrate.
+            The default is "auto".
+        :type interface_distance: int, float or str, optional
+
+        :param interface_distance_addon: This will be added to the automatic interface distance if
+            interface_distance is not set explicitly to a float or int. The default is 0.0.
+        :type interface_distance_addon: float, optional
+
+        :param external_pressure: External pressure to be applied to the interface structure in GPa.
             For now this is doing nothing. However, one could use this to
             reduce the automatic interface distance if it is not explicitly
             set. The default is None.
+        :type external_pressure: float, optional
 
-        Returns
-        -------
-        None.
+        :param max_sites: Maximum number of sites in the interface structure. The default is 200.
+        :type max_sites: int, optional
+
+        :return: None
+        :rtype: NoneType
 
         """
         # handle inconsistent input
@@ -279,20 +300,16 @@ class InterfaceMatcher:
         """
         Check if the supplied strain weights are making sense and correct them if not.
 
+        :param strain_weight_1: Weight for the lattice straining of the first slab. Combined with the
+            'strain_weight_2' this determines which slab will be strained by
+            how much to get unified lattice for the interface.
+        :type strain_weight_1: float, optional
 
-        Parameters
-        ----------
-        strain_weight_1 : float
-            Weight 1
-        strain_weight_2 : float
-            weight 2
+        :param strain_weight_2: See strain_weight_1
+        :type strain_weight_2: float, optional
 
-        Returns
-        -------
-        float
-            Weight 1
-        float
-            Weight 2
+        :return: Weight 1 and Weight 2
+        :rtype: float, float
 
         """
         if not sum((strain_weight_1, strain_weight_2)):
@@ -340,17 +357,14 @@ class InterfaceMatcher:
         be automatically computed as the average layer distance of the
         two slabs.
 
-        Parameters
-        ----------
-        initial_distance : any type possible
-            if transformable to a float, the float will be used, otherwise
-            automatic computation is done.
-        distance_boost : float or int
-            added to interface distance if it is automatically determined.
+        :param initial_distance: Distance between the two slabs in Angstrom.
+        :type initial_distance: float, int or str
 
-        Returns
-        -------
-        None.
+        :param distance_boost: This will be added to the automatic interface distance if
+            interface_distance is not set explicitly to a float or int.
+        :type distance_boost: float, optional
+
+        :return: None
 
         """
         try:
@@ -669,6 +683,10 @@ class InterfaceMatcher:
         """
         tcs, bcs = self.get_centered_slabs()
         if not tcs and not bcs:
+            warnings.warn(
+                f"\nCould not find a matching interface with the given parameters."
+                f" Try increasing the max_area parameter."
+            )
             return None
 
         # Note that the from_slab method of the Interface object flips the film over!

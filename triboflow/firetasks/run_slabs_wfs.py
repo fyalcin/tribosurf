@@ -410,6 +410,54 @@ class GetSlabSurfenListFromUids(FiretaskBase):
 
 @explicit_serialize
 class GetCandidatesForHeteroStructure(FiretaskBase):
+    """Get the candidates for the heterostructure.
+
+    :param mpid_1: Material Project's material identifier ID for the first material.
+    :type mpid_1: str
+
+    :param mpid_2: Material Project's material identifier ID for the second material.
+    :type mpid_2: str
+
+    :param comp_params_1: Computational parameters for the slab calculations for the first material.
+    :type comp_params_1: dict
+
+    :param comp_params_2: Computational parameters for the slab calculations for the second material.
+    :type comp_params_2: dict
+
+    :param interface_params: Interface parameters.
+    :type interface_params: dict
+
+    :param sg_params_1: Slab generation parameters for the first material.
+    :type sg_params_1: dict
+
+    :param sg_params_2: Slab generation parameters for the second material.
+    :type sg_params_2: dict
+
+    :param sg_filter_1: Slab generation filter for the first material.
+    :type sg_filter_1: dict
+
+    :param sg_filter_2: Slab generation filter for the second material.
+    :type sg_filter_2: dict
+
+    :param db_file: Path to the database file.
+    :type db_file: str
+
+    :param high_level: Name of the high-level database.
+    :type high_level: str
+
+    :param surfen_coll: Name of the surface energy collection.
+    :type surfen_coll: str
+
+    :param bulk_coll: Name of the bulk collection.
+    :type bulk_coll: str
+
+    :param add_full_relax: Add a full relaxation calculation to the workflow.
+    :type add_full_relax: bool
+
+    :return: FWAction that detours to a Workflow.
+    :rtype: FWAction
+
+    """
     _fw_name = "Match Slabs and Calculate Surface Energies"
     required_params = [
         "mpid_1",

@@ -92,39 +92,28 @@ class InterfaceSymmetryAnalyzer:
         angle_tol=0.01,
     ):
         """
-        Initializes the InterfaceSymmetryAnalysis class.
+        Initializes the InterfaceSymmetryAnalyzer class.
 
-        Parameters
-        ----------
-        in_cartesian_coordinates : bool, optional
-            Return the high symmetry points and interface shifts in cartesian
-            rather than fractional coordinates. The default is False.
-        no_obtuse_hollow : bool, optional
-            Selects if you want to add obtuse hollows to the high symmetry
-            points. The default for this in pymatgen's AdsorbateSiteFinder is
-            "True", which means that no obtuse hollows are added! Be careful
-            when adding these sites, since it will result most likely in
-            extremely many unique shifts and sample the unit cell very densely
-            with associated huge computational cost. The default is True.
-        jsanitize_output : bool, optional
-            If true, will run monty.jsanitize on the final dictionary so that
-            the numpy arrays will be converted to lists and can be saved in a
-            mongoDB database.
-        ltol : float, optional
-            Fractional length tolerance for the StructureMatcher. Keep this low,
-            since matching structures should match exactly. The default is 0.01.
-        stol : float, optional
-            Site tolerance for the StructureMatcher. Defined as the fraction of
-            the average free length per atom. Keep this low, since matching
-            structures should match exactly. The default is 0.01.
-        angle_tol : float, optional
-            Angle tolerance for the StructureMatcher in degrees. Keep this low,
-            since matching structures should match exactly. The default is 0.01.
+        :param interface: A pymatgen Interface object.
+        :type interface: pymatgen.core.interface.Interface
 
-        Returns
-        -------
-        None.
+        :param in_cartesian_coordinates: Return the high symmetry points and interface shifts in cartesian rather than fractional coordinates. The default is False.
+        :type in_cartesian_coordinates: bool, optional
 
+        :param no_obtuse_hollow: Selects if you want to add obtuse hollows to the high symmetry points. The default for this in pymatgen's AdsorbateSiteFinder is "True", which means that no obtuse hollows are added! Be careful when adding these sites, since it will result most likely in extremely many unique shifts and sample the unit cell very densely with associated huge computational cost. The default is True.
+        :type no_obtuse_hollow: bool, optional
+
+        :param jsanitize_output: If true, will run monty sanitize on the final dictionary so that the numpy arrays will be converted to lists and can be saved in a mongoDB database.
+        :type jsanitize_output: bool, optional
+
+        :param ltol: Fractional length tolerance for the StructureMatcher. Keep this low, since matching structures should match exactly. The default is 0.01.
+        :type ltol: float, optional
+
+        :param stol: Site tolerance for the StructureMatcher. Defined as the fraction of the average free length per atom. Keep this low, since matching structures should match exactly. The default is 0.01.
+        :type stol: float, optional
+
+        :param angle_tol: Angle tolerance for the StructureMatcher in degrees. Keep this low, since matching structures should match exactly. The default is 0.01.
+        :type angle_tol: float, optional
         """
 
         self.interface = interface
@@ -186,23 +175,19 @@ class InterfaceSymmetryAnalyzer:
         """
         Return the adsorption sites of a slab object, either only unique ones, or all.
 
-        Parameters
-        ----------
-        slab : pymatgen.core.surface.Slab (pymatgen.core.structure.Structure)
+        :param slab: pymatgen.core.surface.Slab (pymatgen.core.structure.Structure)
             The slab of which you want to calculate the surface HS points.
             The input needs to be a slab, i.e. an atomic structure non-periodic
             along the z-direction. However, type(slab) could be either a Slab
             object or a Structure object.
+        :type slab: pymatgen.core.surface.Slab (pymatgen.core.structure.Structure)
 
-        unique : bool, optional
-            If True, only unique non-equivalent points are returned. If False, all
+        :param unique: If True, only unique non-equivalent points are returned. If False, all
             replicas are listed as well.
+        :type unique: bool, optional
 
-        Returns
-        -------
-        sites : dict
-            Dictionary with adsorption sites with the sites ordered by type.
-
+        :return: Dictionary with adsorption sites with the sites ordered by type.
+        :rtype: dict
         """
 
         if slab == self.top_slab:

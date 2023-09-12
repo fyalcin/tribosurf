@@ -44,25 +44,26 @@ class FT_StartBulkPreRelax(FiretaskBase):
     of a primitive structure depending on lattice parameters, and then move
     the optimized primitive structure to the high level database.
 
-    Parameters
-    ----------
-    mp_id : str
-        ID number for structures in the material project.
-    functional : str
-        functional that is used for the calculation.
-    db_file : str, optional
-        Full path to the db.json file which holds the location and access
-        credentials to the database. If not given uses env_chk.
-    encut : float, optional
-        Energy cutoff for the relaxation run. Defaults to 1000.
-    k_dens : int, optional
-        kpoint density in 1/Angstrom. Defaults to a (quite high) 15.
-    high_level : str, optional
-        Name of the high level database the structure should be queried in
-        and later the results written to. Defaults to 'triboflow'.
-    Returns
-    -------
-        Starts a subworkflow as a detour to the current workflow.
+    :param mp_id: Materials Project ID.
+    :type mp_id: str
+
+    :param functional: Name of the functional used for the calculation.
+    :type functional: str
+
+    :param db_file: Path to the database file.
+    :type db_file: str
+
+    :param encut: Energy cutoff for the relaxation run.
+    :type encut: float
+
+    :param k_dens: kpoint density in 1/Angstrom.
+    :type k_dens: int
+
+    :param high_level: Name of the high level database.
+    :type high_level: str
+
+    :return: FWAction that detours to a subworkflow.
+    :rtype: FWAction
     """
 
     _fw_name = "Start a cell shape relaxation"
@@ -148,24 +149,26 @@ class FT_StartBulkPreRelax(FiretaskBase):
 class FT_UpdatePrimStruct(FiretaskBase):
     """Update the primitive structure in the high level database.
 
-    Parameters
-    ----------
-    functional : str
-        functional that is used for the calculation.
-    tag : str
-        Unique identifier for the Optimize FW.
-    flag : str
-        An identifier to find the results in the database. It is strongly
-        suggested to use the proper Materials-ID from the MaterialsProject
-        if it is known for the specific input structure. Otherwise, use
-        something unique which you can find again.
-    db_file : str, optional
-        Full path to the db.json file which holds the location and access
-        credentials to the database. If not given uses env_chk.
-    Returns
-    -------
-        Moves the optimized primitive structure from the low level
-        database to the high level database.
+    :param functional: Name of the functional used for the calculation.
+    :type functional: str
+
+    :param tag: Unique identifier for the Optimize FW.
+    :type tag: str
+
+    :param flag: An identifier to find the results in the database. It is
+        strongly suggested to use the proper Materials-ID from the
+        MaterialsProject if it is known for the specific input structure.
+        Otherwise, use something unique which you can find again.
+    :type flag: str
+
+    :param db_file: Path to the database file.
+    :type db_file: str
+
+    :param high_level: Name of the high level database.
+    :type high_level: str
+
+    :return: FWAction that updates the spec.
+    :rtype: FWAction
     """
 
     _fw_name = "Update primitive structure in the high level DB"
@@ -205,48 +208,54 @@ class FT_UpdatePrimStruct(FiretaskBase):
 class FT_GetRelaxedSlab(FiretaskBase):
     """Get the relaxed structure, and put a Slab into the high-level DB.
 
-    Parameters
-    ----------
-    flag : str
-        An identifier to find the results in the database. It is strongly
-        suggested to use the proper Materials-ID from the MaterialsProject
-        if it is known for the specific input structure. Otherwise, use
-        something unique which you can find again.
-    miller : list of int or str
-        Miller indices for the slab generation. Either single str e.g. '111',
-        or a list of int e.g. [1, 1, 1]
-    functional : str
-        functional that is used for the calculation.
-    tag : str
-        Unique identifier for the Optimize FW.
-    db_file : str, optional
-        Full path to the db.json file which holds the location and access
-        credentials to the database. If not given uses env_chk.
-    struct_out_name : str, optional
-        Name of the slab to be put in the DB (identified by mp_id and miller).
-        Defaults to 'relaxed_slab'.
-    file_output : bool, optional
-        Toggles file output. The default is False.
-    output_dir : str, optional
-        Defines a directory the output is to be copied to. (Do not use a
-        trailing / and/or relative location symbols like ~/.)
-        The default is None.
-    remote_copy : bool, optional
-        If true, scp will be used to copy the results to a remote server. Be
-        advised that ssh-key certification must be set up between the two
-        machines. The default is False.
-    server : str, optional
-        Fully qualified domain name of the server the output should be copied
-        to. The default is None.
-    user : str, optional
-        The username on the remote server.
-    port : int, optional
-        On some machines ssh-key certification is only supported for certain
-        ports. A port may be selected here. The default is None.
+    :param flag: An identifier to find the results in the database. It is
+        strongly suggested to use the proper Materials-ID from the
+        MaterialsProject if it is known for the specific input structure.
+        Otherwise, use something unique which you can find again.
+    :type flag: str
 
-    Returns
-    -------
-        Pymatgen Slab into the high-level DB.
+    :param miller: Miller indices for the slab generation. Either single str
+        e.g. '111', or a list of int e.g. [1, 1, 1]
+    :type miller: list of int or str
+
+    :param functional: Name of the functional used for the calculation.
+    :type functional: str
+
+    :param tag: Unique identifier for the Optimize FW.
+    :type tag: str
+
+    :param db_file: Path to the database file.
+    :type db_file: str
+
+    :param struct_out_name: Name of the slab to be put in the DB (identified
+        by mp_id and miller). Defaults to 'relaxed_slab'.
+    :type struct_out_name: str
+
+    :param file_output: Toggles file output.
+    :type file_output: bool
+
+    :param output_dir: Defines a directory the output is to be copied to.
+        (Do not use a trailing / and/or relative location symbols like ~/.)
+    :type output_dir: str
+
+    :param remote_copy: If true, scp will be used to copy the results to a
+        remote server. Be advised that ssh-key certification must be set up
+        between the two machines.
+    :type remote_copy: bool
+
+    :param server: Fully qualified domain name of the server the output should
+        be copied to.
+    :type server: str
+
+    :param user: The username on the remote server.
+    :type user: str
+
+    :param port: On some machines ssh-key certification is only supported for
+        certain ports. A port may be selected here.
+    :type port: int
+
+    :return: FWAction that updates the spec or detours to a subworkflow.
+    :rtype: FWAction
     """
 
     required_params = ["flag", "miller", "functional", "tag"]
@@ -396,6 +405,26 @@ class FT_GetRelaxedSlab(FiretaskBase):
 
 @explicit_serialize
 class FT_AddBulkToDB(FiretaskBase):
+    """Add a bulk structure to the high level database.
+
+    :param mpid: Materials Project ID.
+    :type mpid: str
+
+    :param functional: Name of the functional used for the calculation.
+    :type functional: str
+
+    :param db_file: Path to the database file.
+    :type db_file: str
+
+    :param high_level: Name of the high level database.
+    :type high_level: str
+
+    :param custom_data: Custom data to be added to the database.
+    :type custom_data: dict
+
+    :return: FWAction that updates the spec.
+    :rtype: FWAction
+    """
     _fw_name = "Add bulk to DB"
     required_params = ["mpid", "functional"]
     optional_params = ["db_file", "high_level", "custom_data"]
@@ -425,23 +454,27 @@ class FT_MakeHeteroStructure(FiretaskBase):
     If the match fails, the accuracy criteria are relaxed in steps of 5% until
     a match is found.
 
-    Parameters
-    ----------
-    mp_id_1 : str
-        ID number from the MP to identify material 1.
-    mp_id_2 : str
-        ID number from the MP for material 2.
-    functional : str
-        functional that is used for the calculation.
-    external_pressure : float
-        External pressure in GPa.
-    db_file : str, optional
-        Full path to the db.json file which holds the location and access
-        credentials to the database. If not given uses env_chk.
+    :param mp_id_1: Materials Project ID of the first material.
+    :type mp_id_1: str
 
-    Returns
-    -------
-    Matched interface structure and bottom and top slabs in interface_data DB.
+    :param mp_id_2: Materials Project ID of the second material.
+    :type mp_id_2: str
+
+    :param interface_params: Parameters for the interface matcher.
+    :type interface_params: dict
+
+    :param functional: Name of the functional used for the calculation.
+    :type functional: str
+
+    :param db_file: Path to the database file.
+    :type db_file: str
+
+    :param high_level: Name of the high level database.
+    :type high_level: str
+
+    :return: FWAction that updates the spec or defuses the workflow if no
+        interface could be found.
+    :rtype: FWAction
     """
 
     _fw_name = "Make Hetero Structure"
@@ -494,11 +527,6 @@ class FT_MakeHeteroStructure(FiretaskBase):
         for pair in pairs:
             slab1_dict, slab2_dict = pair
             slab1, slab2 = slab1_dict["slab"], slab2_dict["slab"]
-            # for smaller interfaces, try to use primitive slabs.
-            # The InterfaceMatcher class takes care of the
-            # orthogonality of the c-axis.
-            slab1 = slab1.get_primitive_structure()
-            slab2 = slab2.get_primitive_structure()
             hkl1, hkl2 = slab1_dict["hkl"], slab2_dict["hkl"]
             shift1, shift2 = slab1_dict["shift"], slab2_dict["shift"]
 
