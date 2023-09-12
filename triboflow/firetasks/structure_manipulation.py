@@ -111,7 +111,7 @@ class FT_StartBulkPreRelax(FiretaskBase):
             # database and updating with the optional inputs
             comp_params = data.get("comp_parameters")
             encut = self.get("encut", 1000)
-            k_dens = self.get("k_dens", 10)
+            k_dens = self.get("k_dens", 9.0)
             comp_params.update({"encut": encut, "k_dens": k_dens})
 
             vis = get_custom_vasp_relax_settings(
