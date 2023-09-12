@@ -59,34 +59,26 @@ class InterfaceSymmetryAnalyzer:
     to get a list of all interfaces with unique shifts and individually optimized
     interface gaps (if you not pass a specific interface distance).
 
-    Parameters
-    ----------
-    interface : pymatgen.core.interface.Interface
-            An pymatgen Interface object.
-    in_cartesian_coordinates : bool, optional
-        Return the high symmetry points and interface shifts in cartesian
-        rather than fractional coordinates. The default is False.
-    no_obtuse_hollow : bool, optional
-        Selects if you want to add obtuse hollows to the high symmetry
-        points. The default for this in pymatgen's AdsorbateSiteFinder is
-        "True", which means that no obtuse hollows are added! Be careful
-        when adding these sites, since it will result most likely in
-        extremely many unique shifts and sample the unit cell very densely
-        with associated huge computational cost. The default is True.
-    jsanitize_output : bool, optional
-        If true, will run monty.jsanitze on the final dictionary so that
-        the numpy arrays will be converted to lists and can be saved in a
-        mongoDB database.
-    ltol : float, optional
-        Fractional length tolerance for the StructureMatcher. Keep this low,
-        since matching structures should match exactly. The default is 0.01.
-    stol : float, optional
-        Site tolerance for the StructureMatcher. Defined as the fraction of
-        the average free length per atom. Keep this low, since matching
-        structures should match exactly. The default is 0.01.
-    angle_tol : float, optional
-        Angle tolerance for the StructureMatcher in degrees. Keep this low,
-        since matching structures should match exactly. The default is 0.01.
+    :param interface: A pymatgen Interface object.
+    :type interface: pymatgen.core.interface.Interface
+
+    :param in_cartesian_coordinates: Return the high symmetry points and interface shifts in cartesian rather than fractional coordinates. The default is False.
+    :type in_cartesian_coordinates: bool, optional
+
+    :param no_obtuse_hollow: Selects if you want to add obtuse hollows to the high symmetry points. The default for this in pymatgen's AdsorbateSiteFinder is "True", which means that no obtuse hollows are added! Be careful when adding these sites, since it will result most likely in extremely many unique shifts and sample the unit cell very densely with associated huge computational cost. The default is True.
+    :type no_obtuse_hollow: bool, optional
+
+    :param jsanitize_output: If true, will run monty sanitize on the final dictionary so that the numpy arrays will be converted to lists and can be saved in a mongoDB database.
+    :type jsanitize_output: bool, optional
+
+    :param ltol: Fractional length tolerance for the StructureMatcher. Keep this low, since matching structures should match exactly. The default is 0.01.
+    :type ltol: float, optional
+
+    :param stol: Site tolerance for the StructureMatcher. Defined as the fraction of the average free length per atom. Keep this low, since matching structures should match exactly. The default is 0.01.
+    :type stol: float, optional
+
+    :param angle_tol: Angle tolerance for the StructureMatcher in degrees. Keep this low, since matching structures should match exactly. The default is 0.01.
+    :type angle_tol: float, optional
     """
 
     def __init__(
@@ -115,7 +107,7 @@ class InterfaceSymmetryAnalyzer:
             extremely many unique shifts and sample the unit cell very densely
             with associated huge computational cost. The default is True.
         jsanitize_output : bool, optional
-            If true, will run monty.jsanitze on the final dictionary so that
+            If true, will run monty.jsanitize on the final dictionary so that
             the numpy arrays will be converted to lists and can be saved in a
             mongoDB database.
         ltol : float, optional
@@ -529,7 +521,7 @@ class InterfaceSymmetryAnalyzer:
 
         """
         initial_interface = self.interface
-        # set interface distance extemely low initially, since we want to
+        # set interface distance extremely low initially, since we want to
         # increase it until the minimum bond distance is equal to the
         # minimum bond distance of the aligned slabs minus the bond_dist_delta
         initial_interface.gap = 0.1  # in Angstrom

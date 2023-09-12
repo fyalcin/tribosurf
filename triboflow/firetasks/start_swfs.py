@@ -21,27 +21,31 @@ class FT_StartChargeAnalysisSWF(FiretaskBase):
     Take an interface from the high_level database and compute
     the charge density redistribution through a subworkflow.
 
-    Parameters
-    ----------
-    mp_id_1 : str
-        MaterialsProject ID number for the first material
-    mp_id_2 : str
-        MaterialsProject ID number for the second material
-    functional : str
-        Functional with which the workflow is run. PBE or SCAN.
-    external_pressure : float
-        External pressure in GPa.
-    db_file : str, optional
-        Full path of the db.json file to be used. The default is to use
-        env_chk to find the file.
-    high_level : str or True, optional
-        Name of the high_level database to use. Defaults to 'True', in which
-        case it is read from the db.json file.
-    interface_label : str, optional
-        Label that the relaxed interface has in the high-level database. Can
-        be either structure@min (default), or structure@max at the moment.
-    """
+    :param mp_id_1: MaterialsProject ID number for the first material
+    :type mp_id_1: str
 
+    :param mp_id_2: MaterialsProject ID number for the second material
+    :type mp_id_2: str
+
+    :param functional: Functional with which the workflow is run. PBE or SCAN.
+    :type functional: str
+
+    :param external_pressure: External pressure in GPa.
+    :type external_pressure: float
+
+    :param db_file: Full path of the db.json file to be used. The default is to use env_chk to find the file.
+    :type db_file: str, optional
+
+    :param high_level: Name of the high_level database to use. Defaults to 'True', in which case it is read from the db.json file.
+    :type high_level: str or True, optional
+
+    :param interface_label: Label that the relaxed interface has in the high-level database. Can be either structure@min (default), or structure@max at the moment.
+    :type interface_label: str, optional
+
+    :return: FWAction that produces a detour charge analysis subworkflow.
+    :rtype: FWAction
+    """
+    _fw_name = "Start Charge Analysis SWF"
     required_params = [
         "mp_id_1",
         "mp_id_2",
@@ -101,27 +105,31 @@ class FT_StartAdhesionSWF(FiretaskBase):
     interface structure (by default the one with the lowest energy) and compute
     the adhesion energy through a subworkflow.
 
-    Parameters
-    ----------
-    mp_id_1 : str
-        MaterialsProject ID number for the first material
-    mp_id_2 : str
-        MaterialsProject ID number for the second material
-    functional : str
-        Functional with which the workflow is run. PBE or SCAN.
-    external_pressure : float
-        External pressure in GPa.
-    db_file : str, optional
-        Full path of the db.json file to be used. The default is to use
-        env_chk to find the file.
-    adhesion_handle: str, optional
-        Flag under which the adhesion energy will be saved in the
-        interface_data collection of the high_level database.
-    high_level : str or True, optional
-        Name of the high_level database to use. Defaults to 'True', in which
-        case it is read from the db.json file.
-    """
+    :param mp_id_1: MaterialsProject ID number for the first material
+    :type mp_id_1: str
 
+    :param mp_id_2: MaterialsProject ID number for the second material
+    :type mp_id_2: str
+
+    :param functional: Functional with which the workflow is run. PBE or SCAN.
+    :type functional: str
+
+    :param external_pressure: External pressure in GPa.
+    :type external_pressure: float
+
+    :param db_file: Full path of the db.json file to be used. The default is to use env_chk to find the file.
+    :type db_file: str, optional
+
+    :param adhesion_handle: Flag under which the adhesion energy will be saved in the interface_data collection of the high_level database.
+    :type adhesion_handle: str, optional
+
+    :param high_level: Name of the high_level database to use. Defaults to 'True', in which case it is read from the db.json file.
+    :type high_level: str or True, optional
+
+    :return: FWAction that produces a detour adhesion subworkflow.
+    :rtype: FWAction
+    """
+    _fw_name = "Start Adhesion SWF"
     required_params = [
         "mp_id_1",
         "mp_id_2",
@@ -184,36 +192,39 @@ class FT_StartBulkConvoSWF(FiretaskBase):
     Starts either an energy cutoff or kpoint density convergence of a material
     with a given MPID and functional through a subworkflow.
 
-    Parameters
-    ----------
-    conv_type : str
-        Either "kpoints" or "encut", depending on what to converge.
-    mp_id : str
-        MaterialsProject ID number for the material
-    functional : str
-        Functional with which the workflow is run. PBE or SCAN.
-    db_file : str, optional
-        Full path of the db.json file to be used. The default is to use
-        env_chk to find the file.
-    encut_start : float, optional
-        Starting encut value for the first run. Defaults to the largest EMIN
-        in the POTCAR.
-    encut_incr : float, optional
-        Increment for the encut during the convergence. Defaults to 25.
-    k_dens_start : float, optional
-        Starting kpoint density in 1/Angstrom. Defaults to 1.0
-    k_dens_incr : float, optional
-        Increment for the kpoint convergence. Can be set quite small since
-        there is a check in place to see if a new mesh is actually constructed
-        for each density. Defaults to 0.1.
-    n_converge : int, optional
-        Number of calculations that have to be inside the convergence
-        threshold for convergence to be reached. Defaults to 3.
-    high_level : str or True, optional
-        Name of the high_level database to use. Defaults to 'True', in which
-        case it is read from the db.json file.
-    """
+    :param conv_type: Either "kpoints" or "encut", depending on what to converge.
+    :type conv_type: str
 
+    :param mp_id: MaterialsProject ID number for the material
+    :type mp_id: str
+
+    :param functional: Functional with which the workflow is run. PBE or SCAN.
+    :type functional: str
+
+    :param db_file: Full path of the db.json file to be used. The default is to use env_chk to find the file.
+    :type db_file: str, optional
+
+    :param encut_start: Starting encut value for the first run. Defaults to the largest EMIN in the POTCAR.
+    :type encut_start: float, optional
+
+    :param encut_incr: Increment for the encut during the convergence. Defaults to 25.
+    :type encut_incr: float, optional
+
+    :param k_dens_start: Starting kpoint density in 1/Angstrom. Defaults to 1.0
+    :type k_dens_start: float, optional
+
+    :param k_dens_incr: Increment for the kpoint convergence. Can be set quite small since there is a check in place to see if a new mesh is actually constructed for each density. Defaults to 0.1.
+    :type k_dens_incr: float, optional
+
+    :param n_converge: Number of calculations that have to be inside the convergence threshold for convergence to be reached. Defaults to 3.
+    :type n_converge: int, optional
+
+    :param high_level: Name of the high_level database to use. Defaults to 'True', in which case it is read from the db.json file.
+    :type high_level: str or True, optional
+
+    :return: FWAction that produces a detour convergence subworkflow.
+    :rtype: FWAction
+    """
     _fw_name = "Start Encut or Kdensity Convergence"
     required_params = ["conv_type", "mp_id", "functional"]
     optional_params = [
@@ -295,34 +306,37 @@ class FT_StartPESCalcSWF(FiretaskBase):
     This is intended to be used to start a PES subworkflow from a main
     workflow.
 
-    Parameters
-    ----------
-    mp_id_1 : str
-        Materials Project database ID for the first material of the interface.
-    mp_id_2 : str
-        Materials Project database ID for the second material of the interface.
-    functional : str
-        Which functional to use; has to be 'PBE' or 'SCAN'.
-    external_pressure : float
-        External pressure in GPa.
-    db_file : str, optional
-        Full path to the db.json file that should be used. Defaults to
-        '>>db_file<<', to use env_chk.
-    prerelax : bool, optional
-        Whether to perform a prerelaxation using a network potential
-        before starting a DFT relaxation. Defaults to True.
-    prerelax_calculator : str, optional
-        Which network potential to use for the prerelaxation. Defaults
-        to 'm3gnet'.
-    prerelax_kwargs : dict, optional
-        Keyword arguments to be passed to the ASE calculator for
-        the prerelaxation.
+    :param mp_id_1: MaterialsProject ID number for the first material
+    :type mp_id_1: str
 
-    Returns
-    -------
-    FWAction that produces a detour PES subworkflow.
+    :param mp_id_2: MaterialsProject ID number for the second material
+    :type mp_id_2: str
+
+    :param functional: Functional with which the workflow is run. PBE or SCAN.
+    :type functional: str
+
+    :param external_pressure: External pressure in GPa.
+    :type external_pressure: float
+
+    :param db_file: Full path of the db.json file to be used. The default is to use env_chk to find the file.
+    :type db_file: str, optional
+
+    :param prerelax: Whether to perform a prerelaxation using a network potential before starting a DFT relaxation. Defaults to True.
+    :type prerelax: bool, optional
+
+    :param prerelax_calculator: Which network potential to use for the prerelaxation. Defaults to 'm3gnet'.
+    :type prerelax_calculator: str, optional
+
+    :param prerelax_kwargs: Keyword arguments to be passed to the ASE calculator for the prerelaxation.
+    :type prerelax_kwargs: dict, optional
+
+    :param high_level: Name of the high_level database to use. Defaults to 'True', in which case it is read from the db.json file.
+    :type high_level: str or True, optional
+
+    :return: FWAction that produces a detour PES subworkflow.
+    :rtype: FWAction
     """
-
+    _fw_name = "Start PES Calculation"
     required_params = [
         "mp_id_1",
         "mp_id_2",
@@ -390,33 +404,28 @@ class FT_StartPPESWF(FiretaskBase):
     The workflow is only added if there are not already relevant results in
     the high-level database.
 
-    Parameters
-    ----------
-    interface_name : str
-        Name of the interface in the high-level database.
-    functional : str
-        Which functional to use; has to be 'PBE' or 'SCAN'.
-    distance_list : list of float, optional
-        Modification of the equilibrium distance between the slabs.
-        The default is [-0.5, -0.25, 0.0, 0.25, 0.5, 2.5, 3.0, 4.0, 5.0, 7.5].
-    out_name : str, optional
-        Name for the PPES data in the high-level database. The default is
-        'PPES@minimum'.
-    structure_name : str, optional
-        Name of the structure in the interface entry to the high-level database
-        for which the PPES should be calculated. The default is
-        'minimum_relaxed'.
-    spec : dict, optional
-        fw_spec that can be passed to the SWF and will be passed on. The
-        default is {}.
+    :param interface_name: Name of the interface in the high-level database.
+    :type interface_name: str
 
-    Returns
-    -------
-    SWF : fireworks.core.firework.Workflow
-        Subworkflow to calculate the PPES for a certain interface.
+    :param functional: Which functional to use; has to be 'PBE' or 'SCAN'.
+    :type functional: str
 
+    :param distance_list: Modification of the equilibrium distance between the slabs.
+    :type distance_list: list of float, optional
+
+    :param out_name: Name for the PPES data in the high-level database. The default is 'PPES@minimum'.
+    :type out_name: str, optional
+
+    :param structure_name: Name of the structure in the interface entry to the high-level database for which the PPES should be calculated. The default is 'minimum_relaxed'.
+    :type structure_name: str, optional
+
+    :param spec: fw_spec that can be passed to the SWF and will be passed on. The default is {}.
+    :type spec: dict, optional
+
+    :return: FWAction that produces a detour PPES subworkflow.
+    :rtype: FWAction
     """
-
+    _fw_name = "Start PPES Calculation"
     required_params = ["interface_name", "functional", "distance_list"]
     optional_params = [
         "db_file",

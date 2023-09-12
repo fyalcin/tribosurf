@@ -28,30 +28,34 @@ class FT_RetrieveMatchedSlabs(FiretaskBase):
     Get the relaxed aligned top and bottom slabs from the low level database
     and save them in the interface_data collection of the high level database.
 
-    Parameters
-    ----------
-    mp_id_1 : str
-        MaterialsProject ID number for the first material
-    mp_id_2 : str
-        MaterialsProject ID number for the second material
-    functional : str
-        Functional with which the workflow is run. PBE or SCAN.
-    external_pressure : float
-        External pressure in GPa.
-    db_file : str, optional
-        Full path of the db.json file to be used. The default is to use
-        env_chk to find the file.
-    top_out_name : str, optional
-        Name the relaxed top slab will have in the high-level database.
-        Defaults to 'top_aligned_relaxed'
-    bottom_out_name : str, optional
-        Name the relaxed bottom slab will have in the high-level database.
-        Defaults to 'bottom_aligned_relaxed'
-    high_level : str or True, optional
-        Name of the high_level database to use. Defaults to 'True', in which
-        case it is read from the db.json file.
-    """
+    :param mp_id_1: MaterialsProject ID number for the first material
+    :type mp_id_1: str
 
+    :param mp_id_2: MaterialsProject ID number for the second material
+    :type mp_id_2: str
+
+    :param functional: Functional with which the workflow is run. PBE or SCAN.
+    :type functional: str
+
+    :param external_pressure: External pressure in GPa.
+    :type external_pressure: float
+
+    :param db_file: Full path of the db.json file to be used. The default is to use env_chk to find the file.
+    :type db_file: str, optional
+
+    :param top_out_name: Name the relaxed top slab will have in the high-level database. Defaults to 'top_aligned_relaxed'
+    :type top_out_name: str, optional
+
+    :param bottom_out_name: Name the relaxed bottom slab will have in the high-level database. Defaults to 'bottom_aligned_relaxed'
+    :type bottom_out_name: str, optional
+
+    :param high_level: Name of the high_level database to use. Defaults to 'True', in which case it is read from the db.json file.
+    :type high_level: str or True, optional
+
+    :return: FWAction that updates the spec.
+    :rtype: FWAction
+    """
+    _fw_name = "Retrieve relaxed matched slabs"
     required_params = [
         "mp_id_1",
         "mp_id_2",
@@ -116,43 +120,49 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
     Get the aligned top and bottom slabs from the high level database and
     start their relaxation runs.
 
-    Parameters
-    ----------
-    mp_id_1 : str
-        MaterialsProject ID number for the first material
-    mp_id_2 : str
-        MaterialsProject ID number for the second material
-    functional : str
-        Functional with which the workflow is run. PBE or SCAN.
-    external_pressure : float
-        External pressure in GPa.
-    db_file : str, optional
-        Full path of the db.json file to be used. The default is to use
-        env_chk to find the file.
-    top_in_name : str, optional
-        Name the unrelaxed top slab has in the high-level database.
-        Defaults to 'top_aligned'
-    bottom_in_name : str, optional
-        Name the unrelaxed bottom slab has in the high-level database.
-        Defaults to 'bottom_aligned'
-    top_out_name : str, optional
-        Name the relaxed top slab will have in the high-level database.
-        Defaults to 'top_aligned_relaxed'
-    bottom_out_name : str, optional
-        Name the relaxed bottom slab will have in the high-level database.
-        Defaults to 'bottom_aligned_relaxed'
-    high_level : str or True, optional
-        Name of the high_level database to use. Defaults to 'True', in which
-        case it is read from the db.json file.
-    prerelax : bool, optional
-        Whether to run a prerelaxation step before the actual relaxation.
-        Defaults to True.
-    prerelax_calculator : str, optional
-        Network potential to use for the prerelaxation. Defaults to 'm3gnet'.
-    prerelax_kwargs : dict, optional
-        Keyword arguments to pass to the prerelaxation ASE optimizer.
-    """
+    :param mp_id_1: MaterialsProject ID number for the first material
+    :type mp_id_1: str
 
+    :param mp_id_2: MaterialsProject ID number for the second material
+    :type mp_id_2: str
+
+    :param functional: Functional with which the workflow is run. PBE or SCAN.
+    :type functional: str
+
+    :param external_pressure: External pressure in GPa.
+    :type external_pressure: float
+
+    :param db_file: Full path of the db.json file to be used. The default is to use env_chk to find the file.
+    :type db_file: str, optional
+
+    :param top_in_name: Name the unrelaxed top slab has in the high-level database. Defaults to 'top_aligned'
+    :type top_in_name: str, optional
+
+    :param bottom_in_name: Name the unrelaxed bottom slab has in the high-level database. Defaults to 'bottom_aligned'
+    :type bottom_in_name: str, optional
+
+    :param top_out_name: Name the relaxed top slab will have in the high-level database. Defaults to 'top_aligned_relaxed'
+    :type top_out_name: str, optional
+
+    :param bottom_out_name: Name the relaxed bottom slab will have in the high-level database. Defaults to 'bottom_aligned_relaxed'
+    :type bottom_out_name: str, optional
+
+    :param high_level: Name of the high_level database to use. Defaults to 'True', in which case it is read from the db.json file.
+    :type high_level: str or True, optional
+
+    :param prerelax: Whether to run a prerelaxation step before the actual relaxation. Defaults to True.
+    :type prerelax: bool, optional
+
+    :param prerelax_calculator: Network potential to use for the prerelaxation. Defaults to 'm3gnet'.
+    :type prerelax_calculator: str, optional
+
+    :param prerelax_kwargs: Keyword arguments to pass to the prerelaxation ASE optimizer.
+    :type prerelax_kwargs: dict, optional
+
+    :return: FWAction that detours to the relaxation workflow.
+    :rtype: FWAction
+    """
+    _fw_name = "Relax matched slabs"
     required_params = [
         "mp_id_1",
         "mp_id_2",
@@ -255,36 +265,37 @@ class FT_CalcAdhesion(FiretaskBase):
         E_abs = (top_energy + bot_energy) - inter_energy
     The result is saved in the high_level database in J/m^2.
 
-    Parameters
-    ----------
-    interface_name : str
-        Flag to find the interface entry in the high_level database. Created
-        by the 'interface_name' function in triboflow.firetasks.init_db.pyl
-    functional : str
-        Functional with which the workflow is run. PBE or SCAN.
-    external_pressure : float
-        External pressure in GPa.
-    top_label : str
-        Task_label in the low level database to find the total energy
-        calculation of the top slab.
-    bottom_label : str
-        Task_label in the low level database to find the total energy
-        calculation of the bottom slab.
-    interface_label : str
-        Task_label in the low level database to find the total energy
-        calculation of the interface.
-    db_file : str, optional
-        Full path of the db.json file to be used. The default is to use
-        env_chk to find the file.
-    out_name: str, optional
-        Key in the interface collection of the high_level database that
-        contains the calculated adhesion energy as value. Defaults to
-        'adhesion_energy@min'.
-    high_level : str or True, optional
-        Name of the high_level database to use. Defaults to 'True', in which
-        case it is read from the db.json file.
-    """
+    :param interface_name: Flag to find the interface entry in the high_level database. Created by the 'interface_name' function in triboflow.firetasks.init_db.pyl
+    :type interface_name: str
 
+    :param functional: Functional with which the workflow is run. PBE or SCAN.
+    :type functional: str
+
+    :param external_pressure: External pressure in GPa.
+    :type external_pressure: float
+
+    :param top_label: Task_label in the low level database to find the total energy calculation of the top slab.
+    :type top_label: str
+
+    :param bottom_label: Task_label in the low level database to find the total energy calculation of the bottom slab.
+    :type bottom_label: str
+
+    :param interface_label: Task_label in the low level database to find the total energy calculation of the interface.
+    :type interface_label: str
+
+    :param db_file: Full path of the db.json file to be used. The default is to use env_chk to find the file.
+    :type db_file: str, optional
+
+    :param out_name: Key in the interface collection of the high_level database that contains the calculated adhesion energy as value. Defaults to 'adhesion_energy@min'.
+    :type out_name: str, optional
+
+    :param high_level: Name of the high_level database to use. Defaults to 'True', in which case it is read from the db.json file.
+    :type high_level: str or True, optional
+
+    :return: FWAction that updates the spec.
+    :rtype: FWAction
+    """
+    _fw_name = "Calculate adhesion energy"
     required_params = [
         "interface_name",
         "functional",

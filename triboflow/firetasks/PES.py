@@ -37,22 +37,29 @@ class FT_ComputePES(FiretaskBase):
     and fits the PES using radial basis functions. Output is saved in the
     database and if wanted also to files.
 
-    Parameters
-    ----------
-    interface_name : str
-        Name of the interface in the high-level database.
-    functional : str
-        Which functional to use; has to be 'PBE' or 'SCAN'.
-    external_pressure : float
-        External pressure on the interface in GPa.
-    file_output : bool
-        Determines if results are written to disc.
-    db_file : str, optional
-        Full path to the db.json file that should be used. Defaults to
+    :param interface_name: Name of the interface in the high-level database.
+    :type interface_name: str
+
+    :param functional: Which functional to use; has to be 'PBE' or 'SCAN'.
+    :type functional: str
+
+    :param external_pressure: External pressure on the interface in GPa.
+    :type external_pressure: float
+
+    :param file_output: Determines if results are written to disc.
+    :type file_output: bool
+
+    :param db_file: Full path to the db.json file that should be used. Defaults to
         '>>db_file<<', to use env_chk.
+    :type db_file: str, optional
 
+    :param high_level: Name of the high-level database.
+    :type high_level: str, optional
+
+    :return: None
+    :rtype: NoneType
     """
-
+    _fw_name = "Compute PES"
     required_params = [
         "interface_name",
         "functional",
@@ -167,25 +174,26 @@ class FT_RetrievePESEnergies(FiretaskBase):
     database. Also save the list of shifts and energies with corresponding
     labels there.
 
-    Parameters
-    ----------
-    interface_name : str
-        Name of the interface in the high-level database.
-    functional : str
-        Which functional to use; has to be 'PBE' or 'SCAN'.
-    tag : str
-        Unique tag to identify the calculations.
-    external_pressure : float
-        External pressure on the interface in GPa.
-    db_file : str, optional
-        Full path to the db.json file that should be used. Defaults to
+    :param interface_name: Name of the interface in the high-level database.
+    :type interface_name: str
+
+    :param functional: Which functional to use; has to be 'PBE' or 'SCAN'.
+    :type functional: str
+
+    :param tag: Unique tag to identify the calculations.
+    :type tag: str
+
+    :param external_pressure: External pressure on the interface in GPa.
+    :type external_pressure: float
+
+    :param db_file: Full path to the db.json file that should be used. Defaults to
         '>>db_file<<', to use env_chk.
+    :type db_file: str, optional
 
-    Returns
-    -------
-    FWActions that produce a detour workflow with relaxations for the PES.
+    :return: None
+    :rtype: NoneType
     """
-
+    _fw_name = "Retrieve PES energies"
     required_params = [
         "interface_name",
         "functional",
@@ -319,23 +327,24 @@ class FT_FindHighSymmPoints(FiretaskBase):
     fw_spec is updated with the lateral shifts needed for the PES relaxations
     as well.
 
-    Parameters
-    ----------
-    interface : pymatgen.core.interface.Interface
-        Interface object for which the PES is to be constructed
-    functional : str
-        Which functional to use; has to be 'PBE' or 'SCAN'.
-    interface_name : str
-        Name of the interface in the high-level database.
-    external_pressure : float
-        External pressure in GPa.
-    db_file : str, optional
-        Full path to the db.json file that should be used. Defaults to
-        '>>db_file<<', to use env_chk.
+    :param interface: Interface object for which the PES is to be constructed
+    :type interface: pymatgen.core.interface.Interface
 
-    Returns
-    -------
-    FWActions that updates the fw_spec with lateral shifts.
+    :param functional: Which functional to use; has to be 'PBE' or 'SCAN'.
+    :type functional: str
+
+    :param interface_name: Name of the interface in the high-level database.
+    :type interface_name: str
+
+    :param external_pressure: External pressure in GPa.
+    :type external_pressure: float
+
+    :param db_file: Full path to the db.json file that should be used. Defaults to
+        '>>db_file<<', to use env_chk.
+    :type db_file: str, optional
+
+    :return: FWActions that updates the fw_spec with lateral shifts.
+    :rtype: FWAction
     """
 
     required_params = [
@@ -405,34 +414,41 @@ class FT_StartPESCalcs(FiretaskBase):
 
     Take a list of lateral shifts from the fw_spec and start relaxations
     for each one of them as parallel detours.
-    heterogeneous_wf
-    Parameters
-    ----------
-    interface_name : str
-        Name of the interface in the high-level database.
-    comp_parameters : dict
-        Computational parameters to be passed to the vasp input file
-        generation.
-    tag : str
-        Unique tag to identify the calculations.
-    db_file : str, optional
-        Full path to the db.json file that should be used. Defaults to
+
+
+    :param interface_name: Name of the interface in the high-level database.
+    :type interface_name: str
+
+    :param comp_parameters: Computational parameters to be passed to the vasp input
+        file generation.
+    :type comp_parameters: dict
+
+    :param tag: Unique tag to identify the calculations.
+    :type tag: str
+
+    :param external_pressure: External pressure on the interface in GPa.
+    :type external_pressure: float
+
+    :param db_file: Full path to the db.json file that should be used. Defaults to
         '>>db_file<<', to use env_chk.
-    prerelax : bool, optional
-        Whether to perform a prerelaxation using a network potential before starting
-        a DFT relaxation. Defaults to True.
-    prerelax_calculator : str, optional
-        Which network potential to use for the prerelaxation. Defaults to 'm3gnet'.
-    prerelax_kwargs : dict, optional
-        Keyword arguments to be passed to the ASE calculator for the prerelaxation.
+    :type db_file: str, optional
 
+    :param prerelax: Whether to perform a prerelaxation using a network potential
+        before starting a DFT relaxation. Defaults to True.
+    :type prerelax: bool, optional
 
+    :param prerelax_calculator: Which network potential to use for the prerelaxation.
+        Defaults to 'm3gnet'.
+    :type prerelax_calculator: str, optional
 
-    Returns
-    -------
-    FWActions that produce a detour workflow with relaxations for the PES.
+    :param prerelax_kwargs: Keyword arguments to be passed to the ASE calculator for
+        the prerelaxation.
+    :type prerelax_kwargs: dict, optional
+
+    :return: FWActions that produce a detour workflow with relaxations for the PES.
+    :rtype: FWAction
     """
-
+    _fw_name = "Start PES calculations"
     required_params = [
         "interface_name",
         "comp_parameters",

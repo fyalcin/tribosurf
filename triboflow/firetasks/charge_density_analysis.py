@@ -35,6 +35,14 @@ def plot_charge_profile(chgcar, axis=2, xmin=None, xmax=None):
 
 
 def get_interface_region(interface):
+    """Returns the z-coordinates of the interface region.
+
+    :param interface: Interface object.
+    :type interface: pymatgen.core.interface.Interface
+
+    :return: zmin, zmax
+    :rtype: tuple
+    """
     z_sub = [
         s.coords[2]
         for s in interface.sites
@@ -49,6 +57,24 @@ def get_interface_region(interface):
 
 
 def make_charge_differences(interface, chgcar_int, chgcar_bot, chgcar_top):
+    """Computes the charge density difference between the interface and the
+    top and bottom slabs.
+
+    :param interface: Interface object.
+    :type interface: pymatgen.core.interface.Interface
+
+    :param chgcar_int: Charge density of the interface.
+    :type chgcar_int: pymatgen.io.vasp.outputs.Chgcar
+
+    :param chgcar_bot: Charge density of the bottom slab.
+    :type chgcar_bot: pymatgen.io.vasp.outputs.Chgcar
+
+    :param chgcar_top: Charge density of the top slab.
+    :type chgcar_top: pymatgen.io.vasp.outputs.Chgcar
+
+    :return: Dictionary containing the charge density differences.
+    :rtype: dict
+    """
     chgcar_diff = chgcar_int - chgcar_top - chgcar_bot
     abs_chgcar_diff = chgcar_diff.copy()
     abs_chgcar_diff.data["total"] = abs(abs_chgcar_diff.data["total"])
@@ -107,6 +133,27 @@ def make_charge_differences(interface, chgcar_int, chgcar_bot, chgcar_top):
 
 @explicit_serialize
 class FT_MakeChargeCalc(FiretaskBase):
+    """Firetask to make a charge density calculation.
+
+    :param structure: Structure object.
+    :type structure: pymatgen.core.structure.Structure
+
+    :param comp_params: Dictionary containing computational parameters.
+    :type comp_params: dict
+
+    :param calc_name: Name of the calculation.
+    :type calc_name: str
+
+    :param db_file: Path to the database file.
+    :type db_file: str
+
+    :param high_level: Name of the high-level database.
+    :type high_level: str
+
+    :return: FWAction that detours to a StaticFW.
+    :rtype: FWAction
+    """
+    _fw_name = "Make charge density calculation"
     required_params = ["structure", "comp_params", "calc_name"]
     optional_params = ["db_file", "high_level"]
 
@@ -131,6 +178,39 @@ class FT_MakeChargeCalc(FiretaskBase):
 
 @explicit_serialize
 class FT_MakeChargeDensityDiff(FiretaskBase):
+    """Firetask to make a charge density difference calculation.
+
+    :param interface: Interface object.
+    :type interface: pymatgen.core.interface.Interface
+
+    :param interface_name: Name of the interface.
+    :type interface_name: str
+
+    :param interface_calc_name: Name of the interface calculation.
+    :type interface_calc_name: str
+
+    :param top_calc_name: Name of the top slab calculation.
+    :type top_calc_name: str
+
+    :param bot_calc_name: Name of the bottom slab calculation.
+    :type bot_calc_name: str
+
+    :param functional: Functional to be used.
+    :type functional: str
+
+    :param external_pressure: External pressure in GPa.
+    :type external_pressure: float
+
+    :param db_file: Path to the database file.
+    :type db_file: str
+
+    :param high_level: Name of the high-level database.
+    :type high_level: str
+
+    :return: None
+    :rtype: NoneType
+    """
+    _fw_name = "Make charge density difference"
     required_params = [
         "interface",
         "interface_name",

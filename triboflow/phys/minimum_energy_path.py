@@ -120,9 +120,9 @@ def find_minima(extended_energy_list, xlim, ylim, border_padding):
 
     Parameters
     ----------
-    extended_energy_list : np.array
+    extended_energy_list : array
         High symmetry points with x and y coordinates and the total energy
-        as third collumn.
+        as third column.
     xlim : float
         maximum x value for the minima search
     ylim : float
@@ -190,11 +190,11 @@ def get_initial_strings(
 
     Returns
     -------
-    string_d : np.array
+    string_d : array
         Diagonal string
-    string_x : np.array
+    string_x : array
         String in x direction
-    string_y : np.array
+    string_y : array
         String in y direction
 
     """
