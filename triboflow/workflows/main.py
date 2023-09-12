@@ -76,6 +76,7 @@ def optimize_bulk_wf(inputs):
             functional=functional,
             db_file=db_file,
             high_level=high_level,
+            k_dense=computational_params.get("k_dense", 9)
         ),
         name=f"Start pre-relaxation for {formula} ({mpid})",
         parents=[add_bulk],
