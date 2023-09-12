@@ -99,9 +99,9 @@ class FT_StartBulkPreRelax(FiretaskBase):
         else:
             prim_struct = Structure.from_dict(prim_struct)
 
-        a = np.round(prim_struct.lattice.a, 6)
-        b = np.round(prim_struct.lattice.b, 6)
-        c = np.round(prim_struct.lattice.c, 6)
+        a = np.round(prim_struct.lattice.a, 3)
+        b = np.round(prim_struct.lattice.b, 3)
+        c = np.round(prim_struct.lattice.c, 3)
 
         if data.get("pre_relaxed") or ((a == c) and (b == c)):
             return FWAction(update_spec=fw_spec)
@@ -110,7 +110,7 @@ class FT_StartBulkPreRelax(FiretaskBase):
             # database and updating with the optional inputs
             comp_params = data.get("comp_parameters")
             encut = self.get("encut", 1000)
-            k_dens = self.get("k_dens", 15)
+            k_dens = self.get("k_dens", 10)
             comp_params.update({"encut": encut, "k_dens": k_dens})
 
             vis = get_custom_vasp_relax_settings(
@@ -494,6 +494,11 @@ class FT_MakeHeteroStructure(FiretaskBase):
         for pair in pairs:
             slab1_dict, slab2_dict = pair
             slab1, slab2 = slab1_dict["slab"], slab2_dict["slab"]
+            # for smaller interfaces, try to use primitive slabs.
+            # The InterfaceMatcher class takes care of the
+            # orthogonality of the c-axis.
+            slab1 = slab1.get_primitive_structure()
+            slab2 = slab2.get_primitive_structure()
             hkl1, hkl2 = slab1_dict["hkl"], slab2_dict["hkl"]
             shift1, shift2 = slab1_dict["shift"], slab2_dict["shift"]
 
