@@ -785,11 +785,13 @@ class InterfaceMatcher:
                 "a": top_strain_ab[0],
                 "b": top_strain_ab[1],
                 "gamma": top_strain_gamma,
+                "units": {"a": "%", "b": "%", "gamma": "deg"},
             },
             "bot": {
                 "a": bot_strain_ab[0],
                 "b": bot_strain_ab[1],
                 "gamma": bot_strain_gamma,
+                "units": {"a": "%", "b": "%", "gamma": "deg"},
             },
         }
 
