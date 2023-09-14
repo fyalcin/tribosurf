@@ -401,7 +401,7 @@ class InterfaceMatcher:
 
         Make sure that the c-axis are orthogonal to the ab-plane.
         This is just for consistency since above and below are of course
-        not meaningfull in a DFT context. Strain weights are assigned
+        not meaningful in a DFT context. Strain weights are assigned
         accordingly as well.
 
         Parameters

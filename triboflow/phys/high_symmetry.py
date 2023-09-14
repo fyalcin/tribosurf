@@ -118,7 +118,7 @@ class InterfaceSymmetryAnalyzer:
 
         self.interface = interface
         self.cart_coords = in_cartesian_coordinates
-        self.no_optuse_hollow = no_obtuse_hollow
+        self.no_obtuse_hollow = no_obtuse_hollow
         self.jsanitize_output = jsanitize_output
         self.ltol = ltol
         self.stol = stol
@@ -201,7 +201,7 @@ class InterfaceSymmetryAnalyzer:
                 distance=0,
                 symm_reduce=0.01,
                 near_reduce=0.01,
-                no_obtuse_hollow=self.no_optuse_hollow,
+                no_obtuse_hollow=self.no_obtuse_hollow,
             )
         else:
             # Extract all the HS points for the given surface
@@ -209,7 +209,7 @@ class InterfaceSymmetryAnalyzer:
                 distance=0,
                 symm_reduce=0,
                 near_reduce=0.01,
-                no_obtuse_hollow=self.no_optuse_hollow,
+                no_obtuse_hollow=self.no_obtuse_hollow,
             )
         return sites
 
@@ -239,7 +239,7 @@ class InterfaceSymmetryAnalyzer:
         Parameters
         ----------
         adsf : pymatgen.analysis.adsorption.AdsorptionSiteFinder
-            The AdsorptionSiteFinder object associated witih the slab in question.
+            The AdsorptionSiteFinder object associated with the slab in question.
         all_sites : dict
             Dictionary previously constructed containing all (also symmetrically
             equivalent) high symmetry surface sites of the slab in question.
@@ -338,7 +338,7 @@ class InterfaceSymmetryAnalyzer:
                         if shift not in all_shifts_list:
                             all_shifts_list.append(shift)
                             shift_list.append(shift)
-                # convert to numpy array and assigne to HSP combination.
+                # convert to numpy array and assign to HSP combination.
                 # do not add empty lists
                 if shift_list:
                     shifts[kbot + "-" + ktop] = np.asarray(shift_list)

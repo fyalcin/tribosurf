@@ -44,7 +44,7 @@ def get_shear_strength(coords, rbf, delta=0.01):
         Contain the information of the interpolation of the potential energy.
 
     delta : TYPE, optional
-        discretized step along x and y for integration. Tuning this value may
+        discreticized step along x and y for integration. Tuning this value may
         vary slightly the final result. The default is 0.01.
 
     Returns
@@ -53,7 +53,7 @@ def get_shear_strength(coords, rbf, delta=0.01):
         Profile of potential energy and forces along the MEP.
 
     ss : float
-        The shear strenth along the MEP.
+        The shear strength along the MEP.
 
     TODO : check what is stored in data_ss_mep and keep only important stuff
 
@@ -109,8 +109,7 @@ def get_shear_strength_xy(lattice, rbf, params=None):
     Calculate the shear strength along the x and y directions of the cell.
     Simplified version of get_shear_strength.
 
-    TODO : generalize the function in order to calculate the SS along any
-    straigth line
+    TODO : generalize the function in order to calculate the SS along any straight line
 
     """
 

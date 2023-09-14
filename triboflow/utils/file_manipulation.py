@@ -21,7 +21,7 @@ def write_file_from_dict(Dict, Filename):
     Takes an input dictionary 'Dict' and an output filename (or
     path) 'Filename' as a string and writes the dictionary as
     the output file. If a list is found as a value of the dictionary,
-    its entries are printed without colons or brakets.
+    its entries are printed without colons or brackets.
     E.g. {'ENCUT': 320, 'ALGO: 'FAST', 'MAGMOM': [3.0, -3.0]}
     is written as:
                 ENCUT = 320
@@ -51,11 +51,11 @@ def copy_output_files(
     user=None,
     port=None,
 ):
-    """Return a Firetask that copys output files locally or to remote server.
+    """Return a Firetask that copies output files locally or to remote server.
 
     Handles file copy from the work-folder to a chosen output directory which
-    might be on a differnet machine. In that case scp will be used via
-    a ScriptTaks, as the FileTransferTask was found to be unreliable sometimes
+    might be on a different machine. In that case scp will be used via
+    a ScriptTasks, as the FileTransferTask was found to be unreliable sometimes
     for remote copies.
 
     Parameters

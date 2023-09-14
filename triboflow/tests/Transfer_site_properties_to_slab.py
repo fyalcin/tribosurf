@@ -6,7 +6,7 @@ Created on Thu Jul 16 13:01:38 2020
 @author: mwo
 """
 
-from pymatgen import MPRester
+from mp_api.client import MPRester
 from pymatgen.analysis.structure_matcher import *
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer as sga
 

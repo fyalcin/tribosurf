@@ -14,7 +14,7 @@ Simple logger. This module contains the class:
     - initialize_logfolder
     - debug
     - info
-    - warnign
+    - warning
     - error
     - critical
     - get_config
@@ -130,7 +130,7 @@ class LoggingBase:
         file_level : int or str, optional
             Logfile debug level. The default is 30.
         log_format : str, optional
-            Format fot the debug messages. The default is log_format (gloabl
+            Format for the debug messages. The default is log_format (global
             variable).
 
         """

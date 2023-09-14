@@ -22,7 +22,7 @@ class FT_UpdateCompParams(FiretaskBase):
     functional : str
         Functional for the identification of the high_level db.
     new_params : list
-        List of strings that identify the new keys that should be written to
+        A list of strings that identify the new keys that should be written to
         the computational parameters.
     db_file : str, optional
         Full path of the db.json. The default is 'auto'.

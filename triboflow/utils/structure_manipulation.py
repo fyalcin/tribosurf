@@ -95,7 +95,7 @@ def transfer_average_magmoms(magnetic_struct, struct_without_magmoms):
     of the magentic moments in the magnetic input structure is computed and
     set as a site property for all atoms of the same species in the output
     structure. NOTE THAT THIS WILL GIVE GENERALLY WRONG RESULTS FOR ALL BUT
-    SIMPLE FERROMAGENTIC STRUCTURES!
+    SIMPLE FERROMAGNETIC STRUCTURES!
 
     Parameters
     ----------
@@ -123,10 +123,10 @@ def transfer_average_magmoms(magnetic_struct, struct_without_magmoms):
     ):
         warnings.warn(
             "\n##################################################\n"
-            "You are trying to transfer magnetig moments between\n"
+            "You are trying to transfer magnetic moments between\n"
             "two structures which contain different species and\n"
             "                 THIS CANNOT WORK!\n"
-            "The code will continue to run, without transfering\n"
+            "The code will continue to run, without transferring\n"
             "any magnetic moments. Convergence might be slow..."
             "\n##################################################\n"
         )
@@ -389,17 +389,17 @@ def make_pymatgen_slab(
     Uses pmg slab generator to create 1 slab from a bulk struct and miller index.
 
     First a conventional unit cell is created using SpacegroupAnalyzer, then
-    possible magnetic moments get transfered and the slab is created using
+    possible magnetic moments get transferred and the slab is created using
     pymatgen.core.surface.SlabGenerator. Only the first slab of the returned
     list is taken! Oxidation states are guessed, so polarity of the slab might
-    be quaried.
+    be queried.
 
     Parameters
     ----------
     bulk_struct : pymatgen.core.structure.Structure
         the bulk structure from which the slab will be constructed.
     miller : list
-        List of three miller indices
+        A list of three miller indices
     min_thickness : int, optional
         Thickness of the slab in layers (probably will end up thicker).
         The default is 8.

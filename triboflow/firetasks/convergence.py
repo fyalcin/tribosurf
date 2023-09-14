@@ -1,4 +1,4 @@
-"""Firetasks for converging the energy cutof in the triboflow project.
+"""Firetasks for converging the energy cutoff in the triboflow project.
 
 Created on Wed Jun 17 15:59:59 2020
 @author: mwo

@@ -27,7 +27,7 @@ def evolve_mep(
     """
     Compute minimum energy paths for all strings in the sting_dictionary.
 
-    Either use the nudged elastiv band ('neb', default) or zero temperature
+    Either use the nudged elastic band ('neb', default) or zero temperature
     string method ('zts') to find the MEPs. All three directions are
     optimized in parallel, but depending on the PES, this might still take
     around a couple of minutes or half an hour...
@@ -53,7 +53,7 @@ def evolve_mep(
                 meps = evolve_pool.starmap(new_evolve_string, pool_inputs)
             except:
                 print(
-                    "Parallel ZTS method failed and crashed. Swiching to sequential."
+                    "Parallel ZTS method failed and crashed. Switching to sequential."
                 )
                 # try running sequentially because pool might be running into
                 # a recursion limit on some systems
@@ -86,7 +86,7 @@ def evolve_mep(
                 meps = evolve_pool.starmap(run_neb, pool_inputs)
             except:
                 print(
-                    "Parallel NEB method failed and crashed. Swiching to sequential."
+                    "Parallel NEB method failed and crashed. Switching to sequential."
                 )
                 # try running sequentially because pool might be running into
                 # a recursion limit on some systems
@@ -321,7 +321,7 @@ def new_evolve_string(
     string, rbf, nstepmax=9999, mintol=1e-7, delta=0.005, h=0.005
 ):
     """
-    Find a minumum energy path from an initial string.
+    Find a minimum energy path from an initial string.
 
     Simplified zero temperature string method as described by Weinan E et al.
     J. Chem. Phys. 126, 164103 (2007)

@@ -67,7 +67,7 @@ def get_pes_generator_from_db(
     Returns
     -------
     PG : triboflow.phys.potential_energy_surface.PESGenerator
-        PESGenerator object.
+        A PESGenerator object.
 
     """
     if pes_generator_kwargs is None:
@@ -174,7 +174,7 @@ class PESGenerator:
         method, a smooth PES is constructed using radial basis function
         interpolation. The interpolation object, as well as a figure of the
         PES are provided as properties of the class once the class has been
-        called as a funcion on the interface object and the necessary dicts
+        called as a function on the interface object and the necessary dicts
         with high-symmetry point and energy data.
 
 
@@ -208,7 +208,7 @@ class PESGenerator:
                 - 'cubic'                : ``r**3``
                 - 'quintic'              : ``-r**5``
             The default is 'cubic' for a more physical smooth interpolation,
-            although 'linear' could be necessary to perserve symmtery in some
+            although 'linear' could be necessary to preserve symmetry in some
             cases.
         plot_hs_points : bool or str, optional
             Plot 'all' or 'unique' high symmetry point if those strings are
@@ -245,7 +245,7 @@ class PESGenerator:
         add_noise_to_string : float or None, optional
             Select if some noise should be added to the initial string nodes,
             to avoid having symmetry related problems where the string is
-            situatad directly over maxima with zero gradients.
+            situated directly over maxima with zero gradients.
             The default is 0.01
         string_max_iterations : int, optional
             How long the zero temperature string method will run to find the
@@ -401,7 +401,7 @@ class PESGenerator:
 
     def __get_initial_strings(self):
         """
-        Find initial placements for the strings that then get evoved with NEB or ZTS.
+        Find initial placements for the strings that then get evolved with NEB or ZTS.
 
         Initially we try to make the strings short, using small multiples
         of the PES unit cell (puc). If that does not lead to viable strings,

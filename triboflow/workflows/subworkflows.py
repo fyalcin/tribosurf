@@ -544,7 +544,7 @@ def calc_pes_swf(
             },
         )
 
-    FW_1 = run_pes_calc_fw(
+    fw_1 = run_pes_calc_fw(
         interface=interface,
         interface_name=interface_name,
         external_pressure=external_pressure,
@@ -559,7 +559,7 @@ def calc_pes_swf(
         high_level=high_level,
     )
 
-    FW_2 = make_pes_fw(
+    fw_2 = make_pes_fw(
         interface_name=interface_name,
         functional=functional,
         external_pressure=external_pressure,
@@ -575,12 +575,12 @@ def calc_pes_swf(
         high_level=high_level,
     )
 
-    SWF = Workflow(
-        [FW_1, FW_2],
-        {FW_1.fw_id: [FW_2.fw_id]},
+    swf = Workflow(
+        [fw_1, fw_2],
+        {fw_1.fw_id: [fw_2.fw_id]},
         name="Calc PES for " + interface_name + " SWF",
     )
-    return SWF
+    return swf
 
 
 def calc_ppes_swf(
@@ -634,7 +634,7 @@ def calc_ppes_swf(
         spec = {}
     tag = interface_name + "_" + str(uuid4())
 
-    FW_1 = Firework(
+    fw_1 = Firework(
         FT_DoPPESCalcs(
             interface_name=interface_name,
             functional=functional,
@@ -648,7 +648,7 @@ def calc_ppes_swf(
         name="PPES Calculations for " + interface_name,
     )
 
-    FW_2 = Firework(
+    fw_2 = Firework(
         FT_FitPPES(
             interface_name=interface_name,
             functional=functional,
@@ -662,12 +662,12 @@ def calc_ppes_swf(
         name="PPES Fitting for " + interface_name,
     )
 
-    SWF = Workflow(
-        [FW_1, FW_2],
-        {FW_1.fw_id: [FW_2.fw_id]},
+    swf = Workflow(
+        [fw_1, fw_2],
+        {fw_1.fw_id: [fw_2.fw_id]},
         name="Calc PPES for " + interface_name + " SWF",
     )
-    return SWF
+    return swf
 
 
 def converge_swf(
@@ -883,7 +883,7 @@ def converge_swf(
             )
             comp_parameters["functional"] = functional
 
-    FT_EncutConvo = FT_Convo(
+    ft_encut_convo = FT_Convo(
         structure=structure,
         conv_type=conv_type,
         comp_params=comp_parameters,
@@ -906,7 +906,7 @@ def converge_swf(
         port=port,
     )
 
-    FW_C = Firework(FT_EncutConvo, spec=spec, name=name)
-    WF = Workflow([FW_C], name=name)
+    fw_c = Firework(ft_encut_convo, spec=spec, name=name)
+    wf = Workflow([fw_c], name=name)
 
-    return WF
+    return wf
