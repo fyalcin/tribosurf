@@ -24,8 +24,12 @@ from scipy.interpolate import interp1d
 
 
 def evolve_mep(
-        string_dict, rbf, method="neb", max_iter=99999, neb_forcetol=1e-3
-):
+        string_dict: dict,
+        rbf: callable,
+        method: str = "neb",
+        max_iter: int = 99999,
+        neb_forcetol: float = 1e-3
+) -> dict:
     """
     Compute minimum energy paths for all strings in the sting_dictionary.
 
@@ -116,7 +120,10 @@ def evolve_mep(
     return mep
 
 
-def find_minima(extended_energy_list, xlim, ylim, border_padding):
+def find_minima(extended_energy_list: np.array,
+                xlim: float,
+                ylim: float,
+                border_padding: float = 0.1) -> list[np.array, np.array]:
     """
     Return global minimas in an energy list.
 
