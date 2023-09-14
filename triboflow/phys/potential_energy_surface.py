@@ -13,10 +13,12 @@ __credits__ = "Code partly inspired by a previous version of M. Wolloch and Gabr
 __contact__ = "michael.wolloch@univie.ac.at"
 __date__ = "April 14th, 2022"
 
+from io import BytesIO
+from typing import Union, Optional
+
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
-from io import BytesIO
 from pymatgen.core import PeriodicSite
 from pymatgen.core.interface import Interface
 from pymatgen.core.structure import Structure
@@ -30,142 +32,27 @@ from triboflow.phys.minimum_energy_path import (
 )
 
 
-def get_pes_generator_from_db(
-    interface_name,
-    external_pressure,
-    db_file="auto",
-    high_level=True,
-    functional="PBE",
-    pes_generator_kwargs=None,
-):
-    """
-    Return a PESGenerator object using input arguments from the high_level db.
-
-    An interface object is loaded from the high level database alongside info
-    about the high symmetry points and their energies. A PESGenerator is
-    constructed using the optional pes_generator_kwargs, and called for the
-    queried interface. This leads to PES construction.
-
-    Parameters
-    ----------
-    interface_name : pymatgen.core.interface.Interface
-        The Interface object
-    external_pressure : float
-        external_pressure in GPa.
-    db_file : str, optional
-        path to a db.json file. If 'auto', it is loaded from the default
-        location. The default is 'auto'.
-    high_level : str or bool, optional
-        Name of the high_level db. If True, this is read from the db.json.
-        The default is True.
-    functional : str, optional
-        'PBE' or 'SCAN'. The default is 'PBE'.
-    pes_generator_kwargs : dict, optional
-        Dictionary with keyword arguments for the initialization of the
-        PESGenerator object. The default is {}.
-
-    Returns
-    -------
-    PG : triboflow.phys.potential_energy_surface.PESGenerator
-        A PESGenerator object.
-
-    """
-    if pes_generator_kwargs is None:
-        pes_generator_kwargs = {}
-    db_high = VaspDB(db_file=db_file, high_level=high_level)
-    inter_dict = db_high.find_data(
-        collection=f"{functional}.interface_data",
-        fltr={
-            "name": interface_name,
-            "external_pressure": external_pressure,
-        },
-    )
-
-    possible_kwargs = [
-        "points_per_angstrom",
-        "interpolation_kernel",
-        "plot_hs_points",
-        "plot_unit_cell",
-        "plotting_ratio",
-        "normalize_minimum",
-        "nr_of_contours",
-        "fig_title",
-        "fig_type",
-        "plot_path",
-        "plot_minimum_energy_paths",
-        "mep_method",
-        "neb_forcetol",
-        "plot_pes_unit_cell",
-        "string_point_density",
-        "add_noise_to_string",
-        "string_max_iterations",
-        "custom_cell_to_plot",
-        "calculate_mep",
-    ]
-    pg_kwargs = pes_generator_kwargs.copy()
-    for k in pes_generator_kwargs.keys():
-        if k not in possible_kwargs:
-            pg_kwargs.pop(k)
-            print(
-                f"<{k}> is not a valid keyword argument for PESGenerator "
-                "and will be ignored.\n"
-                f"Please use only the following arguments: \n{possible_kwargs}"
-            )
-
-    PG = PESGenerator(**pg_kwargs)
-
-    try:
-        interface = Interface.from_dict(inter_dict["unrelaxed_structure"])
-        all_shifts = inter_dict["PES"]["high_symmetry_points"]["all_shifts"]
-        unique_shifts = inter_dict["PES"]["high_symmetry_points"][
-            "unique_shifts"
-        ]
-        energy_dict = inter_dict["PES"]["high_symmetry_points"][
-            "energies_dict"
-        ]
-        group_assignments = inter_dict["PES"]["high_symmetry_points"][
-            "group_assignments"
-        ]
-    except KeyError:
-        print(
-            "Apparently not all necessary data for PES generation for the "
-            f"{interface_name} interface is available in the database yet.\n"
-            "Check your workflow!"
-        )
-        return None
-
-    PG(
-        interface=interface,
-        energies_dict=energy_dict,
-        all_shifts_dict=all_shifts,
-        unique_shifts_dict=unique_shifts,
-        group_names_dict=group_assignments,
-    )
-
-    return PG
-
-
 class PESGenerator:
     def __init__(
-        self,
-        points_per_angstrom=50,
-        interpolation_kernel="cubic",
-        calculate_mep=True,
-        plot_hs_points=False,
-        plot_unit_cell=True,
-        plot_pes_unit_cell=True,
-        plot_minimum_energy_paths=True,
-        plotting_ratio=1.0,
-        normalize_minimum=True,
-        nr_of_contours=30,
-        fig_title="PES",
-        fig_type="png",
-        plot_path="./",
-        mep_method="neb",
-        neb_forcetol=1e-3,
-        string_point_density=20,
-        add_noise_to_string=0.005,
-        string_max_iterations=10000,
+            self,
+            points_per_angstrom: int = 50,
+            interpolation_kernel: str = "cubic",
+            calculate_mep: bool = True,
+            plot_hs_points: bool = False,
+            plot_unit_cell: bool = True,
+            plot_pes_unit_cell: bool = True,
+            plot_minimum_energy_paths: bool = True,
+            plotting_ratio: float = 1.0,
+            normalize_minimum: bool = True,
+            nr_of_contours: int = 30,
+            fig_title: str = "PES",
+            fig_type: str = "png",
+            plot_path: str = "./",
+            mep_method: str = "neb",
+            neb_forcetol: float = 1e-3,
+            string_point_density: int = 20,
+            add_noise_to_string: float = 0.005,
+            string_max_iterations: int = 10000,
     ):
         """
         Class for generating PES interpolation and plots for interfaces.
@@ -277,12 +164,12 @@ class PESGenerator:
             self.plot_mep = False
 
     def __call__(
-        self,
-        interface,
-        energies_dict,
-        all_shifts_dict,
-        unique_shifts_dict,
-        group_names_dict=None,
+            self,
+            interface: Interface,
+            energies_dict: dict,
+            all_shifts_dict: dict,
+            unique_shifts_dict: dict,
+            group_names_dict: Optional[dict] = None,
     ):
         """
         Interpolate a PES for a given interface and prepare a plot of it.
@@ -326,7 +213,7 @@ class PESGenerator:
         self.corrugation = self.__get_corrugation(Z)
         self.PES_on_meshgrid = {"X": X, "Y": Y, "Z": Z}
 
-    def __get_mep_limits(self, puc_mult=2, delta=0.1):
+    def __get_mep_limits(self, puc_mult: int = 2, delta: float = 0.1) -> tuple:
         """
         Get reasonable limits for the initial MEP string lengths
 
@@ -337,7 +224,7 @@ class PESGenerator:
             used to define the limits for the initial MEP string search.
             The default is 2.
         delta : float, optional
-            Additional room for the intial MEP search to consider a minimum.
+            Additional room for the initial MEP search to consider a minimum.
             The default is 0.1.
 
         Returns
@@ -415,7 +302,7 @@ class PESGenerator:
         string_d = string_x = string_y = []
         puc_mult = 1
         while (
-            len(string_d) < 10 and len(string_x) < 10 and len(string_y) < 10
+                len(string_d) < 10 and len(string_x) < 10 and len(string_y) < 10
         ):
             try:
                 max_x, max_y = self.__get_mep_limits(
@@ -495,11 +382,11 @@ class PESGenerator:
             )
             dx = np.ediff1d(fine_mep[:, 0], to_begin=0)
             dy = np.ediff1d(fine_mep[:, 1], to_begin=0)
-            spacing = np.cumsum(np.sqrt(dx**2 + dy**2))
+            spacing = np.cumsum(np.sqrt(dx ** 2 + dy ** 2))
             potential = self.rbf(fine_mep)
             potential -= min(potential)
             shrstrgth = (
-                np.gradient(potential, spacing) * 10
+                    np.gradient(potential, spacing) * 10
             )  # convert to GPa
             max_ss = max(shrstrgth)
 
@@ -559,7 +446,7 @@ class PESGenerator:
             self.hsp_min = min_group[0]
             self.hsp_max = max_group[0]
 
-    def __get_corrugation(self, Z):
+    def __get_corrugation(self, Z: np.ndarray) -> float:
         """
         Returns the PES corrugation in eV.
 
@@ -666,7 +553,7 @@ class PESGenerator:
             kernel=self.interpolation_kernel,
         )
 
-    def __from_frac_to_cart(self, array):
+    def __from_frac_to_cart(self, array: np.ndarray) -> np.ndarray:
         """
         Transform fractional to cartesian coordinates
 
@@ -710,7 +597,10 @@ class PESGenerator:
             self.shift_x = 0
         self.height = max_y - min_y
 
-    def __plot_grid(self, X, Y, Z):
+    def __plot_grid(self,
+                    X: np.ndarray,
+                    Y: np.ndarray,
+                    Z: np.ndarray):
         """
         Plot the PES in a matplotlib figure adding unit cell and high symmetry
         points if wanted.
@@ -779,7 +669,7 @@ class PESGenerator:
                 self.all_shifts, fig, self.group_names_dict
             )
 
-        fig.set_tight_layout(True)
+        fig.tight_layout()
         plt.tight_layout()
         self.PES_fig = fig
 
@@ -789,7 +679,9 @@ class PESGenerator:
             bbox_inches="tight",
         )
 
-    def __evaluate_on_grid(self, X, Y):
+    def __evaluate_on_grid(self,
+                           X: np.ndarray,
+                           Y: np.ndarray) -> np.ndarray:
         """
         Evaluate the RBF on a meshgrid
 
@@ -812,7 +704,7 @@ class PESGenerator:
             Z = Z - min(Z.ravel())
         return Z
 
-    def __get_grid(self, xmax, ymax):
+    def __get_grid(self, xmax: float, ymax: float):
         """
         Return a meshgrid for a (0,xmax*xmult) (0,ymax*ymult) rectangle
 
@@ -837,7 +729,9 @@ class PESGenerator:
         X, Y = np.meshgrid(grid_x, grid_y)
         return X, Y
 
-    def __colorbar_ticks(self, Z, nr_of_ticks=10):
+    def __colorbar_ticks(self,
+                         Z: np.ndarray,
+                         nr_of_ticks: int = 10):
         """
         Define tick marks for the colorbar. Make sure the lowest and highest
         values are included
@@ -901,7 +795,7 @@ class PESGenerator:
 
         return pes_unit_cell
 
-    def __plot_unit_cell(self, ax):
+    def __plot_unit_cell(self, ax: plt.Axes):
         """
         Adds the unit cell to the plot
 
@@ -948,7 +842,7 @@ class PESGenerator:
                         )
                     )
 
-    def __get_fig_and_ax(self):
+    def __get_fig_and_ax(self) -> tuple[plt.Figure, plt.Axes]:
         """
         Generate a matplotlib figure and corresponding axes.
 
@@ -980,7 +874,10 @@ class PESGenerator:
         ax.set_aspect("equal")
         return fig, ax
 
-    def __plot_hs_points(self, hs_points_dict, fig, group_names_dict=None):
+    def __plot_hs_points(self,
+                         hs_points_dict: dict,
+                         fig: plt.Figure,
+                         group_names_dict: Optional[dict] = None):
         """
         Plot high symmetry points including a legend on the PES
 
@@ -1028,7 +925,7 @@ class PESGenerator:
                 fontsize=12,
             )
 
-    def __get_pes_as_bytes(self):
+    def __get_pes_as_bytes(self) -> bytes:
         """
         Transform a figure into a bytes object to store in the MongoDB database.
 
@@ -1053,7 +950,7 @@ class PESGenerator:
         # im.save(image_bytes, format='png')
         # return image_bytes.getvalue()
 
-    def __interpolate_on_grid(self):
+    def __interpolate_on_grid(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Generate RBF interpolation, get a meshgrid and evaluate the RBF there.
 
@@ -1078,7 +975,122 @@ class PESGenerator:
         return X, Y, Z
 
 
-def convert_image_to_bytes(path_to_img_file):
+def get_pes_generator_from_db(
+        interface_name: str,
+        external_pressure: float,
+        db_file: str = "auto",
+        high_level: Union[str, bool] = True,
+        functional: str = "PBE",
+        pes_generator_kwargs: dict = None,
+) -> PESGenerator | None:
+    """
+    Return a PESGenerator object using input arguments from the high_level db.
+
+    An interface object is loaded from the high level database alongside info
+    about the high symmetry points and their energies. A PESGenerator is
+    constructed using the optional pes_generator_kwargs, and called for the
+    queried interface. This leads to PES construction.
+
+    Parameters
+    ----------
+    interface_name : pymatgen.core.interface.Interface
+        The Interface object
+    external_pressure : float
+        external_pressure in GPa.
+    db_file : str, optional
+        path to a db.json file. If 'auto', it is loaded from the default
+        location. The default is 'auto'.
+    high_level : str or bool, optional
+        Name of the high_level db. If True, this is read from the db.json.
+        The default is True.
+    functional : str, optional
+        'PBE' or 'SCAN'. The default is 'PBE'.
+    pes_generator_kwargs : dict, optional
+        Dictionary with keyword arguments for the initialization of the
+        PESGenerator object. The default is {}.
+
+    Returns
+    -------
+    PG : triboflow.phys.potential_energy_surface.PESGenerator
+        A PESGenerator object.
+
+    """
+    if pes_generator_kwargs is None:
+        pes_generator_kwargs = {}
+    db_high = VaspDB(db_file=db_file, high_level=high_level)
+    inter_dict = db_high.find_data(
+        collection=f"{functional}.interface_data",
+        fltr={
+            "name": interface_name,
+            "external_pressure": external_pressure,
+        },
+    )
+
+    possible_kwargs = [
+        "points_per_angstrom",
+        "interpolation_kernel",
+        "plot_hs_points",
+        "plot_unit_cell",
+        "plotting_ratio",
+        "normalize_minimum",
+        "nr_of_contours",
+        "fig_title",
+        "fig_type",
+        "plot_path",
+        "plot_minimum_energy_paths",
+        "mep_method",
+        "neb_forcetol",
+        "plot_pes_unit_cell",
+        "string_point_density",
+        "add_noise_to_string",
+        "string_max_iterations",
+        "custom_cell_to_plot",
+        "calculate_mep",
+    ]
+    pg_kwargs = pes_generator_kwargs.copy()
+    for k in pes_generator_kwargs.keys():
+        if k not in possible_kwargs:
+            pg_kwargs.pop(k)
+            print(
+                f"<{k}> is not a valid keyword argument for PESGenerator "
+                "and will be ignored.\n"
+                f"Please use only the following arguments: \n{possible_kwargs}"
+            )
+
+    pg = PESGenerator(**pg_kwargs)
+
+    try:
+        interface = Interface.from_dict(inter_dict["unrelaxed_structure"])
+        all_shifts = inter_dict["PES"]["high_symmetry_points"]["all_shifts"]
+        unique_shifts = inter_dict["PES"]["high_symmetry_points"][
+            "unique_shifts"
+        ]
+        energy_dict = inter_dict["PES"]["high_symmetry_points"][
+            "energies_dict"
+        ]
+        group_assignments = inter_dict["PES"]["high_symmetry_points"][
+            "group_assignments"
+        ]
+    except KeyError:
+        print(
+            "Apparently not all necessary data for PES generation for the "
+            f"{interface_name} interface is available in the database yet.\n"
+            "Check your workflow!"
+        )
+        return None
+
+    pg(
+        interface=interface,
+        energies_dict=energy_dict,
+        all_shifts_dict=all_shifts,
+        unique_shifts_dict=unique_shifts,
+        group_names_dict=group_assignments,
+    )
+
+    return pg
+
+
+def convert_image_to_bytes(path_to_img_file: str) -> bytes:
     """Convert an image to bytes for storage in a MongoDB database.
 
     Parameters

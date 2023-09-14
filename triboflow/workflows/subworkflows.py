@@ -3,13 +3,16 @@
 Created on Wed Jun 17 15:47:39 2020
 @author: mwo
 """
-
+from typing import Optional, Union
 from uuid import uuid4
 
 import numpy as np
 from atomate.vasp.fireworks import StaticFW
 from atomate.vasp.powerups import add_modify_incar
 from fireworks import Workflow, Firework
+from pymatgen.core import Structure
+from pymatgen.core.interface import Interface
+from pymatgen.core.surface import Slab
 
 from hitmen_utils.db_tools import VaspDB
 from hitmen_utils.misc_tools import make_calculation_hash
@@ -28,14 +31,14 @@ from triboflow.utils.mp_connection import MPConnection
 
 
 def charge_analysis_swf(
-    interface,
-    interface_name=None,
-    functional="PBE",
-    external_pressure=0,
-    db_file=None,
-    high_level="auto",
-    comp_parameters=None,
-):
+        interface: Interface,
+        interface_name: Optional[str] = None,
+        functional: str = "PBE",
+        external_pressure: float = 0,
+        db_file: str = "auto",
+        high_level: Union[bool, str] = True,
+        comp_parameters: dict = None,
+) -> Workflow:
     """Subworkflow to compute the charge redistribution of an interface.
 
     This workflow takes an interface object as an input and makes 3 static
@@ -93,14 +96,14 @@ def charge_analysis_swf(
         mt = "".join(str(s) for s in top_miller)
         mb = "".join(str(s) for s in bot_miller)
         interface_name = (
-            top_slab.composition.reduced_formula
-            + "_"
-            + mt
-            + "_"
-            + bot_slab.composition.reduced_formula
-            + "_"
-            + mb
-            + "_AutoGen"
+                top_slab.composition.reduced_formula
+                + "_"
+                + mt
+                + "_"
+                + bot_slab.composition.reduced_formula
+                + "_"
+                + mb
+                + "_AutoGen"
         )
         print(
             "\nYour interface name has been automatically generated to be:"
@@ -136,44 +139,44 @@ def charge_analysis_swf(
 
     db = VaspDB(db_file=db_file, high_level=False)
     main_tag = (
-        interface_name
-        + "_"
-        + make_calculation_hash(interface, vis=vis_interface.as_dict())
+            interface_name
+            + "_"
+            + make_calculation_hash(interface, vis=vis_interface.as_dict())
     )
 
     if not db.find_data("tasks", {"task_label": main_tag + "_top"}):
-        FW_top = StaticFW(
+        fw_top = StaticFW(
             structure=top_slab,
             vasp_input_set=vis_top,
             name=main_tag + "_top",
             vasptodb_kwargs={"store_volumetric_data": ["chgcar"]},
         )
     else:
-        FW_top = None
+        fw_top = None
 
     if not db.find_data("tasks", {"task_label": main_tag + "_bottom"}):
-        FW_bot = StaticFW(
+        fw_bot = StaticFW(
             structure=bot_slab,
             vasp_input_set=vis_bot,
             name=main_tag + "_bottom",
             vasptodb_kwargs={"store_volumetric_data": ["chgcar"]},
         )
     else:
-        FW_bot = None
+        fw_bot = None
 
     if not db.find_data("tasks", {"task_label": main_tag + "_interface"}):
-        FW_interface = StaticFW(
+        fw_interface = StaticFW(
             structure=interface,
             vasp_input_set=vis_interface,
             name=main_tag + "_interface",
             vasptodb_kwargs={"store_volumetric_data": ["chgcar"]},
         )
     else:
-        FW_interface = None
+        fw_interface = None
 
-    parents = [fw for fw in [FW_top, FW_bot, FW_interface] if fw is not None]
+    parents = [fw for fw in [fw_top, fw_bot, fw_interface] if fw is not None]
 
-    FW_charge_analysis = Firework(
+    fw_charge_analysis = Firework(
         FT_MakeChargeDensityDiff(
             interface=interface,
             interface_name=interface_name,
@@ -191,29 +194,29 @@ def charge_analysis_swf(
 
     fws = [
         fw
-        for fw in [FW_top, FW_bot, FW_interface, FW_charge_analysis]
+        for fw in [fw_top, fw_bot, fw_interface, fw_charge_analysis]
         if fw is not None
     ]
 
-    SWF = Workflow(
+    swf = Workflow(
         fireworks=fws,
         name="Calculate adhesion SWF for {}".format(interface_name),
     )
 
-    return add_modify_incar(SWF)
+    return add_modify_incar(swf)
 
 
 def adhesion_energy_swf(
-    top_slab,
-    bottom_slab,
-    interface,
-    external_pressure=0,
-    interface_name=None,
-    functional="PBE",
-    comp_parameters=None,
-    db_file="auto",
-    high_level=True,
-):
+        top_slab: Slab,
+        bottom_slab: Slab,
+        interface: Interface,
+        external_pressure: float = 0.0,
+        interface_name: str = None,
+        functional: str = "PBE",
+        comp_parameters: dict = None,
+        db_file: str = "auto",
+        high_level: Union[bool, str] = True,
+) -> Workflow:
     """Create a subworkflow to compute the adhesion energy for an interface.
 
     This workflow takes two matched slabs (their cells must be identical) and
@@ -278,14 +281,14 @@ def adhesion_energy_swf(
         mt = "".join(str(s) for s in top_miller)
         mb = "".join(str(s) for s in bot_miller)
         interface_name = (
-            top_slab.composition.reduced_formula
-            + "_"
-            + mt
-            + "_"
-            + bottom_slab.composition.reduced_formula
-            + "_"
-            + mb
-            + "_AutoGen"
+                top_slab.composition.reduced_formula
+                + "_"
+                + mt
+                + "_"
+                + bottom_slab.composition.reduced_formula
+                + "_"
+                + mb
+                + "_AutoGen"
         )
         print(
             "\nYour interface name has been automatically generated to be:"
@@ -320,40 +323,40 @@ def adhesion_energy_swf(
     )
 
     main_tag = (
-        interface_name
-        + "_"
-        + make_calculation_hash(structure=interface, vis=vis_interface)
+            interface_name
+            + "_"
+            + make_calculation_hash(structure=interface, vis=vis_interface)
     )
     db = VaspDB(db_file=db_file, high_level=False)
 
     if not db.find_data("tasks", {"task_label": main_tag + "_top"}):
-        FW_top = StaticFW(
+        fw_top = StaticFW(
             structure=top_slab, vasp_input_set=vis_top, name=main_tag + "_top"
         )
     else:
-        FW_top = None
+        fw_top = None
 
     if not db.find_data("tasks", {"task_label": main_tag + "_bottom"}):
-        FW_bot = StaticFW(
+        fw_bot = StaticFW(
             structure=bottom_slab,
             vasp_input_set=vis_bot,
             name=main_tag + "_bottom",
         )
     else:
-        FW_bot = None
+        fw_bot = None
 
     if not db.find_data("tasks", {"task_label": main_tag + "_interface"}):
-        FW_interface = StaticFW(
+        fw_interface = StaticFW(
             structure=interface,
             vasp_input_set=vis_interface,
             name=main_tag + "_interface",
         )
     else:
-        FW_interface = None
+        fw_interface = None
 
-    parents = [fw for fw in [FW_top, FW_bot, FW_interface] if fw is not None]
+    parents = [fw for fw in [fw_top, fw_bot, fw_interface] if fw is not None]
 
-    FW_results = Firework(
+    fw_results = Firework(
         FT_CalcAdhesion(
             interface_name=interface_name,
             functional=functional,
@@ -370,7 +373,7 @@ def adhesion_energy_swf(
 
     fws = [
         fw
-        for fw in [FW_top, FW_bot, FW_interface, FW_results]
+        for fw in [fw_top, fw_bot, fw_interface, fw_results]
         if fw is not None
     ]
     SWF = Workflow(
@@ -382,23 +385,23 @@ def adhesion_energy_swf(
 
 
 def calc_pes_swf(
-    interface,
-    interface_name=None,
-    functional="PBE",
-    external_pressure=0,
-    comp_parameters=None,
-    file_output=False,
-    output_dir=None,
-    remote_copy=False,
-    server=None,
-    user=None,
-    port=None,
-    prerelax=True,
-    prerelax_calculator="m3gnet",
-    prerelax_kwargs=None,
-    db_file="auto",
-    high_level=True,
-):
+        interface: Interface,
+        interface_name: str = None,
+        functional: str = "PBE",
+        external_pressure: float = 0,
+        comp_parameters: dict = None,
+        file_output: bool = False,
+        output_dir: str = None,
+        remote_copy: bool = False,
+        server: str = None,
+        user: str = None,
+        port: str = None,
+        prerelax: bool = True,
+        prerelax_calculator: str = "m3gnet",
+        prerelax_kwargs: dict = None,
+        db_file: str = "auto",
+        high_level: Union[bool, str] = True,
+) -> Workflow:
     """Create a subworkflow to compute the PES for an interface of two slabs.
 
     This workflow takes two matched slabs (their cells must be identical) as
@@ -470,14 +473,14 @@ def calc_pes_swf(
             mt = "".join(str(s) for s in top_miller)
             mb = "".join(str(s) for s in bot_miller)
             interface_name = (
-                interface.film.composition.reduced_formula
-                + "_"
-                + mt
-                + "_"
-                + interface.substrate.composition.reduced_formula
-                + "_"
-                + mb
-                + "_AutoGen"
+                    interface.film.composition.reduced_formula
+                    + "_"
+                    + mt
+                    + "_"
+                    + interface.substrate.composition.reduced_formula
+                    + "_"
+                    + mb
+                    + "_AutoGen"
             )
             print(
                 "\nYour interface name has been automatically generated to be:"
@@ -487,14 +490,14 @@ def calc_pes_swf(
         if not interface_name:
             mt = mb = "unknown_miller"
             interface_name = (
-                interface.film.composition.reduced_formula
-                + "_"
-                + mt
-                + "_"
-                + interface.substrate.composition.reduced_formula
-                + "_"
-                + mb
-                + "_AutoGen"
+                    interface.film.composition.reduced_formula
+                    + "_"
+                    + mt
+                    + "_"
+                    + interface.substrate.composition.reduced_formula
+                    + "_"
+                    + mb
+                    + "_AutoGen"
             )
             print(
                 "\nYour interface name has been automatically generated to be:"
@@ -584,15 +587,15 @@ def calc_pes_swf(
 
 
 def calc_ppes_swf(
-    interface_name,
-    functional,
-    distance_list=(-0.5, -0.25, 0.0, 0.25, 0.5, 2.5, 3.0, 4.0, 5.0, 7.5),
-    out_name="PPES@minimum",
-    structure_name="minimum_relaxed",
-    spec=None,
-    db_file="auto",
-    high_level=True,
-):
+        interface_name: str,
+        functional: str,
+        distance_list: tuple[float] = (-0.5, -0.25, 0.0, 0.25, 0.5, 2.5, 3.0, 4.0, 5.0, 7.5),
+        out_name: str = "PPES@minimum",
+        structure_name: str = "minimum_relaxed",
+        spec: dict = None,
+        db_file: str = "auto",
+        high_level: Union[bool, str] = True,
+) -> Workflow:
     """
     Generate a subworkflow that calculates a PPES using static calculations.
 
@@ -671,28 +674,28 @@ def calc_ppes_swf(
 
 
 def converge_swf(
-    structure,
-    conv_type,
-    flag,
-    comp_parameters=None,
-    spec=None,
-    functional="PBE",
-    deformations=None,
-    encut_start=None,
-    encut_incr=25,
-    k_dens_start=1.0,
-    k_dens_incr=0.1,
-    k_dens_default=9.0,
-    n_converge=3,
-    db_file=None,
-    file_output=False,
-    output_dir=None,
-    remote_copy=False,
-    server=None,
-    user=None,
-    port=None,
-    print_help=True,
-):
+        structure: Structure,
+        conv_type: str,
+        flag: str,
+        comp_parameters: dict = None,
+        spec: dict = None,
+        functional: str = "PBE",
+        deformations: list[list[float]] = None,
+        encut_start: int = None,
+        encut_incr: int = 25,
+        k_dens_start: float = 1.0,
+        k_dens_incr: float = 0.1,
+        k_dens_default: float = 9.0,
+        n_converge: int = 3,
+        db_file: str = None,
+        file_output: bool = False,
+        output_dir: str = None,
+        remote_copy: bool = False,
+        server: str = None,
+        user: str = None,
+        port: int = None,
+        print_help: bool = True,
+) -> Workflow:
     """Subworkflows that converges Encut or kpoints density using fits to an EOS.
 
     Takes a given structure, computational parameters, and an optional list
@@ -706,6 +709,8 @@ def converge_swf(
 
     Parameters
     ----------
+    functional: str
+        Which functional to use; has to be 'PBE' or 'SCAN'.
     structure : pymatgen.core.structure.Structure
         The structure for which to converge the energy cutoff parameter.
     conv_type : str
@@ -784,8 +789,8 @@ def converge_swf(
         )
     if conv_type == "encut":
         name = (
-            "Encut Convergence SWF of "
-            + structure.composition.reduced_formula
+                "Encut Convergence SWF of "
+                + structure.composition.reduced_formula
         )
         if not encut_start:
             # Get the largest EMIN value of the potcar and round up to the
@@ -798,8 +803,8 @@ def converge_swf(
             encut_start = int(25 * np.ceil(enmax / 25))
     elif conv_type == "kpoints":
         name = (
-            "Kpoint Convergence SWF of "
-            + structure.composition.reduced_formula
+                "Kpoint Convergence SWF of "
+                + structure.composition.reduced_formula
         )
     else:
         raise ValueError(

@@ -1,7 +1,10 @@
 #! /.fs/data/wolloch/atomate_test/atomate_env/bin/python
 
 
+from typing import Union
+
 from fireworks import Firework
+from pymatgen.core.interface import Interface
 
 from triboflow.firetasks.PES import (
     FT_FindHighSymmPoints,
@@ -25,19 +28,19 @@ __date__ = "March 11th, 2020"
 
 
 def run_pes_calc_fw(
-    interface,
-    interface_name,
-    external_pressure,
-    functional,
-    comp_parameters,
-    tag,
-    FW_name,
-    prerelax=True,
-    prerelax_calculator="m3gnet",
-    prerelax_kwargs=None,
-    db_file="auto",
-    high_level=True,
-):
+    interface: Interface,
+    interface_name: str,
+    external_pressure: float,
+    functional: str,
+    comp_parameters: dict,
+    tag: str,
+    FW_name: str,
+    prerelax: bool = True,
+    prerelax_calculator: str = "m3gnet",
+    prerelax_kwargs: dict = None,
+    db_file: str = "auto",
+    high_level: Union[str, bool] = True,
+) -> Firework:
     """Compute high-symmetry points for an interface and start PES calculations.
 
     Combines two Fireworks that find the high-symmetry points for the interface
@@ -112,20 +115,20 @@ def run_pes_calc_fw(
 
 
 def make_pes_fw(
-    interface_name,
-    functional,
-    external_pressure,
-    tag,
-    FW_name,
-    file_output,
-    output_dir,
-    remote_copy=False,
-    server=None,
-    user=None,
-    port=None,
-    db_file="auto",
-    high_level=True,
-):
+    interface_name: str,
+    functional: str,
+    external_pressure: float,
+    tag: str,
+    FW_name: str,
+    file_output: bool,
+    output_dir: str,
+    remote_copy: bool = False,
+    server: str = None,
+    user: str = None,
+    port: int = None,
+    db_file: str = "auto",
+    high_level: Union[str, bool] = True,
+) -> Firework:
     """Retrieve PES calculations from the database and compute the PES.
 
     Retrieve the computed energies of the unique high-symmetry points and match

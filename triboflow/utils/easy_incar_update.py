@@ -38,7 +38,7 @@ def GetUserInput():
         dest="update_dict",
         type=str,
         help="Str holding a dictionary with VASP INCAR parameters to set. "
-        "Has to have single quotes outside and double quotes inside.",
+             "Has to have single quotes outside and double quotes inside.",
     )
     parser.add_argument(
         "-f", "--functional", dest="functional", type=str, help="Functional"
@@ -54,7 +54,9 @@ def GetUserInput():
     return args
 
 
-def update_fws(id_list, update, rerun):
+def update_fws(id_list: list[int],
+               update: dict[str, str],
+               rerun: bool):
     """
 
 

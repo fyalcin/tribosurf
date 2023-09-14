@@ -1,5 +1,8 @@
-import numpy as np
 import warnings
+from typing import Union, Type
+
+import numpy as np
+from pymatgen.core.interface import Interface
 from pymatgen.core.sites import PeriodicSite
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import SlabGenerator, Slab, center_slab
@@ -10,7 +13,7 @@ from hitmen_utils.db_tools import VaspDB
 from triboflow.utils.mp_connection import MPConnection
 
 
-def get_interface_distance(structure):
+def get_interface_distance(structure: Interface) -> float | None:
     z_max_substrate = -10000
     z_min_film = 10000
     for s in structure.sites:
@@ -25,7 +28,10 @@ def get_interface_distance(structure):
     return z_min_film - z_max_substrate
 
 
-def get_conv_bulk_from_mpid(mpid, coll, db_file="auto", high_level=True):
+def get_conv_bulk_from_mpid(mpid: str,
+                            coll: str,
+                            db_file: str = "auto",
+                            high_level: Union[str, bool] = "auto") -> Structure:
     """
     Generates the conventional standard bulk structure for a material given by
     its MaterialsProject ID.
@@ -85,7 +91,8 @@ def get_conv_bulk_from_mpid(mpid, coll, db_file="auto", high_level=True):
     return bulk_conv
 
 
-def transfer_average_magmoms(magnetic_struct, struct_without_magmoms):
+def transfer_average_magmoms(magnetic_struct: Type[Structure],
+                             struct_without_magmoms: Type[Structure]) -> Type[Structure]:
     """Set magmom for a structure based on the average value of each species of a reference structure.
 
     For unit cells of the same structure, it is not always trivial to transfer
@@ -119,7 +126,7 @@ def transfer_average_magmoms(magnetic_struct, struct_without_magmoms):
         return new_struct
 
     if not sorted(mag_struct.types_of_species) == sorted(
-        new_struct.types_of_species
+            new_struct.types_of_species
     ):
         warnings.warn(
             "\n##################################################\n"
@@ -150,7 +157,8 @@ def transfer_average_magmoms(magnetic_struct, struct_without_magmoms):
     return new_struct
 
 
-def slab_from_structure(miller, structure):
+def slab_from_structure(miller: list | tuple,
+                        structure: Structure) -> Slab:
     """Returns a pymatgen.core.surface.Slab from a pymatgen structure.
 
     Parameters
@@ -178,7 +186,7 @@ def slab_from_structure(miller, structure):
     )
 
 
-def clean_up_site_properties(structure):
+def clean_up_site_properties(structure: Type[Structure]) -> Type[Structure]:
     """
     Cleans up site_properties of structures that contain NoneTypes.
 
@@ -216,7 +224,9 @@ def clean_up_site_properties(structure):
     return struct
 
 
-def stack_aligned_slabs(bottom_slab, top_slab, top_shift=(0, 0, 0)):
+def stack_aligned_slabs(bottom_slab: Slab,
+                        top_slab: Slab,
+                        top_shift:tuple=(0, 0, 0)) -> Structure:
     """
     Combine slabs that are centered around 0 into a single structure.
 
@@ -263,7 +273,9 @@ def stack_aligned_slabs(bottom_slab, top_slab, top_shift=(0, 0, 0)):
     return interface
 
 
-def recenter_aligned_slabs(top_slab, bottom_slab, d=2.5):
+def recenter_aligned_slabs(top_slab : Slab,
+                           bottom_slab : Slab,
+                           d:float=2.5):
     """
     Center two slabs around z=0 and give them the distance d.
 
@@ -312,13 +324,13 @@ def recenter_aligned_slabs(top_slab, bottom_slab, d=2.5):
 
 
 def interface_name(
-    mpid1,
-    mpid2,
-    miller1,
-    miller2,
-    shift1: float = None,
-    shift2: float = None,
-):
+        mpid1: str,
+        mpid2: str,
+        miller1: tuple,
+        miller2: tuple,
+        shift1: float = None,
+        shift2: float = None,
+) -> str:
     """Return a name for an interface based on MP-IDs and miller indices.
 
     Parameters
@@ -380,10 +392,10 @@ def interface_name(
 
 
 def make_pymatgen_slab(
-    bulk_struct: Structure,
-    miller: list,
-    min_thickness: int = 8,
-    min_vacuum: float = 20,
+        bulk_struct: Structure,
+        miller: list,
+        min_thickness: int = 8,
+        min_vacuum: float = 20,
 ) -> Slab:
     """
     Uses pmg slab generator to create 1 slab from a bulk struct and miller index.
@@ -441,7 +453,7 @@ def make_pymatgen_slab(
     return slab
 
 
-def flip_slab(slab):
+def flip_slab(slab: Slab) -> Slab:
     """
     Flip the z coordinates of the input slab by multiplying all z-coords with -1.
 

@@ -43,11 +43,13 @@ The module contains:
 """
 
 import warnings
+from typing import Union
 
 import numpy as np
 from pymatgen.analysis.interfaces.zsl import ZSLGenerator
 from pymatgen.core.interface import Interface
 from pymatgen.core.lattice import Lattice
+from pymatgen.core.surface import Slab
 
 from hitmen_utils.db_tools import VaspDB
 from hitmen_utils.shaper import Shaper
@@ -58,8 +60,12 @@ from triboflow.utils.structure_manipulation import (
 
 
 def get_consolidated_comp_params(
-    mpid1, mpid2, bulk_coll, db_file, high_level
-):
+    mpid1: str,
+    mpid2: str,
+    bulk_coll: str,
+    db_file: str,
+    high_level: Union[str, bool],
+) -> dict:
     """
     Get consolidated computational parameters for two materials.
 
@@ -109,7 +115,9 @@ def get_consolidated_comp_params(
     return comp_params_inter
 
 
-def get_average_lattice(latt1, latt2, weight1, weight2):
+def get_average_lattice(
+    latt1: Lattice, latt2: Lattice, weight1: float, weight2: float
+) -> Lattice:
     """Return a Lattice that is the weighted average of the input lattices.
 
     The weighted average of the lattice parameters and angles of two input
@@ -137,19 +145,15 @@ def get_average_lattice(latt1, latt2, weight1, weight2):
     a = np.average([latt1.a, latt2.a], weights=[weight1, weight2])
     b = np.average([latt1.b, latt2.b], weights=[weight1, weight2])
     c = np.average([latt1.c, latt2.c], weights=[weight1, weight2])
-    alpha = np.average(
-        [latt1.alpha, latt2.alpha], weights=[weight1, weight2]
-    )
+    alpha = np.average([latt1.alpha, latt2.alpha], weights=[weight1, weight2])
     beta = np.average([latt1.beta, latt2.beta], weights=[weight1, weight2])
-    gamma = np.average(
-        [latt1.gamma, latt2.gamma], weights=[weight1, weight2]
-    )
+    gamma = np.average([latt1.gamma, latt2.gamma], weights=[weight1, weight2])
 
     av_latt = Lattice.from_parameters(a, b, c, alpha, beta, gamma)
     return av_latt
 
 
-def are_slabs_aligned(slab_1, slab_2, prec=12):
+def are_slabs_aligned(slab_1: Slab, slab_2: Slab, prec: int = 12) -> bool:
     """Check if two slabs have the same x and y lattice (z coordinate may differ)
 
     :param slab_1: First slab of two, for which alignment is checked.
@@ -177,20 +181,20 @@ def are_slabs_aligned(slab_1, slab_2, prec=12):
 class InterfaceMatcher:
     def __init__(
         self,
-        slab_1,
-        slab_2,
-        strain_weight_1=1.0,
-        strain_weight_2=1.0,
-        max_area_ratio_tol=0.09,
-        max_area=100,
-        max_length_tol=0.03,
-        max_angle_tol=0.01,
-        bidirectional_search=True,
-        vacuum=15.0,
-        interface_distance="auto",
-        interface_distance_addon=0.0,
-        external_pressure=None,
-        max_sites=200,
+        slab_1: Slab,
+        slab_2: Slab,
+        strain_weight_1: float = 1.0,
+        strain_weight_2: float = 1.0,
+        max_area_ratio_tol: float = 0.09,
+        max_area: float = 100,
+        max_length_tol: float = 0.03,
+        max_angle_tol: float = 0.01,
+        bidirectional_search: bool = True,
+        vacuum: float = 15.0,
+        interface_distance: Union[str, float] = "auto",
+        interface_distance_addon: float = 0.0,
+        external_pressure: float = None,
+        max_sites: int = 200,
     ):
         """Initialize the InterfaceMatcher class
 
@@ -289,14 +293,14 @@ class InterfaceMatcher:
             slab_1.copy(), slab_2.copy(), weight_1, weight_2
         )
         # Set interface distance
-        self.__set_interface_dist(
-            interface_distance, interface_distance_addon
-        )
+        self.__set_interface_dist(interface_distance, interface_distance_addon)
         # Set the vacua for the centered slabs to ensure correct vacuum for the
         # interface
         self.__set_vacua()
 
-    def __check_weights(self, strain_weight_1, strain_weight_2):
+    def __check_weights(
+        self, strain_weight_1: float, strain_weight_2: float
+    ) -> tuple[float, float]:
         """
         Check if the supplied strain weights are making sense and correct them if not.
 
@@ -348,7 +352,9 @@ class InterfaceMatcher:
             thickness_top + self.vacuum_thickness + self.inter_dist
         )
 
-    def __set_interface_dist(self, initial_distance, distance_boost):
+    def __set_interface_dist(
+        self, initial_distance: Union[float, str], distance_boost: float
+    ):
         """
         Set the interface distance for the class instance.
 
@@ -376,7 +382,7 @@ class InterfaceMatcher:
                 np.mean([av_spacing_top, av_spacing_bot]) + distance_boost
             )
 
-    def __get_formula_and_miller(self, slab):
+    def __get_formula_and_miller(self, slab: Slab) -> str:
         """
         Return a string combination of a reduced formula and miller indices.
 
@@ -395,7 +401,9 @@ class InterfaceMatcher:
         m = "".join(str(s) for s in slab.miller_index)
         return f + m
 
-    def __assign_top_bottom(self, slab_1, slab_2, weight_1, weight_2):
+    def __assign_top_bottom(
+        self, slab_1: Slab, slab_2: Slab, weight_1: float, weight_2: float
+    ):
         """
         Assign top and bottom slab based on the formula and miller index.
 
@@ -440,9 +448,12 @@ class InterfaceMatcher:
             self.bot_weight = weight_1
             self.bot_miller = slab_1.miller_index
 
-    def __make_3d_lattice_from_2d_lattice(self, slab, uv):
+    def __make_3d_lattice_from_2d_lattice(
+        self, slab: Slab, uv: list
+    ) -> Lattice:
         """
-        Takes a slab and adds its third lattice vector to the 2D lattice that is also passed.
+        Takes a slab and adds its third lattice vector to the 2D lattice
+        that is also passed.
 
         Parameters
         ----------
@@ -463,7 +474,7 @@ class InterfaceMatcher:
         )
         return latt
 
-    def __get_supercell_matrix(self, slab, lattice):
+    def __get_supercell_matrix(self, slab: Slab, lattice: Lattice) -> np.array:
         """
         Return a matrix that can be used to construct a supercell.
 
@@ -486,7 +497,7 @@ class InterfaceMatcher:
         sc_matrix[2] = np.array([0, 0, 1])
         return sc_matrix
 
-    def _set_intended_vacuum(self, slab, vacuum):
+    def _set_intended_vacuum(self, slab: Slab, vacuum: float):
         return Shaper.modify_vacuum(
             slab, vacuum, method="to_value", center=False
         )
@@ -525,7 +536,9 @@ class InterfaceMatcher:
         except:
             return None, None
 
-    def _get_matching_lattices(self):
+    def _get_matching_lattices(
+        self,
+    ) -> tuple[None, None] | tuple[Lattice, Lattice]:
         """
         Find a matching lattice and return two Lattices if it is found.
 
@@ -556,7 +569,9 @@ class InterfaceMatcher:
 
         return top_latt, bot_latt
 
-    def _get_matching_supercells(self):
+    def _get_matching_supercells(
+        self,
+    ) -> tuple[None, None] | tuple[Slab, Slab]:
         """
         Return almost matched supercells of the input slabs
 
@@ -584,7 +599,7 @@ class InterfaceMatcher:
         supercell_bot.make_supercell(supercell_matrix_bot)
         return supercell_top, supercell_bot
 
-    def get_aligned_slabs(self):
+    def get_aligned_slabs(self) -> tuple[None, None] | tuple[Slab, Slab]:
         """
         Get aligned slabs that are stretched according to the supplied weights.
 
@@ -631,7 +646,7 @@ class InterfaceMatcher:
 
         return self.aligned_top_slab, self.aligned_bot_slab
 
-    def get_centered_slabs(self):
+    def get_centered_slabs(self) -> tuple[None, None] | tuple[Slab, Slab]:
         """
         Return slabs that are already positioned to form and interface around z=0.
 
@@ -668,7 +683,7 @@ class InterfaceMatcher:
         )
         return tcs, bcs
 
-    def get_interface(self):
+    def get_interface(self) -> Interface | None:
         """
         Return an Interface object containing two matched slabs.
 
@@ -724,7 +739,7 @@ class InterfaceMatcher:
 
         return self.interface
 
-    def get_interface_distance(self):
+    def get_interface_distance(self) -> float:
         """
         Return the interface distance of the InterfaceMatcher class instance.
 
@@ -736,7 +751,7 @@ class InterfaceMatcher:
         """
         return self.inter_dist
 
-    def get_strain(self):
+    def get_strain(self) -> dict:
         """
         Calculate the strains on the aligned top and bottom slabs by comparing
         the unstrained lattices of the constituent slabs and final lattice
@@ -764,15 +779,11 @@ class InterfaceMatcher:
         inter_latt = self.interface.lattice
 
         top_strain_ab = [
-            100
-            * (inter_latt.abc[i] - u_top_latt.abc[i])
-            / u_top_latt.abc[i]
+            100 * (inter_latt.abc[i] - u_top_latt.abc[i]) / u_top_latt.abc[i]
             for i in range(2)
         ]
         bot_strain_ab = [
-            100
-            * (inter_latt.abc[i] - u_bot_latt.abc[i])
-            / u_bot_latt.abc[i]
+            100 * (inter_latt.abc[i] - u_bot_latt.abc[i]) / u_bot_latt.abc[i]
             for i in range(2)
         ]
 

@@ -6,6 +6,8 @@ Created on Fri Aug 28 16:10:28 2020
 @author: mwo
 """
 
+from typing import Union
+
 import numpy as np
 from atomate.utils.utils import env_chk
 from atomate.vasp.fireworks.core import StaticFW
@@ -114,9 +116,7 @@ class FT_DoPPESCalcs(FiretaskBase):
                 struct_d, comp_params, "slab_from_scratch"
             )
 
-            FW = StaticFW(
-                structure=struct_d, vasp_input_set=vis, name=label
-            )
+            FW = StaticFW(structure=struct_d, vasp_input_set=vis, name=label)
             FW_list.append(FW)
 
         WF = Workflow(FW_list, name="PPES calcs for: " + name)
@@ -211,7 +211,7 @@ class FT_FitPPES(FiretaskBase):
         )
 
 
-def UBER(x, G, l):
+def UBER(x: Union[float, list[float]], G: float, l: float):
     """
     Define the UBER function.
 
@@ -235,7 +235,7 @@ def UBER(x, G, l):
     return G * (1 - (1 + x / l) * np.exp(-x / l))
 
 
-def PPES_UBER(distance_energy_array):
+def PPES_UBER(distance_energy_array: list[list[float]]):
     """
     Fit PPES data to an UBER relation.
 

@@ -18,12 +18,17 @@ The module contains the following functions:
 """
 
 __author__ = "Gabriele Losi"
-__credits__ = "Code readapted from our past homogeneous workflow, MIT license, https://github.com/mcrighi/interface-workflow,"
+__credits__ = "Code readapted from our past homogeneous workflow, MIT license, " \
+              "https://github.com/mcrighi/interface-workflow,"
 __copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
 __contact__ = "clelia.righi@unibo.it"
 __date__ = "February 8th, 2021"
 
+from typing import Optional, Tuple, Any
+
 import numpy as np
+from numpy import ndarray
+from scipy.interpolate.rbf import Rbf
 
 
 # =============================================================================
@@ -31,32 +36,20 @@ import numpy as np
 # =============================================================================
 
 
-def get_shear_strength(coords, rbf, delta=0.01):
-    """
-    Calculate the shear strength given a path and a potential energy surface.
+def get_shear_strength(coords: np.ndarray,
+                       rbf: Rbf,
+                       delta: float = 0.01) -> tuple[ndarray, ndarray | int | float | complex]:
+    """Calculate the shear strength given a path and a potential energy surface.
 
-    Parameters
-    ----------
-    coords : numpy.ndarray
-        Coordinates [x, y] of the path along which you evaluate shear strength.
-
-    rbf : scipy.interpolate.rbf.Rbf
-        Contain the information of the interpolation of the potential energy.
-
-    delta : TYPE, optional
-        discreticized step along x and y for integration. Tuning this value may
+    :param coords: Coordinates [x, y] of the path along which you evaluate shear strength.
+    :type coords: numpy.ndarray
+    :param rbf: Contain the information of the interpolation of the potential energy.
+    :type rbf: scipy.interpolate.rbf.Rbf
+    :param delta: discreticized step along x and y for integration. Tuning this value may
         vary slightly the final result. The default is 0.01.
+    :type delta: TYPE, optional
 
-    Returns
-    -------
-    data_ss_mep : numpy.ndarray
-        Profile of potential energy and forces along the MEP.
-
-    ss : float
-        The shear strength along the MEP.
-
-    TODO : check what is stored in data_ss_mep and keep only important stuff
-
+    
     """
 
     x = coords[:, 0]
@@ -86,7 +79,7 @@ def get_shear_strength(coords, rbf, delta=0.01):
     dVy = 0.5 * (tempValp - tempValm) / delta
 
     tforce = -(tx * dVx + ty * dVy)
-    force = tforce / np.sqrt(tx**2 + ty**2)
+    force = tforce / np.sqrt(tx ** 2 + ty ** 2)
 
     for i in range(n - 1):
         Vz[i + 1] = Vz[i] - 0.5 * (tforce[i] + tforce[i + 1])
@@ -94,7 +87,7 @@ def get_shear_strength(coords, rbf, delta=0.01):
     Vz -= np.min(Vz)
     Ve = rbf(x, y)
     Ve -= np.min(Ve)
-    lxy = np.cumsum(np.sqrt(dx**2 + dy**2))
+    lxy = np.cumsum(np.sqrt(dx ** 2 + dy ** 2))
     data_ss_mep = np.stack((lxy, dVx, dVy, Vz, Ve, force), axis=-1)
 
     ss_min = 10.0 * np.min(force)
@@ -104,12 +97,17 @@ def get_shear_strength(coords, rbf, delta=0.01):
     return data_ss_mep, ss_mep
 
 
-def get_shear_strength_xy(lattice, rbf, params=None):
-    """
-    Calculate the shear strength along the x and y directions of the cell.
+def get_shear_strength_xy(lattice: np.ndarray,
+                          rbf: Rbf,
+                          params: Optional[dict] = None) -> tuple[ndarray, tuple[float | Any, float | Any]]:
+    """Calculate the shear strength along the x and y directions of the cell.
     Simplified version of get_shear_strength.
-
+    
     TODO : generalize the function in order to calculate the SS along any straight line
+
+    :param lattice: 
+    :param rbf: 
+    :param params:  (Default value = None)
 
     """
 
@@ -155,7 +153,11 @@ def get_shear_strength_xy(lattice, rbf, params=None):
 # =============================================================================
 
 
-def take_derivative(rbf, coordx, coordy, m=None, delta=0.01):
+def take_derivative(rbf: Rbf,
+                    coordx: float,
+                    coordy: float,
+                    m: Optional[float] = None,
+                    delta: float = 0.01) -> float:
     """
     Inner function used to calculate the shear strength
 
@@ -183,7 +185,6 @@ def take_derivative(rbf, coordx, coordy, m=None, delta=0.01):
     zdev = 0.5 * (V_2 - V_1) / delta
 
     return zdev
-
 
 # OLD VERSIONS OF THE DERIVATIVE. IT WORKED
 

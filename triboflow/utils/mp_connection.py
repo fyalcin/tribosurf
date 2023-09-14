@@ -77,7 +77,7 @@ class MPConnection:
         with MPRester(api_key=self.mp_api_key) as mpr:
             doc = mpr.summary.search(
                 formula=chem_formula,
-                energy_above_hull=[0.0, 0.0],
+                energy_above_hull=(0.0, 0.0),
                 fields=["material_id"],
             )
             if len(doc) == 0:
@@ -174,7 +174,7 @@ if __name__ == "__main__":
     # db._print_all_properties("elasticity")
 
 
-def material_from_mp(material_dict):
+def material_from_mp(material_dict: dict) -> tuple[Structure, str]:
     """
     It reads the dictionary containing the input parameters for a material.
     It needs at least the key: `formula`, providing an MPID is also helpful.

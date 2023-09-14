@@ -12,13 +12,17 @@ from atomate.vasp.fireworks.core import StaticFW
 from atomate.vasp.powerups import add_modify_incar
 from fireworks import Workflow, FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
+from pymatgen.core.interface import Interface
+from pymatgen.io.vasp.outputs import Chgcar
 from scipy.integrate import romb, simpson
 
 from hitmen_utils.db_tools import VaspDB
 from hitmen_utils.vasp_tools import get_custom_vasp_static_settings
 
 
-def plot_charge_profile(chgcar, axis=2, xmin=None, xmax=None):
+def plot_charge_profile(
+    chgcar: Chgcar, axis: int = 2, xmin: float = None, xmax: float = None
+) -> None:
     """Plots the charge density profile along the given axis.
 
     :param chgcar: Charge density object.
@@ -51,7 +55,7 @@ def plot_charge_profile(chgcar, axis=2, xmin=None, xmax=None):
     fig.savefig(f"charge_profile_{chgcar.structure.formula}.png")
 
 
-def get_interface_region(interface):
+def get_interface_region(interface: Interface) -> tuple:
     """Returns the z-coordinates of the interface region.
 
     :param interface: Interface object.
@@ -73,7 +77,12 @@ def get_interface_region(interface):
     return max(z_sub), min(z_film)
 
 
-def make_charge_differences(interface, chgcar_int, chgcar_bot, chgcar_top):
+def make_charge_differences(
+    interface: Interface,
+    chgcar_int: Chgcar,
+    chgcar_bot: Chgcar,
+    chgcar_top: Chgcar,
+) -> dict:
     """Computes the charge density difference between the interface and the
     top and bottom slabs.
 
@@ -136,9 +145,9 @@ def make_charge_differences(interface, chgcar_int, chgcar_bot, chgcar_top):
         rho_inter_region = simpson(y=abs(profile_inter_region), dx=dz) / (
             zmax - zmin
         )
-        rho_inter_region_abs = simpson(
-            y=abs_profile_inter_region, dx=dz
-        ) / (zmax - zmin)
+        rho_inter_region_abs = simpson(y=abs_profile_inter_region, dx=dz) / (
+            zmax - zmin
+        )
 
     return {
         "rho_classic": rho_inter_region,
@@ -170,6 +179,7 @@ class FT_MakeChargeCalc(FiretaskBase):
     :return: FWAction that detours to a StaticFW.
     :rtype: FWAction
     """
+
     _fw_name = "Make charge density calculation"
     required_params = ["structure", "comp_params", "calc_name"]
     optional_params = ["db_file", "high_level"]
@@ -227,6 +237,7 @@ class FT_MakeChargeDensityDiff(FiretaskBase):
     :return: None
     :rtype: NoneType
     """
+
     _fw_name = "Make charge density difference"
     required_params = [
         "interface",

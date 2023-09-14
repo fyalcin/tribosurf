@@ -3,13 +3,15 @@
 Created on Wed Jun 17 15:59:59 2020
 @author: mwo
 """
+from datetime import datetime
+from pprint import pprint, pformat
+
 import numpy as np
 import pymongo
 from atomate.utils.utils import env_chk
 from atomate.vasp.config import VASP_CMD, DB_FILE
 from atomate.vasp.powerups import add_modify_incar
 from atomate.vasp.workflows.base.bulk_modulus import get_wf_bulk_modulus
-from datetime import datetime
 from fireworks import (
     FWAction,
     FiretaskBase,
@@ -18,7 +20,6 @@ from fireworks import (
     FileWriteTask,
 )
 from fireworks.utilities.fw_utilities import explicit_serialize
-from pprint import pprint, pformat
 
 from hitmen_utils.db_tools import VaspDB
 from hitmen_utils.kpoints import MeshFromDensity
@@ -56,6 +57,7 @@ class FT_UpdateBMLists(FiretaskBase):
     :return: None
     :rtype: NoneType
     """
+
     _fw_name = "Update Bulk Modulus Lists"
     required_params = ["formula", "tag"]
     optional_params = ["db_file"]
@@ -174,6 +176,7 @@ class FT_Convo(FiretaskBase):
         reached.
     :rtype: FWAction
     """
+
     _fw_name = "Convergence for encut or kpoints"
     required_params = [
         "structure",
@@ -314,9 +317,7 @@ class FT_Convo(FiretaskBase):
                 name="Update BM Lists and Loop",
             )
 
-            bm_wf.append_wf(
-                Workflow.from_Firework(ual_fw), bm_wf.leaf_fw_ids
-            )
+            bm_wf.append_wf(Workflow.from_Firework(ual_fw), bm_wf.leaf_fw_ids)
             # Use add_modify_incar powerup to add KPAR and NCORE settings
             # based on env_chk in my_fworker.yaml
             bm_wf = add_modify_incar(bm_wf)
@@ -552,9 +553,7 @@ class FT_Convo(FiretaskBase):
                 name="Update BM Lists and Loop",
             )
 
-            bm_wf.append_wf(
-                Workflow.from_Firework(ual_fw), bm_wf.leaf_fw_ids
-            )
+            bm_wf.append_wf(Workflow.from_Firework(ual_fw), bm_wf.leaf_fw_ids)
             # Use add_modify_incar powerup to add KPAR and NCORE settings
             # based on env_chk in my_fworker.yaml
             bm_wf = add_modify_incar(bm_wf)
@@ -576,7 +575,7 @@ class FT_Convo(FiretaskBase):
             return FWAction(detours=bm_wf)
 
 
-def is_list_converged(input_list, tol, n=3):
+def is_list_converged(input_list: list[float], tol: float, n: int = 3) -> bool:
     """Check if the last n values of an array are within tol of each other.
 
     :param input_list: List of values to be checked for convergence.

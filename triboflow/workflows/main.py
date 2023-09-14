@@ -29,7 +29,7 @@ from triboflow.utils.mp_connection import material_from_mp
 from triboflow.utils.check_WF_inputs import check_hetero_wf_inputs
 
 
-def optimize_bulk_wf(inputs):
+def optimize_bulk_wf(inputs: dict) -> Workflow:
     """Return main workflow for bulk optimization within Triboflow.
 
     Parameters
@@ -116,7 +116,7 @@ def optimize_bulk_wf(inputs):
     return wf
 
 
-def heterogeneous_wf(inputs):
+def heterogeneous_wf(inputs: dict) -> Workflow:
     """Return main workflow for heterogeneous interfaces within Triboflow.
 
     Parameters

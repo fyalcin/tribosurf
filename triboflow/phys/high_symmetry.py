@@ -5,12 +5,15 @@ Created on Wed Mar 16 14:40:07 2022
 
 @author: wolloch
 """
+from copy import deepcopy
+from typing import Union
 
 import numpy as np
-from copy import deepcopy
 from monty.json import jsanitize
 from pymatgen.analysis.adsorption import AdsorbateSiteFinder
 from pymatgen.analysis.structure_matcher import StructureMatcher
+from pymatgen.core.interface import Interface
+from pymatgen.core.surface import Slab
 
 from hitmen_utils.shaper import Shaper
 from triboflow.utils.structure_manipulation import flip_slab
@@ -62,34 +65,42 @@ class InterfaceSymmetryAnalyzer:
     :param interface: A pymatgen Interface object.
     :type interface: pymatgen.core.interface.Interface
 
-    :param in_cartesian_coordinates: Return the high symmetry points and interface shifts in cartesian rather than fractional coordinates. The default is False.
+    :param in_cartesian_coordinates: Return the high symmetry points and interface shifts in cartesian rather than
+    fractional coordinates. The default is False.
     :type in_cartesian_coordinates: bool, optional
 
-    :param no_obtuse_hollow: Selects if you want to add obtuse hollows to the high symmetry points. The default for this in pymatgen's AdsorbateSiteFinder is "True", which means that no obtuse hollows are added! Be careful when adding these sites, since it will result most likely in extremely many unique shifts and sample the unit cell very densely with associated huge computational cost. The default is True.
+    :param no_obtuse_hollow: Selects if you want to add obtuse hollows to the high symmetry points. The default for
+    this in pymatgen's AdsorbateSiteFinder is "True", which means that no obtuse hollows are added! Be careful when
+    adding these sites, since it will result most likely in extremely many unique shifts and sample the unit cell
+    very densely with associated huge computational cost. The default is True.
     :type no_obtuse_hollow: bool, optional
 
-    :param jsanitize_output: If true, will run monty sanitize on the final dictionary so that the numpy arrays will be converted to lists and can be saved in a mongoDB database.
+    :param jsanitize_output: If true, will run monty sanitize on the final dictionary so that the numpy arrays will
+    be converted to lists and can be saved in a mongoDB database.
     :type jsanitize_output: bool, optional
 
-    :param ltol: Fractional length tolerance for the StructureMatcher. Keep this low, since matching structures should match exactly. The default is 0.01.
+    :param ltol: Fractional length tolerance for the StructureMatcher. Keep this low, since matching structures
+    should match exactly. The default is 0.01.
     :type ltol: float, optional
 
-    :param stol: Site tolerance for the StructureMatcher. Defined as the fraction of the average free length per atom. Keep this low, since matching structures should match exactly. The default is 0.01.
+    :param stol: Site tolerance for the StructureMatcher. Defined as the fraction of the average free length per
+    atom. Keep this low, since matching structures should match exactly. The default is 0.01.
     :type stol: float, optional
 
-    :param angle_tol: Angle tolerance for the StructureMatcher in degrees. Keep this low, since matching structures should match exactly. The default is 0.01.
+    :param angle_tol: Angle tolerance for the StructureMatcher in degrees. Keep this low, since matching structures
+    should match exactly. The default is 0.01.
     :type angle_tol: float, optional
     """
 
     def __init__(
-        self,
-        interface,
-        in_cartesian_coordinates=False,
-        no_obtuse_hollow=True,
-        jsanitize_output=True,
-        ltol=0.01,
-        stol=0.01,
-        angle_tol=0.01,
+            self,
+            interface: Interface,
+            in_cartesian_coordinates: bool = False,
+            no_obtuse_hollow: bool = True,
+            jsanitize_output: bool = True,
+            ltol: float = 0.01,
+            stol: float = 0.01,
+            angle_tol: float = 0.01,
     ):
         """
         Initializes the InterfaceSymmetryAnalyzer class.
@@ -97,22 +108,30 @@ class InterfaceSymmetryAnalyzer:
         :param interface: A pymatgen Interface object.
         :type interface: pymatgen.core.interface.Interface
 
-        :param in_cartesian_coordinates: Return the high symmetry points and interface shifts in cartesian rather than fractional coordinates. The default is False.
+        :param in_cartesian_coordinates: Return the high symmetry points and interface shifts in cartesian rather
+        than fractional coordinates. The default is False.
         :type in_cartesian_coordinates: bool, optional
 
-        :param no_obtuse_hollow: Selects if you want to add obtuse hollows to the high symmetry points. The default for this in pymatgen's AdsorbateSiteFinder is "True", which means that no obtuse hollows are added! Be careful when adding these sites, since it will result most likely in extremely many unique shifts and sample the unit cell very densely with associated huge computational cost. The default is True.
+        :param no_obtuse_hollow: Selects if you want to add obtuse hollows to the high symmetry points. The default
+        for this in pymatgen's AdsorbateSiteFinder is "True", which means that no obtuse hollows are added! Be
+        careful when adding these sites, since it will result most likely in extremely many unique shifts and sample
+        the unit cell very densely with associated huge computational cost. The default is True.
         :type no_obtuse_hollow: bool, optional
 
-        :param jsanitize_output: If true, will run monty sanitize on the final dictionary so that the numpy arrays will be converted to lists and can be saved in a mongoDB database.
+        :param jsanitize_output: If true, will run monty sanitize on the final dictionary so that the numpy arrays
+        will be converted to lists and can be saved in a mongoDB database.
         :type jsanitize_output: bool, optional
 
-        :param ltol: Fractional length tolerance for the StructureMatcher. Keep this low, since matching structures should match exactly. The default is 0.01.
+        :param ltol: Fractional length tolerance for the StructureMatcher. Keep this low, since matching structures
+        should match exactly. The default is 0.01.
         :type ltol: float, optional
 
-        :param stol: Site tolerance for the StructureMatcher. Defined as the fraction of the average free length per atom. Keep this low, since matching structures should match exactly. The default is 0.01.
+        :param stol: Site tolerance for the StructureMatcher. Defined as the fraction of the average free length per
+        atom. Keep this low, since matching structures should match exactly. The default is 0.01.
         :type stol: float, optional
 
-        :param angle_tol: Angle tolerance for the StructureMatcher in degrees. Keep this low, since matching structures should match exactly. The default is 0.01.
+        :param angle_tol: Angle tolerance for the StructureMatcher in degrees. Keep this low, since matching
+        structures should match exactly. The default is 0.01.
         :type angle_tol: float, optional
         """
 
@@ -125,7 +144,7 @@ class InterfaceSymmetryAnalyzer:
         self.angle_tol = angle_tol
         self.high_symmetry_info = None
 
-    def __convert_to_frac(self, hs_dict, only_2d=False):
+    def __convert_to_frac(self, hs_dict: dict, only_2d: bool = False) -> dict:
         """
         Convert cartesian coordinates in a high_symmetry dictionary to fractional.
         """
@@ -142,7 +161,7 @@ class InterfaceSymmetryAnalyzer:
                 frac_sites[k] = v
         return frac_sites
 
-    def __convert_to_cart(self, hs_dict, only_2d=True):
+    def __convert_to_cart(self, hs_dict: dict, only_2d: bool = True) -> dict:
         """
         Convert fractional coordinates in a high_symmetry dictionary to cartesian.
         """
@@ -159,7 +178,7 @@ class InterfaceSymmetryAnalyzer:
                 cart_sites[k] = v
         return cart_sites
 
-    def __remove_c_coord(self, hs_dict):
+    def __remove_c_coord(self, hs_dict: dict) -> dict:
         """
         Remove the c coordinate for all high symmetry points to make 2D shifts.
         """
@@ -171,7 +190,7 @@ class InterfaceSymmetryAnalyzer:
                 new_dict[k] = v[:2]
         return new_dict
 
-    def __get_adsorption_site(self, slab, unique):
+    def __get_adsorption_site(self, slab: Slab, unique: bool) -> dict:
         """
         Return the adsorption sites of a slab object, either only unique ones, or all.
 
@@ -213,7 +232,7 @@ class InterfaceSymmetryAnalyzer:
             )
         return sites
 
-    def __separate_adsorption_sites(self, sites_dictionary):
+    def __separate_adsorption_sites(self, sites_dictionary: dict) -> dict:
         """
         Label unique adsorption sites uniquely
 
@@ -228,7 +247,7 @@ class InterfaceSymmetryAnalyzer:
                     d[k + "_" + str(i + 1)] = coords
         return d
 
-    def __sort_all_sites(self, adsf, all_sites, unique_sites):
+    def __sort_all_sites(self, adsf: AdsorbateSiteFinder, all_sites: dict, unique_sites: dict) -> dict:
         """
         Sort duplicate high symmetry points wrt the labels of the unique points.
 
@@ -262,7 +281,7 @@ class InterfaceSymmetryAnalyzer:
             new_dict[label] = np.asarray(new_dict[label])
         return new_dict
 
-    def __get_unique_hs_sites(self, slab):
+    def __get_unique_hs_sites(self, slab: Slab) -> tuple[dict, dict]:
         """
         Return unique adsorption sites for a slab.
 
@@ -275,7 +294,7 @@ class InterfaceSymmetryAnalyzer:
         unique_frac = self.__remove_c_coord(self.__convert_to_frac(unique))
         return unique, unique_frac
 
-    def __get_all_hs_sites(self, slab, unique_sites, adsf):
+    def __get_all_hs_sites(self, slab: Slab, unique_sites: dict, adsf: AdsorbateSiteFinder) -> dict:
         """
         Return all adsorption sites for a slab in fractional 2D coordinates.
         """
@@ -395,7 +414,7 @@ class InterfaceSymmetryAnalyzer:
         self.replica_shifts = replic_shifts
         self.group_assignment = group_assignment
 
-    def __set_parameters(self, interface):
+    def __set_parameters(self, interface: Interface):
         """
         set a couple of parameters for the class instance depended on the
         interface passed to the __call__ method.
@@ -407,7 +426,7 @@ class InterfaceSymmetryAnalyzer:
         self.top_adsf = AdsorbateSiteFinder(self.top_slab)
         self.bot_adsf = AdsorbateSiteFinder(self.bot_slab)
 
-    def __check_cartesian_and_jsanitize(self, out_dict):
+    def __check_cartesian_and_jsanitize(self, out_dict: dict) -> dict:
         """
         Return the output and possibly switch to cartesian coordinates and jsanitize.
         """
@@ -472,11 +491,11 @@ class InterfaceSymmetryAnalyzer:
         return self.__check_cartesian_and_jsanitize(out_dict)
 
     def get_all_high_symmetry_interfaces(
-        self,
-        interface_distance=None,
-        distance_boost=0.05,
-        bond_dist_delta=0.05
-    ):
+            self,
+            interface_distance: Union[str, float] = None,
+            distance_boost: float = 0.05,
+            bond_dist_delta: float = 0.05
+    ) -> list[Interface]:
         """
         Return a list of interfaces with high-symmetry lateral shifts.
 
@@ -491,6 +510,11 @@ class InterfaceSymmetryAnalyzer:
 
         Parameters
         ----------
+        interface_distance: Union[str, float], optional
+            If set to "auto" or None, the interface distance is increased until
+            the minimum bond distance is larger than the minimum bond distance
+            of the aligned slabs minus the bond_dist_delta parameter. If set to
+            a float, the interface distance is set to that value.
         distance_boost : float, optional
             Boost the interface distance at each step by this amount.
             The default is 0.05.

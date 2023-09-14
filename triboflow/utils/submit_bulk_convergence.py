@@ -5,8 +5,9 @@ Created on Mon Oct  4 16:12:32 2021
 
 @author: wolloch
 """
+from typing import List
 
-from fireworks import LaunchPad
+from fireworks import LaunchPad, Workflow
 from triboflow.workflows.main import optimize_bulk_wf
 from triboflow.utils.homoatomic_materials import load_homoatomic_materials
 
@@ -22,7 +23,7 @@ database_params = {
 }
 
 
-def submit_multiple_wfs(workflow_list):
+def submit_multiple_wfs(workflow_list: List[Workflow]):
     lpad = LaunchPad.auto_load()
     for wf in workflow_list:
         lpad.add_wf(wf)
