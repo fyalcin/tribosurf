@@ -3,12 +3,14 @@
 
 __author__ = "Michael Wolloch"
 __copyright__ = "Copyright 2022, M. Wolloch, HIT, FWF, University of Vienna"
-__credits__ = "Code readapted from our past work by Gabriele Losi and Mauro Ferrario, MIT license, https://github.com/mcrighi/interface-workflow,"
+__credits__ = "Code readapted from our past work by Gabriele Losi and Mauro Ferrario, MIT license, " \
+              "https://github.com/mcrighi/interface-workflow,"
 __contact__ = "michael.wolloch@univie.ac.at"
 __date__ = "September 16th, 2022"
 
 import math as m
 import multiprocessing
+
 import numpy as np
 from mep.models import Model
 from mep.neb import NEB
@@ -22,7 +24,7 @@ from scipy.interpolate import interp1d
 
 
 def evolve_mep(
-    string_dict, rbf, method="neb", max_iter=99999, neb_forcetol=1e-3
+        string_dict, rbf, method="neb", max_iter=99999, neb_forcetol=1e-3
 ):
     """
     Compute minimum energy paths for all strings in the sting_dictionary.
@@ -144,24 +146,22 @@ def find_minima(extended_energy_list, xlim, ylim, border_padding):
         x[:2]
         for x in energies
         if (
-            x[2] == 0.0
-            and x[0] >= border_padding
-            and x[0] < xlim - border_padding
-            and x[1] >= border_padding
-            and x[1] < ylim - border_padding
+                x[2] == 0.0
+                and border_padding <= x[0] < xlim - border_padding
+                and border_padding <= x[1] < ylim - border_padding
         )
     ]
     return minima
 
 
 def get_initial_strings(
-    extended_energy_list,
-    xlim,
-    ylim,
-    point_density=20,
-    add_noise=0.01,
-    border_padding=0.1,
-):
+        extended_energy_list: np.array,
+        xlim: float,
+        ylim: float,
+        point_density: int = 20,
+        add_noise: float = 0.01,
+        border_padding: float = 0.1,
+) -> tuple[np.array, np.array, np.array]:
     """
     Make 3 straight strings that connect minima of the PES.
 
@@ -242,7 +242,9 @@ def get_initial_strings(
     return string_d, string_x, string_y
 
 
-def numgrad(string, rbf, delta=0.002):
+def numgrad(string: np.array,
+            rbf: callable,
+            delta: float = 0.002) -> np.array:
     """
     Numerically compute the gradient of a potential given by rbf at the points in string.
 
@@ -282,7 +284,8 @@ def numgrad(string, rbf, delta=0.002):
     return np.stack((gradientx, gradienty), axis=1)
 
 
-def reparametrize_string_with_equal_spacing(string, nr_of_points):
+def reparametrize_string_with_equal_spacing(string: np.array,
+                                            nr_of_points: int) -> np.array:
     """
     Reparametrize the string so that the arc length are constant again.
 
@@ -304,7 +307,7 @@ def reparametrize_string_with_equal_spacing(string, nr_of_points):
     y = string[:, 1]
     dx = np.ediff1d(x, to_begin=0)
     dy = np.ediff1d(y, to_begin=0)
-    lxy = np.cumsum(np.sqrt(dx**2 + dy**2))  # lxy[n-1] = sum(lxy[:n])
+    lxy = np.cumsum(np.sqrt(dx ** 2 + dy ** 2))  # lxy[n-1] = sum(lxy[:n])
     lxy /= lxy[-1]  # rescale distance between points to [0,1] interval
     xf = interp1d(lxy, x, kind="cubic")  # interpolate x=f(lxy)
     x = xf(
@@ -318,8 +321,13 @@ def reparametrize_string_with_equal_spacing(string, nr_of_points):
 
 
 def new_evolve_string(
-    string, rbf, nstepmax=9999, mintol=1e-7, delta=0.005, h=0.005
-):
+        string: np.array,
+        rbf: callable,
+        nstepmax: int = 9999,
+        mintol: float = 1e-7,
+        delta: float = 0.005,
+        h: float = 0.005
+) -> dict:
     """
     Find a minimum energy path from an initial string.
 
@@ -371,7 +379,10 @@ def new_evolve_string(
     return {"mep": string, "convergence": is_converged}
 
 
-def run_neb(model, path, nsteps, tol):
+def run_neb(model: Model,
+            path: Path,
+            nsteps: int,
+            tol: float) -> dict:
     """
     Run the NEB model
     """
@@ -382,10 +393,10 @@ def run_neb(model, path, nsteps, tol):
 
 
 class RBFModel(Model):
-    def __init__(self, rbf):
+    def __init__(self, rbf: callable):
         self.rbf = rbf
 
-    def predict_energy(self, image):
+    def predict_energy(self, image: Image) -> float:
         if isinstance(image, Image):
             image = image.data
         image = np.atleast_2d(image)
