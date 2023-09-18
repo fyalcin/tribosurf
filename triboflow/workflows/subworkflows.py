@@ -376,12 +376,12 @@ def adhesion_energy_swf(
         for fw in [fw_top, fw_bot, fw_interface, fw_results]
         if fw is not None
     ]
-    SWF = Workflow(
+    swf = Workflow(
         fireworks=fws,
         name="Calculate adhesion SWF for {}".format(interface_name),
     )
 
-    return add_modify_incar(SWF)
+    return add_modify_incar(swf)
 
 
 def calc_pes_swf(
