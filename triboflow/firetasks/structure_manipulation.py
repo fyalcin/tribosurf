@@ -23,7 +23,7 @@ from pymatgen.io.vasp.inputs import Poscar
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 from hitmen_utils.db_tools import VaspDB
-from hitmen_utils.misc_tools import make_calculation_hash
+from hitmen_utils.misc_tools import make_calculation_hash, transfer_average_magmoms
 from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
 from hitmen_utils.workflows import dynamic_relax_swf
 from surfen.utils.structure_manipulation import add_bulk_to_db
@@ -34,7 +34,6 @@ from triboflow.phys.interface_matcher import (
 from triboflow.utils.file_manipulation import copy_output_files
 from triboflow.utils.structure_manipulation import (
     interface_name,
-    transfer_average_magmoms,
 )
 
 
