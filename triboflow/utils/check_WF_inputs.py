@@ -12,7 +12,7 @@ def check_hetero_wf_inputs(inputs):
     """
     checked_inputs = {}
     triboflow_defaults = load_defaults("triboflow")
-    surfgen_defaults = load_defaults("surfen")
+    surfgen_defaults = load_defaults("surfflow")
     for key, value in inputs.items():
         if key.endswith("_1") or key.endswith("_2"):
             check_key = key[:-2]

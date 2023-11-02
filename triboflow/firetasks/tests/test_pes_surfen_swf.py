@@ -98,7 +98,7 @@ fw2 = Firework(
     parents=[fw1],
 )
 
-wf = Workflow([fw1, fw2], name="Test surfen workflow")
+wf = Workflow([fw1, fw2], name="Test surfflow workflow")
 today = datetime.today().strftime("%Y-%m-%d")
 
 lpad = LaunchPad.from_file("/home/yalcin/config_local/my_launchpad.yaml")
