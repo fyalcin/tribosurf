@@ -15,9 +15,9 @@ from operator import itemgetter
 from pymatgen.core.interface import Interface
 from pymatgen.core.structure import Structure
 
-from hitmen_utils.db_tools import VaspDB
-from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
-from hitmen_utils.workflows import dynamic_relax_swf
+from htflow_utils.db_tools import VaspDB
+from htflow_utils.vasp_tools import get_custom_vasp_relax_settings
+from htflow_utils.workflows import dynamic_relax_swf
 from triboflow.phys.high_symmetry import InterfaceSymmetryAnalyzer
 from triboflow.phys.potential_energy_surface import (
     get_pes_generator_from_db,

@@ -7,7 +7,7 @@ Created on Wed Jun 17 15:59:59 2020
 from fireworks import FWAction, FiretaskBase
 from fireworks.utilities.fw_utilities import explicit_serialize
 
-from hitmen_utils.db_tools import VaspDB
+from htflow_utils.db_tools import VaspDB
 
 
 @explicit_serialize

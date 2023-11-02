@@ -8,7 +8,7 @@ Created on Fri Jun 19 16:15:02 2020
 from fireworks import LaunchPad
 from pymatgen.core.structure import Structure
 
-from hitmen_utils.db_tools import VaspDB
+from htflow_utils.db_tools import VaspDB
 
 # from fireworks.core.rocket_launcher import rapidfire
 from triboflow.workflows.subworkflows import converge_swf

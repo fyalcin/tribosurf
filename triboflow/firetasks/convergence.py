@@ -21,9 +21,9 @@ from fireworks import (
 )
 from fireworks.utilities.fw_utilities import explicit_serialize
 
-from hitmen_utils.db_tools import VaspDB
-from hitmen_utils.kpoints import MeshFromDensity
-from hitmen_utils.vasp_tools import (
+from htflow_utils.db_tools import VaspDB
+from htflow_utils.kpoints import MeshFromDensity
+from htflow_utils.vasp_tools import (
     get_custom_vasp_static_settings,
     get_emin_and_emax,
 )

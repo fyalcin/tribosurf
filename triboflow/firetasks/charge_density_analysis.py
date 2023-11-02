@@ -16,8 +16,8 @@ from pymatgen.core.interface import Interface
 from pymatgen.io.vasp.outputs import Chgcar
 from scipy.integrate import romb, simpson
 
-from hitmen_utils.db_tools import VaspDB
-from hitmen_utils.vasp_tools import get_custom_vasp_static_settings
+from htflow_utils.db_tools import VaspDB
+from htflow_utils.vasp_tools import get_custom_vasp_static_settings
 
 
 def plot_charge_profile(

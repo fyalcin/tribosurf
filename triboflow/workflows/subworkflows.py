@@ -14,9 +14,9 @@ from pymatgen.core import Structure
 from pymatgen.core.interface import Interface
 from pymatgen.core.surface import Slab
 
-from hitmen_utils.db_tools import VaspDB
-from hitmen_utils.misc_tools import make_calculation_hash
-from hitmen_utils.vasp_tools import (
+from htflow_utils.db_tools import VaspDB
+from htflow_utils.misc_tools import make_calculation_hash
+from htflow_utils.vasp_tools import (
     get_emin_and_emax,
     get_custom_vasp_static_settings,
 )
@@ -866,7 +866,7 @@ def converge_swf(
             "Once you workflow has finished you can access the "
             "results from the database using this code:\n\n"
             "import pprint\n"
-            "from hitmen_utils.db_tools import VaspDB\n"
+            "from htflow_utils.db_tools import VaspDB\n"
             f"db = VaspDB(db_file='{db_file}')\n"
             f"results = db.find_data(collection='{functional}.bulk_data', fltr={'name': '{flag}'})\n"
             "pprint.pprint(results)\n"

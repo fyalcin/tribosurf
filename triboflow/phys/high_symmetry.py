@@ -15,7 +15,7 @@ from pymatgen.analysis.structure_matcher import StructureMatcher
 from pymatgen.core.interface import Interface
 from pymatgen.core.surface import Slab
 
-from hitmen_utils.shaper import Shaper
+from htflow_utils.shaper import Shaper
 from triboflow.utils.structure_manipulation import flip_slab
 
 

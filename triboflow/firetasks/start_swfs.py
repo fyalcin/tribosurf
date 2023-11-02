@@ -4,7 +4,7 @@ from pymatgen.core import Structure
 from pymatgen.core.interface import Interface
 from pymatgen.core.surface import Slab
 
-from hitmen_utils.db_tools import VaspDB
+from htflow_utils.db_tools import VaspDB
 from triboflow.workflows.subworkflows import (
     adhesion_energy_swf,
     calc_pes_swf,

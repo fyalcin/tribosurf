@@ -22,10 +22,10 @@ from pymatgen.core.surface import Slab
 from pymatgen.io.vasp.inputs import Poscar
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
-from hitmen_utils.db_tools import VaspDB
-from hitmen_utils.misc_tools import make_calculation_hash, transfer_average_magmoms
-from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
-from hitmen_utils.workflows import dynamic_relax_swf
+from htflow_utils.db_tools import VaspDB
+from htflow_utils.misc_tools import make_calculation_hash, transfer_average_magmoms
+from htflow_utils.vasp_tools import get_custom_vasp_relax_settings
+from htflow_utils.workflows import dynamic_relax_swf
 from surfflow.utils.structure_manipulation import add_bulk_to_db
 from triboflow.phys.interface_matcher import (
     InterfaceMatcher,

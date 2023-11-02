@@ -29,7 +29,7 @@ from fireworks import (
 )
 from pymatgen.core.surface import Slab
 
-from hitmen_utils.db_tools import VaspDB
+from htflow_utils.db_tools import VaspDB
 from surfflow.utils.misc_tools import check_input
 from surfflow.utils.surfen_tools import get_surfen_inputs_from_mpid
 from surfflow.workflows.subworkflows import surface_energy_swf_from_slab_dict

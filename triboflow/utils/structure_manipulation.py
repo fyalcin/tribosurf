@@ -8,8 +8,8 @@ from pymatgen.core.surface import SlabGenerator, Slab, center_slab
 from pymatgen.ext.matproj import MPRester
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
-from hitmen_utils.db_tools import VaspDB
-from hitmen_utils.misc_tools import transfer_average_magmoms
+from htflow_utils.db_tools import VaspDB
+from htflow_utils.misc_tools import transfer_average_magmoms
 from triboflow.utils.mp_connection import MPConnection
 
 

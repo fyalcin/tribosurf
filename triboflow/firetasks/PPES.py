@@ -17,8 +17,8 @@ from fireworks.utilities.fw_utilities import explicit_serialize
 from pymatgen.core.structure import Structure
 from scipy.optimize import curve_fit
 
-from hitmen_utils.db_tools import VaspDB
-from hitmen_utils.vasp_tools import get_custom_vasp_static_settings
+from htflow_utils.db_tools import VaspDB
+from htflow_utils.vasp_tools import get_custom_vasp_static_settings
 from triboflow.utils.structure_manipulation import clean_up_site_properties
 
 

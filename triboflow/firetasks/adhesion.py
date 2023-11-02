@@ -12,10 +12,10 @@ from fireworks.utilities.fw_utilities import explicit_serialize
 from pymatgen.core.structure import Structure
 from pymatgen.core.surface import Slab
 
-from hitmen_utils.db_tools import VaspDB
-from hitmen_utils.misc_tools import make_calculation_hash
-from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
-from hitmen_utils.workflows import dynamic_relax_swf
+from htflow_utils.db_tools import VaspDB
+from htflow_utils.misc_tools import make_calculation_hash
+from htflow_utils.vasp_tools import get_custom_vasp_relax_settings
+from htflow_utils.workflows import dynamic_relax_swf
 from triboflow.utils.structure_manipulation import (
     slab_from_structure,
 )

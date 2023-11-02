@@ -13,7 +13,7 @@ if __name__ == "__main__":
         license='Not public yet',
         install_requires=[
                         'atomate@git+https://github.com/MichaelWolloch/atomate.git',
-                        'hitmen_utils@git+ssh://git@gitlab.com/hit_group/hitmen_utils.git@surfgen_merge',
+                        'htflow_utils@git+ssh://git@gitlab.com/hit_group/htflow_utils.git@surfgen_merge',
                         'surfen@git+ssh://git@gitlab.com/hit_group/SurfGen.git',
                         'mep@git+https://github.com/fyalcin/mep.git',
                         'python-Levenshtein',

@@ -24,7 +24,7 @@ from pymatgen.core.interface import Interface
 from pymatgen.core.structure import Structure
 from scipy.interpolate import RBFInterpolator
 
-from hitmen_utils.db_tools import VaspDB
+from htflow_utils.db_tools import VaspDB
 from triboflow.phys.minimum_energy_path import (
     get_initial_strings,
     reparametrize_string_with_equal_spacing,

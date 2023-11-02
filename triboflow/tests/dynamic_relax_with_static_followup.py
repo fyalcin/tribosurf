@@ -9,9 +9,9 @@ Created on Wed Sep 22 11:17:06 2021
 from fireworks import LaunchPad
 from pymatgen.core.structure import Structure
 
-from hitmen_utils.db_tools import VaspDB
-from hitmen_utils.vasp_tools import get_custom_vasp_relax_settings
-from hitmen_utils.workflows import dynamic_relax_swf
+from htflow_utils.db_tools import VaspDB
+from htflow_utils.vasp_tools import get_custom_vasp_relax_settings
+from htflow_utils.workflows import dynamic_relax_swf
 
 db = VaspDB("auto", True)
 # mpids = ['mp-134', 'mp-13', 'mp-66']

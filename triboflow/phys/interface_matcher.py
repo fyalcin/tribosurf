@@ -51,8 +51,8 @@ from pymatgen.core.interface import Interface
 from pymatgen.core.lattice import Lattice
 from pymatgen.core.surface import Slab
 
-from hitmen_utils.db_tools import VaspDB
-from hitmen_utils.shaper import Shaper
+from htflow_utils.db_tools import VaspDB
+from htflow_utils.shaper import Shaper
 from triboflow.utils.structure_manipulation import (
     recenter_aligned_slabs,
     clean_up_site_properties,

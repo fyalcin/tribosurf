@@ -11,10 +11,10 @@ from fireworks import LaunchPad
 from fireworks import Workflow, Firework
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
-from hitmen_utils.db_tools import VaspDB
-from hitmen_utils.misc_tools import make_calculation_hash
-from hitmen_utils.shaper import Shaper
-from hitmen_utils.vasp_tools import get_custom_vasp_static_settings
+from htflow_utils.db_tools import VaspDB
+from htflow_utils.misc_tools import make_calculation_hash
+from htflow_utils.shaper import Shaper
+from htflow_utils.vasp_tools import get_custom_vasp_static_settings
 from triboflow.firetasks.charge_density_analysis import (
     FT_MakeChargeDensityDiff,
 )
