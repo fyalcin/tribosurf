@@ -29,16 +29,16 @@ def write_file_from_dict(Dict, Filename):
                 MAGMOM = 3.0 -3.0
     to the file.
     """
-    Out_file = []
+    out_file = []
     for key in Dict.keys():
         if type(Dict[key]) is list:
             str_list = [str(x) for x in Dict[key]]
             value = " ".join(str_list)
         else:
             value = str(Dict[key])
-        Out_file.append(str(key) + " = " + value)
+        out_file.append(str(key) + " = " + value)
     with open(Filename, "w") as out:
-        for line in Out_file:
+        for line in out_file:
             out.write(line + "\n")
     return
 
@@ -93,7 +93,7 @@ def copy_output_files(
                 scp_str = "scp -P {} {} {}@{}:{}/.".format(
                     port, to_copy, user, server, output_dir
                 )
-            FT = ScriptTask.from_str(scp_str)
+            ft = ScriptTask.from_str(scp_str)
         else:
             out_str = (
                 "You have requested remote_copy but "
@@ -101,10 +101,10 @@ def copy_output_files(
                 "and/or username!\n"
                 "No copy will be performed!\n"
             )
-            FT = ScriptTask.from_str('echo "{}"'.format(out_str))
+            ft = ScriptTask.from_str('echo "{}"'.format(out_str))
 
     else:
-        FT = FileTransferTask(
+        ft = FileTransferTask(
             {"files": file_list, "dest": output_dir, "mode": "copy"}
         )
-    return FT
+    return ft

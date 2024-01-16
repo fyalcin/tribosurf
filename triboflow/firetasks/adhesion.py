@@ -22,7 +22,7 @@ from triboflow.utils.structure_manipulation import (
 
 
 @explicit_serialize
-class FT_RetrieveMatchedSlabs(FiretaskBase):
+class RetrieveMatchedSlabs(FiretaskBase):
     """Retrieve relaxed matched slabs and save them in the high_level database.
 
     Get the relaxed aligned top and bottom slabs from the low level database
@@ -43,13 +43,16 @@ class FT_RetrieveMatchedSlabs(FiretaskBase):
     :param db_file: Full path of the db.json file to be used. The default is to use env_chk to find the file.
     :type db_file: str, optional
 
-    :param top_out_name: Name the relaxed top slab will have in the high-level database. Defaults to 'top_aligned_relaxed'
+    :param top_out_name: Name the relaxed top slab will have in the high-level database. Defaults to
+    'top_aligned_relaxed'
     :type top_out_name: str, optional
 
-    :param bottom_out_name: Name the relaxed bottom slab will have in the high-level database. Defaults to 'bottom_aligned_relaxed'
+    :param bottom_out_name: Name the relaxed bottom slab will have in the high-level database. Defaults to
+    'bottom_aligned_relaxed'
     :type bottom_out_name: str, optional
 
-    :param high_level: Name of the high_level database to use. Defaults to 'True', in which case it is read from the db.json file.
+    :param high_level: Name of the high_level database to use. Defaults to 'True', in which case it is read from the
+    db.json file.
     :type high_level: str or True, optional
 
     :return: FWAction that updates the spec.
@@ -114,7 +117,7 @@ class FT_RetrieveMatchedSlabs(FiretaskBase):
 
 
 @explicit_serialize
-class FT_RelaxMatchedSlabs(FiretaskBase):
+class RelaxMatchedSlabs(FiretaskBase):
     """Start the relaxation of the matched slabs.
 
     Get the aligned top and bottom slabs from the high level database and
@@ -141,13 +144,16 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
     :param bottom_in_name: Name the unrelaxed bottom slab has in the high-level database. Defaults to 'bottom_aligned'
     :type bottom_in_name: str, optional
 
-    :param top_out_name: Name the relaxed top slab will have in the high-level database. Defaults to 'top_aligned_relaxed'
+    :param top_out_name: Name the relaxed top slab will have in the high-level database. Defaults to
+    'top_aligned_relaxed'
     :type top_out_name: str, optional
 
-    :param bottom_out_name: Name the relaxed bottom slab will have in the high-level database. Defaults to 'bottom_aligned_relaxed'
+    :param bottom_out_name: Name the relaxed bottom slab will have in the high-level database. Defaults to
+    'bottom_aligned_relaxed'
     :type bottom_out_name: str, optional
 
-    :param high_level: Name of the high_level database to use. Defaults to 'True', in which case it is read from the db.json file.
+    :param high_level: Name of the high_level database to use. Defaults to 'True', in which case it is read from the
+    db.json file.
     :type high_level: str or True, optional
 
     :param prerelax: Whether to run a prerelaxation step before the actual relaxation. Defaults to True.
@@ -217,11 +223,11 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
             formula = top_slab.composition.reduced_formula
             miller = "".join(str(s) for s in top_slab.miller_index)
             label_top = (
-                "top_slab_"
-                + formula
-                + miller
-                + "_"
-                + make_calculation_hash(structure=top_slab, vis=top_vis)
+                    "top_slab_"
+                    + formula
+                    + miller
+                    + "_"
+                    + make_calculation_hash(structure=top_slab, vis=top_vis)
             )
             inputs.append([top_slab, top_vis, label_top])
         if not relaxed_bot_present:
@@ -232,11 +238,11 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
             formula = bot_slab.composition.reduced_formula
             miller = "".join(str(s) for s in bot_slab.miller_index)
             label_bot = (
-                "bot_slab_"
-                + formula
-                + miller
-                + "_"
-                + make_calculation_hash(structure=bot_slab, vis=bot_vis)
+                    "bot_slab_"
+                    + formula
+                    + miller
+                    + "_"
+                    + make_calculation_hash(structure=bot_slab, vis=bot_vis)
             )
             inputs.append([bot_slab, bot_vis, label_bot])
 
@@ -257,7 +263,7 @@ class FT_RelaxMatchedSlabs(FiretaskBase):
 
 
 @explicit_serialize
-class FT_CalcAdhesion(FiretaskBase):
+class CalcAdhesion(FiretaskBase):
     """Calculate the adhesion from the total energies of static calculations.
 
     Find the corresponding total energy calculations from the low_level
@@ -265,7 +271,8 @@ class FT_CalcAdhesion(FiretaskBase):
         E_abs = (top_energy + bot_energy) - inter_energy
     The result is saved in the high_level database in J/m^2.
 
-    :param interface_name: Flag to find the interface entry in the high_level database. Created by the 'interface_name' function in triboflow.firetasks.init_db.pyl
+    :param interface_name: Flag to find the interface entry in the high_level database. Created by the
+    'interface_name' function in triboflow.firetasks.init_db.pyl
     :type interface_name: str
 
     :param functional: Functional with which the workflow is run. PBE or SCAN.
@@ -286,10 +293,12 @@ class FT_CalcAdhesion(FiretaskBase):
     :param db_file: Full path of the db.json file to be used. The default is to use env_chk to find the file.
     :type db_file: str, optional
 
-    :param out_name: Key in the interface collection of the high_level database that contains the calculated adhesion energy as value. Defaults to 'adhesion_energy@min'.
+    :param out_name: Key in the interface collection of the high_level database that contains the calculated adhesion
+    energy as value. Defaults to 'adhesion_energy@min'.
     :type out_name: str, optional
 
-    :param high_level: Name of the high_level database to use. Defaults to 'True', in which case it is read from the db.json file.
+    :param high_level: Name of the high_level database to use. Defaults to 'True', in which case it is read from the
+    db.json file.
     :type high_level: str or True, optional
 
     :return: FWAction that updates the spec.
@@ -342,16 +351,16 @@ class FT_CalcAdhesion(FiretaskBase):
             np.cross(struct.lattice.matrix[0], struct.lattice.matrix[1])
         )
 
-        E_abs = (top_energy + bot_energy) - inter_energy
+        e_abs = (top_energy + bot_energy) - inter_energy
 
         # Convert adhesion energy from eV/Angstrom^2 to J/m^2
-        E_Jm2 = 16.02176565 * E_abs / area
+        e_jm2 = 16.02176565 * e_abs / area
 
         db_high = VaspDB(db_file=db_file, high_level=hl_db)
         db_high.update_data(
             collection=functional + ".interface_data",
             fltr={"name": name, "external_pressure": external_pressure},
-            new_values={"$set": {out_name: E_Jm2}},
+            new_values={"$set": {out_name: e_jm2}},
         )
 
         return FWAction(update_spec=fw_spec)

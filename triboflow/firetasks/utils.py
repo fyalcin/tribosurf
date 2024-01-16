@@ -11,7 +11,7 @@ from htflow_utils.db_tools import VaspDB
 
 
 @explicit_serialize
-class FT_UpdateCompParams(FiretaskBase):
+class UpdateCompParams(FiretaskBase):
     """
     Firetask to update computational parameters for bulk and/or slabs
 
@@ -84,7 +84,7 @@ class FT_UpdateCompParams(FiretaskBase):
 
 
 @explicit_serialize
-class FT_PassSpec(FiretaskBase):
+class PassSpec(FiretaskBase):
     """Update only certain keys in the first level of the spec.
 
     If the key_list contains only '_all', update the whole spec!
@@ -112,7 +112,7 @@ class FT_PassSpec(FiretaskBase):
 
 
 @explicit_serialize
-class FT_PrintSpec(FiretaskBase):
+class PrintSpec(FiretaskBase):
     """Prints the spec of the current Workflow to the screen.
 
     Not only prints the current spec in a pretty way, but also returns a

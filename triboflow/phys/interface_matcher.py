@@ -298,8 +298,9 @@ class InterfaceMatcher:
         # interface
         self.__set_vacua()
 
+    @staticmethod
     def __check_weights(
-        self, strain_weight_1: float, strain_weight_2: float
+            strain_weight_1: float, strain_weight_2: float
     ) -> tuple[float, float]:
         """
         Check if the supplied strain weights are making sense and correct them if not.
@@ -382,7 +383,8 @@ class InterfaceMatcher:
                 np.mean([av_spacing_top, av_spacing_bot]) + distance_boost
             )
 
-    def __get_formula_and_miller(self, slab: Slab) -> str:
+    @staticmethod
+    def __get_formula_and_miller(slab: Slab) -> str:
         """
         Return a string combination of a reduced formula and miller indices.
 
@@ -448,8 +450,9 @@ class InterfaceMatcher:
             self.bot_weight = weight_1
             self.bot_miller = slab_1.miller_index
 
+    @staticmethod
     def __make_3d_lattice_from_2d_lattice(
-        self, slab: Slab, uv: list
+            slab: Slab, uv: list
     ) -> Lattice:
         """
         Takes a slab and adds its third lattice vector to the 2D lattice
@@ -497,7 +500,8 @@ class InterfaceMatcher:
         sc_matrix[2] = np.array([0, 0, 1])
         return sc_matrix
 
-    def _set_intended_vacuum(self, slab: Slab, vacuum: float):
+    @staticmethod
+    def _set_intended_vacuum(slab: Slab, vacuum: float):
         return Shaper.modify_vacuum(
             slab, vacuum, method="to_value", center=False
         )

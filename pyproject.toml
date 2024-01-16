@@ -15,7 +15,9 @@ classifiers = [
 ]
 keywords = ["tribology", "potential energy surface", "surface", "adhesion", "friction", "wear", "solid-solid interface", "high-throughput"]
 dependencies = [
-    "surfen@git+ssh://git@gitlab.com/hit_group/SurfGen.git",
+    "surfflow",
+    "mp-api",
+    "atomate@git+https://github.com/MichaelWolloch/atomate.git",
     "mep@git+https://github.com/fyalcin/mep.git"]
 requires-python = ">=3.9"
 

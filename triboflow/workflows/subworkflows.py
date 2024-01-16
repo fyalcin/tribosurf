@@ -20,12 +20,12 @@ from htflow_utils.vasp_tools import (
     get_emin_and_emax,
     get_custom_vasp_static_settings,
 )
-from triboflow.firetasks.PPES import FT_DoPPESCalcs, FT_FitPPES
-from triboflow.firetasks.adhesion import FT_CalcAdhesion
+from triboflow.firetasks.PPES import DoPPESCalcs, FitPPES
+from triboflow.firetasks.adhesion import CalcAdhesion
 from triboflow.firetasks.charge_density_analysis import (
-    FT_MakeChargeDensityDiff,
+    MakeChargeDensityDiff,
 )
-from triboflow.firetasks.convergence import FT_Convo
+from triboflow.firetasks.convergence import Converge
 from triboflow.fireworks.common import run_pes_calc_fw, make_pes_fw
 from triboflow.utils.mp_connection import MPConnection
 
@@ -177,7 +177,7 @@ def charge_analysis_swf(
     parents = [fw for fw in [fw_top, fw_bot, fw_interface] if fw is not None]
 
     fw_charge_analysis = Firework(
-        FT_MakeChargeDensityDiff(
+        MakeChargeDensityDiff(
             interface=interface,
             interface_name=interface_name,
             interface_calc_name=main_tag + "_interface",
@@ -357,7 +357,7 @@ def adhesion_energy_swf(
     parents = [fw for fw in [fw_top, fw_bot, fw_interface] if fw is not None]
 
     fw_results = Firework(
-        FT_CalcAdhesion(
+        CalcAdhesion(
             interface_name=interface_name,
             functional=functional,
             external_pressure=external_pressure,
@@ -401,7 +401,7 @@ def calc_pes_swf(
         prerelax_kwargs: dict = None,
         db_file: str = "auto",
         high_level: Union[bool, str] = True,
-) -> Workflow:
+) -> Optional[Workflow]:
     """Create a subworkflow to compute the PES for an interface of two slabs.
 
     This workflow takes two matched slabs (their cells must be identical) as
@@ -589,7 +589,7 @@ def calc_pes_swf(
 def calc_ppes_swf(
         interface_name: str,
         functional: str,
-        distance_list: tuple[float] = (-0.5, -0.25, 0.0, 0.25, 0.5, 2.5, 3.0, 4.0, 5.0, 7.5),
+        distance_list: tuple = (-0.5, -0.25, 0.0, 0.25, 0.5, 2.5, 3.0, 4.0, 5.0, 7.5),
         out_name: str = "PPES@minimum",
         structure_name: str = "minimum_relaxed",
         spec: dict = None,
@@ -638,7 +638,7 @@ def calc_ppes_swf(
     tag = interface_name + "_" + str(uuid4())
 
     fw_1 = Firework(
-        FT_DoPPESCalcs(
+        DoPPESCalcs(
             interface_name=interface_name,
             functional=functional,
             distance_list=distance_list,
@@ -652,7 +652,7 @@ def calc_ppes_swf(
     )
 
     fw_2 = Firework(
-        FT_FitPPES(
+        FitPPES(
             interface_name=interface_name,
             functional=functional,
             distance_list=distance_list,
@@ -888,7 +888,7 @@ def converge_swf(
             )
             comp_parameters["functional"] = functional
 
-    ft_encut_convo = FT_Convo(
+    ft_encut_convo = Converge(
         structure=structure,
         conv_type=conv_type,
         comp_params=comp_parameters,

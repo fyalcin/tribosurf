@@ -63,32 +63,32 @@ def get_shear_strength(coords: np.ndarray,
     tx = 0.5 * (np.roll(x, -1) - np.roll(x, 1))
     ty = 0.5 * (np.roll(y, -1) - np.roll(y, 1))
     # potential computed as integral of projection of gradV on string tangent
-    Vz = np.zeros(n)
+    vz = np.zeros(n)
     # derivative of the potential
     x += delta
-    tempValp = rbf(x, y)
+    temp_valp = rbf(x, y)
     x -= 2.0 * delta
-    tempValm = rbf(x, y)
-    dVx = 0.5 * (tempValp - tempValm) / delta
+    temp_valm = rbf(x, y)
+    d_vx = 0.5 * (temp_valp - temp_valm) / delta
     x += delta
     y += delta
-    tempValp = rbf(x, y)
+    temp_valp = rbf(x, y)
     y -= 2.0 * delta
-    tempValm = rbf(x, y)
+    temp_valm = rbf(x, y)
     y += delta
-    dVy = 0.5 * (tempValp - tempValm) / delta
+    d_vy = 0.5 * (temp_valp - temp_valm) / delta
 
-    tforce = -(tx * dVx + ty * dVy)
+    tforce = -(tx * d_vx + ty * d_vy)
     force = tforce / np.sqrt(tx ** 2 + ty ** 2)
 
     for i in range(n - 1):
-        Vz[i + 1] = Vz[i] - 0.5 * (tforce[i] + tforce[i + 1])
+        vz[i + 1] = vz[i] - 0.5 * (tforce[i] + tforce[i + 1])
 
-    Vz -= np.min(Vz)
+    vz -= np.min(vz)
     Ve = rbf(x, y)
     Ve -= np.min(Ve)
     lxy = np.cumsum(np.sqrt(dx ** 2 + dy ** 2))
-    data_ss_mep = np.stack((lxy, dVx, dVy, Vz, Ve, force), axis=-1)
+    data_ss_mep = np.stack((lxy, d_vx, d_vy, vz, Ve, force), axis=-1)
 
     ss_min = 10.0 * np.min(force)
     ss_max = 10.0 * np.max(force)

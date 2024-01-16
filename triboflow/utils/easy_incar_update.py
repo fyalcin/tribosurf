@@ -14,7 +14,7 @@ import json
 from fireworks import LaunchPad
 
 
-def GetUserInput():
+def get_user_input():
     """Read the fw_ids, incar update and rerun toggle from the command line.
 
     Returns
@@ -128,7 +128,7 @@ def update_fws(id_list: list[int],
 
 if __name__ == "__main__":
     lp = LaunchPad.auto_load()
-    args = GetUserInput()
+    args = get_user_input()
     id_list = args.fw_id
     update = json.loads(args.update_dict)
     rerun = args.rerun == "True"

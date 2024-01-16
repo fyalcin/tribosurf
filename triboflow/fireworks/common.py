@@ -7,10 +7,10 @@ from fireworks import Firework
 from pymatgen.core.interface import Interface
 
 from triboflow.firetasks.PES import (
-    FT_FindHighSymmPoints,
-    FT_StartPESCalcs,
-    FT_RetrievePESEnergies,
-    FT_ComputePES,
+    FindHighSymmPoints,
+    StartPESCalcs,
+    RetrievePESEnergies,
+    ComputePES,
 )
 from triboflow.utils.file_manipulation import copy_output_files
 
@@ -28,18 +28,18 @@ __date__ = "March 11th, 2020"
 
 
 def run_pes_calc_fw(
-    interface: Interface,
-    interface_name: str,
-    external_pressure: float,
-    functional: str,
-    comp_parameters: dict,
-    tag: str,
-    FW_name: str,
-    prerelax: bool = True,
-    prerelax_calculator: str = "m3gnet",
-    prerelax_kwargs: dict = None,
-    db_file: str = "auto",
-    high_level: Union[str, bool] = True,
+        interface: Interface,
+        interface_name: str,
+        external_pressure: float,
+        functional: str,
+        comp_parameters: dict,
+        tag: str,
+        FW_name: str,
+        prerelax: bool = True,
+        prerelax_calculator: str = "m3gnet",
+        prerelax_kwargs: dict = None,
+        db_file: str = "auto",
+        high_level: Union[str, bool] = True,
 ) -> Firework:
     """Compute high-symmetry points for an interface and start PES calculations.
 
@@ -68,7 +68,8 @@ def run_pes_calc_fw(
     :param FW_name: Name of the Firework.
     :type FW_name: str
 
-    :param prerelax: Whether to perform a prerelaxation using a neural-network potential before starting a DFT relaxation. Defaults to True.
+    :param prerelax: Whether to perform a prerelaxation using a neural-network potential before starting a DFT
+        relaxation. Defaults to True.
     :type prerelax: bool, optional
 
     :param prerelax_calculator: Which neural-network potential to use for the prerelaxation. Defaults to 'm3gnet'.
@@ -89,7 +90,7 @@ def run_pes_calc_fw(
     """
     if prerelax_kwargs is None:
         prerelax_kwargs = {}
-    ft_1 = FT_FindHighSymmPoints(
+    ft_1 = FindHighSymmPoints(
         interface=interface,
         interface_name=interface_name,
         functional=functional,
@@ -98,7 +99,7 @@ def run_pes_calc_fw(
         high_level=high_level,
     )
 
-    ft_2 = FT_StartPESCalcs(
+    ft_2 = StartPESCalcs(
         interface_name=interface_name,
         comp_parameters=comp_parameters,
         tag=tag,
@@ -115,19 +116,19 @@ def run_pes_calc_fw(
 
 
 def make_pes_fw(
-    interface_name: str,
-    functional: str,
-    external_pressure: float,
-    tag: str,
-    FW_name: str,
-    file_output: bool,
-    output_dir: str,
-    remote_copy: bool = False,
-    server: str = None,
-    user: str = None,
-    port: int = None,
-    db_file: str = "auto",
-    high_level: Union[str, bool] = True,
+        interface_name: str,
+        functional: str,
+        external_pressure: float,
+        tag: str,
+        FW_name: str,
+        file_output: bool,
+        output_dir: str,
+        remote_copy: bool = False,
+        server: str = None,
+        user: str = None,
+        port: int = None,
+        db_file: str = "auto",
+        high_level: Union[str, bool] = True,
 ) -> Firework:
     """Retrieve PES calculations from the database and compute the PES.
 
@@ -157,7 +158,8 @@ def make_pes_fw(
     :param output_dir: Location the output files are copied to if file_output is selected.
     :type output_dir: str
 
-    :param remote_copy: If true, scp will be used to copy the results to a remote server. Be advised that ssh-key certification must be set up between the two machines. The default is False.
+    :param remote_copy: If true, scp will be used to copy the results to a remote server. Be advised that ssh-key
+    certification must be set up between the two machines. The default is False.
     :type remote_copy: bool, optional
 
     :param server: Fully qualified domain name of the server the output should be copied to. The default is None.
@@ -166,7 +168,8 @@ def make_pes_fw(
     :param user: The username on the remote server.
     :type user: str, optional
 
-    :param port: On some machines ssh-key certification is only supported for certain ports. A port may be selected here. The default is None.
+    :param port: On some machines ssh-key certification is only supported for certain ports. A port may be selected
+    here. The default is None.
     :type port: int, optional
 
     :param db_file: Full path to the db.json file that should be used. Defaults to '>>db_file<<', to use env_chk.
@@ -179,7 +182,7 @@ def make_pes_fw(
     :rtype: fireworks.core.firework.Firework
 
     """
-    ft_1 = FT_RetrievePESEnergies(
+    ft_1 = RetrievePESEnergies(
         interface_name=interface_name,
         functional=functional,
         tag=tag,
@@ -187,7 +190,7 @@ def make_pes_fw(
         db_file=db_file,
         high_level=high_level,
     )
-    ft_2 = FT_ComputePES(
+    ft_2 = ComputePES(
         interface_name=interface_name,
         functional=functional,
         external_pressure=external_pressure,

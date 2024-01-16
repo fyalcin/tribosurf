@@ -169,7 +169,8 @@ class LoggingBase:
             # Create file logger
             self.file_logger = logging.getLogger(self.name + "_file_logger")
 
-    def __check_debug_level(self, level):
+    @staticmethod
+    def __check_debug_level(level):
         """
         Checks if the debug level is a valid one.
 
@@ -203,8 +204,9 @@ class LoggingBase:
                 "ERROR: 40, CRITICAL: 50.".format(level)
             )
 
+    @staticmethod
     def __initialize_console_logger_handler(
-        self, name, console_level, log_format
+            name, console_level, log_format
     ):
         """
         Initializes a logger handler for the console.
@@ -231,8 +233,9 @@ class LoggingBase:
         if not console_logger.hasHandlers():
             console_logger.addHandler(console_handler)
 
+    @staticmethod
     def __initialize_file_logger_handler(
-        self, name, file_level, path, log_format
+            name, file_level, path, log_format
     ):
         """
         Initializes a logger handler for the file.

@@ -38,7 +38,7 @@ from triboflow.utils.structure_manipulation import (
 
 
 @explicit_serialize
-class FT_StartBulkPreRelax(FiretaskBase):
+class StartBulkPreRelax(FiretaskBase):
     """Start a subworkflow as a detour to relax the cell shape and positions
     of a primitive structure depending on lattice parameters, and then move
     the optimized primitive structure to the high level database.
@@ -117,16 +117,16 @@ class FT_StartBulkPreRelax(FiretaskBase):
                 prim_struct, comp_params, "bulk_pos_shape_relax"
             )
             tag = f"CellShapeRelax-{make_calculation_hash(structure=prim_struct, vis=vis)}"
-            RelaxWF = dynamic_relax_swf(
+            relax_wf = dynamic_relax_swf(
                 inputs_list=[[prim_struct, vis, tag]],
                 prerelax_system=True,
                 prerelax_kwargs={"relax_cell": True},
                 db_file=db_file,
             )
 
-            MoveResultsFW = Firework(
+            move_results_fw = Firework(
                 [
-                    FT_UpdatePrimStruct(
+                    UpdatePrimStruct(
                         functional=functional,
                         tag=tag,
                         flag=mp_id,
@@ -135,17 +135,17 @@ class FT_StartBulkPreRelax(FiretaskBase):
                 ],
                 name=f"Move pre-relaxed structure for {prim_struct.formula}",
             )
-            MoveResultsWF = Workflow([MoveResultsFW])
+            move_results_wf = Workflow([move_results_fw])
 
-            if RelaxWF is not None:
-                RelaxWF.append_wf(MoveResultsWF, RelaxWF.leaf_fw_ids)
-            wf = RelaxWF if RelaxWF else MoveResultsWF
+            if relax_wf is not None:
+                relax_wf.append_wf(move_results_wf, relax_wf.leaf_fw_ids)
+            wf = relax_wf if relax_wf else move_results_wf
 
             return FWAction(detours=wf, update_spec=fw_spec)
 
 
 @explicit_serialize
-class FT_UpdatePrimStruct(FiretaskBase):
+class UpdatePrimStruct(FiretaskBase):
     """Update the primitive structure in the high level database.
 
     :param functional: Name of the functional used for the calculation.
@@ -204,7 +204,7 @@ class FT_UpdatePrimStruct(FiretaskBase):
 
 
 @explicit_serialize
-class FT_GetRelaxedSlab(FiretaskBase):
+class GetRelaxedSlab(FiretaskBase):
     """Get the relaxed structure, and put a Slab into the high-level DB.
 
     :param flag: An identifier to find the results in the database. It is
@@ -315,7 +315,7 @@ class FT_GetRelaxedSlab(FiretaskBase):
                 miller,
                 Structure.from_sites(relaxed_slab, to_unit_cell=True),
                 shift=0,
-                scale_factor=[[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+                scale_factor=np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]),
                 site_properties=relaxed_slab.site_properties,
             )
 
@@ -342,7 +342,7 @@ class FT_GetRelaxedSlab(FiretaskBase):
                     miller,
                     Structure.from_sites(relaxed_slab, to_unit_cell=True),
                     shift=0,
-                    scale_factor=[[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+                    scale_factor=np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]),
                     site_properties=relaxed_slab.site_properties,
                 )
                 print("")
@@ -373,7 +373,7 @@ class FT_GetRelaxedSlab(FiretaskBase):
             poscar_str = Poscar(slab).get_string()
             poscar_name = flag + "_Relaxed_slab_POSCAR.vasp"
             slab_name = flag + "_Relaxed_slab_dict.txt"
-            write_FT = FileWriteTask(
+            write_ft = FileWriteTask(
                 files_to_write=[
                     {"filename": poscar_name, "contents": poscar_str},
                     {
@@ -382,7 +382,7 @@ class FT_GetRelaxedSlab(FiretaskBase):
                     },
                 ]
             )
-            copy_FT = copy_output_files(
+            copy_ft = copy_output_files(
                 file_list=[poscar_name, slab_name],
                 output_dir=output_dir,
                 remote_copy=remote_copy,
@@ -390,20 +390,20 @@ class FT_GetRelaxedSlab(FiretaskBase):
                 user=user,
                 port=port,
             )
-            FW = Firework(
-                [write_FT, copy_FT], name="Copy SlabRelax SWF results"
+            fw = Firework(
+                [write_ft, copy_ft], name="Copy SlabRelax SWF results"
             )
-            WF = Workflow.from_Firework(
-                FW, name="Copy SlabRelax SWF results"
+            wf = Workflow.from_Firework(
+                fw, name="Copy SlabRelax SWF results"
             )
 
-            return FWAction(update_spec=fw_spec, detours=WF)
+            return FWAction(update_spec=fw_spec, detours=wf)
         else:
             return FWAction(update_spec=fw_spec)
 
 
 @explicit_serialize
-class FT_AddBulkToDB(FiretaskBase):
+class AddBulkToDB(FiretaskBase):
     """Add a bulk structure to the high level database.
 
     :param mpid: Materials Project ID.
@@ -447,7 +447,7 @@ class FT_AddBulkToDB(FiretaskBase):
 
 
 @explicit_serialize
-class FT_MakeHeteroStructure(FiretaskBase):
+class MakeHeteroStructure(FiretaskBase):
     """Matches two slab systems to form a heterogeneous interface.
 
     If the match fails, the accuracy criteria are relaxed in steps of 5% until
@@ -617,7 +617,8 @@ class FT_MakeHeteroStructure(FiretaskBase):
                     if pair == pairs[-1]:
                         warnings.warn(
                             f"\nWARNING:"
-                            f"Could not find a matching interface for {mpid1} and {mpid2} with the given accuracy criteria."
+                            f"Could not find a matching interface for {mpid1} and {mpid2} with the given accuracy "
+                            f"criteria."
                             f"Defusing workflow.\n"
                         )
                         return FWAction(defuse_workflow=True)

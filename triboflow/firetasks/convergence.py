@@ -31,10 +31,10 @@ from triboflow.utils.file_manipulation import copy_output_files
 
 
 @explicit_serialize
-class FT_UpdateBMLists(FiretaskBase):
+class UpdateBMLists(FiretaskBase):
     """Fetch information about the EOS fit from the DB and update the lists.
 
-    Used with FT_Convo to converge energy cutoffs or kpoints using the
+    Used with Converge to converge energy cutoffs or kpoints using the
     get_wf_bulk_modulus workflow of atomate. This Firetasks reads the
     necessary information from the eos collection of the database. Since no
     useful tag is placed, the identification of the correct entry is done
@@ -75,20 +75,20 @@ class FT_UpdateBMLists(FiretaskBase):
                 "created_at", pymongo.DESCENDING
             )
         )[0]
-        BM = results["bulk_modulus"]
-        V0 = results["results"]["v0"]
+        bm = results["bulk_modulus"]
+        v0 = results["results"]["v0"]
 
         # Update data arrays in the database
         db = VaspDB(db_file=db_file)
         db.update_data(
             collection="BM_data_sharing",
             fltr={"tag": tag},
-            new_values={"$push": {"BM_list": BM, "V0_list": V0}},
+            new_values={"$push": {"BM_list": bm, "V0_list": v0}},
         )
 
 
 @explicit_serialize
-class FT_Convo(FiretaskBase):
+class Converge(FiretaskBase):
     """Converge the encut or kpoint density via fits to an EOS.
 
     Uses the get_bulk_modulus workflow of atomate to fit Birch-Murnaghan EOS
@@ -234,23 +234,23 @@ class FT_Convo(FiretaskBase):
         comp_params = self["comp_params"]
         tag = self["tag"]
 
-        V0_tolerance = comp_params.get("volume_tolerence", 0.001)
-        BM_tolerance = comp_params.get("BM_tolerence", 0.01)
+        v0_tolerance = comp_params.get("volume_tolerance", 0.001)
+        bm_tolerance = comp_params.get("BM_tolerance", 0.01)
 
         # Get the data arrays from the database (returns None when not there)
         db = VaspDB(db_file=db_file)
         data = db.find_data(collection="BM_data_sharing", fltr={"tag": tag})
 
         if data:
-            BM_list = data.get("BM_list")
-            V0_list = data.get("V0_list")
+            bm_list = data.get("BM_list")
+            v0_list = data.get("V0_list")
             convo_list = data.get("convo_list")
         else:
-            BM_list = None
-            V0_list = None
+            bm_list = None
+            v0_list = None
             convo_list = None
 
-        if BM_list is None:
+        if bm_list is None:
             # Handle the first iteration.
 
             if conv_type == "encut":
@@ -292,8 +292,8 @@ class FT_Convo(FiretaskBase):
             formula = struct.composition.reduced_formula
             ual_fw = Firework(
                 [
-                    FT_UpdateBMLists(formula=formula, tag=tag),
-                    FT_Convo(
+                    UpdateBMLists(formula=formula, tag=tag),
+                    Converge(
                         structure=struct,
                         conv_type=conv_type,
                         comp_params=comp_params,
@@ -335,20 +335,20 @@ class FT_Convo(FiretaskBase):
             return FWAction(detours=bm_wf)
 
         else:
-            BM_tol = BM_list[-1] * BM_tolerance
-            V0_tol = V0_list[-1] * V0_tolerance
+            bm_tol = bm_list[-1] * bm_tolerance
+            v0_tol = v0_list[-1] * v0_tolerance
 
             if is_list_converged(
-                BM_list, BM_tol, n_converge
-            ) and is_list_converged(V0_list, V0_tol, n_converge):
+                bm_list, bm_tol, n_converge
+            ) and is_list_converged(v0_list, v0_tol, n_converge):
                 # Handle the last iteration
-                final_BM = BM_list[-n_converge]
-                final_V0 = V0_list[-n_converge]
+                final_bm = bm_list[-n_converge]
+                final_v0 = v0_list[-n_converge]
                 flag = self.get("flag")
                 functional = self.get("functional")
 
                 scaled_structure = struct.copy()
-                scaled_structure.scale_lattice(final_V0)
+                scaled_structure.scale_lattice(final_v0)
                 struct_dict = scaled_structure.as_dict()
 
                 if conv_type == "encut":
@@ -358,7 +358,7 @@ class FT_Convo(FiretaskBase):
                     print(
                         " Final encut = {} eV; Final BM = {} GPa;"
                         "Final Volume = {} Angstrom³".format(
-                            final_encut, final_BM, final_V0
+                            final_encut, final_bm, final_v0
                         )
                     )
                     print("")
@@ -367,29 +367,29 @@ class FT_Convo(FiretaskBase):
                     output_dict = {
                         "encut_info": {
                             "final_encut": final_encut,
-                            "final_BM": final_BM,
-                            "final_volume": final_V0,
-                            "BM_list": BM_list,
-                            "V0_list": V0_list,
+                            "final_BM": final_bm,
+                            "final_volume": final_v0,
+                            "BM_list": bm_list,
+                            "V0_list": v0_list,
                             "convo_list": convo_list,
-                            "BM_tol_abs": BM_tol,
-                            "BM_tol_rel": BM_tolerance,
-                            "V0_tol_abs": V0_tol,
-                            "V0_tol_rel": V0_tolerance,
+                            "BM_tol_abs": bm_tol,
+                            "BM_tol_rel": bm_tolerance,
+                            "V0_tol_abs": v0_tol,
+                            "V0_tol_rel": v0_tolerance,
                         },
-                        "equilibrium_volume": final_V0,
-                        "bulk_moduls": final_BM,
+                        "equilibrium_volume": final_v0,
+                        "bulk_moduls": final_bm,
                         "comp_parameters.encut": final_encut,
                         "structure_equiVol": struct_dict,
                     }
-                else:
+                elif conv_type == "kpoints":
                     final_k_dens = convo_list[-n_converge]
                     print("")
                     print(" Convergence reached for total energy per atom.")
                     print(
                         " Final k_dens = {}; Final BM = {} GPa;"
                         "Final Volume = {} Angstrom³".format(
-                            final_k_dens, final_BM, final_V0
+                            final_k_dens, final_bm, final_v0
                         )
                     )
                     print("")
@@ -397,21 +397,25 @@ class FT_Convo(FiretaskBase):
                     output_dict = {
                         "k_dense_info": {
                             "final_k_dens": final_k_dens,
-                            "final_BM": final_BM,
-                            "final_volume": final_V0,
-                            "BM_list": BM_list,
-                            "V0_list": V0_list,
+                            "final_BM": final_bm,
+                            "final_volume": final_v0,
+                            "BM_list": bm_list,
+                            "V0_list": v0_list,
                             "convo_list": convo_list,
-                            "BM_tol_abs": BM_tol,
-                            "BM_tol_rel": BM_tolerance,
-                            "V0_tol_abs": V0_tol,
-                            "V0_tol_rel": V0_tolerance,
+                            "BM_tol_abs": bm_tol,
+                            "BM_tol_rel": bm_tolerance,
+                            "V0_tol_abs": v0_tol,
+                            "V0_tol_rel": v0_tolerance,
                         },
-                        "equilibrium_volume": final_V0,
-                        "bulk_moduls": final_BM,
+                        "equilibrium_volume": final_v0,
+                        "bulk_moduls": final_bm,
                         "comp_parameters.k_dens": final_k_dens,
                         "structure_equiVol": struct_dict,
                     }
+                else:
+                    raise ValueError(
+                        "Convergence type {} not recognized!".format(conv_type)
+                    )
 
                 db_high = VaspDB(db_file=db_file, high_level=hl_db)
                 db_high.update_data(
@@ -428,12 +432,12 @@ class FT_Convo(FiretaskBase):
                         new_values={
                             "$set": {
                                 "final_encut": final_encut,
-                                "final_BM": final_BM,
-                                "final_volume": final_V0,
-                                "BM_tol_abs": BM_tol,
-                                "BM_tol_rel": BM_tolerance,
-                                "V0_tol_abs": V0_tol,
-                                "V0_tol_rel": V0_tolerance,
+                                "final_BM": final_bm,
+                                "final_volume": final_v0,
+                                "BM_tol_abs": bm_tol,
+                                "BM_tol_rel": bm_tolerance,
+                                "V0_tol_abs": v0_tol,
+                                "V0_tol_rel": v0_tolerance,
                             }
                         },
                     )
@@ -444,19 +448,19 @@ class FT_Convo(FiretaskBase):
                         new_values={
                             "$set": {
                                 "final_k_dense": final_k_dens,
-                                "final_BM": final_BM,
-                                "final_volume": final_V0,
-                                "BM_tol_abs": BM_tol,
-                                "BM_tol_rel": BM_tolerance,
-                                "V0_tol_abs": V0_tol,
-                                "V0_tol_rel": V0_tolerance,
+                                "final_BM": final_bm,
+                                "final_volume": final_v0,
+                                "BM_tol_abs": bm_tol,
+                                "BM_tol_rel": bm_tolerance,
+                                "V0_tol_abs": v0_tol,
+                                "V0_tol_rel": v0_tolerance,
                             }
                         },
                     )
 
                 # handle file output:
                 if file_output:
-                    write_FT = FileWriteTask(
+                    write_ft = FileWriteTask(
                         files_to_write=[
                             {
                                 "filename": flag + "_output_dict.txt",
@@ -465,7 +469,7 @@ class FT_Convo(FiretaskBase):
                         ]
                     )
 
-                    copy_FT = copy_output_files(
+                    copy_ft = copy_output_files(
                         file_list=[flag + "_output_dict.txt"],
                         output_dir=output_dir,
                         remote_copy=remote_copy,
@@ -474,16 +478,16 @@ class FT_Convo(FiretaskBase):
                         port=port,
                     )
 
-                    FW = Firework(
-                        [write_FT, copy_FT],
+                    fw = Firework(
+                        [write_ft, copy_ft],
                         name="Copy Convergence SWF results",
                     )
 
-                    WF = Workflow.from_Firework(
-                        FW, name="Copy Convergence SWF results"
+                    wf = Workflow.from_Firework(
+                        fw, name="Copy Convergence SWF results"
                     )
 
-                    return FWAction(update_spec=fw_spec, detours=WF)
+                    return FWAction(update_spec=fw_spec, detours=wf)
                 else:
                     return FWAction(update_spec=fw_spec)
 
@@ -529,8 +533,8 @@ class FT_Convo(FiretaskBase):
             formula = struct.composition.reduced_formula
             ual_fw = Firework(
                 [
-                    FT_UpdateBMLists(formula=formula, tag=tag),
-                    FT_Convo(
+                    UpdateBMLists(formula=formula, tag=tag),
+                    Converge(
                         structure=struct,
                         conv_type=conv_type,
                         comp_params=comp_params,
@@ -595,9 +599,9 @@ def is_list_converged(input_list: list[float], tol: float, n: int = 3) -> bool:
         return False
     else:
         check_list = [False] * n
-        l = input_list.copy()
-        l.reverse()
+        tmp = input_list.copy()
+        tmp.reverse()
         for i, b in enumerate(check_list):
-            if abs(l[0] - l[i + 1]) < tol:
+            if abs(tmp[0] - tmp[i + 1]) < tol:
                 check_list[i] = True
         return all(check_list)

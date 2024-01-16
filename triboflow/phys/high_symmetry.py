@@ -178,7 +178,8 @@ class InterfaceSymmetryAnalyzer:
                 cart_sites[k] = v
         return cart_sites
 
-    def __remove_c_coord(self, hs_dict: dict) -> dict:
+    @staticmethod
+    def __remove_c_coord(hs_dict: dict) -> dict:
         """
         Remove the c coordinate for all high symmetry points to make 2D shifts.
         """
@@ -232,7 +233,8 @@ class InterfaceSymmetryAnalyzer:
             )
         return sites
 
-    def __separate_adsorption_sites(self, sites_dictionary: dict) -> dict:
+    @staticmethod
+    def __separate_adsorption_sites(sites_dictionary: dict) -> dict:
         """
         Label unique adsorption sites uniquely
 
@@ -247,7 +249,8 @@ class InterfaceSymmetryAnalyzer:
                     d[k + "_" + str(i + 1)] = coords
         return d
 
-    def __sort_all_sites(self, adsf: AdsorbateSiteFinder, all_sites: dict, unique_sites: dict) -> dict:
+    @staticmethod
+    def __sort_all_sites(adsf: AdsorbateSiteFinder, all_sites: dict, unique_sites: dict) -> dict:
         """
         Sort duplicate high symmetry points wrt the labels of the unique points.
 

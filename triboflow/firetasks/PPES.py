@@ -23,10 +23,10 @@ from triboflow.utils.structure_manipulation import clean_up_site_properties
 
 
 @explicit_serialize
-class FT_DoPPESCalcs(FiretaskBase):
+class DoPPESCalcs(FiretaskBase):
     """Start static PPES calculations in parallel for each given distance.
 
-    First part of the PPES subworkflow (followed by FT_FitPPES). Takes the
+    First part of the PPES subworkflow (followed by FitPPES). Takes the
     interface from the high-level database, moves that slabs to the distances
     passed in the distance_list and submits the calculations in parallel.
 
@@ -100,7 +100,7 @@ class FT_DoPPESCalcs(FiretaskBase):
             if s.c > 0:
                 sites_to_shift.append(i)
 
-        FW_list = []
+        fw_list = []
         for d in d_list:
             label = tag + "_PPES_" + str(d)
             # Make sure that there are no NoneTypes in the site_properties!
@@ -116,20 +116,20 @@ class FT_DoPPESCalcs(FiretaskBase):
                 struct_d, comp_params, "slab_from_scratch"
             )
 
-            FW = StaticFW(structure=struct_d, vasp_input_set=vis, name=label)
-            FW_list.append(FW)
+            fw = StaticFW(structure=struct_d, vasp_input_set=vis, name=label)
+            fw_list.append(fw)
 
-        WF = Workflow(FW_list, name="PPES calcs for: " + name)
-        PPES_Calcs_WF = add_modify_incar(WF)
+        wf = Workflow(fw_list, name="PPES calcs for: " + name)
+        ppes_calcs_wf = add_modify_incar(wf)
 
-        return FWAction(detours=PPES_Calcs_WF)
+        return FWAction(detours=ppes_calcs_wf)
 
 
 @explicit_serialize
-class FT_FitPPES(FiretaskBase):
+class FitPPES(FiretaskBase):
     """Fit PPES results with a UBER function and save them in the database.
 
-    Second part of the PPES subworkflow (preceded by FT_DoPPESCalcs). Use
+    Second part of the PPES subworkflow (preceded by DoPPESCalcs). Use
     a tag to read out the PPES calculation results from the database and then
     fit the results to an UBER function. Save everything in the high-level
     database.
@@ -176,7 +176,7 @@ class FT_FitPPES(FiretaskBase):
 
         db = VaspDB(db_file=db_file)
 
-        d_E_array = []
+        de_array = []
         for d in d_list:
             calc_label = tag + "_PPES_" + str(d)
             # Get energy from vasp run for this distance
@@ -184,9 +184,9 @@ class FT_FitPPES(FiretaskBase):
                 collection=db.db.tasks, fltr={"task_label": calc_label}
             )
             energy = vasp_calc["output"]["energy"]
-            d_E_array.append([d, energy])
+            de_array.append([d, energy])
 
-        popt, perr = PPES_UBER(distance_energy_array=d_E_array)
+        popt, perr = ppes_uber(distance_energy_array=de_array)
 
         db_high = VaspDB(db_file=db_file, high_level=high_level)
 
@@ -197,7 +197,7 @@ class FT_FitPPES(FiretaskBase):
                 "$set": {
                     "PPES": {
                         out_name: {
-                            "distance_Energy_array": d_E_array,
+                            "distance_Energy_array": de_array,
                             "UBER": {
                                 "G": popt[0],
                                 "l": popt[1],
@@ -211,7 +211,7 @@ class FT_FitPPES(FiretaskBase):
         )
 
 
-def UBER(x: Union[float, list[float]], G: float, l: float):
+def uber(x: Union[float, list[float]], G: float, lc: float):
     """
     Define the UBER function.
 
@@ -223,7 +223,7 @@ def UBER(x: Union[float, list[float]], G: float, l: float):
         distance(s).
     G : float
         binding energy at UBER minimum.
-    l : float
+    lc : float
         critical length (location of inflection point).
 
     Returns
@@ -232,10 +232,10 @@ def UBER(x: Union[float, list[float]], G: float, l: float):
         UBER binding energy at position(s) x.
 
     """
-    return G * (1 - (1 + x / l) * np.exp(-x / l))
+    return G * (1 - (1 + x / lc) * np.exp(-x / lc))
 
 
-def PPES_UBER(distance_energy_array: list[list[float]]):
+def ppes_uber(distance_energy_array: list[list[float]]):
     """
     Fit PPES data to an UBER relation.
 
@@ -255,11 +255,11 @@ def PPES_UBER(distance_energy_array: list[list[float]]):
 
     """
     # Fit UBER only to attractive part
-    d_E_array = np.asarray(distance_energy_array)
-    Fit_data = d_E_array[d_E_array[:, 0] >= 0.0, :]
-    z = Fit_data[:, 0]
-    E = Fit_data[:, 1] - min(Fit_data[:, 1])
-    Initial_guess = [-min(E), 0.75]
-    popt, pcov = curve_fit(UBER, z, E, p0=Initial_guess)
+    de_array = np.asarray(distance_energy_array)
+    fit_data = de_array[de_array[:, 0] >= 0.0, :]
+    z = fit_data[:, 0]
+    en = fit_data[:, 1] - min(fit_data[:, 1])
+    initial_guess = [-min(en), 0.75]
+    popt, pcov = curve_fit(uber, z, en, p0=initial_guess, full_output=False)
     perr = np.sqrt(np.diag(pcov))
     return popt, perr

@@ -158,7 +158,7 @@ def make_charge_differences(
 
 
 @explicit_serialize
-class FT_MakeChargeCalc(FiretaskBase):
+class MakeChargeCalc(FiretaskBase):
     """Firetask to make a charge density calculation.
 
     :param structure: Structure object.
@@ -193,18 +193,18 @@ class FT_MakeChargeCalc(FiretaskBase):
             struct, comp_params, "slab_from_scratch"
         )
 
-        FW = StaticFW(
+        fw = StaticFW(
             structure=struct,
             vasp_input_set=vis,
             name=label,
             vasptodb_kwargs={"store_volumetric_data": ["chgcar"]},
         )
-        WF = add_modify_incar(Workflow.from_Firework(FW))
-        return FWAction(detours=WF)
+        wf = add_modify_incar(Workflow.from_Firework(fw))
+        return FWAction(detours=wf)
 
 
 @explicit_serialize
-class FT_MakeChargeDensityDiff(FiretaskBase):
+class MakeChargeDensityDiff(FiretaskBase):
     """Firetask to make a charge density difference calculation.
 
     :param interface: Interface object.

@@ -8,29 +8,29 @@ Created on Thu Jul 16 13:01:38 2020
 
 from mp_api.client import MPRester
 from pymatgen.analysis.structure_matcher import *
-from pymatgen.symmetry.analyzer import SpacegroupAnalyzer as sga
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer as SgA
 
 NiO_struct = MPRester().get_structure_by_material_id("mp-19009")
 Fe_struct = MPRester().get_structure_by_material_id("mp-13")
 
 
 def make_magnetic_standard_structure(struct):
-    conv_struct = sga(struct).get_conventional_standard_structure(
+    conv_struct = SgA(struct).get_conventional_standard_structure(
         keep_site_properties=True
     )
     my_lattice = struct.lattice
     conv_lattice = conv_struct.lattice
 
-    # Get the tranisition matrix from the initial to the conventional lattice
-    TM_MyToConv = np.dot(my_lattice.inv_matrix, conv_lattice.matrix)
+    # Get the transition matrix from the initial to the conventional lattice
+    tm_my_to_conv = np.dot(my_lattice.inv_matrix, conv_lattice.matrix)
 
     # This scaling factor is not working generally! It will approach inf if one
     # or more entries in the TM are close to 0!
-    scale_factor = 1 / np.amin(np.absolute(TM_MyToConv))
-    SC_matrix = TM_MyToConv * scale_factor
+    scale_factor = 1 / np.amin(np.absolute(tm_my_to_conv))
+    sc_matrix = tm_my_to_conv * scale_factor
 
     my_supercell = struct.copy()
-    my_supercell.make_supercell(SC_matrix)
+    my_supercell.make_supercell(sc_matrix)
 
     conv_supercell = conv_struct.copy()
     conv_supercell.make_supercell(scale_factor)

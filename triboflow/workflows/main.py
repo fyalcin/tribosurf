@@ -7,26 +7,26 @@ Created on Wed Jun 17 15:47:39 2020
 from fireworks import Workflow, Firework
 
 from triboflow.firetasks.adhesion import (
-    FT_RelaxMatchedSlabs,
-    FT_RetrieveMatchedSlabs,
+    RelaxMatchedSlabs,
+    RetrieveMatchedSlabs,
 )
 from triboflow.firetasks.run_slabs_wfs import (
     GetCandidatesForHeteroStructure,
 )
 from triboflow.firetasks.start_swfs import (
-    FT_StartAdhesionSWF,
-    FT_StartBulkConvoSWF,
+    StartAdhesionSWF,
+    StartBulkConvoSWF,
     # FT_StartDielectricSWF,
-    FT_StartPESCalcSWF,
-    FT_StartChargeAnalysisSWF,
+    StartPESCalcSWF,
+    StartChargeAnalysisSWF,
 )
 from triboflow.firetasks.structure_manipulation import (
-    FT_AddBulkToDB,
-    FT_MakeHeteroStructure,
-    FT_StartBulkPreRelax,
+    AddBulkToDB,
+    MakeHeteroStructure,
+    StartBulkPreRelax,
 )
-from triboflow.utils.mp_connection import material_from_mp
 from triboflow.utils.check_WF_inputs import check_hetero_wf_inputs
+from triboflow.utils.mp_connection import material_from_mp
 
 
 def optimize_bulk_wf(inputs: dict) -> Workflow:
@@ -59,7 +59,7 @@ def optimize_bulk_wf(inputs: dict) -> Workflow:
     wf_list = []
 
     add_bulk = Firework(
-        FT_AddBulkToDB(
+        AddBulkToDB(
             mpid=mpid,
             functional=functional,
             db_file=db_file,
@@ -71,7 +71,7 @@ def optimize_bulk_wf(inputs: dict) -> Workflow:
     wf_list.append(add_bulk)
 
     pre_relaxation = Firework(
-        FT_StartBulkPreRelax(
+        StartBulkPreRelax(
             mp_id=mpid,
             functional=functional,
             db_file=db_file,
@@ -84,7 +84,7 @@ def optimize_bulk_wf(inputs: dict) -> Workflow:
     wf_list.append(pre_relaxation)
 
     converge_encut = Firework(
-        FT_StartBulkConvoSWF(
+        StartBulkConvoSWF(
             conv_type="encut",
             mp_id=mpid,
             functional=functional,
@@ -97,7 +97,7 @@ def optimize_bulk_wf(inputs: dict) -> Workflow:
     wf_list.append(converge_encut)
 
     converge_kpoints = Firework(
-        FT_StartBulkConvoSWF(
+        StartBulkConvoSWF(
             conv_type="kpoints",
             mp_id=mpid,
             functional=functional,
@@ -172,7 +172,6 @@ def heterogeneous_wf(inputs: dict) -> Workflow:
             f"'{struct_2.composition.reduced_formula}'. Please update your inputs with matching formulas and mpids."
         )
 
-
     formula_1 = struct_1.composition.reduced_formula
     formula_2 = struct_2.composition.reduced_formula
 
@@ -182,11 +181,11 @@ def heterogeneous_wf(inputs: dict) -> Workflow:
 
     # external_pressure might default to None, so we have to check for that
     external_pressure = (
-        interface_params.get("external_pressure", 0.0) or 0.0
+            interface_params.get("external_pressure", 0.0) or 0.0
     )
 
     add_bulk_m1 = Firework(
-        FT_AddBulkToDB(
+        AddBulkToDB(
             mpid=mpid_1,
             functional=functional,
             db_file=db_file,
@@ -198,7 +197,7 @@ def heterogeneous_wf(inputs: dict) -> Workflow:
     fw_list.append(add_bulk_m1)
 
     pre_relaxation_m1 = Firework(
-        FT_StartBulkPreRelax(
+        StartBulkPreRelax(
             mp_id=mpid_1,
             functional=functional,
             db_file=db_file,
@@ -210,7 +209,7 @@ def heterogeneous_wf(inputs: dict) -> Workflow:
     fw_list.append(pre_relaxation_m1)
 
     converge_encut_m1 = Firework(
-        FT_StartBulkConvoSWF(
+        StartBulkConvoSWF(
             conv_type="encut",
             mp_id=mpid_1,
             functional=functional,
@@ -223,7 +222,7 @@ def heterogeneous_wf(inputs: dict) -> Workflow:
     fw_list.append(converge_encut_m1)
 
     converge_kpoints_m1 = Firework(
-        FT_StartBulkConvoSWF(
+        StartBulkConvoSWF(
             conv_type="kpoints",
             mp_id=mpid_1,
             functional=functional,
@@ -239,7 +238,7 @@ def heterogeneous_wf(inputs: dict) -> Workflow:
 
     if mpid_2 != mpid_1:
         add_bulk_m2 = Firework(
-            FT_AddBulkToDB(
+            AddBulkToDB(
                 mpid=mpid_2,
                 functional=functional,
                 db_file=db_file,
@@ -251,7 +250,7 @@ def heterogeneous_wf(inputs: dict) -> Workflow:
         fw_list.append(add_bulk_m2)
 
         pre_relaxation_m2 = Firework(
-            FT_StartBulkPreRelax(
+            StartBulkPreRelax(
                 mp_id=mpid_2,
                 functional=functional,
                 db_file=db_file,
@@ -263,7 +262,7 @@ def heterogeneous_wf(inputs: dict) -> Workflow:
         fw_list.append(pre_relaxation_m2)
 
         converge_encut_m2 = Firework(
-            FT_StartBulkConvoSWF(
+            StartBulkConvoSWF(
                 conv_type="encut",
                 mp_id=mpid_2,
                 functional=functional,
@@ -276,7 +275,7 @@ def heterogeneous_wf(inputs: dict) -> Workflow:
         fw_list.append(converge_encut_m2)
 
         converge_kpoints_m2 = Firework(
-            FT_StartBulkConvoSWF(
+            StartBulkConvoSWF(
                 conv_type="kpoints",
                 mp_id=mpid_2,
                 functional=functional,
@@ -317,7 +316,7 @@ def heterogeneous_wf(inputs: dict) -> Workflow:
     fw_list.append(find_candidate_slabs)
 
     make_interface = Firework(
-        FT_MakeHeteroStructure(
+        MakeHeteroStructure(
             mp_id_1=mpid_1,
             mp_id_2=mpid_2,
             interface_params=interface_params,
@@ -331,7 +330,7 @@ def heterogeneous_wf(inputs: dict) -> Workflow:
     fw_list.append(make_interface)
 
     relax_matched_slabs = Firework(
-        FT_RelaxMatchedSlabs(
+        RelaxMatchedSlabs(
             mp_id_1=mpid_1,
             mp_id_2=mpid_2,
             functional=functional,
@@ -346,7 +345,7 @@ def heterogeneous_wf(inputs: dict) -> Workflow:
     fw_list.append(relax_matched_slabs)
 
     calc_pes_points = Firework(
-        FT_StartPESCalcSWF(
+        StartPESCalcSWF(
             mp_id_1=mpid_1,
             mp_id_2=mpid_2,
             functional=functional,
@@ -361,7 +360,7 @@ def heterogeneous_wf(inputs: dict) -> Workflow:
     fw_list.append(calc_pes_points)
 
     retrieve_matched_slabs = Firework(
-        FT_RetrieveMatchedSlabs(
+        RetrieveMatchedSlabs(
             mp_id_1=mpid_1,
             mp_id_2=mpid_2,
             functional=functional,
@@ -375,7 +374,7 @@ def heterogeneous_wf(inputs: dict) -> Workflow:
     fw_list.append(retrieve_matched_slabs)
 
     compute_adhesion = Firework(
-        FT_StartAdhesionSWF(
+        StartAdhesionSWF(
             mp_id_1=mpid_1,
             mp_id_2=mpid_2,
             functional=functional,
@@ -389,7 +388,7 @@ def heterogeneous_wf(inputs: dict) -> Workflow:
     fw_list.append(compute_adhesion)
 
     charge_analysis = Firework(
-        FT_StartChargeAnalysisSWF(
+        StartChargeAnalysisSWF(
             mp_id_1=mpid_1,
             mp_id_2=mpid_2,
             functional=functional,
@@ -403,12 +402,12 @@ def heterogeneous_wf(inputs: dict) -> Workflow:
     fw_list.append(charge_analysis)
 
     wf_name = (
-        "TriboFlow_"
-        + "-".join(
-            sorted([f"{formula_1}_({mpid_1})", f"{formula_2}_({mpid_2})"])
-        )
-        + "_"
-        + f"{functional}@{external_pressure}GPa"
+            "TriboFlow_"
+            + "-".join(
+        sorted([f"{formula_1}_({mpid_1})", f"{formula_2}_({mpid_2})"])
+    )
+            + "_"
+            + f"{functional}@{external_pressure}GPa"
     )
 
     fw_list = Workflow(fw_list, name=wf_name)

@@ -141,6 +141,7 @@ class PESGenerator:
             If a custom cell is to be plotted, this can be passed.
 
         """
+        self.pes_unit_cell = None
         self.ppA = points_per_angstrom
         self.interpolation_kernel = interpolation_kernel
         self.calc_mep = calculate_mep
@@ -201,17 +202,17 @@ class PESGenerator:
         self.__get_min_and_max_hsps()
         self.__get_limits_and_multiples()
 
-        X, Y, Z = self.__interpolate_on_grid()
+        x, y, z = self.__interpolate_on_grid()
         self.__get_pes_unit_cell()
 
         if self.calc_mep:
             self.__get_mep()
             self.__get_shear_strength()
 
-        self.__plot_grid(X, Y, Z)
+        self.__plot_grid(x, y, z)
         self.PES_as_bytes = self.__get_pes_as_bytes()
-        self.corrugation = self.__get_corrugation(Z)
-        self.PES_on_meshgrid = {"X": X, "Y": Y, "Z": Z}
+        self.corrugation = self.__get_corrugation(z)
+        self.PES_on_meshgrid = {"X": x, "Y": y, "Z": z}
 
     def __get_mep_limits(self, puc_mult: int = 2, delta: float = 0.1) -> tuple:
         """
@@ -337,7 +338,7 @@ class PESGenerator:
         """
         Compute minimum energy paths for three initial directions.
 
-        Either use the nudged elastiv band ('neb', default) or zero temperature
+        Either use the nudged elastic band ('neb', default) or zero temperature
         string method ('zts') to find the MEPs. All three directions are
         optimized in parallel, but depending on the PES, this might still take
         around a couple of minutes or half an hour...
@@ -446,7 +447,8 @@ class PESGenerator:
             self.hsp_min = min_group[0]
             self.hsp_max = max_group[0]
 
-    def __get_corrugation(self, Z: np.ndarray) -> float:
+    @staticmethod
+    def __get_corrugation(Z: np.ndarray) -> float:
         """
         Returns the PES corrugation in eV.
 
@@ -643,13 +645,13 @@ class PESGenerator:
                 self.__get_mep()
             for k, v in self.mep.items():
                 if k == "mep_d":
-                    l = "g:"
+                    color = "g:"
                 elif k == "mep_x":
-                    l = "r:"
+                    color = "r:"
                 else:
-                    l = "b:"
+                    color = "b:"
                 mep = v["mep"]
-                plt.plot(mep[:, 0], mep[:, 1], l)
+                plt.plot(mep[:, 0], mep[:, 1], color)
 
         plt.xlabel(r"x [$\rm\AA$]", fontsize=20, family="sans-serif")
         plt.ylabel(r"y [$\rm\AA$]", fontsize=20, family="sans-serif")
@@ -699,10 +701,10 @@ class PESGenerator:
         """
         xy = np.vstack([X.ravel(), Y.ravel()]).T
         z = self.rbf(xy)
-        Z = np.reshape(z, X.shape, order="C")
+        z = np.reshape(z, X.shape, order="C")
         if self.normalize:
-            Z = Z - min(Z.ravel())
-        return Z
+            z = z - min(z.ravel())
+        return z
 
     def __get_grid(self, xmax: float, ymax: float):
         """
@@ -726,11 +728,11 @@ class PESGenerator:
         nr_pts_y = int(ymax * self.ppA)
         grid_x = np.linspace(0, xmax, nr_pts_x)
         grid_y = np.linspace(0, ymax, nr_pts_y)
-        X, Y = np.meshgrid(grid_x, grid_y)
-        return X, Y
+        x, y = np.meshgrid(grid_x, grid_y)
+        return x, y
 
-    def __colorbar_ticks(self,
-                         Z: np.ndarray,
+    @staticmethod
+    def __colorbar_ticks(z: np.ndarray,
                          nr_of_ticks: int = 10):
         """
         Define tick marks for the colorbar. Make sure the lowest and highest
@@ -738,7 +740,7 @@ class PESGenerator:
 
         Parameters
         ----------
-        Z : numpy.ndarray
+        z : numpy.ndarray
             Interpolated PES values
         nr_of_ticks : int, optional
             Number of tick marks. The default is 8.
@@ -749,8 +751,8 @@ class PESGenerator:
             Array of tick marks for the colorbar
 
         """
-        low = min(Z.ravel())
-        high = max(Z.ravel())
+        low = min(z.ravel())
+        high = max(z.ravel())
         return np.linspace(low, high, nr_of_ticks).tolist()
 
     def __get_pes_unit_cell(self):
@@ -766,9 +768,7 @@ class PESGenerator:
         pymatgen.core.lattice.Lattice
             Lattice object with the periodicity of the PES unit cell
         """
-        try:
-            pes_unit_cell = self.pes_unit_cell
-        except:
+        if not getattr(self, "pes_unit_cell", None):
             interface = self.interface
             specie = interface[0].species
             lattice = interface.lattice
@@ -793,7 +793,7 @@ class PESGenerator:
             pes_unit_cell = pbc_struct_prim.lattice
             self.pes_unit_cell = pes_unit_cell
 
-        return pes_unit_cell
+        return self.pes_unit_cell
 
     def __plot_unit_cell(self, ax: plt.Axes):
         """
@@ -970,9 +970,9 @@ class PESGenerator:
         """
         self.__get_rbf()
 
-        X, Y = self.__get_grid(self.xlim, self.ylim)
-        Z = self.__evaluate_on_grid(X, Y)
-        return X, Y, Z
+        x, y = self.__get_grid(self.xlim, self.ylim)
+        z = self.__evaluate_on_grid(x, y)
+        return x, y, z
 
 
 def get_pes_generator_from_db(

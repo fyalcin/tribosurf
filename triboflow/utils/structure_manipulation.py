@@ -1,4 +1,4 @@
-from typing import Union, Type
+from typing import Union
 
 import numpy as np
 from pymatgen.core.interface import Interface
@@ -120,7 +120,7 @@ def slab_from_structure(miller: list | tuple,
     )
 
 
-def clean_up_site_properties(structure: Type[Structure]) -> Type[Structure]:
+def clean_up_site_properties(structure: Structure) -> Structure:
     """
     Cleans up site_properties of structures that contain NoneTypes.
 
@@ -160,7 +160,7 @@ def clean_up_site_properties(structure: Type[Structure]) -> Type[Structure]:
 
 def stack_aligned_slabs(bottom_slab: Slab,
                         top_slab: Slab,
-                        top_shift:tuple=(0, 0, 0)) -> Structure:
+                        top_shift: tuple = (0, 0, 0)) -> Structure:
     """
     Combine slabs that are centered around 0 into a single structure.
 
@@ -207,9 +207,9 @@ def stack_aligned_slabs(bottom_slab: Slab,
     return interface
 
 
-def recenter_aligned_slabs(top_slab : Slab,
-                           bottom_slab : Slab,
-                           d:float=2.5):
+def recenter_aligned_slabs(top_slab: Slab,
+                           bottom_slab: Slab,
+                           d: float = 2.5):
     """
     Center two slabs around z=0 and give them the distance d.
 
@@ -364,7 +364,7 @@ def make_pymatgen_slab(
     ).get_conventional_standard_structure(keep_site_properties=True)
     bulk_conv = transfer_average_magmoms(bulk_struct, bulk_conv)
 
-    SG = SlabGenerator(
+    sg = SlabGenerator(
         initial_structure=bulk_conv,
         miller_index=miller,
         center_slab=True,
@@ -375,7 +375,7 @@ def make_pymatgen_slab(
         min_vacuum_size=min_vacuum,
     )
 
-    slab = SG.get_slabs(
+    slab = sg.get_slabs(
         bonds=None,
         ftol=0.1,
         tol=0.1,

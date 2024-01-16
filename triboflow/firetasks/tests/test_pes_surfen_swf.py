@@ -6,7 +6,7 @@ from triboflow.firetasks.run_slabs_wfs import (
     GetCandidatesForHeteroStructure,
 )
 from triboflow.firetasks.structure_manipulation import (
-    FT_MakeHeteroStructure,
+    MakeHeteroStructure,
 )
 
 required_params = ["mpid_1", "mpid_2"]
@@ -86,7 +86,7 @@ fw1 = Firework(
 )
 
 fw2 = Firework(
-    FT_MakeHeteroStructure(
+    MakeHeteroStructure(
         mp_id_1=mpid_1,
         mp_id_2=mpid_2,
         interface_params=inputs["interface_params"],

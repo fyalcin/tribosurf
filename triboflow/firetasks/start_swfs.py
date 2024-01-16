@@ -15,7 +15,7 @@ from triboflow.workflows.subworkflows import (
 
 
 @explicit_serialize
-class FT_StartChargeAnalysisSWF(FiretaskBase):
+class StartChargeAnalysisSWF(FiretaskBase):
     """Start a charge redistribution analysis subworkflow.
 
     Take an interface from the high_level database and compute
@@ -36,10 +36,12 @@ class FT_StartChargeAnalysisSWF(FiretaskBase):
     :param db_file: Full path of the db.json file to be used. The default is to use env_chk to find the file.
     :type db_file: str, optional
 
-    :param high_level: Name of the high_level database to use. Defaults to 'True', in which case it is read from the db.json file.
+    :param high_level: Name of the high_level database to use. Defaults to 'True', in which case it is read from the
+    db.json file.
     :type high_level: str or True, optional
 
-    :param interface_label: Label that the relaxed interface has in the high-level database. Can be either structure@min (default), or structure@max at the moment.
+    :param interface_label: Label that the relaxed interface has in the high-level database. Can be either
+    structure@min (default), or structure@max at the moment.
     :type interface_label: str, optional
 
     :return: FWAction that produces a detour charge analysis subworkflow.
@@ -82,7 +84,7 @@ class FT_StartChargeAnalysisSWF(FiretaskBase):
         if not redistribution_was_calculated:
             interface = Interface.from_dict(interface_dict[interface_label])
 
-            SWF = charge_analysis_swf(
+            swf = charge_analysis_swf(
                 interface=interface,
                 interface_name=name,
                 functional=functional,
@@ -92,13 +94,13 @@ class FT_StartChargeAnalysisSWF(FiretaskBase):
                 comp_parameters=comp_params,
             )
 
-            return FWAction(detours=SWF)
+            return FWAction(detours=swf)
         else:
             return FWAction(update_spec=fw_spec)
 
 
 @explicit_serialize
-class FT_StartAdhesionSWF(FiretaskBase):
+class StartAdhesionSWF(FiretaskBase):
     """Start an adhesion subworkflow.
 
     Take relaxed top and bottom slabs of an interface, as well as the relaxed
@@ -120,10 +122,12 @@ class FT_StartAdhesionSWF(FiretaskBase):
     :param db_file: Full path of the db.json file to be used. The default is to use env_chk to find the file.
     :type db_file: str, optional
 
-    :param adhesion_handle: Flag under which the adhesion energy will be saved in the interface_data collection of the high_level database.
+    :param adhesion_handle: Flag under which the adhesion energy will be saved in the interface_data collection of
+    the high_level database.
     :type adhesion_handle: str, optional
 
-    :param high_level: Name of the high_level database to use. Defaults to 'True', in which case it is read from the db.json file.
+    :param high_level: Name of the high_level database to use. Defaults to 'True', in which case it is read from the
+    db.json file.
     :type high_level: str or True, optional
 
     :return: FWAction that produces a detour adhesion subworkflow.
@@ -186,7 +190,7 @@ class FT_StartAdhesionSWF(FiretaskBase):
 
 
 @explicit_serialize
-class FT_StartBulkConvoSWF(FiretaskBase):
+class StartBulkConvoSWF(FiretaskBase):
     """Starts a convergence subworkflow.
 
     Starts either an energy cutoff or kpoint density convergence of a material
@@ -213,13 +217,16 @@ class FT_StartBulkConvoSWF(FiretaskBase):
     :param k_dens_start: Starting kpoint density in 1/Angstrom. Defaults to 1.0
     :type k_dens_start: float, optional
 
-    :param k_dens_incr: Increment for the kpoint convergence. Can be set quite small since there is a check in place to see if a new mesh is actually constructed for each density. Defaults to 0.1.
+    :param k_dens_incr: Increment for the kpoint convergence. Can be set quite small since there is a check in place
+    to see if a new mesh is actually constructed for each density. Defaults to 0.1.
     :type k_dens_incr: float, optional
 
-    :param n_converge: Number of calculations that have to be inside the convergence threshold for convergence to be reached. Defaults to 3.
+    :param n_converge: Number of calculations that have to be inside the convergence threshold for convergence to be
+    reached. Defaults to 3.
     :type n_converge: int, optional
 
-    :param high_level: Name of the high_level database to use. Defaults to 'True', in which case it is read from the db.json file.
+    :param high_level: Name of the high_level database to use. Defaults to 'True', in which case it is read from the
+    db.json file.
     :type high_level: str or True, optional
 
     :return: FWAction that produces a detour convergence subworkflow.
@@ -266,6 +273,11 @@ class FT_StartBulkConvoSWF(FiretaskBase):
             stop_convergence = data.get("encut_info")
         elif conv_type == "kpoints":
             stop_convergence = data.get("k_dense_info")
+        else:
+            raise ValueError(
+                '"type" input must be either "kpoints" or'
+                '"encut".\nYou have passed {}'.format(conv_type)
+            )
 
         if not stop_convergence:
             structure_dict = data.get("structure_equiVol")
@@ -280,7 +292,7 @@ class FT_StartBulkConvoSWF(FiretaskBase):
                         )
             structure = Structure.from_dict(structure_dict)
             comp_params = data.get("comp_parameters", {})
-            SWF = converge_swf(
+            swf = converge_swf(
                 structure=structure,
                 conv_type=conv_type,
                 flag=mp_id,
@@ -293,13 +305,13 @@ class FT_StartBulkConvoSWF(FiretaskBase):
                 n_converge=n_converge,
                 print_help=False,
             )
-            return FWAction(detours=SWF, update_spec=fw_spec)
+            return FWAction(detours=swf, update_spec=fw_spec)
         else:
             return FWAction(update_spec=fw_spec)
 
 
 @explicit_serialize
-class FT_StartPESCalcSWF(FiretaskBase):
+class StartPESCalcSWF(FiretaskBase):
     """Start a PES subworkflow.
 
     Starts a PES subworkflow using data from the high-level database.
@@ -321,7 +333,8 @@ class FT_StartPESCalcSWF(FiretaskBase):
     :param db_file: Full path of the db.json file to be used. The default is to use env_chk to find the file.
     :type db_file: str, optional
 
-    :param prerelax: Whether to perform a prerelaxation using a network potential before starting a DFT relaxation. Defaults to True.
+    :param prerelax: Whether to perform a prerelaxation using a network potential before starting a DFT relaxation.
+    Defaults to True.
     :type prerelax: bool, optional
 
     :param prerelax_calculator: Which network potential to use for the prerelaxation. Defaults to 'm3gnet'.
@@ -330,7 +343,8 @@ class FT_StartPESCalcSWF(FiretaskBase):
     :param prerelax_kwargs: Keyword arguments to be passed to the ASE calculator for the prerelaxation.
     :type prerelax_kwargs: dict, optional
 
-    :param high_level: Name of the high_level database to use. Defaults to 'True', in which case it is read from the db.json file.
+    :param high_level: Name of the high_level database to use. Defaults to 'True', in which case it is read from the
+    db.json file.
     :type high_level: str or True, optional
 
     :return: FWAction that produces a detour PES subworkflow.
@@ -376,7 +390,7 @@ class FT_StartPESCalcSWF(FiretaskBase):
         already_done = interface_dict.get("relaxed_structure@min")
 
         if not already_done:
-            SWF = calc_pes_swf(
+            swf = calc_pes_swf(
                 interface=interface,
                 interface_name=name,
                 functional=functional,
@@ -390,14 +404,14 @@ class FT_StartPESCalcSWF(FiretaskBase):
                 high_level=hl_db,
             )
 
-            return FWAction(detours=SWF, update_spec=fw_spec)
+            return FWAction(detours=swf, update_spec=fw_spec)
 
         else:
             return FWAction(update_spec=fw_spec)
 
 
 @explicit_serialize
-class FT_StartPPESWF(FiretaskBase):
+class StartPPESWF(FiretaskBase):
     """
     Start a CalcPPES_SWF subworkflow that calculates a PPES.
 
@@ -416,7 +430,8 @@ class FT_StartPPESWF(FiretaskBase):
     :param out_name: Name for the PPES data in the high-level database. The default is 'PPES@minimum'.
     :type out_name: str, optional
 
-    :param structure_name: Name of the structure in the interface entry to the high-level database for which the PPES should be calculated. The default is 'minimum_relaxed'.
+    :param structure_name: Name of the structure in the interface entry to the high-level database for which the PPES
+    should be calculated. The default is 'minimum_relaxed'.
     :type structure_name: str, optional
 
     :param spec: fw_spec that can be passed to the SWF and will be passed on. The default is {}.
@@ -459,7 +474,7 @@ class FT_StartPPESWF(FiretaskBase):
                 f"0 external_pressure not found in high-level database {db_file}!"
             )
 
-        calc_PPES = True
+        calc_ppes = True
         if interface_dict.get("PPES") is not None:
             if interface_dict["PPES"].get(out_name) is not None:
                 print(
@@ -471,10 +486,10 @@ class FT_StartPPESWF(FiretaskBase):
                     + functional
                     + " functional."
                 )
-                calc_PPES = False
+                calc_ppes = False
 
-        if calc_PPES:
-            SWF = calc_ppes_swf(
+        if calc_ppes:
+            swf = calc_ppes_swf(
                 interface_name=name,
                 functional=functional,
                 distance_list=d_list,
@@ -483,6 +498,6 @@ class FT_StartPPESWF(FiretaskBase):
                 spec=fw_spec,
             )
 
-            return FWAction(additions=SWF, update_spec=fw_spec)
+            return FWAction(additions=swf, update_spec=fw_spec)
         else:
             return FWAction(update_spec=fw_spec)

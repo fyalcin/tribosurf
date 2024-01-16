@@ -29,7 +29,7 @@ from triboflow.utils.structure_manipulation import (
 
 
 @explicit_serialize
-class FT_ComputePES(FiretaskBase):
+class ComputePES(FiretaskBase):
     """Compute the PES for a given interface, plot and save it.
 
     Uses the previously computed energies for the unique high-symmetry points
@@ -90,7 +90,7 @@ class FT_ComputePES(FiretaskBase):
                 print("PES already computed for this interface. Skipping...")
                 return FWAction()
 
-        PG = get_pes_generator_from_db(
+        pg = get_pes_generator_from_db(
             interface_name=name,
             external_pressure=external_pressure,
             db_file=db_file,
@@ -108,19 +108,19 @@ class FT_ComputePES(FiretaskBase):
                 fltr={"name": name, "external_pressure": external_pressure},
                 new_values={
                     "$set": {
-                        "PES.all_energies": jsanitize(PG.extended_energies),
-                        "PES.pes_data": jsanitize(PG.PES_on_meshgrid),
-                        "PES.image": PG.PES_as_bytes,
-                        "PES.rbf": pickle.dumps(PG.rbf),
-                        "corrugation": PG.corrugation,
-                        "hsp@min": PG.hsp_min,
-                        "hsp@max": PG.hsp_max,
-                        "mep": jsanitize(PG.mep),
-                        "shear_strength": jsanitize(PG.shear_strength),
+                        "PES.all_energies": jsanitize(pg.extended_energies),
+                        "PES.pes_data": jsanitize(pg.PES_on_meshgrid),
+                        "PES.image": pg.PES_as_bytes,
+                        "PES.rbf": pickle.dumps(pg.rbf),
+                        "corrugation": pg.corrugation,
+                        "hsp@min": pg.hsp_min,
+                        "hsp@max": pg.hsp_max,
+                        "mep": jsanitize(pg.mep),
+                        "shear_strength": jsanitize(pg.shear_strength),
                         "initial_strings": {
-                            "x": PG.initial_string_x.tolist(),
-                            "y": PG.initial_string_y.tolist(),
-                            "d": PG.initial_string_d.tolist(),
+                            "x": pg.initial_string_x.tolist(),
+                            "y": pg.initial_string_y.tolist(),
+                            "d": pg.initial_string_d.tolist(),
                         },
                     }
                 },
@@ -131,11 +131,11 @@ class FT_ComputePES(FiretaskBase):
                 fltr={"name": name, "external_pressure": external_pressure},
                 new_values={
                     "$set": {
-                        "corrugation": PG.corrugation,
-                        "hsp@min": PG.hsp_min,
-                        "hsp@max": PG.hsp_max,
-                        "mep": jsanitize(PG.mep),
-                        "shear_strength": jsanitize(PG.shear_strength),
+                        "corrugation": pg.corrugation,
+                        "hsp@min": pg.hsp_min,
+                        "hsp@max": pg.hsp_max,
+                        "mep": jsanitize(pg.mep),
+                        "shear_strength": jsanitize(pg.shear_strength),
                     }
                 },
             )
@@ -147,9 +147,9 @@ class FT_ComputePES(FiretaskBase):
             }.items():
                 try:
                     if k == "rbf":
-                        data = pickle.dumps(getattr(PG, v))
+                        data = pickle.dumps(getattr(pg, v))
                     else:
-                        data = jsanitize(getattr(PG, v))
+                        data = jsanitize(getattr(pg, v))
                     db_high.update_data(
                         collection="PBE.interface_data",
                         fltr={
@@ -164,7 +164,7 @@ class FT_ComputePES(FiretaskBase):
 
 
 @explicit_serialize
-class FT_RetrievePESEnergies(FiretaskBase):
+class RetrievePESEnergies(FiretaskBase):
     """Retrieve the energies from the PES relaxations and update the db.
 
     Uses a tag together with the labels of the high-symmetry points saved
@@ -315,7 +315,7 @@ class FT_RetrievePESEnergies(FiretaskBase):
 
 
 @explicit_serialize
-class FT_FindHighSymmPoints(FiretaskBase):
+class FindHighSymmPoints(FiretaskBase):
     """Compute high symmetry points for the top and bottom slab and the interface.
 
     Finds the high symmetry points of the top side of the bottom slab and the
@@ -373,9 +373,9 @@ class FT_FindHighSymmPoints(FiretaskBase):
         )
         interface_params = interface_data["interface_params"]
 
-        ISA = InterfaceSymmetryAnalyzer(interface)
-        hsp_dict = ISA.get_high_symmetry_info()
-        interfaces = ISA.get_all_high_symmetry_interfaces(
+        isa = InterfaceSymmetryAnalyzer(interface)
+        hsp_dict = isa.get_high_symmetry_info()
+        interfaces = isa.get_all_high_symmetry_interfaces(
             interface_distance=interface_params.get("interface_distance")
         )
 
@@ -409,7 +409,7 @@ class FT_FindHighSymmPoints(FiretaskBase):
 
 
 @explicit_serialize
-class FT_StartPESCalcs(FiretaskBase):
+class StartPESCalcs(FiretaskBase):
     """Start z-relaxations for different lateral positions of an interface.
 
     Take a list of lateral shifts from the fw_spec and start relaxations
@@ -497,7 +497,7 @@ class FT_StartPESCalcs(FiretaskBase):
             inputs.append([clean_struct, vis, label])
 
         wf_name = "PES relaxations for: " + interface_name
-        WF = dynamic_relax_swf(
+        wf = dynamic_relax_swf(
             inputs_list=inputs,
             wf_name=wf_name,
             add_static=True,
@@ -507,4 +507,4 @@ class FT_StartPESCalcs(FiretaskBase):
             db_file=db_file,
         )
 
-        return FWAction(detours=WF)
+        return FWAction(detours=wf)

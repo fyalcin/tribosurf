@@ -16,20 +16,20 @@ from htflow_utils.misc_tools import make_calculation_hash
 from htflow_utils.shaper import Shaper
 from htflow_utils.vasp_tools import get_custom_vasp_static_settings
 from triboflow.firetasks.charge_density_analysis import (
-    FT_MakeChargeDensityDiff,
+    MakeChargeDensityDiff,
 )
 from triboflow.phys.interface_matcher import InterfaceMatcher
 from triboflow.utils.mp_connection import MPConnection
 
 
 def charge_analysis_swf(
-    interface,
-    interface_name=None,
-    functional="PBE",
-    external_pressure=0,
-    db_file=None,
-    high_level="auto",
-    comp_parameters={},
+        interface,
+        interface_name=None,
+        functional="PBE",
+        external_pressure: float = 0.0,
+        db_file=None,
+        high_level="auto",
+        comp_parameters=None,
 ):
     """Subworkflow to compute the charge redistribution of an interface.
 
@@ -70,6 +70,8 @@ def charge_analysis_swf(
         interface.
 
     """
+    if comp_parameters is None:
+        comp_parameters = {}
     top_slab = interface.film
     bot_slab = interface.substrate
     try:
@@ -86,14 +88,14 @@ def charge_analysis_swf(
         mt = "".join(str(s) for s in top_miller)
         mb = "".join(str(s) for s in bot_miller)
         interface_name = (
-            top_slab.composition.reduced_formula
-            + "_"
-            + mt
-            + "_"
-            + bot_slab.composition.reduced_formula
-            + "_"
-            + mb
-            + "_AutoGen"
+                top_slab.composition.reduced_formula
+                + "_"
+                + mt
+                + "_"
+                + bot_slab.composition.reduced_formula
+                + "_"
+                + mb
+                + "_AutoGen"
         )
         print(
             "\nYour interface name has been automatically generated to be:"
@@ -130,9 +132,9 @@ def charge_analysis_swf(
     )
 
     main_tag = (
-        interface_name
-        + "_"
-        + make_calculation_hash(structure=interface, vis=vis_interface)
+            interface_name
+            + "_"
+            + make_calculation_hash(structure=interface, vis=vis_interface)
     )
     if not db.find_data("tasks", {"task_label": main_tag + "top"}):
         FW_top = StaticFW(
@@ -167,7 +169,7 @@ def charge_analysis_swf(
     parents = [fw for fw in [FW_top, FW_bot, FW_interface] if fw is not None]
 
     FW_charge_analysis = Firework(
-        FT_MakeChargeDensityDiff(
+        MakeChargeDensityDiff(
             interface=interface,
             interface_name=interface_name,
             interface_calc_name=main_tag + "interface",
@@ -249,7 +251,7 @@ if __name__ == "__main__":
     )
     lpad = LaunchPad.auto_load()
     lpad.add_wf(WF)
-    # FW1 = Firework(tasks=[FT_MakeChargeCalc(structure=slab,
+    # FW1 = Firework(tasks=[MakeChargeCalc(structure=slab,
     #                                        comp_params=comp_params,
     #                                        calc_name=calc_name)],
     #               name='compute_charge_FW')
