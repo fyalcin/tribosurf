@@ -85,10 +85,10 @@ def get_shear_strength(coords: np.ndarray,
         vz[i + 1] = vz[i] - 0.5 * (tforce[i] + tforce[i + 1])
 
     vz -= np.min(vz)
-    Ve = rbf(x, y)
-    Ve -= np.min(Ve)
+    ve = rbf(x, y)
+    ve -= np.min(ve)
     lxy = np.cumsum(np.sqrt(dx ** 2 + dy ** 2))
-    data_ss_mep = np.stack((lxy, d_vx, d_vy, vz, Ve, force), axis=-1)
+    data_ss_mep = np.stack((lxy, d_vx, d_vy, vz, ve, force), axis=-1)
 
     ss_min = 10.0 * np.min(force)
     ss_max = 10.0 * np.max(force)
@@ -180,9 +180,9 @@ def take_derivative(rbf: Rbf,
         coordy_2 = coordy
 
     # Calculate the derivative
-    V_1 = rbf(coordx_1, coordy_1)
-    V_2 = rbf(coordx_2, coordy_2)
-    zdev = 0.5 * (V_2 - V_1) / delta
+    v_1 = rbf(coordx_1, coordy_1)
+    v_2 = rbf(coordx_2, coordy_2)
+    zdev = 0.5 * (v_2 - v_1) / delta
 
     return zdev
 

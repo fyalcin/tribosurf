@@ -137,38 +137,38 @@ def charge_analysis_swf(
             + make_calculation_hash(structure=interface, vis=vis_interface)
     )
     if not db.find_data("tasks", {"task_label": main_tag + "top"}):
-        FW_top = StaticFW(
+        fw_top = StaticFW(
             structure=top_slab,
             vasp_input_set=vis_top,
             name=main_tag + "top",
             vasptodb_kwargs={"store_volumetric_data": ["chgcar"]},
         )
     else:
-        FW_top = None
+        fw_top = None
 
     if not db.find_data("tasks", {"task_label": main_tag + "bottom"}):
-        FW_bot = StaticFW(
+        fw_bot = StaticFW(
             structure=bot_slab,
             vasp_input_set=vis_bot,
             name=main_tag + "bottom",
             vasptodb_kwargs={"store_volumetric_data": ["chgcar"]},
         )
     else:
-        FW_bot = None
+        fw_bot = None
 
     if not db.find_data("tasks", {"task_label": main_tag + "interface"}):
-        FW_interface = StaticFW(
+        fw_interface = StaticFW(
             structure=interface,
             vasp_input_set=vis_interface,
             name=main_tag + "interface",
             vasptodb_kwargs={"store_volumetric_data": ["chgcar"]},
         )
     else:
-        FW_interface = None
+        fw_interface = None
 
-    parents = [fw for fw in [FW_top, FW_bot, FW_interface] if fw is not None]
+    parents = [fw for fw in [fw_top, fw_bot, fw_interface] if fw is not None]
 
-    FW_charge_analysis = Firework(
+    fw_charge_analysis = Firework(
         MakeChargeDensityDiff(
             interface=interface,
             interface_name=interface_name,
@@ -184,12 +184,12 @@ def charge_analysis_swf(
         parents=parents,
     )
 
-    SWF = Workflow(
-        fireworks=[FW_top, FW_bot, FW_interface, FW_charge_analysis],
+    swf = Workflow(
+        fireworks=[fw_top, fw_bot, fw_interface, fw_charge_analysis],
         name="Calculate adhesion SWF for {}".format(interface_name),
     )
 
-    return add_modify_incar(SWF)
+    return add_modify_incar(swf)
 
 
 if __name__ == "__main__":
