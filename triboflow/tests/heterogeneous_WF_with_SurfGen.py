@@ -5,9 +5,8 @@ Created on Fri Jun 19 16:15:02 2020
 
 @author: mwo
 """
-from datetime import datetime
-from atomate.vasp.powerups import add_modify_incar
-from fireworks import LaunchPad
+from fireworks import LaunchPad, FWorker
+from fireworks.core.rocket_launcher import rapidfire
 
 from triboflow.workflows.main import heterogeneous_wf
 
@@ -42,9 +41,10 @@ inputs = {
         "external_pressure": 1,
         "max_sites": 30,
     },
-    "db_file": "/home/fs71411/mwo3/FireWorks/config_VSC5_Zen3/db.json",
-    "high_level": "release_test_db",
-}
+    "database_params": {
+        "db_file": "auto",
+        "high_level": "tribosurf_main",
+    }}
 
 WF = heterogeneous_wf(inputs)
 
@@ -53,5 +53,5 @@ lpad = LaunchPad.auto_load()
 # lpad.reset(today)
 lpad.add_wf(WF)
 
-# fworker = FWorker.from_file("/home/yalcin/config_local/my_fworker.yaml")
-# rapidfire(launchpad=lpad, fworker=fworker, m_dir="/home/yalcin/scratch")
+fworker = FWorker.from_file("/home/yalcin/config_tribosurf/my_fworker.yaml")
+rapidfire(launchpad=lpad, fworker=fworker, m_dir="/home/yalcin/scratch")
