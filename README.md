@@ -3,7 +3,7 @@
 Triboflow is a collection of workflows designed to build up crystalline interfaces consisting of nearly arbitrary materials, calculate tribological figures of merit for them using DFT, and store the results in a database.
 Triboflow uses the [FireWorks](https://materialsproject.github.io/fireworks/index.html) framework and relies heavily on [pymatgen](https://pymatgen.org/), [atomate](https://atomate.org/), and the [Materialsproject](https://materialsproject.org/) in general.
 
-The project is a collaboration between [Michael Wolloch](https://www.researchgate.net/profile/Michael_Wolloch) at the University of Vienna and the [Group of Prof. M. Clelia Righi](http://www.tribchem.it/) at the University of Bologna.
+The project is based on [collaboration](https://www.sciencedirect.com/science/article/pii/S0927025622000969) between [Michael Wolloch](https://www.researchgate.net/profile/Michael_Wolloch) at the University of Vienna and the [Group of Prof. M. Clelia Righi](http://www.tribchem.it/) at the University of Bologna. It has been rewritten and updated by [Michael Wolloch](https://www.researchgate.net/profile/Michael_Wolloch) and [Firat Yalcin](https://github.com/fyalcin)
 
  1. [Download and Installation](#install)
      1. [Create a virtual environment for TriboFlow](#virtualenv)
