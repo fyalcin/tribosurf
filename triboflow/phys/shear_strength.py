@@ -11,17 +11,14 @@ The module contains the following functions:
     - get_shear_strength_xy
     - take_derivative
 
-    Author: Gabriele Losi (glosi000)
-    Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna
+    Authors: Gabriele Losi (glosi000), Michael Wolloch, and Firat Yalcin
     Credits: Code readapted from our past homogeneous workflow, MIT license,
     https://github.com/mcrighi/interface-workflow,
 """
 
-__author__ = "Gabriele Losi"
+__author__ = "Gabriele Losi, Michael Wolloch, Firat Yalcin"
 __credits__ = "Code readapted from our past homogeneous workflow, MIT license, " \
               "https://github.com/mcrighi/interface-workflow,"
-__copyright__ = "Copyright 2021, Prof. M.C. Righi, TribChem, ERC-SLIDE, University of Bologna"
-__contact__ = "clelia.righi@unibo.it"
 __date__ = "February 8th, 2021"
 
 from typing import Optional, Tuple, Any
